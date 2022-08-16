@@ -16,7 +16,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HstWbInstaller.Imager.GuiAp
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHub", "GitHub", "{0F77FBC1-964C-4DB6-89FA-DFE7E3A96833}"
 	ProjectSection(SolutionItems) = preProject
-		..\.github\workflows\prerelease.yml = ..\.github\workflows\prerelease.yml
+		..\.github\workflows\build-and-release.yml = ..\.github\workflows\build-and-release.yml
 	EndProjectSection
 EndProject
 Global

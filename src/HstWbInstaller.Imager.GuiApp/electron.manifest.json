@@ -8,7 +8,7 @@
   "aspCoreBackendPort": 42001,
   "build": {
     "appId": "com.HstWbInstaller.Imager.GuiApp.app",
-    "productName": "HstWB Imager",
+    "productName": "Hst Imager",
     "copyright": "Copyright © 2022",
     "buildVersion": "0.1.0",
     "compression": "maximum",
@@ -58,7 +58,7 @@
         ]
       }],
       "synopsis": "Disk imaging tool",
-      "description": "Disk imaging tool to read and write raw disk images to and from physical drives with support for Amiga rigid disk block (RDB)",
+      "description": "Disk imaging tool to read and write disk images to and from physical drives",
       "icon": "../../../hstwb-installer.icns"
     },
     "nsis": {
