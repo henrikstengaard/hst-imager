@@ -1,19 +1,23 @@
 ﻿namespace HstWbInstaller.Imager.Core.PhysicalDrives
 {
     using System;
+    using System.Collections.Generic;
     using System.IO;
     using Apis;
 
     public class WindowsPhysicalDriveStream : Stream
     {
-        // private const int BLOCK_SIZE = 16384; //512;
-        // private readonly SafeFileHandle safeFileHandle;
+        private readonly long size;
+        private readonly IEnumerable<string> driveLetters;
+
         private readonly Win32RawDisk win32RawDisk;
 
-        public WindowsPhysicalDriveStream(string path, long size, bool writable)
+        public WindowsPhysicalDriveStream(string path, long size, IEnumerable<string> driveLetters, bool writable)
         {
+            this.size = size;
+            this.driveLetters = driveLetters;
             this.CanWrite = writable;
-            this.win32RawDisk = new Win32RawDisk(path, size, writable);
+            this.win32RawDisk = new Win32RawDisk(path, writable);
         }
 
         protected override void Dispose(bool disposing)
@@ -21,6 +25,12 @@
             if (disposing)
             {
                 win32RawDisk.Dispose();
+
+                foreach (var driveLetter in driveLetters)
+                {
+                    using var driveLetterWin32RawDisk = new Win32RawDisk(driveLetter, this.CanWrite);
+                    driveLetterWin32RawDisk.UnlockDevice();
+                }
             }
 
             base.Dispose(disposing);
@@ -62,7 +72,7 @@
         public override bool CanSeek => true;
         public override bool CanWrite { get; }
 
-        public override long Length => win32RawDisk.Size();
+        public override long Length => size;
 
         public override long Position
         {

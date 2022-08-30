@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Apis;
     using HstWbInstaller.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Models;
@@ -49,9 +50,13 @@
         {
             var driveLetters = wmicDiskDriveToDiskPartitions.Where(x => x.Antecedent == wmicDiskDrive.Name)
                 .Join(wmicLogicalDiskToPartitions, disk => disk.Dependent, logical => logical.Antecedent,
-                    (_, logical) => logical.Dependent);
+                    (_, logical) => logical.Dependent).ToList();
+
+            var win32RawDisk = new Win32RawDisk(wmicDiskDrive.Name);
+            var size = win32RawDisk.Size();
+            
             return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.Model,
-                wmicDiskDrive.Size ?? 0, driveLetters);
+                size, driveLetters);
         }
 
         private async Task<string> GetWmicDiskDriveListCsv()

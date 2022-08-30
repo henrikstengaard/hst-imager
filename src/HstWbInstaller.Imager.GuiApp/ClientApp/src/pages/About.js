@@ -32,14 +32,14 @@ export default function About() {
                 text="About"
             />
             <Typography sx={{ mt: 2 }}>
-                HstWB Imager v{HSTWB_INSTALLER_VERSION}.
+                Hst Imager v{HSTWB_INSTALLER_VERSION}.
             </Typography>
             <Typography sx={{ mt: 2 }}>
-                HstWB Imager is a disk imaging tool to read and write raw disk images to and from physical drives with support for Amiga rigid disk block (RDB, partition table used by Amiga computers).
+                Hst Imager is a disk imaging tool to read and write raw disk images to and from physical drives with support for Amiga rigid disk block (RDB, partition table used by Amiga computers).
                 This is useful for creating images on modern computers and write them to physical drives such as hard disks, SSD, CF- and MicroSD-cards or creating images of physical drives for backup or tweaking with Amiga emulators much faster than real Amiga hardware.
             </Typography>
             <Typography sx={{ mt: 2 }}>
-                HstWB Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time. To support future development and appreciate your use of HstWB Imager, please make a donation via <Link href="#" onClick={async (event) => openUrl(event, payPalDonateUrl)}>PayPal donate</Link>.
+                Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time. To support future development and appreciate your use of Hst Imager, please make a donation via <Link href="#" onClick={async (event) => openUrl(event, payPalDonateUrl)}>PayPal donate</Link>.
             </Typography>
             <Typography sx={{ mt: 2 }}>
                 Please report issues by creating a new issue at <Link href="#" onClick={async (event) => openUrl(event, gitHubIssuesUrl)}>Github issues</Link>.

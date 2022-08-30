@@ -8,8 +8,8 @@ namespace HstWbInstaller.Imager.Core.PhysicalDrives
         public string Path { get; }
         public string Type { get; }
         public string Model { get; }
-        public long Size { get; }
-        public bool Writable { get; set; }
+        public long Size { get; protected set; }
+        public bool Writable { get; private set; }
         public RigidDiskBlock RigidDiskBlock { get; set; }
 
         public GenericPhysicalDrive(string path, string type, string model, long size, bool writable = false)

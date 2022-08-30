@@ -17,17 +17,26 @@
 
         public override Stream Open()
         {
-            if (!Writable)
-            {
-                return new WindowsPhysicalDriveStream(Path, Size, Writable);
-            }
+            var driveLetters = DriveLetters.Select(driveLetter => @"\\.\" + driveLetter + @"").ToList();
             
-            foreach (var path in DriveLetters.ToList().Select(driveLetter => @"\\.\" + driveLetter + @""))
+            foreach (var driveLetter in driveLetters)
             {
-                using var win32RawDisk = new Win32RawDisk(path, Size, true);
+                using var win32RawDisk = new Win32RawDisk(driveLetter, true);
+                if (!win32RawDisk.LockDevice())
+                {
+                    win32RawDisk.CloseDevice();
+                    throw new IOException($"Failed to lock device '{driveLetter}'");
+                }
+
+                if (!win32RawDisk.DismountDevice())
+                {
+                    win32RawDisk.UnlockDevice();
+                    win32RawDisk.CloseDevice();
+                    throw new IOException($"Failed to dismount device '{driveLetter}'");
+                }
             }
 
-            return new WindowsPhysicalDriveStream(Path, Size, Writable);
+            return new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable);
         }
     }
 }

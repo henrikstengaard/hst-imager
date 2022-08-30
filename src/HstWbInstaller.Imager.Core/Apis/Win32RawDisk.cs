@@ -13,15 +13,11 @@
     // http://buiba.blogspot.com/2009/06/using-winapi-createfile-readfile.html
     public class Win32RawDisk : IDisposable
     {
-        private readonly long size;
-        private readonly bool writeable;
         private readonly SafeFileHandle safeFileHandle;
         private bool disposed;
 
-        public Win32RawDisk(string path, long size, bool writeable = false)
+        public Win32RawDisk(string path, bool writeable = false)
         {
-            this.size = size;
-            this.writeable = writeable;
             safeFileHandle = DeviceApi.CreateFile(path,
                 writeable ? DeviceApi.GENERIC_READ | DeviceApi.GENERIC_WRITE : DeviceApi.GENERIC_READ,
                 writeable ? DeviceApi.FILE_SHARE_READ | DeviceApi.FILE_SHARE_WRITE : DeviceApi.FILE_SHARE_READ,
@@ -32,20 +28,9 @@
 
             if (safeFileHandle.IsInvalid)
             {
-                throw new IOException($"Path '{path}' is invalid");
-            }
-            
-            if (writeable && !LockDevice())
-            {
-                CloseDevice();
-                throw new IOException($"Failed to lock device '{path}'");
-            }
-
-            if (writeable && !DismountDevice())
-            {
-                UnlockDevice();
-                CloseDevice();
-                throw new IOException("Failed to dismount device '{path}'");
+                var error = Marshal.GetLastWin32Error();
+                
+                throw new IOException($"Handle for path '{path}' is invalid, win32 error code {error}");
             }
         }
 
@@ -128,10 +113,11 @@
 
         public long Size()
         {
-            return size;
-        }        
-        
-        protected virtual void Dispose(bool disposing)
+            var diskGeometry = Kernel32.GetDiskGeometryEx(safeFileHandle);
+            return diskGeometry.DiskSize;
+        }
+
+        private void Dispose(bool disposing)
         {
             if (disposed)
             {
@@ -140,11 +126,6 @@
 
             if (disposing)
             {
-                if (writeable)
-                {
-                    UnlockDevice();
-                }
-
                 safeFileHandle.Close();
                 safeFileHandle.Dispose();
             }
