@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using Commands;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Models;
     using Xunit;
 
     public class GivenBlankCommand : CommandTestBase
@@ -15,17 +16,17 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
-            var size = 512 * 512;
+            var size = new Size(512 * 512, Unit.Bytes);
             var fakeCommandHelper = new FakeCommandHelper(writeableMediaPaths: new[] { path });
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - create blank
-            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size);
+            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size, false);
             var result = await blankCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert data is zero filled
-            var sourceBytes = new byte[size];
+            var sourceBytes = new byte[size.Value];
             var destinationBytes = fakeCommandHelper.GetMedia(path).GetBytes();
             Assert.Equal(sourceBytes, destinationBytes);
         }
@@ -35,24 +36,24 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.vhd";
-            var size = 512 * 512;
+            var size = new Size(512 * 512, Unit.Bytes);
             var fakeCommandHelper = new FakeCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - create blank
-            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size);
+            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size, false);
             var result = await blankCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, path, size);
+            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, path, size.Value);
             var destinationPathSize = new FileInfo(path).Length;
 
             // assert vhd is less than size
-            Assert.True(destinationPathSize < size);
+            Assert.True(destinationPathSize < size.Value);
 
             // assert data is zero filled
-            var sourceBytes = new byte[size];
+            var sourceBytes = new byte[size.Value];
             Assert.Equal(sourceBytes, destinationBytes);
 
             // delete vhd file

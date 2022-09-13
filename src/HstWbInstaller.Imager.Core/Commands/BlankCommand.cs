@@ -6,32 +6,43 @@
     using System.Threading.Tasks;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
+    using Models;
+    using File = System.IO.File;
 
     public class BlankCommand : CommandBase
     {
         private readonly ILogger<BlankCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly string path;
-        private readonly long? size;
+        private readonly Size size;
+        private readonly bool compatibleSize;
 
-        public BlankCommand(ILogger<BlankCommand> logger, ICommandHelper commandHelper, string path, long? size)
+        public BlankCommand(ILogger<BlankCommand> logger, ICommandHelper commandHelper, string path, Size size, bool compatibleSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.path = path;
             this.size = size;
+            this.compatibleSize = compatibleSize;
         }
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            if (size is null or <= 0)
+            logger.LogDebug($"Path '{path}', size '{size}'");
+
+            if (size.Unit != Unit.Bytes)
             {
-                throw new ArgumentNullException(nameof(size));
+                return new Result(new Error("Size unit must be in bytes"));
             }
             
-            logger.LogDebug($"Path '{path}', size '{size.Value}'");
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            var mediaSize = compatibleSize ? Convert.ToInt64(size.Value * 0.95) : size.Value;
             
-            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, size.Value, false);
+            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);
@@ -42,7 +53,7 @@
 
             if (!commandHelper.IsVhd(path))
             {
-                stream.SetLength(size.Value);
+                stream.SetLength(mediaSize);
             }
 
             return new Result();

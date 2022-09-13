@@ -2,7 +2,7 @@
 {
     using System.Linq;
     using Core.Commands;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
+    using Hst.Amiga.RigidDiskBlocks;
     using Models;
 
     public static class ViewModelExtensions
@@ -84,6 +84,7 @@
                 DosTypeFormatted = fileSystemHeaderBlock.DosTypeFormatted,
                 DosTypeHex = fileSystemHeaderBlock.DosTypeHex,
                 Version = fileSystemHeaderBlock.Version,
+                Revision = fileSystemHeaderBlock.Revision,
                 VersionFormatted = fileSystemHeaderBlock.VersionFormatted,
                 FileSystemName = fileSystemHeaderBlock.FileSystemName
             };

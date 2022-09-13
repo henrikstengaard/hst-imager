@@ -5,9 +5,9 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
+    using Hst.Amiga.RigidDiskBlocks;
     using HstWbInstaller.Core;
     using HstWbInstaller.Core.Extensions;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
     using Microsoft.Extensions.Logging;
     using Models;
 

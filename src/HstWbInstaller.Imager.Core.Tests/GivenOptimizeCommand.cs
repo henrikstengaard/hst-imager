@@ -5,7 +5,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Commands;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
+    using Hst.Amiga.RigidDiskBlocks;
     using Microsoft.Extensions.Logging.Abstractions;
     using Models;
     using Xunit;

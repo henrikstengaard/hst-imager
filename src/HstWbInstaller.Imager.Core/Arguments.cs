@@ -12,7 +12,8 @@
             Convert,
             Verify,
             Blank,
-            Optimize
+            Optimize,
+            InitializeRdb
         }
 
         public CommandEnum Command { get; set; }

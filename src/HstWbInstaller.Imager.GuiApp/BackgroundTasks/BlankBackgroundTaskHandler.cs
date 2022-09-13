@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
     using Core.Commands;
+    using Core.Models;
     using Core.Models.BackgroundTasks;
     using Extensions;
     using Hubs;
@@ -40,7 +41,7 @@
 
                 var commandHelper = new CommandHelper();
                 var blankCommand = new BlankCommand(loggerFactory.CreateLogger<BlankCommand>(), commandHelper, blankBackgroundTask.Path,
-                    blankBackgroundTask.CompatibleSize ? Convert.ToInt64(blankBackgroundTask.Size * 0.95) : blankBackgroundTask.Size);
+                     new Size(blankBackgroundTask.Size, Unit.Bytes), blankBackgroundTask.CompatibleSize);
 
                 var result = await blankCommand.Execute(context.Token);
 

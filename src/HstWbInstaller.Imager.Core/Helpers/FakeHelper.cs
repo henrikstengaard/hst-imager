@@ -1,7 +1,7 @@
 ﻿namespace HstWbInstaller.Imager.Core.Helpers
 {
     using Commands;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
+    using Hst.Amiga.RigidDiskBlocks;
 
     public static class FakeHelper
     {

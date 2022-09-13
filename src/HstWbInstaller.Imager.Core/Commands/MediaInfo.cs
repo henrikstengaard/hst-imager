@@ -1,6 +1,6 @@
 ﻿namespace HstWbInstaller.Imager.Core.Commands
 {
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
+    using Hst.Amiga.RigidDiskBlocks;
     using Models;
 
     public class MediaInfo

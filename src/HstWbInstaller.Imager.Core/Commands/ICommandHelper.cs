@@ -3,8 +3,8 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Threading.Tasks;
+    using Hst.Amiga.RigidDiskBlocks;
     using HstWbInstaller.Core;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
     using Models;
 
     public interface ICommandHelper
