@@ -7,6 +7,7 @@
     using System.Threading.Tasks;
     using Commands;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Models;
     using Xunit;
 
     public class GivenWriteCommand : CommandTestBase
@@ -17,20 +18,18 @@
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new []{ destinationPath });
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - write source img to destination img
             var writeCommand =
-                new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(), sourcePath, destinationPath);
+                new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
+                    sourcePath, destinationPath, new Size());
             DataProcessedEventArgs dataProcessedEventArgs = null;
-            writeCommand.DataProcessed += (_, args) =>
-            {
-                dataProcessedEventArgs = args;
-            };
+            writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
-            
+
             Assert.NotNull(dataProcessedEventArgs);
             Assert.NotEqual(0, dataProcessedEventArgs.PercentComplete);
             Assert.NotEqual(0, dataProcessedEventArgs.BytesProcessed);
@@ -42,7 +41,7 @@
             var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
             Assert.Equal(sourceBytes, destinationBytes);
         }
-        
+
         [Fact]
         public async Task WhenWriteSourceToVhdDestinationThenReadDataIsIdentical()
         {
@@ -56,7 +55,8 @@
             var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
 
             // act - write source img to destination vhd
-            var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(), sourcePath, destinationPath, sourceBytes.Length);
+            var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(sourceBytes.Length, Unit.Bytes));
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

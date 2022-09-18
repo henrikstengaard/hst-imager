@@ -2,14 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Extensions;
     using HstWbInstaller.Core;
-    using HstWbInstaller.Core.Extensions;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class WriteCommand : CommandBase
     {
@@ -18,12 +17,12 @@
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string sourcePath;
         private readonly string destinationPath;
-        private readonly long? size;
+        private readonly Size size;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         
         public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, long? size = null)
+            string destinationPath, Size size)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -35,6 +34,8 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            OnProgressMessage($"Writing source path '{sourcePath}' to destination path '{destinationPath}'");
+            
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath, false);
             if (sourceMediaResult.IsFaulted)
@@ -44,24 +45,26 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            RigidDiskBlock rigidDiskBlock = null;
-            try
-            {
-                var firstBytes = await sourceStream.ReadBytes(512 * 2048);
-                rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+            // RigidDiskBlock rigidDiskBlock = null;
+            // try
+            // {
+            //     var firstBytes = await sourceStream.ReadBytes(512 * 2048);
+            //     rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
+            // }
+            // catch (Exception)
+            // {
+            //     // ignored
+            // }
 
             var sourceSize = sourceMedia.Size;
-            var writeSize = size is > 0 ? size.Value : rigidDiskBlock?.DiskSize ?? sourceSize;
+            //var writeSize = size is > 0 ? size.Value : sourceSize;
+            var writeSize = sourceSize.ResolveSize(size);
 
-            logger.LogDebug($"Size '{(size is > 0 ? size.Value : "N/A")}'");
-            logger.LogDebug($"Source size '{sourceSize}'");
-            logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
-            logger.LogDebug($"Write size '{writeSize}'");
+            logger.LogDebug($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
+            // logger.LogDebug($"Size '{(size is > 0 ? size.Value : "N/A")}'");
+            // logger.LogDebug($"Source size '{sourceSize}'");
+            //logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
+            logger.LogDebug($"Write size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
             
             var destinationMediaResult = commandHelper.GetWritableMedia(physicalDrivesList, destinationPath, writeSize);
             if (destinationMediaResult.IsFaulted)

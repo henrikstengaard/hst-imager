@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Extensions;
     using Hst.Amiga.RigidDiskBlocks;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
@@ -39,9 +40,9 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage($"Reading Rigid Disk Block");
+            OnProgressMessage("Reading Rigid Disk Block");
             
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
             if (rigidDiskBlock == null)
             {
@@ -60,7 +61,7 @@
             partitionBlocks.RemoveAt(partitionNumber - 1);
             rigidDiskBlock.PartitionBlocks = partitionBlocks;
             
-            OnProgressMessage($"Writing Rigid Disk Block");
+            OnProgressMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
             
             return new Result();

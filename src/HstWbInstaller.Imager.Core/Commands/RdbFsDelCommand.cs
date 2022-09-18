@@ -39,9 +39,9 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage($"Reading Rigid Disk Block");
+            OnProgressMessage("Reading Rigid Disk Block");
             
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
             if (rigidDiskBlock == null)
             {
@@ -60,7 +60,7 @@
             fileSystemHeaderBlocks.RemoveAt(fileSystemNumber - 1);
             rigidDiskBlock.FileSystemHeaderBlocks = fileSystemHeaderBlocks;
             
-            OnProgressMessage($"Writing Rigid Disk Block");
+            OnProgressMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
             
             return new Result();

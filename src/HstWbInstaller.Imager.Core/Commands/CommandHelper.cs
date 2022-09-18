@@ -9,6 +9,7 @@
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
     using Hst.Amiga.RigidDiskBlocks;
+    using Hst.Core.Extensions;
     using HstWbInstaller.Core;
     using Models;
 
@@ -132,33 +133,50 @@
 
         public virtual async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
         {
-            try
+            var rdbIndex = 0;
+            var blockSize = 512;
+            var rdbLocationLimit = 16;
+            RigidDiskBlock rigidDiskBlock = null;
+
+            // read rigid disk block from one of the first 15 blocks
+            do
             {
-                stream.Seek(0, SeekOrigin.Begin);
-            }
-            catch (Exception)
+                // calculate block offset
+                var blockOffset = blockSize * rdbIndex;
+
+                // seek block offset
+                stream.Seek(blockOffset, SeekOrigin.Begin);
+
+                // read block
+                var blockBytes = await stream.ReadBytes(blockSize);
+
+                if (blockBytes.Length < blockSize)
+                {
+                    return null;
+                }
+                
+                // continue, if identifier doesn't match
+                var identifier = BitConverter.ToUInt32(blockBytes, 0);
+                if (!identifier.Equals(BlockIdentifiers.RigidDiskBlock))
+                {
+                    rdbIndex++;
+                    continue;
+                }
+                
+                // read rigid disk block
+                rigidDiskBlock = await RigidDiskBlockReader.Parse(blockBytes);
+                break;
+            } while (rdbIndex < rdbLocationLimit);
+
+            // fail, if rigid disk block is null
+            if (rigidDiskBlock == null)
             {
                 return null;
             }
 
-            RigidDiskBlock rigidDiskBlock;
-            try
-            {
-                rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
-            }
-            catch (Exception)
-            {
-                rigidDiskBlock = null;
-            }
-
-            try
-            {
-                stream.Seek(0, SeekOrigin.Begin);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
+            rigidDiskBlock.FileSystemHeaderBlocks = await FileSystemHeaderBlockReader.Read(rigidDiskBlock, stream);
+            rigidDiskBlock.PartitionBlocks = await PartitionBlockReader.Read(rigidDiskBlock, stream);
+            rigidDiskBlock.BadBlocks = await BadBlockReader.Read(rigidDiskBlock, stream);
 
             return rigidDiskBlock;
         }

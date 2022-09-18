@@ -4,14 +4,18 @@
 
     public class Size
     {
-        public readonly long Value;
+        public readonly double Value;
         public readonly Unit Unit;
 
         public Size() : this(0, Unit.Bytes)
         {
         }
 
-        public Size(long value, Unit unit)
+        public Size(long value, Unit unit) : this((double)value, unit)
+        {
+        }
+        
+        public Size(double value, Unit unit)
         {
             if (unit == Unit.Percent && (value < 0 || value > 100))
             {

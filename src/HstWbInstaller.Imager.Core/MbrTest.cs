@@ -27,8 +27,9 @@
             using var imgStream = File.Create(path);
             //var disk = Disk.Initialize(imgStream, Ownership.None, size, new Geometry(cylinders, headsPerCylinder, sectorsPerTrack, sectorSize));
             var disk = Disk.Initialize(imgStream, Ownership.None, size);
-            BiosPartitionTable.Initialize(disk, WellKnownPartitionType.WindowsFat);
-
+            var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+            // biosPartitionTable.CreatePrimaryBySector()
+            
             // var bootSector = new byte[512];
             // imgStream.Position = 0;
             // imgStream.Read(bootSector, 0, bootSector.Length);

@@ -2,93 +2,137 @@
 {
     using System;
     using System.Linq;
+    using System.Text;
     using Amiga.RigidDiskBlocks;
     using HstWbInstaller.Imager.Core.Extensions;
 
     public static class RigidDiskBlockPresenter
     {
-        public static void Present(RigidDiskBlock rigidDiskBlock)
+        public static string Present(RigidDiskBlock rigidDiskBlock)
         {
             if (rigidDiskBlock == null)
             {
-                Console.WriteLine("No Rigid Disk Block present");
-                return;
+                return "No Rigid Disk Block present";
             }
 
-            Console.WriteLine("Rigid Disk Block:");
-            Console.WriteLine("-----------------");
-            Console.WriteLine($"Manufacturers name = {rigidDiskBlock.DiskVendor}");
-            Console.WriteLine($"Drive name = {rigidDiskBlock.DiskProduct}");
-            Console.WriteLine($"Drive revision = {rigidDiskBlock.DiskRevision}");
-            Console.WriteLine("");
-            Console.WriteLine($"Cylinders = {rigidDiskBlock.Cylinders}");
-            Console.WriteLine($"Heads = {rigidDiskBlock.Heads}");
-            Console.WriteLine(
-                $"Disk Size = {rigidDiskBlock.DiskSize.FormatBytes()} ({rigidDiskBlock.DiskSize} bytes)");
-            Console.WriteLine($"Blocks per track = {rigidDiskBlock.Sectors}");
-            Console.WriteLine($"Blocks per cylinder = {rigidDiskBlock.CylBlocks}");
-            Console.WriteLine($"Park head where cylinder = {rigidDiskBlock.ParkingZone}");
+            var outputBuilder = new StringBuilder();
+            
+            outputBuilder.AppendLine("Rigid Disk Block:");
+            var rigidDiskBlockTable = new Table
+            {
+                Columns = new[]
+                {
+                    new Column { Name = "Name" },
+                    new Column { Name = "Vendor" },
+                    new Column { Name = "Revision" },
+                    new Column { Name = "Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Cylinders", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Heads", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Sectors", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Block Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Rdb Block Lo", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Rdb Block Hi", Alignment = ColumnAlignment.Right }
+                },
+                Rows = new []{ new Row
+                    {
+                        Columns = new[]
+                        {
+                            rigidDiskBlock.DiskProduct,
+                            rigidDiskBlock.DiskVendor,
+                            rigidDiskBlock.DiskRevision,
+                            rigidDiskBlock.DiskSize.FormatBytes(),
+                            rigidDiskBlock.Cylinders.ToString(),
+                            rigidDiskBlock.Heads.ToString(),
+                            rigidDiskBlock.Sectors.ToString(),
+                            rigidDiskBlock.BlockSize.ToString(),
+                            rigidDiskBlock.RdbBlockLo.ToString(),
+                            rigidDiskBlock.RdbBlockHi.ToString()
+                        }
+                    }}
+                    .ToList()
+            };
 
+            outputBuilder.AppendLine();
+            outputBuilder.Append(TablePresenter.Present(rigidDiskBlockTable));
+            
+            // file systems
+
+            outputBuilder.AppendLine();
+            outputBuilder.AppendLine("File systems:");
             var fileSystemNumber = 0;
-            foreach (var fileSystemHeaderBlock in rigidDiskBlock.FileSystemHeaderBlocks)
+            var fileSystemTable = new Table
             {
-                Console.WriteLine("");
-                var fileSystemLabel = $"File system {++fileSystemNumber}:";
-                Console.WriteLine(fileSystemLabel);
-                Console.WriteLine(new string('-', fileSystemLabel.Length));
-                Console.WriteLine($"DOS Type = {fileSystemHeaderBlock.DosTypeHex} ({fileSystemHeaderBlock.DosTypeFormatted})");
-                Console.WriteLine($"Version = {fileSystemHeaderBlock.VersionFormatted}");
-                Console.WriteLine($"File system name = {fileSystemHeaderBlock.FileSystemName}");
+                Columns = new[]
+                {
+                    new Column { Name = "#" },
+                    new Column { Name = "DOS Type" },
+                    new Column { Name = "Version" },
+                    new Column { Name = "Name" },
+                    new Column { Name = "Size", Alignment = ColumnAlignment.Right }
+                },
+                Rows = rigidDiskBlock.FileSystemHeaderBlocks.Select(x => new Row
+                    {
+                        Columns = new[]
+                        {
+                            (++fileSystemNumber).ToString(),
+                            $"0x{x.DosType.FormatHex().ToUpper()}, {x.DosTypeFormatted}",
+                            x.VersionFormatted,
+                            x.FileSystemName ?? string.Empty,
+                            ((long)x.FileSystemSize).FormatBytes()
+                        }
+                    })
+                    .ToList()
+            };
 
-                long fileSystemSize = fileSystemHeaderBlock.LoadSegBlocks.Sum(x => x.Data.Length);
-                Console.WriteLine($"Size = {fileSystemSize.FormatBytes()} ({fileSystemSize} bytes)");
-            }
-
+            outputBuilder.AppendLine();
+            outputBuilder.Append(TablePresenter.Present(fileSystemTable));
+            
+            // partitions 
+            
+            outputBuilder.AppendLine();
+            outputBuilder.AppendLine("Partitions:");
+            
             var partitionNumber = 0;
-            foreach (var partitionBlock in rigidDiskBlock.PartitionBlocks)
+            var partitionTable = new Table
             {
-                Console.WriteLine("");
-                var partitionLabel = $"Partition {++partitionNumber}:"; 
-                Console.WriteLine(partitionLabel);
-                Console.WriteLine(new string('-', partitionLabel.Length));
-                Console.WriteLine($"Device name = {partitionBlock.DriveName}");
-                Console.WriteLine($"Start cylinders = {partitionBlock.LowCyl}");
-                Console.WriteLine($"End cylinders = {partitionBlock.HighCyl}");
-                Console.WriteLine($"Total cylinders = {partitionBlock.HighCyl - partitionBlock.LowCyl + 1}");
-                Console.WriteLine($"Buffers = {partitionBlock.NumBuffer}");
-                Console.WriteLine(
-                    $"File system block size = {partitionBlock.SizeBlock * 4 * partitionBlock.Sectors}");
-                Console.WriteLine(
-                    $"Reserved = {partitionBlock.Reserved} (DOS Blocks reserved at the beginning of partition)");
-                Console.WriteLine(
-                    $"PreAlloc = {partitionBlock.PreAlloc} (DOS Blocks reserved at the end of partition)");
-
-                var partitionFlags = (PartitionBlock.PartitionFlagsEnum)partitionBlock.Flags;
-
-                if (partitionFlags.HasFlag(PartitionBlock.PartitionFlagsEnum.Bootable))
+                Columns = new[]
                 {
-                    Console.WriteLine($"Bootable, Boot Priority = {partitionBlock.BootPriority}");
-                }
+                    new Column { Name = "#" },
+                    new Column { Name = "Name" },
+                    new Column { Name = "Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "LowCyl", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "HighCyl", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Reserved", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "PreAlloc", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Block Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Buffers", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "DOS Type", Alignment = ColumnAlignment.Left },
+                    new Column { Name = "Max Transfer", Alignment = ColumnAlignment.Left },
+                    new Column { Name = "Bootable", Alignment = ColumnAlignment.Left },
+                    new Column { Name = "Auto Mount", Alignment = ColumnAlignment.Left },
+                    new Column { Name = "Priority", Alignment = ColumnAlignment.Right }
+                },
+                Rows = rigidDiskBlock.PartitionBlocks.Select(x => new Row
+                    {
+                        Columns = new[]
+                        {
+                            (++partitionNumber).ToString(),
+                            x.DriveName, x.PartitionSize.FormatBytes(), x.LowCyl.ToString(), x.HighCyl.ToString(),
+                            x.Reserved.ToString(), x.PreAlloc.ToString(), x.FileSystemBlockSize.ToString(),
+                            x.NumBuffer.ToString(),
+                            $"0x{x.DosType.FormatHex().ToUpper()}, {x.DosTypeFormatted}",
+                            $"0x{x.MaxTransfer.FormatHex().ToUpper()}, {x.MaxTransfer}",
+                            x.Bootable ? "Yes" : "No", !x.NoMount ? "Yes" : "No",
+                            x.BootPriority.ToString()
+                        }
+                    })
+                    .ToList()
+            };
 
-                if (partitionFlags.HasFlag(PartitionBlock.PartitionFlagsEnum.NoMount))
-                {
-                    Console.WriteLine("No Automount");
-                }
+            outputBuilder.AppendLine();
+            outputBuilder.Append(TablePresenter.Present(partitionTable));
 
-                var dosTypeIdentifier = new byte[3];
-                Array.Copy(partitionBlock.DosType, 0, dosTypeIdentifier, 0, 3);
-                var dosTypeFormatted = string.Concat(
-                    System.Text.Encoding.GetEncoding("ISO-8859-1").GetString(dosTypeIdentifier),
-                    "\\", $"{partitionBlock.DosType[3]:d}");
-
-                Console.WriteLine($"Mask = 0x{partitionBlock.Mask.FormatHex()}");
-                Console.WriteLine(
-                    $"Max Transfer = 0x{partitionBlock.MaxTransfer.FormatHex()}, ({partitionBlock.MaxTransfer})");
-                Console.WriteLine(
-                    $"Dos Type = 0x{partitionBlock.DosType.FormatHex()}, ({dosTypeFormatted})");
-                Console.WriteLine(
-                    $"Partition Size = {partitionBlock.PartitionSize.FormatBytes()} ({partitionBlock.PartitionSize} bytes)");
-            }
+            return outputBuilder.ToString();
         }
     }
 }

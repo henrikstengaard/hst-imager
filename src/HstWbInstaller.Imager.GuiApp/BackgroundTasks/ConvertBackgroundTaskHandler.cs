@@ -1,15 +1,13 @@
 ﻿namespace HstWbInstaller.Imager.GuiApp.BackgroundTasks
 {
     using System;
-    using System.Linq;
     using System.Threading.Tasks;
-    using Core;
     using Core.Commands;
+    using Core.Models;
     using Core.Models.BackgroundTasks;
     using Extensions;
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
-    using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
 
     public class ConvertBackgroundTaskHandler : IBackgroundTaskHandler
@@ -36,7 +34,8 @@
             {
                 var commandHelper = new CommandHelper();
                 var convertCommand =
-                    new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper, convertBackgroundTask.SourcePath, convertBackgroundTask.DestinationPath);
+                    new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper, 
+                        convertBackgroundTask.SourcePath, convertBackgroundTask.DestinationPath, new Size());
                 convertCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubContext.SendProgress(new Progress

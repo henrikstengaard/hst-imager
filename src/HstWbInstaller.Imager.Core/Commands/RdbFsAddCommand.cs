@@ -40,7 +40,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for reading/writing Rigid Disk Block");
+            OnProgressMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -51,9 +51,9 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage($"Reading Rigid Disk Block from path '{path}'");
-            
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+            OnProgressMessage("Reading Rigid Disk Block");
+
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
             if (rigidDiskBlock == null)
             {
@@ -89,7 +89,7 @@
                 AddFileSystem(rigidDiskBlock, fileSystemHeaderBlock);
             }
             
-            OnProgressMessage($"Writing Rigid Disk Block to path '{path}'");
+            OnProgressMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
             return new Result();
@@ -107,18 +107,18 @@
             var identifier = BitConverter.ToUInt32(await stream.ReadBytes(4), 0);
             if (identifier.Equals(BlockIdentifiers.RigidDiskBlock))
             {
-                OnProgressMessage($"Read file systems from Rigid Disk Block");
+                OnProgressMessage("Read file systems from Rigid Disk Block");
                 return await ReadFileSystemsFromRigidDiskBlock(stream);
             }
 
             var dos1Identifier = BitConverter.ToUInt32(new byte[] { 0x44, 0x4f, 0x53, 0x1 });
             if (identifier.Equals(dos1Identifier))
             {
-                OnProgressMessage($"Read file systems from ADF");
+                OnProgressMessage("Read file systems from ADF");
                 return await ReadFileSystemsFromAdf(stream);
             }
 
-            OnProgressMessage($"Read file systems from file");
+            OnProgressMessage("Read file systems from file");
             
             var version = await VersionStringReader.Read(stream);
             if (string.IsNullOrWhiteSpace(version))
@@ -134,16 +134,20 @@
                 return new List<FileSystemHeaderBlock>();
             }
 
+            OnProgressMessage($"length '{stream.Length}'");
+            var fileSystemHeaderBlock = BlockHelper.CreateFileSystemHeaderBlock(DosTypeHelper.FormatDosType(dosType),
+                fileVersion.Version, fileVersion.Revision, fileSystemName, stream.ToArray());
+            fileSystemHeaderBlock.FileSystemName = Path.GetFileName(fileSystemPath);
+            
             return new[]
             {
-                BlockHelper.CreateFileSystemHeaderBlock(DosTypeHelper.FormatDosType(dosType),
-                    fileVersion.Version, fileVersion.Revision, fileSystemName, stream.ToArray())
+                fileSystemHeaderBlock
             };
         }
 
         private async Task<IEnumerable<FileSystemHeaderBlock>> ReadFileSystemsFromRigidDiskBlock(Stream stream)
         {
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
             
             var fileSystemHeaderBlocks = (await FileSystemHeaderBlockReader.Read(rigidDiskBlock, stream)).ToList();
             foreach (var fileSystemHeaderBlock in fileSystemHeaderBlocks)

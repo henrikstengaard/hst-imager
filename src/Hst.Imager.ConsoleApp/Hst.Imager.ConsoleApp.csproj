@@ -10,7 +10,16 @@
     </ItemGroup>
 
     <ItemGroup>
+        <AssemblyAttribute Include="Hst.Imager.ConsoleApp.BuildDateAttribute">
+            <_Parameter1>$([System.DateTime]::UtcNow.ToString("yyyyMMddHHmmss"))</_Parameter1>
+        </AssemblyAttribute>
+    </ItemGroup>
+    
+    <ItemGroup>
       <None Update="app.manifest">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="pfs3aio">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

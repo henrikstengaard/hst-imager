@@ -10,6 +10,7 @@ namespace HstWbInstaller.Imager.Core.Tests
     using System.Threading.Tasks;
     using Commands;
     using Microsoft.Extensions.Logging.Abstractions;
+    using Models;
 
     public class GivenReadCommand : CommandTestBase
     {
@@ -19,19 +20,17 @@ namespace HstWbInstaller.Imager.Core.Tests
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
-            
+
             // act - read source img to destination img
-            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(), sourcePath, destinationPath);
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size());
             DataProcessedEventArgs dataProcessedEventArgs = null;
-            readCommand.DataProcessed += (_, args) =>
-            {
-                dataProcessedEventArgs = args;
-            };
+            readCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
-            
+
             Assert.NotNull(dataProcessedEventArgs);
             Assert.NotEqual(0, dataProcessedEventArgs.PercentComplete);
             Assert.NotEqual(0, dataProcessedEventArgs.BytesProcessed);
@@ -51,11 +50,12 @@ namespace HstWbInstaller.Imager.Core.Tests
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination img
-            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(), sourcePath, destinationPath, size);
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes));
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -65,21 +65,22 @@ namespace HstWbInstaller.Imager.Core.Tests
             var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
             Assert.Equal(sourceBytes, destinationBytes);
         }
-        
+
         [Fact]
         public async Task WhenReadSourceToVhdDestinationThenReadDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath });
             var cancellationTokenSource = new CancellationTokenSource();
 
             // assert: destination path vhd doesn't exist
             Assert.False(File.Exists(destinationPath));
-            
+
             // act: read source img to destination vhd
-            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper, Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath);
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size());
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -87,17 +88,18 @@ namespace HstWbInstaller.Imager.Core.Tests
             var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, destinationPath, FakeCommandHelper.ImageSize);
+            var destinationBytes =
+                await ReadMediaBytes(fakeCommandHelper, destinationPath, FakeCommandHelper.ImageSize);
             var destinationPathSize = new FileInfo(destinationPath).Length;
 
             // assert length is not the same (vhd file format different than img) and bytes are the same
             Assert.NotEqual(sourceBytes.Length, destinationPathSize);
             Assert.Equal(sourceBytes, destinationBytes);
-            
+
             // delete destination path vhd
             File.Delete(destinationPath);
         }
-        
+
         [Fact]
         public async Task WhenReadSourceToVhdDestinationWithSizeThenReadDataIsIdentical()
         {
@@ -105,11 +107,12 @@ namespace HstWbInstaller.Imager.Core.Tests
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
-            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper, Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, size);
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes));
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -124,7 +127,7 @@ namespace HstWbInstaller.Imager.Core.Tests
             // assert length is not the same (vhd file format different than img) and bytes are the same
             Assert.NotEqual(sourceBytes.Length, destinationPathSize);
             Assert.Equal(sourceBytes, destinationBytes);
-            
+
             // delete destination path vhd
             File.Delete(destinationPath);
         }

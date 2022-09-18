@@ -26,7 +26,7 @@
             Assert.True(result.IsSuccess);
 
             // assert data is zero filled
-            var sourceBytes = new byte[size.Value];
+            var sourceBytes = new byte[Convert.ToInt64(size.Value)];
             var destinationBytes = fakeCommandHelper.GetMedia(path).GetBytes();
             Assert.Equal(sourceBytes, destinationBytes);
         }
@@ -46,14 +46,14 @@
             Assert.True(result.IsSuccess);
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, path, size.Value);
+            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, path, Convert.ToInt64(size.Value));
             var destinationPathSize = new FileInfo(path).Length;
 
             // assert vhd is less than size
             Assert.True(destinationPathSize < size.Value);
 
             // assert data is zero filled
-            var sourceBytes = new byte[size.Value];
+            var sourceBytes = new byte[Convert.ToInt64(size.Value)];
             Assert.Equal(sourceBytes, destinationBytes);
 
             // delete vhd file

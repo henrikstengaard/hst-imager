@@ -7,6 +7,7 @@
     using Core;
     using Core.Commands;
     using Core.Helpers;
+    using Core.Models;
     using Core.Models.BackgroundTasks;
     using Extensions;
     using Microsoft.AspNetCore.SignalR.Client;
@@ -42,7 +43,7 @@
                 var commandHelper = new CommandHelper();
                 var writeCommand =
                     new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives, writeBackgroundTask.SourcePath,
-                        writeBackgroundTask.DestinationPath);
+                        writeBackgroundTask.DestinationPath, new Size());
                 writeCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

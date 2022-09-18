@@ -4,6 +4,7 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Extensions;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
     using Models;
@@ -28,11 +29,9 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            logger.LogDebug($"Path '{path}', size '{size}'");
-
             if (size.Unit != Unit.Bytes)
             {
-                return new Result(new Error("Size unit must be in bytes"));
+                return new Result(new Error("Size must be in bytes"));
             }
             
             if (File.Exists(path))
@@ -40,7 +39,13 @@
                 File.Delete(path);
             }
 
-            var mediaSize = compatibleSize ? Convert.ToInt64(size.Value * 0.95) : size.Value;
+            var mediaSize = Convert.ToInt64(compatibleSize ? size.Value * 0.95 : size.Value);
+
+            OnProgressMessage($"Creating blank image '{path}'");
+            OnProgressMessage($"Size '{mediaSize.FormatBytes()}' ({mediaSize} bytes)");
+            OnProgressMessage($"Compatible '{compatibleSize}'");
+            
+            OnProgressMessage($"Opening '{path}' for read/write");
             
             var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false);
             if (mediaResult.IsFaulted)

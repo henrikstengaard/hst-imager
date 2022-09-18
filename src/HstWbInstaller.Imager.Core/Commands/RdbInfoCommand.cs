@@ -9,12 +9,12 @@
 
     public class RdbInfoCommand : CommandBase
     {
-        private readonly ILogger<RdbInitCommand> logger;
+        private readonly ILogger<RdbInfoCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
 
-        public RdbInfoCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
+        public RdbInfoCommand(ILogger<RdbInfoCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path)
         {
             this.logger = logger;
@@ -27,7 +27,9 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
+            OnProgressMessage($"Opening '{path}' for read");
+
+            var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);
@@ -36,13 +38,13 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            logger.LogDebug($"Reading Rigid Disk Block from path '{path}'");
+            OnProgressMessage($"Reading Rigid Disk Block from path '{path}'");
             
-            var rigidDiskBlock = await Hst.Amiga.RigidDiskBlocks.RigidDiskBlockReader.Read(stream);
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
             if (rigidDiskBlock == null)
             {
-                return new Result(new Error("RDB not found"));
+                return new Result(new Error("Rigid Disk Block not found"));
             }
 
             OnRdbInfoRead(new RdbInfo

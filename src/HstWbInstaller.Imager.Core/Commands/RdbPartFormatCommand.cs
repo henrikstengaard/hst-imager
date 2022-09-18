@@ -1,12 +1,11 @@
 ﻿namespace HstWbInstaller.Imager.Core.Commands
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Amiga.FileSystems.FastFileSystem;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Hst.Amiga.FileSystems.Pfs3;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
 
@@ -43,18 +42,18 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage($"Reading Rigid Disk Block from path '{path}'");
+            OnProgressMessage("Reading Rigid Disk Block");
 
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
             if (rigidDiskBlock == null)
             {
-                return new Result(new Error("RDB not found"));
+                return new Result(new Error("Rigid Disk Block not found"));
             }
             
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnProgressMessage($"Formatting partition number '{partitionNumber}'");
+            OnProgressMessage($"Formatting partition number '{partitionNumber}' with volume name '{name}'");
             
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -63,13 +62,19 @@
 
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
+            OnProgressMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
+            
             switch (partitionBlock.DosTypeFormatted)
             {
                 case "DOS\\3":
                     await FastFileSystemFormatter.FormatPartition(stream, partitionBlock, name);
                     break;
+                case "PDS\\3":
+                case "PFS\\3":
+                    await Pfs3Formatter.FormatPartition(stream, partitionBlock, name);
+                    break;
                 default:
-                    throw new IOException($"Unsupported file system '{partitionBlock.DosTypeFormatted}'");
+                    return new Result(new Error($"Unsupported file system '{partitionBlock.DosTypeFormatted}'"));
             }
 
             return new Result();

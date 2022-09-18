@@ -5,10 +5,12 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Extensions;
     using Hst.Amiga.RigidDiskBlocks;
     using HstWbInstaller.Core;
     using HstWbInstaller.Core.Extensions;
     using Microsoft.Extensions.Logging;
+    using Size = Models.Size;
 
     public class ConvertCommand : CommandBase
     {
@@ -16,13 +18,13 @@
         private readonly ICommandHelper commandHelper;
         private readonly string sourcePath;
         private readonly string destinationPath;
-        private readonly long? size;
+        private readonly Size size;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
         public ConvertCommand(ILogger<ConvertCommand> logger, ICommandHelper commandHelper,
             string sourcePath,
-            string destinationPath, long? size = null)
+            string destinationPath, Size size)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -33,6 +35,8 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            OnProgressMessage($"Converting source path '{sourcePath}' to destination path '{destinationPath}'");
+            
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), sourcePath, false);
             if (sourceMediaResult.IsFaulted)
@@ -54,13 +58,11 @@
                 // ignored
             }
 
-            var sourceSize = sourceMedia.Size;
-            var convertSize = size is > 0 ? size.Value : rigidDiskBlock?.DiskSize ?? sourceSize;
-
-            logger.LogDebug($"Size '{(size is > 0 ? size.Value : "N/A")}'");
-            logger.LogDebug($"Source size '{sourceSize}'");
-            logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
-            logger.LogDebug($"Convert size '{convertSize}'");
+            var convertSize = Convert
+                .ToInt64(size.Value == 0 ? rigidDiskBlock?.DiskSize ?? sourceStream.Length : size.Value)
+                .ResolveSize(size);
+            
+            OnProgressMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), destinationPath, convertSize, false);
