@@ -9,19 +9,22 @@
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class ImageFileInfoBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ResultHub> resultHubContext;
         private readonly IHubContext<ErrorHub> errorHubContext;
+        private readonly AppState appState;
 
         public ImageFileInfoBackgroundTaskHandler(ILoggerFactory loggerFactory, IHubContext<ResultHub> resultHubContext,
-            IHubContext<ErrorHub> errorHubContext)
+            IHubContext<ErrorHub> errorHubContext, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.resultHubContext = resultHubContext;
             this.errorHubContext = errorHubContext;
+            this.appState = appState;
         }
 
         public async ValueTask Handle(IBackgroundTaskContext context)
@@ -31,7 +34,7 @@
                 return;
             }
 
-            var commandHelper = new CommandHelper();
+            var commandHelper = new CommandHelper(appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
             var infoCommand = new InfoCommand(logger, commandHelper, Enumerable.Empty<IPhysicalDrive>(),
                 infoBackgroundTask.Path);

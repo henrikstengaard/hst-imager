@@ -7,6 +7,7 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Models.Requests;
     using Services;
 
@@ -17,13 +18,15 @@
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly IBackgroundTaskQueue backgroundTaskQueue;
+        private readonly AppState appState;
 
         public ConvertController(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
-            IBackgroundTaskQueue backgroundTaskQueue)
+            IBackgroundTaskQueue backgroundTaskQueue, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
             this.backgroundTaskQueue = backgroundTaskQueue;
+            this.appState = appState;
         }
         
         [HttpPost]
@@ -40,7 +43,7 @@
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath
             };
-            var handler = new ConvertBackgroundTaskHandler(loggerFactory, progressHubContext);
+            var handler = new ConvertBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
             await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
             
             return Ok();

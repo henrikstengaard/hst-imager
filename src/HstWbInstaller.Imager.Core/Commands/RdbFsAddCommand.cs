@@ -15,6 +15,7 @@
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
     using BlockHelper = Hst.Amiga.RigidDiskBlocks.BlockHelper;
+    using Constants = Hst.Amiga.FileSystems.FastFileSystem.Constants;
 
     public class RdbFsAddCommand : CommandBase
     {
@@ -40,6 +41,11 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            if (!string.IsNullOrWhiteSpace(dosType) && dosType.Length != 4)
+            {
+                return new Result(new Error("DOS type must be 4 characters"));
+            }
+
             OnProgressMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
@@ -57,7 +63,7 @@
 
             if (rigidDiskBlock == null)
             {
-                return new Result(new Error("RDB not found"));
+                return new Result(new Error("Rigid Disk Block not found"));
             }
 
             OnProgressMessage($"Opening path '{fileSystemPath}' for reading file system");

@@ -9,18 +9,21 @@
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class ConvertBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
+        private readonly AppState appState;
 
         public ConvertBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            IHubContext<ProgressHub> progressHubContext)
+            IHubContext<ProgressHub> progressHubContext, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
+            this.appState = appState;
         }
 
         public async ValueTask Handle(IBackgroundTaskContext context)
@@ -32,7 +35,7 @@
 
             try
             {
-                var commandHelper = new CommandHelper();
+                var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var convertCommand =
                     new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper, 
                         convertBackgroundTask.SourcePath, convertBackgroundTask.DestinationPath, new Size());

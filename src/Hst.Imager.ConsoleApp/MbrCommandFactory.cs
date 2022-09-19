@@ -32,7 +32,7 @@
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to image file.");
+                description: "Path to physical drive or image file.");
 
             var mbrInitCommand = new Command("initialize", "Initialize disk with empty Master Boot Record.");
             mbrInitCommand.AddAlias("init");
@@ -57,7 +57,7 @@
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to image file.");
+                description: "Path to physical drive or image file.");
 
             var typeArgument = new Argument<string>(
                 name: "Type",
@@ -112,7 +112,7 @@
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to image file.");
+                description: "Path to physical drive or image file.");
 
             var partitionNumberArgument = new Argument<int>(
                 name: "PartitionNumber",

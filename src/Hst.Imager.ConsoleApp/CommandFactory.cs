@@ -23,6 +23,7 @@
             rootCommand.AddGlobalOption(LogFileOption);
             rootCommand.AddGlobalOption(VerboseOption);
             rootCommand.AddCommand(CreateScriptCommand());
+            rootCommand.AddCommand(CreateInfoCommand());
             rootCommand.AddCommand(CreateListCommand());
             rootCommand.AddCommand(CreateConvertCommand());
             rootCommand.AddCommand(CreateReadCommand());
@@ -37,7 +38,7 @@
         public static Command CreateScriptCommand()
         {
             var pathArgument = new Argument<string>(
-                name: "path",
+                name: "Path",
                 description: "Path to script file.");
 
             var scriptCommand = new Command("script", "Run script.");
@@ -47,6 +48,19 @@
             return scriptCommand;
         }
 
+        public static Command CreateInfoCommand()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+            
+            var command = new Command("info", "Show info about physical drive or image file.");
+            command.AddArgument(pathArgument);
+            command.SetHandler(CommandHandler.Info, pathArgument);
+
+            return command;
+        }
+        
         public static Command CreateListCommand()
         {
             var listCommand = new Command("list", "List physical drives.");

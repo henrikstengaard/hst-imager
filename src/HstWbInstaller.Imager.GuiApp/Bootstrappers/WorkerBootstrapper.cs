@@ -14,6 +14,7 @@
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Serilog;
     using Serilog.Events;
     using Services;
@@ -116,6 +117,10 @@
             var activeBackgroundTaskList = new ActiveBackgroundTaskList();
             var queuedHostedService = new QueuedHostedService(backgroundTaskQueue, activeBackgroundTaskList,
                 loggerFactory.CreateLogger<QueuedHostedService>());
+            var appState = new AppState
+            {
+                IsAdministrator = true
+            };
 
             var backgroundTaskHandler = new BackgroundTaskHandler(
                 loggerFactory.CreateLogger<BackgroundTaskHandler>(),
@@ -125,7 +130,8 @@
                 resultHubConnection,
                 physicalDriveManagerFactory.Create(),
                 activeBackgroundTaskList,
-                backgroundTaskQueue);
+                backgroundTaskQueue,
+                appState);
 
             await queuedHostedService.StartAsync(CancellationToken.None);
 

@@ -7,6 +7,7 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Models.Requests;
     using Services;
 
@@ -19,16 +20,18 @@
         private readonly IHubContext<ErrorHub> errorHubContext;
         private readonly IBackgroundTaskQueue backgroundTaskQueue;
         private readonly WorkerService workerService;
+        private readonly AppState appState;
 
         public InfoController(ILoggerFactory loggerFactory, IHubContext<ResultHub> resultHubContext,
             IHubContext<ErrorHub> errorHubContext, IBackgroundTaskQueue backgroundTaskQueue,
-            WorkerService workerService)
+            WorkerService workerService, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.resultHubContext = resultHubContext;
             this.errorHubContext = errorHubContext;
             this.backgroundTaskQueue = backgroundTaskQueue;
             this.workerService = workerService;
+            this.appState = appState;
         }
 
         [HttpPost]
@@ -45,7 +48,7 @@
                 {
                     Path = request.Path
                 };
-                var handler = new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext);
+                var handler = new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext, appState);
                 await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
 
                 return Ok();

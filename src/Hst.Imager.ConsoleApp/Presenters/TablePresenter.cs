@@ -42,9 +42,10 @@
             {
                 var columnLength = columnLengths[i];
                 var alignment = i >= columns.Count ? ColumnAlignment.Left : columnAlignments[i];
+                var column = i >= columns.Count ? string.Empty : columns[i];
                 rowParts.Add(alignment == ColumnAlignment.Left
-                    ? columns[i].PadRight(columnLength)
-                    : columns[i].PadLeft(columnLength));
+                    ? column.PadRight(columnLength)
+                    : column.PadLeft(columnLength));
 
                 if (i < columnLengths.Count - 1)
                 {

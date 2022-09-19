@@ -2,12 +2,12 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using DiscUtils;
     using DiscUtils.Partitions;
+    using DiscUtils.Raw;
+    using DiscUtils.Streams;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
 
@@ -29,25 +29,21 @@
 
         public event EventHandler<MbrInfoReadEventArgs> MbrInfoRead;
         
-        public override Task<Result> Execute(CancellationToken token)
+        public override async Task<Result> Execute(CancellationToken token)
         {
-            var physicalDrive =
-                physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            
-            if (physicalDrive != null)
-            {
-                return Task.FromResult(new Result(new Error("MBR does not support physical drives")));
-            }
-            
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnProgressMessage($"Opening '{path}' for read");
 
-            if (!File.Exists(path))
+            var physicalDrivesList = physicalDrives.ToList();
+            var mediaResult = commandHelper.GetReadableMedia(physicalDrivesList, path);
+            if (mediaResult.IsFaulted)
             {
-                return Task.FromResult(new Result(new Error($"Image file '{path}' not found")));
+                return new Result(mediaResult.Error);
             }
+            using var media = mediaResult.Value;
+            await using var stream = media.Stream;
             
-            using var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
-
+            using var disk = new Disk(stream, Ownership.None);
+            
             OnProgressMessage("Reading Master Boot Record");
 
             BiosPartitionTable biosPartitionTable;
@@ -57,7 +53,7 @@
             }
             catch (Exception)
             {
-                return Task.FromResult(new Result(new Error("Master Boot Record not found")));
+                return new Result(new Error("Master Boot Record not found"));
             }
             
             OnMbrInfoRead(new MbrInfo
@@ -68,11 +64,14 @@
                 BlockSize = disk.BlockSize,
                 Partitions = biosPartitionTable.Partitions.Select(x => CreateMbrPartition(x, disk.BlockSize)).ToList()
             });
-            
-            return Task.FromResult(new Result());
+
+            await disk.Content.DisposeAsync();
+            disk.Dispose();
+
+            return new Result();
         }
 
-        private MbrPartition CreateMbrPartition(PartitionInfo partition, int blockSize)
+        private MbrPartition CreateMbrPartition(DiscUtils.Partitions.PartitionInfo partition, int blockSize)
         {
             var partitionSize = (partition.LastSector - partition.FirstSector) * blockSize;
             return new MbrPartition

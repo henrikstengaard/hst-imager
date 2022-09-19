@@ -14,7 +14,7 @@
 
     public class RdbPartAddCommand : CommandBase
     {
-        private readonly ILogger<RdbInitCommand> logger;
+        private readonly ILogger<RdbPartAddCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
@@ -30,7 +30,7 @@
         private readonly int priority;
         private readonly int blockSize;
 
-        public RdbPartAddCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
+        public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
             int reserved, int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int blockSize)
         {
@@ -44,7 +44,7 @@
             this.preAlloc = preAlloc;
             this.buffers = buffers;
             this.maxTransfer = maxTransfer;
-            this.dosType = dosType.ToUpper();
+            this.dosType = dosType;
             this.noMount = noMount;
             this.bootable = bootable;
             this.priority = priority;
@@ -83,7 +83,7 @@
                 return new Result(new Error("Rigid Disk Block not found"));
             }
 
-            var dosTypeBytes = DosTypeHelper.FormatDosType(dosType);
+            var dosTypeBytes = DosTypeHelper.FormatDosType(dosType.ToUpper());
 
             var fileSystemHeaderBlock =
                 rigidDiskBlock.FileSystemHeaderBlocks.FirstOrDefault(x => x.DosType.SequenceEqual(dosTypeBytes));
@@ -94,7 +94,7 @@
             }
 
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
-            var nameBytes = AmigaTextHelper.GetBytes(name);
+            var nameBytes = AmigaTextHelper.GetBytes(name.ToUpper());
             if (partitionBlocks.Any(x => AmigaTextHelper.GetBytes(x.DriveName).SequenceEqual(nameBytes)))
             {
                 return new Result(new Error($"Partition name '{name}' already exists"));

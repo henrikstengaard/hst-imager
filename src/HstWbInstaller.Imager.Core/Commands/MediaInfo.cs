@@ -11,5 +11,6 @@
         public Media.MediaType Type;        
         public long DiskSize { get; set; }
         public RigidDiskBlock RigidDiskBlock { get; set; }
+        public DiskInfo DiskInfo { get; set; }
     }
 }

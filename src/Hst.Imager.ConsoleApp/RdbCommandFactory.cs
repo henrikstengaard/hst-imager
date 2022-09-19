@@ -79,8 +79,8 @@
                 name: "FileSystemPath",
                 description: "Path to file system to add.");
 
-            var dosTypeArgument = new Option<string>(
-                new[] { "--dos-type", "-d" },
+            var dosTypeArgument = new Argument<string>(
+                name: "DosType",
                 description: "Dos Type for file system (eg. DOS3, PDS3).");
 
             var fileSystemNameOption = new Option<string>(
@@ -92,7 +92,7 @@
                 fileSystemNameOption);
             rdbFsAddCommand.AddArgument(pathArgument);
             rdbFsAddCommand.AddArgument(fileSystemPathArgument);
-            rdbFsAddCommand.AddOption(dosTypeArgument);
+            rdbFsAddCommand.AddArgument(dosTypeArgument);
             rdbFsAddCommand.AddOption(fileSystemNameOption);
 
             return rdbFsAddCommand;
@@ -122,6 +122,7 @@
             var rdbPartCommand = new Command("part", "Partition.");
 
             rdbPartCommand.AddCommand(CreateRdbPartAdd());
+            rdbPartCommand.AddCommand(CreateRdbPartUpdate());
             rdbPartCommand.AddCommand(CreateRdbPartDel());
             rdbPartCommand.AddCommand(CreateRdbPartFormat());
 
@@ -205,7 +206,7 @@
                 await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer,
                     noMount, bootable, priority, blockSize);
             });
-            
+
             rdbPartAddCommand.AddArgument(pathArgument);
             rdbPartAddCommand.AddArgument(nameArgument);
             rdbPartAddCommand.AddArgument(dosTypeArgument);
@@ -220,6 +221,99 @@
             rdbPartAddCommand.AddOption(blockSizeOption);
 
             return rdbPartAddCommand;
+        }
+
+        private static Command CreateRdbPartUpdate()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var partitionNumberArgument = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to delete.");
+
+            var dosTypeOption = new Option<string>(
+                new[] { "--dos-type", "-dt" },
+                description: "DOS type for the partition to use (eg. DOS3, PFS3).");
+
+            var nameOption = new Option<string>(
+                new[] { "--name", "-n" },
+                description: "Name of the partition (eg. DH0).");
+
+            var reservedOption = new Option<int?>(
+                new[] { "--reserved", "-r" },
+                description: "Reserved blocks at start of partition.");
+
+            var preAllocOption = new Option<int?>(
+                new[] { "--pre-alloc", "-pa" },
+                description: "Reserved blocks at end of partition");
+
+            var buffersOption = new Option<int?>(
+                new[] { "--buffers", "-bu" },
+                description: "Buffers");
+
+            var maxTransferOption = new Option<uint?>(
+                new[] { "--max-transfer", "-mt" },
+                description: "Max transfer");
+
+            var maskOption = new Option<uint?>(
+                new[] { "--mask", "-ma" },
+                description: "Mask");
+
+            var noMountOption = new Option<BoolType?>(
+                new[] { "--no-mount", "-nm" },
+                description: "Set no mount for partition (partition is not mounted on boot).");
+
+            var bootableOption = new Option<BoolType?>(
+                new[] { "--bootable", "-b" },
+                description: "Set bootable for partition.");
+
+            var priorityOption = new Option<int?>(
+                new[] { "--boot-priority", "-bp" },
+                description: "Set boot priority (controls order of partitions to boot, lowest is booted first).");
+
+            var blockSizeOption = new Option<int?>(
+                new[] { "--block-size", "-bs" },
+                description: "Block size for the partition.");
+
+            var command = new Command("update", "Update partition.");
+            command.SetHandler(async context =>
+            {
+                var path = context.ParseResult.GetValueForArgument(pathArgument);
+                var partitionNumber = context.ParseResult.GetValueForArgument(partitionNumberArgument);
+                var name = context.ParseResult.GetValueForOption(nameOption);
+                var dosType = context.ParseResult.GetValueForOption(dosTypeOption);
+                var reserved = context.ParseResult.GetValueForOption(reservedOption);
+                var preAlloc = context.ParseResult.GetValueForOption(preAllocOption);
+                var buffers = context.ParseResult.GetValueForOption(buffersOption);
+                var maxTransfer = context.ParseResult.GetValueForOption(maxTransferOption);
+                var mask = context.ParseResult.GetValueForOption(maskOption);
+                var noMount = context.ParseResult.GetValueForOption(noMountOption);
+                var bootable = context.ParseResult.GetValueForOption(bootableOption);
+                var priority = context.ParseResult.GetValueForOption(priorityOption);
+                var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
+
+                await CommandHandler.RdbPartUpdate(path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
+                    maxTransfer,
+                    mask, noMount.HasValue ? noMount.Value == BoolType.True : null,
+                    bootable.HasValue ? bootable.Value == BoolType.True : null, priority, blockSize);
+            });
+
+            command.AddArgument(pathArgument);
+            command.AddArgument(partitionNumberArgument);
+            command.AddOption(nameOption);
+            command.AddOption(dosTypeOption);
+            command.AddOption(reservedOption);
+            command.AddOption(preAllocOption);
+            command.AddOption(buffersOption);
+            command.AddOption(maxTransferOption);
+            command.AddOption(noMountOption);
+            command.AddOption(bootableOption);
+            command.AddOption(priorityOption);
+            command.AddOption(blockSizeOption);
+
+            return command;
         }
 
         private static Command CreateRdbPartDel()

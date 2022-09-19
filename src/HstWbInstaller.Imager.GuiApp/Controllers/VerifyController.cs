@@ -7,6 +7,7 @@
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Models.Requests;
     using Services;
 
@@ -18,14 +19,16 @@
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly IBackgroundTaskQueue backgroundTaskQueue;
         private readonly WorkerService workerService;
+        private readonly AppState appState;
 
         public VerifyController(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
-            IBackgroundTaskQueue backgroundTaskQueue, WorkerService workerService)
+            IBackgroundTaskQueue backgroundTaskQueue, WorkerService workerService, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
             this.backgroundTaskQueue = backgroundTaskQueue;
             this.workerService = workerService;
+            this.appState = appState;
         }
 
         [HttpPost]
@@ -45,7 +48,7 @@
                     DestinationPath = request.DestinationPath
                 };
                 var handler =
-                    new ImageFileVerifyBackgroundTaskHandler(loggerFactory, progressHubContext);
+                    new ImageFileVerifyBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
                 await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
 
                 return Ok();

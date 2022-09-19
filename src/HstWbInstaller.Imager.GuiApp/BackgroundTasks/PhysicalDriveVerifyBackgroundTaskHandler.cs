@@ -8,20 +8,23 @@
     using Extensions;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class PhysicalDriveVerifyBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
+        private readonly AppState appState;
 
         public PhysicalDriveVerifyBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            HubConnection progressHubConnection, IPhysicalDriveManager physicalDriveManager)
+            HubConnection progressHubConnection, IPhysicalDriveManager physicalDriveManager, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubConnection = progressHubConnection;
             this.physicalDriveManager = physicalDriveManager;
+            this.appState = appState;
         }
 
         public async ValueTask Handle(IBackgroundTaskContext context)
@@ -35,7 +38,7 @@
             {
                 var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
 
-                var commandHelper = new CommandHelper();
+                var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var verifyCommand =
                     new VerifyCommand(loggerFactory.CreateLogger<VerifyCommand>(), commandHelper, physicalDrives,
                         verifyBackgroundTask.SourcePath,

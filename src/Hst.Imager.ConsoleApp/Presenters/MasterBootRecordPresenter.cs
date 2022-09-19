@@ -17,6 +17,8 @@
             
             var outputBuilder = new StringBuilder();
             
+            outputBuilder.AppendLine($"Master Boot Record info read from '{mbrInfo.Path}':");
+            outputBuilder.AppendLine();
             outputBuilder.AppendLine("Master Boot Record:");
             var masterBootRecordTable = new Table
             {

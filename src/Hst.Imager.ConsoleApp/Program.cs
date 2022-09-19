@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.ConsoleApp
 {
-    using System;
     using System.CommandLine.Builder;
     using System.CommandLine.Parsing;
     using System.Globalization;
@@ -62,7 +61,7 @@
                 Log.Logger.Information($"[CMD] {string.Join(" ", args)}");
                 
                 await next(context);
-            }).Build();
+            }).UseDefaults().Build();
 
             return await parser.InvokeAsync(args);
         }

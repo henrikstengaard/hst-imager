@@ -9,18 +9,21 @@
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class BlankBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
+        private readonly AppState appState;
 
         public BlankBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            IHubContext<ProgressHub> progressHubContext)
+            IHubContext<ProgressHub> progressHubContext, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
+            this.appState = appState;
         }
 
         public async ValueTask Handle(IBackgroundTaskContext context)
@@ -39,7 +42,7 @@
                     PercentComplete = 50,
                 }, context.Token);
 
-                var commandHelper = new CommandHelper();
+                var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var blankCommand = new BlankCommand(loggerFactory.CreateLogger<BlankCommand>(), commandHelper, blankBackgroundTask.Path,
                      new Size(blankBackgroundTask.Size, Unit.Bytes), blankBackgroundTask.CompatibleSize);
 

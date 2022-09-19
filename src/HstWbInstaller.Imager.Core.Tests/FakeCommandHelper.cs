@@ -20,7 +20,7 @@
         public const int RigidDiskBlockSize = 16 * 1024;
 
         public FakeCommandHelper(IEnumerable<string> readableMediaPaths = null,
-            IEnumerable<string> writeableMediaPaths = null, RigidDiskBlock rigidDiskBlock = null)
+            IEnumerable<string> writeableMediaPaths = null, RigidDiskBlock rigidDiskBlock = null) : base(true)
         {
             ReadableMedias = new List<Media>();
             foreach (var readableMediaPath in readableMediaPaths ?? Enumerable.Empty<string>())

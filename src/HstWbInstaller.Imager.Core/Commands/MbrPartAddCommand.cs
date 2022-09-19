@@ -8,6 +8,8 @@
     using System.Threading.Tasks;
     using DiscUtils;
     using DiscUtils.Partitions;
+    using DiscUtils.Raw;
+    using DiscUtils.Streams;
     using Extensions;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
@@ -40,25 +42,36 @@
             this.active = active;
         }
 
-        public override Task<Result> Execute(CancellationToken token)
+        public override async Task<Result> Execute(CancellationToken token)
         {
-            var physicalDrive =
-                physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            
-            if (physicalDrive != null)
+            OnProgressMessage($"Opening '{path}' for read/write");
+
+            var physicalDrivesList = physicalDrives.ToList();
+            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            if (mediaResult.IsFaulted)
             {
-                return Task.FromResult(new Result(new Error("MBR does not support physical drives")));
+                return new Result(mediaResult.Error);
             }
+            using var media = mediaResult.Value;
+            await using var stream = media.Stream;
             
-            using var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
+            using var disk = new Disk(stream, Ownership.None);
 
             var diskSize = disk.Geometry.Capacity;
             var partitionSize = diskSize.ResolveSize(size);
             var partitionSectors = partitionSize / 512;
             
-            logger.LogDebug("Reading Master Boot Record");
+            OnProgressMessage("Reading Master Boot Record");
             
-            var biosPartitionTable = new BiosPartitionTable(disk);
+            BiosPartitionTable biosPartitionTable;
+            try
+            {
+                biosPartitionTable = new BiosPartitionTable(disk);
+            }
+            catch (Exception)
+            {
+                return new Result(new Error("Master Boot Record not found"));
+            }
             
             var start = startSector ?? 1;
             var end = start + partitionSectors - 1;
@@ -70,26 +83,26 @@
                 partitionSize = partitionSectors * 512;
             }
             
-            logger.LogDebug($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
-            logger.LogDebug($"Type '{type.ToUpper()}'");
+            OnProgressMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
+            OnProgressMessage($"Type '{type.ToUpper()}'");
 
             var biosPartitionTypeResult = GetBiosPartitionType();
             if (biosPartitionTypeResult.IsFaulted)
             {
-                return Task.FromResult(new Result(biosPartitionTypeResult.Error));
+                return new Result(biosPartitionTypeResult.Error);
             }
             
-            logger.LogDebug($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
-            logger.LogDebug($"Start sector '{start}'");
-            logger.LogDebug($"End sector '{end}'");
-            logger.LogDebug($"Active '{active}'");
+            OnProgressMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
+            OnProgressMessage($"Start sector '{start}'");
+            OnProgressMessage($"End sector '{end}'");
+            OnProgressMessage($"Active '{active}'");
 
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);
 
-            disk.Content.Dispose();
+            await disk.Content.DisposeAsync();
             disk.Dispose();
             
-            return Task.FromResult(new Result());
+            return new Result();
         }
 
         private Result<byte> GetBiosPartitionType()

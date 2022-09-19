@@ -56,7 +56,17 @@
             {
                 return new Result(new Error($"Invalid file system number '{fileSystemNumber}'"));
             }
+
+            var fileSystemHeaderBlock = fileSystemHeaderBlocks[fileSystemNumber - 1];
             
+            var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+            var partitionBlock =
+                partitionBlocks.FirstOrDefault(x => x.DosType.SequenceEqual(fileSystemHeaderBlock.DosType)); 
+            if (partitionBlock != null)
+            {
+                return new Result(new Error($"Partition number '{partitionBlocks.IndexOf(partitionBlock) + 1}' uses file system number '{fileSystemNumber}'"));
+            }
+
             fileSystemHeaderBlocks.RemoveAt(fileSystemNumber - 1);
             rigidDiskBlock.FileSystemHeaderBlocks = fileSystemHeaderBlocks;
             

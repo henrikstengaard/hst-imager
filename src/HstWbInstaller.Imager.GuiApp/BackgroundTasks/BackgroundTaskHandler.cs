@@ -7,6 +7,7 @@
     using Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Services;
     using BackgroundTask = Core.Models.BackgroundTasks.BackgroundTask;
 
@@ -19,8 +20,9 @@
         private readonly HubConnection resultHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
         private readonly ActiveBackgroundTaskList activeBackgroundTaskList;
-        private readonly BackgroundTaskQueue backgroundTaskQueue; 
-        
+        private readonly BackgroundTaskQueue backgroundTaskQueue;
+        private readonly AppState appState;
+
         public BackgroundTaskHandler(ILogger<BackgroundTaskHandler> logger,
             ILoggerFactory loggerFactory,
             HubConnection progressHubConnection,
@@ -28,7 +30,7 @@
             HubConnection resultHubConnection,
             IPhysicalDriveManager physicalDriveManager,
             ActiveBackgroundTaskList activeBackgroundTaskList,
-            BackgroundTaskQueue backgroundTaskQueue)
+            BackgroundTaskQueue backgroundTaskQueue, AppState appState)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -38,6 +40,7 @@
             this.physicalDriveManager = physicalDriveManager;
             this.activeBackgroundTaskList = activeBackgroundTaskList;
             this.backgroundTaskQueue = backgroundTaskQueue;
+            this.appState = appState;
         }
 
         public async Task Handle(BackgroundTask backgroundTask)
@@ -55,7 +58,7 @@
                         "Failed to cancel background task");
                 }
             }
-            
+
             var task = ResolveTask(backgroundTask);
 
             if (task == null)
@@ -65,7 +68,7 @@
             }
 
             logger.LogDebug($"Resolved background task '{task.GetType().FullName}'");
-            
+
             var handler = ResolveHandler(task);
 
             if (handler == null)
@@ -75,7 +78,7 @@
             }
 
             logger.LogDebug($"Resolved background task handler '{handler.GetType().FullName}'");
-            
+
             await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
         }
 
@@ -112,11 +115,16 @@
         {
             return backgroundTask switch
             {
-                ListBackgroundTask => new ListBackgroundTaskHandler(loggerFactory, resultHubConnection, errorHubConnection, physicalDriveManager),
-                PhysicalDriveInfoBackgroundTask => new PhysicalDriveInfoBackgroundTaskHandler(loggerFactory, resultHubConnection, errorHubConnection, physicalDriveManager),
-                ReadBackgroundTask => new ReadBackgroundTaskHandler(loggerFactory, progressHubConnection, physicalDriveManager),
-                WriteBackgroundTask => new WriteBackgroundTaskHandler(loggerFactory, progressHubConnection, physicalDriveManager),
-                PhysicalDriveVerifyBackgroundTask => new PhysicalDriveVerifyBackgroundTaskHandler(loggerFactory, progressHubConnection, physicalDriveManager),
+                ListBackgroundTask => new ListBackgroundTaskHandler(loggerFactory, resultHubConnection,
+                    errorHubConnection, physicalDriveManager, appState),
+                PhysicalDriveInfoBackgroundTask => new PhysicalDriveInfoBackgroundTaskHandler(loggerFactory,
+                    resultHubConnection, errorHubConnection, physicalDriveManager, appState),
+                ReadBackgroundTask => new ReadBackgroundTaskHandler(loggerFactory, progressHubConnection,
+                    physicalDriveManager, appState),
+                WriteBackgroundTask => new WriteBackgroundTaskHandler(loggerFactory, progressHubConnection,
+                    physicalDriveManager, appState),
+                PhysicalDriveVerifyBackgroundTask => new PhysicalDriveVerifyBackgroundTaskHandler(loggerFactory,
+                    progressHubConnection, physicalDriveManager, appState),
                 _ => null
             };
         }

@@ -8,12 +8,15 @@
     using System.Threading.Tasks;
     using DiscUtils;
     using DiscUtils.Partitions;
+    using DiscUtils.Raw;
+    using DiscUtils.Streams;
     using HstWbInstaller.Core;
     using Microsoft.Extensions.Logging;
 
     public class MbrPartDelCommand : CommandBase
     {
         private readonly ILogger<MbrPartDelCommand> logger;
+        private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
         private readonly int partitionNumber;
@@ -22,37 +25,52 @@
             IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber)
         {
             this.logger = logger;
+            this.commandHelper = commandHelper;
             this.physicalDrives = physicalDrives;
             this.path = path;
             this.partitionNumber = partitionNumber;
         }
 
-        public override Task<Result> Execute(CancellationToken token)
+        public override async Task<Result> Execute(CancellationToken token)
         {
-            var physicalDrive =
-                physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            
-            if (physicalDrive != null)
-            {
-                return Task.FromResult(new Result(new Error("MBR does not support physical drives")));
-            }
-            
-            using var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
+            OnProgressMessage($"Opening '{path}' for read/write");
 
-            logger.LogDebug("Reading Master Boot Record");
+            var physicalDrivesList = physicalDrives.ToList();
+            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            if (mediaResult.IsFaulted)
+            {
+                return new Result(mediaResult.Error);
+            }
+            using var media = mediaResult.Value;
+            await using var stream = media.Stream;
             
-            var biosPartitionTable = new BiosPartitionTable(disk);
+            using var disk = new Disk(stream, Ownership.None);
+            
+            OnProgressMessage("Reading Master Boot Record");
+            
+            BiosPartitionTable biosPartitionTable;
+            try
+            {
+                biosPartitionTable = new BiosPartitionTable(disk);
+            }
+            catch (Exception)
+            {
+                return new Result(new Error("Master Boot Record not found"));
+            }
 
             OnProgressMessage($"Deleting partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
-                return Task.FromResult(new Result(new Error($"Invalid partition number '{partitionNumber}'")));
+                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
             }
             
             biosPartitionTable.Delete(partitionNumber - 1);
             
-            return Task.FromResult(new Result());
+            await disk.Content.DisposeAsync();
+            disk.Dispose();
+            
+            return new Result();
         }
     }
 }

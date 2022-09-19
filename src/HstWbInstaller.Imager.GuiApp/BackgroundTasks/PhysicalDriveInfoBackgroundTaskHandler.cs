@@ -7,6 +7,7 @@
     using Extensions;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class PhysicalDriveInfoBackgroundTaskHandler : IBackgroundTaskHandler
     {
@@ -14,14 +15,16 @@
         private readonly HubConnection resultHubConnection;
         private readonly HubConnection errorHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
+        private readonly AppState appState;
 
         public PhysicalDriveInfoBackgroundTaskHandler(ILoggerFactory loggerFactory, HubConnection resultHubConnection,
             HubConnection errorHubConnection,
-            IPhysicalDriveManager physicalDriveManager)
+            IPhysicalDriveManager physicalDriveManager, AppState appState)
         {
             this.resultHubConnection = resultHubConnection;
             this.errorHubConnection = errorHubConnection;
             this.physicalDriveManager = physicalDriveManager;
+            this.appState = appState;
             this.loggerFactory = loggerFactory;
         }
 
@@ -34,7 +37,7 @@
 
             var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
 
-            var commandHelper = new CommandHelper();
+            var commandHelper = new CommandHelper(appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
             var infoCommand = new InfoCommand(logger, commandHelper, physicalDrives, infoBackgroundTask.Path);
 

@@ -8,18 +8,21 @@
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class OptimizeBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
+        private readonly AppState appState;
 
         public OptimizeBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            IHubContext<ProgressHub> progressHubContext)
+            IHubContext<ProgressHub> progressHubContext, AppState appState)
         {
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
+            this.appState = appState;
         }
 
         public async ValueTask Handle(IBackgroundTaskContext context)
@@ -38,7 +41,7 @@
                     PercentComplete = 50,
                 }, context.Token);
 
-                var commandHelper = new CommandHelper();
+                var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path);
 
                 var result = await optimizeCommand.Execute(context.Token);

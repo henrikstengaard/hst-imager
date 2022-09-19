@@ -4,26 +4,37 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using DiscUtils;
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
     using Hst.Amiga.RigidDiskBlocks;
-    using Hst.Core.Extensions;
     using HstWbInstaller.Core;
     using Models;
 
     public class CommandHelper : ICommandHelper
     {
-        public CommandHelper()
+        private readonly bool isAdministrator;
+
+        private static readonly Regex PhysicalDrivePathRegex =
+            new("^(\\\\\\\\\\.\\\\PHYSICALDRIVE|/dev)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public CommandHelper(bool isAdministrator)
         {
+            this.isAdministrator = isAdministrator;
             DiscUtils.Containers.SetupHelper.SetupContainers();
             DiscUtils.FileSystems.SetupHelper.SetupFileSystems();
         }
-        
+
         public virtual Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             bool allowPhysicalDrive = true)
         {
+            if (!isAdministrator && PhysicalDrivePathRegex.IsMatch(path))
+            {
+                return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
+            }
+
             var physicalDrive =
                 physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
 
@@ -97,19 +108,21 @@
             }
 
             var model = Path.GetFileName(path);
-            
+
             if (!IsVhd(path))
             {
-                return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false, CreateWriteableStream(path)));
+                return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
+                    CreateWriteableStream(path)));
             }
 
             if (File.Exists(path))
             {
                 var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
                 vhdDisk.Content.Position = 0;
-                return new Result<Media>(new VhdMedia(path, model, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk));
+                return new Result<Media>(new VhdMedia(path, model, vhdDisk.Capacity, Media.MediaType.Vhd, false,
+                    vhdDisk));
             }
-            
+
             if (size == null || size.Value == 0)
             {
                 throw new ArgumentNullException(nameof(size), "Size required for vhd");
@@ -117,7 +130,8 @@
 
             var stream = CreateWriteableStream(path);
             var newVhdDisk = Disk.InitializeDynamic(stream, Ownership.None, GetVhdSize(size.Value));
-            return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false, newVhdDisk, stream));
+            return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
+                newVhdDisk, stream));
         }
 
         public virtual long GetVhdSize(long size)
@@ -133,52 +147,7 @@
 
         public virtual async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
         {
-            var rdbIndex = 0;
-            var blockSize = 512;
-            var rdbLocationLimit = 16;
-            RigidDiskBlock rigidDiskBlock = null;
-
-            // read rigid disk block from one of the first 15 blocks
-            do
-            {
-                // calculate block offset
-                var blockOffset = blockSize * rdbIndex;
-
-                // seek block offset
-                stream.Seek(blockOffset, SeekOrigin.Begin);
-
-                // read block
-                var blockBytes = await stream.ReadBytes(blockSize);
-
-                if (blockBytes.Length < blockSize)
-                {
-                    return null;
-                }
-                
-                // continue, if identifier doesn't match
-                var identifier = BitConverter.ToUInt32(blockBytes, 0);
-                if (!identifier.Equals(BlockIdentifiers.RigidDiskBlock))
-                {
-                    rdbIndex++;
-                    continue;
-                }
-                
-                // read rigid disk block
-                rigidDiskBlock = await RigidDiskBlockReader.Parse(blockBytes);
-                break;
-            } while (rdbIndex < rdbLocationLimit);
-
-            // fail, if rigid disk block is null
-            if (rigidDiskBlock == null)
-            {
-                return null;
-            }
-
-            rigidDiskBlock.FileSystemHeaderBlocks = await FileSystemHeaderBlockReader.Read(rigidDiskBlock, stream);
-            rigidDiskBlock.PartitionBlocks = await PartitionBlockReader.Read(rigidDiskBlock, stream);
-            rigidDiskBlock.BadBlocks = await BadBlockReader.Read(rigidDiskBlock, stream);
-
-            return rigidDiskBlock;
+            return await RigidDiskBlockReader.Read(stream);
         }
     }
 }
