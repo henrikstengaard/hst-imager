@@ -1,6 +1,7 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
+    <Copyright>Copyright © 2022</Copyright>
   </PropertyGroup>
   <PropertyGroup>
     <Authors>Henrik Nørfjand Stengaard</Authors>

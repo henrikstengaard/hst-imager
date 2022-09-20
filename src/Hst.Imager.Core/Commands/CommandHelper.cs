@@ -153,11 +153,11 @@
 
         public virtual async Task<DiskInfo> ReadDiskInfo(Media media, Stream stream)
         {
-            Disk disk = null;
+            DiscUtils.Raw.Disk disk = null;
             BiosPartitionTable biosPartitionTable = null;
             try
             {
-                disk = new Disk(stream, Ownership.None);
+                disk = new DiscUtils.Raw.Disk(stream, Ownership.None);
                 biosPartitionTable = new BiosPartitionTable(disk);
             }
             catch (Exception)
@@ -165,12 +165,6 @@
                 // ignored, if read master boot record fails
             }
 
-            if (disk != null)
-            {
-                await disk.Content.DisposeAsync();
-                disk.Dispose();
-            }
-            
             RigidDiskBlock rigidDiskBlock = null;
             try
             {
@@ -204,6 +198,11 @@
                 });
             }
 
+            if (disk != null)
+            {
+                disk.Dispose();
+            }
+            
             if (rigidDiskBlock != null)
             {
                 var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
