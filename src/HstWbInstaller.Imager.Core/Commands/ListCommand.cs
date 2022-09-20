@@ -33,16 +33,16 @@
             {
                 await using var sourceStream = physicalDrive.Open();
 
-                RigidDiskBlock rigidDiskBlock = null;
-                try
-                {
-                    var firstBytes = await sourceStream.ReadBytes(512 * 2048);
-                    rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
+                // RigidDiskBlock rigidDiskBlock = null;
+                // try
+                // {
+                //     var firstBytes = await sourceStream.ReadBytes(512 * 2048);
+                //     rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
+                // }
+                // catch (Exception)
+                // {
+                //     // ignored
+                // }
 
                 logger.LogDebug($"Physical drive size '{physicalDrive.Size}'");
                 
@@ -59,8 +59,7 @@
                     Model = physicalDrive.Model,
                     IsPhysicalDrive = true,
                     Type = Media.MediaType.Raw,
-                    DiskSize = diskSize,
-                    RigidDiskBlock = rigidDiskBlock
+                    DiskSize = diskSize
                 });
             }
 

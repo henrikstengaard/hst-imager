@@ -29,10 +29,10 @@
             var result = await infoCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
-            // assert media info
+            // assert - media info is not null and matches disk size matches image size
             Assert.NotNull(mediaInfo);
-            Assert.Equal(mediaInfo.DiskSize, FakeCommandHelper.ImageSize);
-            Assert.Null(mediaInfo.RigidDiskBlock);
+            Assert.NotNull(mediaInfo.DiskInfo);
+            Assert.Empty(mediaInfo.DiskInfo.PartitionTables);
         }
         
         [Fact]
@@ -52,10 +52,11 @@
             };
             await infoCommand.Execute(cancellationTokenSource.Token);
             
-            // assert media info
+            // assert - media info is not null
             Assert.NotNull(mediaInfo);
-            //Assert.Equal(mediaInfo.DiskSize, FakeCommandHelper.ImageSize);
-            Assert.NotNull(mediaInfo.RigidDiskBlock);
+            Assert.NotNull(mediaInfo.DiskInfo);
+            Assert.Single(mediaInfo.DiskInfo.PartitionTables);
+            Assert.Single(mediaInfo.DiskInfo.PartitionTables.Where(x => x.Type == PartitionTableInfo.PartitionTableType.RigidDiskBlock));
         }
     }
 }

@@ -42,7 +42,6 @@
             Assert.True(mediaInfo.IsPhysicalDrive);
             Assert.Equal("Model", mediaInfo.Model);
             Assert.Equal(8192, mediaInfo.DiskSize);
-            Assert.Null(mediaInfo.RigidDiskBlock);
         }
         
         [Fact]
@@ -75,7 +74,6 @@
             Assert.True(mediaInfo.IsPhysicalDrive);
             Assert.Equal("Model", mediaInfo.Model);
             Assert.Equal(131072, mediaInfo.DiskSize);
-            Assert.NotNull(mediaInfo.RigidDiskBlock);
         }
     }
 }

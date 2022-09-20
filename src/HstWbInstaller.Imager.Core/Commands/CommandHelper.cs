@@ -7,6 +7,7 @@
     using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using DiscUtils;
+    using DiscUtils.Partitions;
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
     using Hst.Amiga.RigidDiskBlocks;
@@ -148,6 +149,91 @@
         public virtual async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
         {
             return await RigidDiskBlockReader.Read(stream);
+        }
+
+        public virtual async Task<DiskInfo> ReadDiskInfo(Media media, Stream stream)
+        {
+            Disk disk = null;
+            BiosPartitionTable biosPartitionTable = null;
+            try
+            {
+                disk = new Disk(stream, Ownership.None);
+                biosPartitionTable = new BiosPartitionTable(disk);
+            }
+            catch (Exception)
+            {
+                // ignored, if read master boot record fails
+            }
+
+            if (disk != null)
+            {
+                await disk.Content.DisposeAsync();
+                disk.Dispose();
+            }
+            
+            RigidDiskBlock rigidDiskBlock = null;
+            try
+            {
+                rigidDiskBlock = await GetRigidDiskBlock(stream);
+            }
+            catch (Exception)
+            {
+                // ignored, if read rigid disk block fails
+            }
+
+            var partitionTables = new List<PartitionTableInfo>();
+
+            if (biosPartitionTable != null)
+            {
+                var mbrPartitionNumber = 0;
+                
+                partitionTables.Add(new PartitionTableInfo
+                {
+                    Type = PartitionTableInfo.PartitionTableType.MasterBootRecord,
+                    Size = disk.Capacity,
+                    Partitions = biosPartitionTable.Partitions.Select(x => new PartitionInfo
+                    {
+                        PartitionNumber = ++mbrPartitionNumber,
+                        Type = x.TypeAsString,
+                        Size = x.SectorCount * disk.BlockSize,
+                        StartOffset = x.FirstSector * disk.BlockSize,
+                        EndOffset = ((x.LastSector + 1) * disk.BlockSize) - 1
+                    }).ToList(),
+                    StartOffset = 0,
+                    EndOffset = 511
+                });
+            }
+
+            if (rigidDiskBlock != null)
+            {
+                var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
+                var rdbPartitionNumber = 0;
+                partitionTables.Add(new PartitionTableInfo
+                {
+                    Type = PartitionTableInfo.PartitionTableType.RigidDiskBlock,
+                    Size = rigidDiskBlock.DiskSize,
+                    Partitions = rigidDiskBlock.PartitionBlocks.Select(x => new PartitionInfo
+                    {
+                        PartitionNumber = ++rdbPartitionNumber,
+                        Type = x.DosTypeFormatted,
+                        Size = x.PartitionSize,
+                        StartOffset = (long)x.LowCyl * cylinderSize,
+                        EndOffset = ((long)x.HighCyl + 1) * cylinderSize - 1
+                    }).ToList(),
+                    StartOffset = rigidDiskBlock.RdbBlockLo * rigidDiskBlock.BlockSize,
+                    EndOffset = ((rigidDiskBlock.RdbBlockHi + 1) * rigidDiskBlock.BlockSize) - 1
+                });
+            }
+            
+            return new DiskInfo
+            {
+                Path = media.Path,
+                Name = media.Model,
+                Size = media.Size,
+                PartitionTables = partitionTables,
+                StartOffset = 0,
+                EndOffset = media.Size
+            };
         }
     }
 }

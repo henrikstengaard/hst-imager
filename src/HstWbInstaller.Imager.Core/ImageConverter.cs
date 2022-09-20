@@ -79,6 +79,10 @@
             } while (sectorResult.BytesRead == bufferSize && bytesRead < size && !sectorResult.EndOfSectors);
 
             timer.Stop();
+            stopwatch.Stop();
+
+            sendDataProcessed = true;
+            OnDataProcessed(100, bytesProcessed, 0, size, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed);
             
             return new Result();
         }

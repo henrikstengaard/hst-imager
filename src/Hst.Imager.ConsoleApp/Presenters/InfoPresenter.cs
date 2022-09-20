@@ -19,12 +19,11 @@
                 {
                     new Column { Name = "Path" },
                     new Column { Name = "Model" },
-                    new Column { Name = "Type" },
                     new Column { Name = "Size", Alignment = ColumnAlignment.Right }
                 },
                 Rows = mediaInfos.Select(x => new Row
                 {
-                    Columns = new []{ x.Path, x.Model, x.Type.ToString(),x.DiskSize.FormatBytes() }
+                    Columns = new []{ x.Path, x.Model, x.DiskSize.FormatBytes() }
                 })
             };
 
