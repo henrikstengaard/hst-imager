@@ -1,10 +1,10 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Models;
-    using PhysicalDrives;
+    using Hst.Imager.Core.Models;
+    using Hst.Imager.Core.PhysicalDrives;
     using Xunit;
 
     public class GivenWmicReader

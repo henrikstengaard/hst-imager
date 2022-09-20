@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.PhysicalDrives
+﻿namespace Hst.Imager.Core.PhysicalDrives
 {
     using System.Collections.Generic;
     using System.Globalization;
@@ -6,7 +6,6 @@
     using System.Linq;
     using System.Text;
     using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
     using CsvHelper;
     using CsvHelper.Configuration;
     using Models;

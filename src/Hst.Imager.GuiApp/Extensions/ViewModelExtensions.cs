@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Extensions
+﻿namespace Hst.Imager.GuiApp.Extensions
 {
     using System.Linq;
-    using Core.Commands;
     using Hst.Amiga.RigidDiskBlocks;
+    using Hst.Imager.Core.Commands;
     using Models;
 
     public static class ViewModelExtensions

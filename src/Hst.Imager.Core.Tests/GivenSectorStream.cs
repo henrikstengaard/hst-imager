@@ -1,6 +1,7 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.IO;
+    using Hst.Imager.Core;
     using Xunit;
 
     public class GivenSectorStream

@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Apis
+﻿namespace Hst.Imager.Core.Apis
 {
     using System;
     using System.ComponentModel;
@@ -8,10 +8,8 @@
     using LPSECURITY_ATTRIBUTES = System.IntPtr;
     using LPOVERLAPPED = System.IntPtr;
     using LPVOID = System.IntPtr;
-    using HANDLE = System.IntPtr;
     using LARGE_INTEGER = System.Int64;
     using DWORD = System.UInt32;
-    using LPCTSTR = System.String;
 
     // https://stackoverflow.com/questions/15051660/physical-disk-size-not-correct-ioctldiskgetdrivegeometry
     public static class Kernel32

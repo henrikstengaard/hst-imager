@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core
+﻿namespace Hst.Imager.Core
 {
     using System;
     using System.IO;
@@ -6,9 +6,9 @@
     using DiscUtils;
     using DiscUtils.Fat;
     using DiscUtils.Partitions;
-    //using DiscUtils.Vhd;
-    using DiscUtils.Streams;
     using DiscUtils.Raw;
+    using DiscUtils.Streams;
+    //using DiscUtils.Vhd;
 
     public class MbrTest
     {

@@ -1,12 +1,13 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Commands;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Commands;
+    using Hst.Imager.Core.Models;
     using Microsoft.Extensions.Logging.Abstractions;
-    using Models;
     using Xunit;
 
     public class GivenConvertCommand : CommandTestBase

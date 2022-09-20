@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Services
+﻿namespace Hst.Imager.GuiApp.Services
 {
     public class ElectronIntegration
     {

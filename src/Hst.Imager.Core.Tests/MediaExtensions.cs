@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;
-    using Models;
+    using Hst.Imager.Core.Models;
 
     public static class MediaExtensions
     {

@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Services
+﻿namespace Hst.Imager.GuiApp.Services
 {
     using System;
     using System.Threading.Tasks;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core.Models.BackgroundTasks;
 
     public class QueuedBackgroundTask
     {

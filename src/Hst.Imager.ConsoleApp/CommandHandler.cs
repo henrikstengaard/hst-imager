@@ -10,11 +10,11 @@
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
+    using Core;
+    using Core.Commands;
+    using Core.Extensions;
+    using Core.Models;
     using Hst.Core;
-    using HstWbInstaller.Imager.Core;
-    using HstWbInstaller.Imager.Core.Commands;
-    using HstWbInstaller.Imager.Core.Extensions;
-    using HstWbInstaller.Imager.Core.Models;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Presenters;

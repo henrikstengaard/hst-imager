@@ -1,9 +1,10 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
+    using Hst.Imager.Core;
     using Xunit;
 
     public class GivenReaderWithDataSectors : SectorTestBase

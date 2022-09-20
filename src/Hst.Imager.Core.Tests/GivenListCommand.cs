@@ -1,14 +1,14 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Commands;
+    using Hst.Imager.Core.Commands;
+    using Hst.Imager.Core.Models;
+    using Hst.Imager.Core.PhysicalDrives;
     using Microsoft.Extensions.Logging.Abstractions;
-    using Models;
-    using PhysicalDrives;
     using Xunit;
 
     public class GivenListCommand : CommandTestBase

@@ -1,13 +1,11 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Extensions
+﻿namespace Hst.Imager.GuiApp.Extensions
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Core.Commands;
-    using Core.Models;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core.Models;
+    using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Models;
 

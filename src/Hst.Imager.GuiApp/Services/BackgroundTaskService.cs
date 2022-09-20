@@ -1,10 +1,9 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Services
+﻿namespace Hst.Imager.GuiApp.Services
 {
     using System;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using BackgroundTasks;
     using Extensions;
     using Hubs;
     using Microsoft.AspNetCore.SignalR;

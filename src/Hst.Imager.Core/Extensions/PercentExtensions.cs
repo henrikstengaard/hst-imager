@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Extensions
+﻿namespace Hst.Imager.Core.Extensions
 {
     using System;
 

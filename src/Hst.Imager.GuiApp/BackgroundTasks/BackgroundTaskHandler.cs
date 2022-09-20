@@ -1,10 +1,10 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.BackgroundTasks
+﻿namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System;
     using System.Text.Json;
     using System.Threading.Tasks;
-    using Core;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
     using Models;

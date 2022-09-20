@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.PhysicalDrives
+﻿namespace Hst.Imager.Core.PhysicalDrives
 {
     using System;
     using System.Collections.Generic;

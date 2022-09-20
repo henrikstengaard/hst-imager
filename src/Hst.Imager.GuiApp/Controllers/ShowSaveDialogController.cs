@@ -1,9 +1,9 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Controllers
+﻿namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Linq;
     using System.Threading.Tasks;
-    using Core.Models.BackgroundTasks;
     using ElectronNET.API;
+    using Hst.Imager.Core.Models.BackgroundTasks;
     using Hubs;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;
@@ -38,7 +38,7 @@
                 Id = model.Id,
                 Title = model.Title,
                 Path = model.Path,
-                FileFilters = model.FileFilters.Select(x => new Core.Models.BackgroundTasks.FileFilter
+                FileFilters = model.FileFilters.Select(x => new Hst.Imager.Core.Models.BackgroundTasks.FileFilter
                 {
                     Name = x.Name,
                     Extensions = x.Extensions

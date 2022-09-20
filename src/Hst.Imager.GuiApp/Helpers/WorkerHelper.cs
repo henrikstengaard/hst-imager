@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Helpers
+﻿namespace Hst.Imager.GuiApp.Helpers
 {
     using System;
     using System.IO;

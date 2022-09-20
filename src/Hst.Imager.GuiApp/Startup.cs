@@ -1,11 +1,4 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-
-namespace HstWbInstaller.Imager.GuiApp
+namespace Hst.Imager.GuiApp
 {
     using System;
     using System.Diagnostics;
@@ -13,14 +6,20 @@ namespace HstWbInstaller.Imager.GuiApp
     using System.Linq;
     using System.Text.Json.Serialization;
     using System.Threading.Tasks;
-    using Core;
-    using Core.Helpers;
-    using Core.Models;
     using ElectronNET.API;
     using ElectronNET.API.Entities;
     using Helpers;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Helpers;
+    using Hst.Imager.Core.Models;
     using Hubs;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Hosting.Server.Features;
+    using Microsoft.AspNetCore.SpaServices.ReactDevelopmentServer;
+    using Microsoft.Extensions.Configuration;
+    using Microsoft.Extensions.DependencyInjection;
+    using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Middlewares;
     using Models;

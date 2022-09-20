@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Helpers
+﻿namespace Hst.Imager.Core.Helpers
 {
     using Commands;
     using Hst.Amiga.RigidDiskBlocks;

@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Commands
+﻿namespace Hst.Imager.Core.Commands
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -8,10 +8,10 @@
     using Hst.Amiga;
     using Hst.Amiga.RigidDiskBlocks;
     using Hst.Core;
-    using Size = Models.Size;
     using Microsoft.Extensions.Logging;
-    using PartitionBlock = Hst.Amiga.RigidDiskBlocks.PartitionBlock;
-    using RigidDiskBlockWriter = Hst.Amiga.RigidDiskBlocks.RigidDiskBlockWriter;
+    using Size = Models.Size;
+    using PartitionBlock = Amiga.RigidDiskBlocks.PartitionBlock;
+    using RigidDiskBlockWriter = Amiga.RigidDiskBlocks.RigidDiskBlockWriter;
 
     public class RdbPartAddCommand : CommandBase
     {

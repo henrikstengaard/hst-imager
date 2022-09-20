@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Apis
+﻿namespace Hst.Imager.Core.Apis
 {
     using System;
     using System.IO;

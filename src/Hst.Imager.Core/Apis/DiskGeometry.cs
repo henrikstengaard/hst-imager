@@ -1,3 +1,3 @@
-﻿namespace HstWbInstaller.Imager.Core.Apis
+﻿namespace Hst.Imager.Core.Apis
 {
 }

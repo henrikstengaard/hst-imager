@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Models
+﻿namespace Hst.Imager.Core.Models
 {
     using System.IO;
     using DiscUtils;

@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Hubs
+﻿namespace Hst.Imager.GuiApp.Hubs
 {
     using System.Threading.Tasks;
-    using Core.Models;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core.Models;
+    using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR;
 
     public class ErrorHub : Hub

@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Events
+﻿namespace Hst.Imager.GuiApp.Events
 {
     using System;
 

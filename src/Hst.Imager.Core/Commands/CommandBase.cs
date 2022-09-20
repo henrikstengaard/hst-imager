@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Commands
+﻿namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -7,7 +7,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Core;
-    using Models;
 
     public abstract class CommandBase
     {

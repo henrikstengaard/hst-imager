@@ -1,7 +1,7 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Services
+﻿namespace Hst.Imager.GuiApp.Services
 {
     using System.Threading;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core.Models.BackgroundTasks;
 
     public class BackgroundTask : IBackgroundTask
     {

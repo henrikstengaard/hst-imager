@@ -1,7 +1,7 @@
 ﻿namespace HstWbInstaller.Imager.ConsoleApp.Presenters
 {
     using System;
-    using Core;
+    using Hst.Imager.Core;
 
     public static class GenericPresenter
     {

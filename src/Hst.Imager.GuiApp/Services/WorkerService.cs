@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Services
+﻿namespace Hst.Imager.GuiApp.Services
 {
     using System;
     using System.Collections.Concurrent;
@@ -8,10 +8,10 @@
     using System.Linq;
     using System.Text.Json;
     using System.Threading.Tasks;
-    using Core.Helpers;
-    using Core.Models;
     using Extensions;
     using Helpers;
+    using Hst.Imager.Core.Helpers;
+    using Hst.Imager.Core.Models;
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Extensions.Logging;
@@ -22,7 +22,7 @@
         private readonly ILogger<WorkerService> logger;
         private readonly AppState appState;
         private readonly IHubContext<ErrorHub> errorHubContext;
-        private readonly BlockingCollection<Core.Models.BackgroundTasks.BackgroundTask> queue;
+        private readonly BlockingCollection<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask> queue;
         private static readonly object LockObject = new();
         
         private int workerProcessId;
@@ -32,7 +32,7 @@
             this.logger = logger;
             this.appState = appState;
             this.errorHubContext = errorHubContext;
-            this.queue = new BlockingCollection<Core.Models.BackgroundTasks.BackgroundTask>(new ConcurrentQueue<Core.Models.BackgroundTasks.BackgroundTask>());
+            this.queue = new BlockingCollection<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask>(new ConcurrentQueue<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask>());
             this.workerProcessId = 0;
         }
 
@@ -118,7 +118,7 @@
             }
 
             logger.LogDebug($"Enqueue background task type '{backgroundTask.GetType().Name}'");
-            this.queue.Add(new Core.Models.BackgroundTasks.BackgroundTask
+            this.queue.Add(new Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask
             {
                 Type = backgroundTask.GetType().Name,
                 Payload = JsonSerializer.Serialize(backgroundTask)
@@ -130,11 +130,11 @@
             }
         }
 
-        public Task<IEnumerable<Core.Models.BackgroundTasks.BackgroundTask>> DequeueAsync()
+        public Task<IEnumerable<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask>> DequeueAsync()
         {
             logger.LogDebug("Dequeue background tasks");
             
-            var backgroundTasks = new List<Core.Models.BackgroundTasks.BackgroundTask>();
+            var backgroundTasks = new List<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask>();
             do
             {
                 var backgroundTask = this.queue.Take();

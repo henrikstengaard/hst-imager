@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Models.BackgroundTasks
+﻿namespace Hst.Imager.Core.Models.BackgroundTasks
 {
     public class BackgroundTask
     {

@@ -1,11 +1,12 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Commands;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Commands;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 

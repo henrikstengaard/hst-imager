@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core.Commands
+﻿namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -11,11 +11,11 @@
     using Hst.Amiga.FileSystems.FastFileSystem;
     using Hst.Amiga.RigidDiskBlocks;
     using Hst.Amiga.VersionStrings;
-    using Hst.Core.Extensions;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
-    using BlockHelper = Hst.Amiga.RigidDiskBlocks.BlockHelper;
-    using Constants = Hst.Amiga.FileSystems.FastFileSystem.Constants;
+    using BlockHelper = Amiga.RigidDiskBlocks.BlockHelper;
+    using Constants = Amiga.FileSystems.FastFileSystem.Constants;
 
     public class RdbFsAddCommand : CommandBase
     {

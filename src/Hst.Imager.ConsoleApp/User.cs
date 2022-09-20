@@ -1,6 +1,6 @@
 ﻿namespace Hst.Imager.ConsoleApp
 {
-    using OperatingSystem = Core.OperatingSystem;
+    using OperatingSystem = Hst.Core.OperatingSystem;
 
     public static class User
     {

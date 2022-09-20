@@ -1,7 +1,7 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Hubs
+﻿namespace Hst.Imager.GuiApp.Hubs
 {
     using System.Threading.Tasks;
-    using Core.Models;
+    using Hst.Imager.Core.Models;
     using Microsoft.AspNetCore.SignalR;
     using Models;
 

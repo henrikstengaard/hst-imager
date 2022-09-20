@@ -1,7 +1,7 @@
-using System;
-
-namespace HstWbInstaller.Imager.GuiApp
+namespace Hst.Imager.GuiApp
 {
+    using System;
+
     public class WeatherForecast
     {
         public DateTime Date { get; set; }

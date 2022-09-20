@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Models
+﻿namespace Hst.Imager.GuiApp.Models
 {
     public class PartitionBlockViewModel
     {

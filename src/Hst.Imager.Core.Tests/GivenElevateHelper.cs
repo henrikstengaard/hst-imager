@@ -1,8 +1,6 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
-    using System;
-    using System.IO;
-    using Helpers;
+    using Hst.Imager.Core.Helpers;
     using Xunit;
 
     public class GivenElevateHelper

@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Controllers
+﻿namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
     using Extensions;

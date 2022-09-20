@@ -1,18 +1,17 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Hosting;
-
-namespace HstWbInstaller.Imager.GuiApp
+namespace Hst.Imager.GuiApp
 {
     using System;
     using System.IO;
     using System.Threading.Tasks;
     using Bootstrappers;
-    using Core.Helpers;
-    using Core.Models;
     using ElectronNET.API;
+    using Helpers;
+    using Hst.Imager.Core.Helpers;
+    using Hst.Imager.Core.Models;
+    using Microsoft.AspNetCore.Hosting;
+    using Microsoft.Extensions.Hosting;
     using Serilog;
     using Serilog.Events;
-    using Helpers;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
     public class Program

@@ -1,10 +1,9 @@
-﻿namespace HstWbInstaller.Imager.Core.Commands
+﻿namespace Hst.Imager.Core.Commands
 {
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Extensions;
     using Hst.Amiga.RigidDiskBlocks;
     using Hst.Core;
     using Microsoft.Extensions.Logging;

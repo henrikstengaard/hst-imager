@@ -4,8 +4,8 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Text;
-    using HstWbInstaller.Imager.Core.Commands;
-    using HstWbInstaller.Imager.Core.Extensions;
+    using Core.Commands;
+    using Core.Extensions;
 
     public static class InfoPresenter
     {

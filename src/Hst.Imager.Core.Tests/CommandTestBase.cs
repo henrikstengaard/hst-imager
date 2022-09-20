@@ -1,8 +1,9 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.Linq;
     using System.Threading.Tasks;
-    using Commands;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Commands;
     using Xunit;
 
     public abstract class CommandTestBase

@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Middlewares
+﻿namespace Hst.Imager.GuiApp.Middlewares
 {
     using System;
     using System.Net;

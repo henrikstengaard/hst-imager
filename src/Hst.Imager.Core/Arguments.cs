@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.Core
+﻿namespace Hst.Imager.Core
 {
     public class Arguments
     {

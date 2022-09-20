@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Bootstrappers
+﻿namespace Hst.Imager.GuiApp.Bootstrappers
 {
     using System;
     using System.Diagnostics;
@@ -6,11 +6,11 @@
     using System.Threading;
     using System.Threading.Tasks;
     using BackgroundTasks;
-    using Core;
-    using Core.Helpers;
-    using Core.Models;
     using Extensions;
     using Helpers;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Helpers;
+    using Hst.Imager.Core.Models;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;

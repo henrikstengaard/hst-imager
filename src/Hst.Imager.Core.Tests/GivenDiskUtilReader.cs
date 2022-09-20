@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System.IO;
     using System.Linq;
-    using PhysicalDrives;
+    using Hst.Imager.Core.PhysicalDrives;
     using Xunit;
 
     public class GivenDiskUtilReader

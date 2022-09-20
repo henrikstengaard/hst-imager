@@ -1,8 +1,8 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Controllers
+﻿namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
     using BackgroundTasks;
-    using Core.Models.BackgroundTasks;
+    using Hst.Imager.Core.Models.BackgroundTasks;
     using Hubs;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;

@@ -1,7 +1,7 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Models
+﻿namespace Hst.Imager.GuiApp.Models
 {
     using System.Collections.Generic;
-    using Core.Commands;
+    using Hst.Imager.Core.Commands;
 
     public class InfoResult
     {

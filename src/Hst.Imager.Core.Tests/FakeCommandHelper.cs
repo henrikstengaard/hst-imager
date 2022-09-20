@@ -1,14 +1,15 @@
-﻿namespace HstWbInstaller.Imager.Core.Tests
+﻿namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Commands;
     using Hst.Amiga.RigidDiskBlocks;
     using Hst.Core;
-    using Models;
+    using Hst.Imager.Core;
+    using Hst.Imager.Core.Commands;
+    using Hst.Imager.Core.Models;
 
     public class FakeCommandHelper : CommandHelper
     {

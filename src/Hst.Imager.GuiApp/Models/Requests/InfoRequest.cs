@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.GuiApp.Models.Requests
+﻿namespace Hst.Imager.GuiApp.Models.Requests
 {
     using System.ComponentModel.DataAnnotations;
 
