@@ -63,7 +63,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HstWbInstaller.Imager.Core\HstWbInstaller.Imager.Core.csproj" />
+    <ProjectReference Include="..\Hst.Imager.Core\Hst.Imager.Core.csproj" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="license.txt" />
