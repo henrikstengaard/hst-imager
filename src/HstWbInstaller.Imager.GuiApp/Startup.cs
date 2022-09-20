@@ -25,7 +25,7 @@ namespace HstWbInstaller.Imager.GuiApp
     using Middlewares;
     using Models;
     using Services;
-    using OperatingSystem = HstWbInstaller.Core.OperatingSystem;
+    using OperatingSystem = Hst.Core.OperatingSystem;
 
     public class Startup
     {

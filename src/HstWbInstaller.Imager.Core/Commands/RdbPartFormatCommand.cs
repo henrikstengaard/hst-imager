@@ -6,7 +6,7 @@
     using System.Threading.Tasks;
     using Hst.Amiga.FileSystems.FastFileSystem;
     using Hst.Amiga.FileSystems.Pfs3;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartFormatCommand : CommandBase

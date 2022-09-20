@@ -1,7 +1,6 @@
 ﻿namespace HstWbInstaller.Imager.Core
 {
     using System.IO;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
 
     public interface IPhysicalDrive
     {
@@ -10,7 +9,7 @@
         string Model { get; }
         long Size { get; }
         bool Writable { get; }
-        RigidDiskBlock RigidDiskBlock { get; set; }
+        //RigidDiskBlock RigidDiskBlock { get; set; }
 
         Stream Open();
         void SetWritable(bool writable);

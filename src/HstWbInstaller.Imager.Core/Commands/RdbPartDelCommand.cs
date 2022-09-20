@@ -6,7 +6,7 @@
     using System.Threading.Tasks;
     using Extensions;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartDelCommand : CommandBase

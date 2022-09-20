@@ -2,8 +2,7 @@
 {
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
-    using HstWbInstaller.Core.Extensions;
+    using Hst.Core.Extensions;
 
     public class MacOsPhysicalDrive : GenericPhysicalDrive
     {

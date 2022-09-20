@@ -7,8 +7,8 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
-    using HstWbInstaller.Core.Extensions;
+    using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
 
     public class VerifyCommand : CommandBase

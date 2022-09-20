@@ -69,7 +69,4 @@
     <None Remove="license.txt" />
     <EmbeddedResource Include="license.txt" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Models\BackgroundTasks" />
-  </ItemGroup>
 </Project>

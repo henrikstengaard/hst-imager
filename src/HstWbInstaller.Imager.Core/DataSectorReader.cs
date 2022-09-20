@@ -1,0 +1,85 @@
+﻿namespace HstWbInstaller.Imager.Core
+{
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Linq;
+    using System.Threading.Tasks;
+
+    public class DataSectorReader
+    {
+        private readonly Stream stream;
+        private readonly int sectorSize;
+        private readonly int bufferSize;
+        private readonly byte[] buffer;
+        private long offset;
+
+        public DataSectorReader(Stream stream, int sectorSize = 512, int bufferSize = 1024 * 1024)
+        {
+            if (sectorSize % 512 != 0)
+            {
+                throw new ArgumentException("Sector size must be dividable by 512", nameof(sectorSize));
+            }
+            
+            if (bufferSize % 512 != 0)
+            {
+                throw new ArgumentException("Buffer size must be dividable by 512", nameof(bufferSize));
+            }
+            
+            this.stream = stream;
+            this.sectorSize = sectorSize;
+            this.bufferSize = bufferSize;
+            this.buffer = new byte[bufferSize];
+            offset = this.stream.Position;
+        }
+
+        public async Task<SectorResult> ReadNext()
+        {
+            var startOffset = offset;
+            var bytesRead = await stream.ReadAsync(buffer, 0, bufferSize);
+            var endOffset = offset + bufferSize - 1;
+
+            var sectors = new List<Sector>();
+
+            for (var start = 0; start < bytesRead; start += sectorSize)
+            {
+                var data = new byte[sectorSize];
+                Array.Copy(buffer, start, data, 0, sectorSize);
+                
+                sectors.Add(new Sector
+                {
+                    Start = offset + start,
+                    End = offset + start + sectorSize - 1,
+                    Size = sectorSize,
+                    IsZeroFilled = data.All(x => x == 0),
+                    Data = data
+                });
+            }
+
+            offset += bytesRead;
+            
+            return new SectorResult
+            {
+                Start = startOffset,
+                End = endOffset,
+                Data = buffer,
+                BytesRead = bytesRead,
+                EndOfSectors = bytesRead != bufferSize,
+                Sectors = sectors
+            };
+        }
+
+        private bool IsSectorZeroFilled(int sectorStart, int sectorEnd)
+        {
+            for (var i = sectorStart; i <= sectorEnd; i++)
+            {
+                if (buffer[i] != 0 || buffer[sectorEnd - i] != 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+    }
+}

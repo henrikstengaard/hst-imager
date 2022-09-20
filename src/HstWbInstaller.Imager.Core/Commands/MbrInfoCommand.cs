@@ -8,7 +8,7 @@
     using DiscUtils.Partitions;
     using DiscUtils.Raw;
     using DiscUtils.Streams;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
 
     public class MbrInfoCommand : CommandBase

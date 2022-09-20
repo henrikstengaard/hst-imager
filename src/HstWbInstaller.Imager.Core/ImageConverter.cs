@@ -7,8 +7,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Helpers;
-    using HstWbInstaller.Core;
-    using HstWbInstaller.Core.IO.Vhds;
+    using Hst.Core;
 
     public class ImageConverter
     {

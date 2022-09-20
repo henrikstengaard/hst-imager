@@ -7,7 +7,7 @@
     using System.Threading.Tasks;
     using Commands;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Models;
 
     public class FakeCommandHelper : CommandHelper

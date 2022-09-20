@@ -5,7 +5,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
 
     public class RdbFsDelCommand : CommandBase

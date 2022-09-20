@@ -5,7 +5,7 @@
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
-    using OperatingSystem = HstWbInstaller.Core.OperatingSystem;
+    using OperatingSystem = Hst.Core.OperatingSystem;
 
     public static class ElevateHelper
     {

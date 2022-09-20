@@ -11,7 +11,7 @@
     using DiscUtils.Raw;
     using DiscUtils.Streams;
     using Extensions;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 

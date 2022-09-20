@@ -4,7 +4,7 @@
     using System.IO;
     using System.Threading.Tasks;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Models;
 
     public interface ICommandHelper

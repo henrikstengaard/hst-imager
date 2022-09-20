@@ -2,14 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using DiscUtils.Partitions;
-    using DiscUtils.Raw;
-    using DiscUtils.Streams;
-    using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
 
     public class InfoCommand : CommandBase

@@ -2,7 +2,7 @@
 {
     using System.Threading;
     using System.Threading.Tasks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
 
     public class RdbPartExportCommand : CommandBase
     {

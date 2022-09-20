@@ -5,7 +5,7 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Apis;
-    using HstWbInstaller.Core.Extensions;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Models;
 

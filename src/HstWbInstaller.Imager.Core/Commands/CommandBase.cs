@@ -6,7 +6,7 @@
     using System.Text.Json;
     using System.Threading;
     using System.Threading.Tasks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Models;
 
     public abstract class CommandBase

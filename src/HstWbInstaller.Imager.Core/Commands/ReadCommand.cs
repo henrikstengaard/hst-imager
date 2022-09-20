@@ -6,7 +6,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
     using Models;
 

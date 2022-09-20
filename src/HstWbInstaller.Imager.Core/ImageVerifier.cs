@@ -7,7 +7,7 @@
     using System.Threading.Tasks;
     using Commands;
     using Helpers;
-    using HstWbInstaller.Core;
+    using Hst.Core;
 
     public class ImageVerifier
     {

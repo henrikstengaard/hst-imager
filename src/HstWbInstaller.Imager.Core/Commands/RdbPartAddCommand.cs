@@ -5,8 +5,9 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
+    using Hst.Amiga;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Size = Models.Size;
     using Microsoft.Extensions.Logging;
     using PartitionBlock = Hst.Amiga.RigidDiskBlocks.PartitionBlock;

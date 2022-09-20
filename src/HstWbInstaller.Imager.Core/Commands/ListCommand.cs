@@ -2,12 +2,9 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
-    using HstWbInstaller.Core.Extensions;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
     using Models;
 

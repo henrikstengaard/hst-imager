@@ -7,8 +7,8 @@
     using System.Threading.Tasks;
     using Extensions;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
-    using HstWbInstaller.Core.Extensions;
+    using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 

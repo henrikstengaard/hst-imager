@@ -13,7 +13,7 @@ namespace HstWbInstaller.Imager.GuiApp
     using Serilog;
     using Serilog.Events;
     using Helpers;
-    using OperatingSystem = HstWbInstaller.Core.OperatingSystem;
+    using OperatingSystem = Hst.Core.OperatingSystem;
 
     public class Program
     {

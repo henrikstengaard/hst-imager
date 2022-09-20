@@ -1,7 +1,6 @@
 namespace HstWbInstaller.Imager.Core.PhysicalDrives
 {
     using System.IO;
-    using HstWbInstaller.Core.IO;
 
     public class FakePhysicalDrive : GenericPhysicalDrive
     {

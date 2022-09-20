@@ -11,7 +11,7 @@
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
     using Hst.Amiga.RigidDiskBlocks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Models;
 
     public class CommandHelper : ICommandHelper

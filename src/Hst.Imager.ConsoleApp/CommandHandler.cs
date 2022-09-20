@@ -10,7 +10,7 @@
     using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using HstWbInstaller.Imager.Core;
     using HstWbInstaller.Imager.Core.Commands;
     using HstWbInstaller.Imager.Core.Extensions;

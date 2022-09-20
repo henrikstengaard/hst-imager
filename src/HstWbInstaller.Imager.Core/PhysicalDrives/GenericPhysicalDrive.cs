@@ -1,7 +1,6 @@
 namespace HstWbInstaller.Imager.Core.PhysicalDrives
 {
     using System.IO;
-    using HstWbInstaller.Core.IO.RigidDiskBlocks;
 
     public class GenericPhysicalDrive : IPhysicalDrive
     {
@@ -10,7 +9,6 @@ namespace HstWbInstaller.Imager.Core.PhysicalDrives
         public string Model { get; }
         public long Size { get; protected set; }
         public bool Writable { get; private set; }
-        public RigidDiskBlock RigidDiskBlock { get; set; }
 
         public GenericPhysicalDrive(string path, string type, string model, long size, bool writable = false)
         {

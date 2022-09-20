@@ -12,7 +12,7 @@
     using Hst.Amiga.RigidDiskBlocks;
     using Hst.Amiga.VersionStrings;
     using Hst.Core.Extensions;
-    using HstWbInstaller.Core;
+    using Hst.Core;
     using Microsoft.Extensions.Logging;
     using BlockHelper = Hst.Amiga.RigidDiskBlocks.BlockHelper;
     using Constants = Hst.Amiga.FileSystems.FastFileSystem.Constants;

@@ -1,6 +1,6 @@
 ﻿namespace HstWbInstaller.Imager.Core.Commands
 {
-    using HstWbInstaller.Core;
+    using Hst.Core;
 
     public class PathNotFoundError : Error
     {
