@@ -10,6 +10,7 @@
     using DiscUtils.Streams;
     using Extensions;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 
@@ -24,6 +25,7 @@
         private readonly long? startSector;
         private readonly long? endSector;
         private readonly bool active;
+        private const int RdbMbrGap = 512 * 1024;
 
         public MbrPartAddCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string type, Size size,
@@ -52,11 +54,37 @@
             }
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
-            
-            using var disk = new Disk(stream, Ownership.None);
 
-            var diskSize = disk.Geometry.Capacity;
-            var partitionSize = diskSize.ResolveSize(size);
+            // read disk info
+            var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
+            
+            // open stream as disk
+            using var disk = new Disk(stream, Ownership.None);
+            
+            // available size and default start offset
+            var availableSize = disk.Geometry.Capacity;
+            long startOffset = 512;
+            
+            // get rdb partition table
+            var rdbPartitionTable =
+                diskInfo.PartitionTables.FirstOrDefault(x =>
+                    x.Type == PartitionTableInfo.PartitionTableType.RigidDiskBlock);
+
+            // reduce available size, if rdb is present and set start offset after rdb
+            if (rdbPartitionTable != null)
+            {
+                startOffset = (rdbPartitionTable.Size + RdbMbrGap).ToSectorSize();
+                availableSize = diskInfo.Size - startOffset;
+            }
+
+            // return error, if start sector is defined and it's less than start offset
+            if (startSector.HasValue && startSector < startOffset / 512)
+            {
+                return new Result(new Error($"Start sector {startSector} is overlapping Rigid Disk Block"));
+            }
+            
+            // calculate partition size and sectors
+            var partitionSize = availableSize.ResolveSize(size);
             var partitionSectors = partitionSize / 512;
             
             OnProgressMessage("Reading Master Boot Record");
@@ -71,9 +99,11 @@
                 return new Result(new Error("Master Boot Record not found"));
             }
             
-            var start = startSector ?? 1;
+            // calculate start and end sector
+            var start = startSector ?? startOffset / 512;
             var end = start + partitionSectors - 1;
 
+            // set end to last sector, if end is larger than last sector
             if (end > disk.Geometry.TotalSectorsLong)
             {
                 end = disk.Geometry.TotalSectorsLong;
@@ -84,19 +114,22 @@
             OnProgressMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
             OnProgressMessage($"Type '{type.ToUpper()}'");
 
+            // get bios partition type
             var biosPartitionTypeResult = GetBiosPartitionType();
             if (biosPartitionTypeResult.IsFaulted)
             {
                 return new Result(biosPartitionTypeResult.Error);
             }
-            
+
             OnProgressMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
             OnProgressMessage($"Start sector '{start}'");
             OnProgressMessage($"End sector '{end}'");
             OnProgressMessage($"Active '{active}'");
 
+            // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);
 
+            // dispose content and disk
             await disk.Content.DisposeAsync();
             disk.Dispose();
             

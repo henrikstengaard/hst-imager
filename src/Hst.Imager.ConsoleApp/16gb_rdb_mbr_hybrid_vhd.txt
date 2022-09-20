@@ -1,8 +1,8 @@
 ﻿# create blank 16gb image with compatible size (cf/sd/ssd friendly)
 blank 16gb.vhd 16000000000 --compatible
 
-# initialize rigid disk block at sector 2
-rdb init 16gb.vhd --rdb-block-lo 2
+# initialize rigid disk block of size 12gb at sector 2
+rdb init 16gb.vhd --size 13gb --rdb-block-lo 2
 
 # add rdb file system pfs3aio with dos type PDS3
 rdb fs add 16gb.vhd pfs3aio PDS3
@@ -10,8 +10,8 @@ rdb fs add 16gb.vhd pfs3aio PDS3
 # add rdb partition of 500mb with device name "DH0" and set bootable
 rdb part add 16gb.vhd DH0 PDS3 500mb --bootable
 
-# add rdb partition of 13gb with device name "DH1"
-rdb part add 16gb.vhd DH1 PDS3 12gb
+# add rdb partition of remaining space with device name "DH1"
+rdb part add 16gb.vhd DH1 PDS3 *
 
 # format rdb partition number 1 with volume name "Workbench"
 rdb part format 16gb.vhd 1 Workbench
@@ -23,7 +23,7 @@ rdb part format 16gb.vhd 2 Work
 mbr init 16gb.vhd
 
 # add mbr partition of 1gb of type fat32
-mbr part add 16gb.vhd fat32 1gb --start 1000000
+mbr part add 16gb.vhd fat32 *
 
 # format mbr partition number 1 with label "PC"
 mbr part format 16gb.vhd 1 "PC"

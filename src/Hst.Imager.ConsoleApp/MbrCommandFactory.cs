@@ -67,10 +67,9 @@
                 name: "Size",
                 description: "Size of the partition.");
 
-            var startSectorOption = new Option<long>(
-                new[] { "--start", "-s" },
-                description: "Set start sector.",
-                getDefaultValue: () => 1);
+            var startSectorOption = new Option<long?>(
+                new[] { "--start-sector", "-s" },
+                description: "Start sector.");
 
             var activeOption = new Option<bool>(
                 new[] { "--active", "-a" },
