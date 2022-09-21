@@ -27,13 +27,13 @@
             sendDataProcessed = false;
         }
 
-        public async Task<Result> Convert(CancellationToken token, Stream source, Stream destination, long size, bool skipZeroFilled = false)
+        public async Task<Result> Convert(CancellationToken token, Stream source, Stream destination, long size, long sourceOffset = 0, long destinationOffset = 0, bool skipZeroFilled = false)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            source.Seek(0, SeekOrigin.Begin);
-            destination.Seek(0, SeekOrigin.Begin);
+            source.Seek(sourceOffset, SeekOrigin.Begin);
+            destination.Seek(destinationOffset, SeekOrigin.Begin);
             
             var dataSectorReader = new DataSectorReader(source, bufferSize: bufferSize);
             
@@ -56,7 +56,7 @@
                 {
                     foreach (var sector in sectorResult.Sectors.Where(x => x.Start < size))
                     {
-                        destination.Seek(sector.Start, SeekOrigin.Begin);
+                        destination.Seek(sourceOffset == 0 ? sector.Start : destinationOffset + sector.Start - sourceOffset, SeekOrigin.Begin);
                         await destination.WriteAsync(sector.Data, 0, sector.Data.Length, token);
                     }
                 }

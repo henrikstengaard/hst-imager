@@ -1,7 +1,9 @@
 ﻿namespace Hst.Imager.Core.Extensions
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
 
     public static class FormatExtensions
     {
@@ -24,6 +26,11 @@
             var bytes = BitConverter.GetBytes(value);
             Array.Reverse(bytes);
             return bytes.FormatHex();
+        }
+
+        public static string FormatElapsed(this TimeSpan value)
+        {
+            return $"{Convert.ToInt32(Math.Floor(value.TotalHours))}h:{value.Minutes}m:{value.Seconds}s";
         }
     }
 }

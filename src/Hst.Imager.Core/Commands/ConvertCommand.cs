@@ -86,7 +86,7 @@
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal);
             };
-            return await imageConverter.Convert(token, sourceStream, destinationStream, convertSize, isVhd);
+            return await imageConverter.Convert(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

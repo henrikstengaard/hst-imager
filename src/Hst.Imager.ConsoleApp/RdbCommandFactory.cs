@@ -124,6 +124,7 @@
             rdbPartCommand.AddCommand(CreateRdbPartAdd());
             rdbPartCommand.AddCommand(CreateRdbPartUpdate());
             rdbPartCommand.AddCommand(CreateRdbPartDel());
+            rdbPartCommand.AddCommand(CreateRdbPartCopy());
             rdbPartCommand.AddCommand(CreateRdbPartFormat());
 
             return rdbPartCommand;
@@ -334,6 +335,35 @@
 
             return rdbPartDelCommand;
         }
+
+        private static Command CreateRdbPartCopy()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var partitionNumber = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to copy.");
+
+            var destinationPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination physical drive or image file.");
+
+            var nameOption = new Option<string>(
+                new[] { "--name", "-n" },
+                description: "Name of the partition (eg. DH0).");
+            
+            var rdbPartDelCommand = new Command("copy", "Copy partition.");
+            rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber, destinationPathArgument, nameOption);
+            rdbPartDelCommand.AddArgument(sourcePathArgument);
+            rdbPartDelCommand.AddArgument(partitionNumber);
+            rdbPartDelCommand.AddArgument(destinationPathArgument);
+            rdbPartDelCommand.AddOption(nameOption);
+
+            return rdbPartDelCommand;
+        }
+
 
         private static Command CreateRdbPartFormat()
         {

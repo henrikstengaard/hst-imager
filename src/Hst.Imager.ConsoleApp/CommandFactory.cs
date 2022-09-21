@@ -29,6 +29,7 @@
             rootCommand.AddCommand(CreateReadCommand());
             rootCommand.AddCommand(CreateWriteCommand());
             rootCommand.AddCommand(CreateBlankCommand());
+            rootCommand.AddCommand(CreateSectorCommand());
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
 
@@ -158,6 +159,31 @@
             blankCommand.AddArgument(sizeArgument);
             blankCommand.AddOption(compatibleSizeOption);
             blankCommand.SetHandler(CommandHandler.Blank, pathArgument, sizeArgument, compatibleSizeOption);
+
+            return blankCommand;
+        }
+        
+        public static Command CreateSectorCommand()
+        {
+            var command = new Command("sector", "Sector.");
+            command.AddCommand(CreateSectorExtractCommand());
+            return command;
+        }
+        
+        public static Command CreateSectorExtractCommand()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var outputPathArgument = new Argument<string>(
+                name: "OutputPath",
+                description: "Output path to write sectors.");
+
+            var blankCommand = new Command("extract", "Extract sectors.");
+            blankCommand.AddArgument(pathArgument);
+            blankCommand.AddArgument(outputPathArgument);
+            blankCommand.SetHandler(CommandHandler.SectorExtract, pathArgument, outputPathArgument);
 
             return blankCommand;
         }

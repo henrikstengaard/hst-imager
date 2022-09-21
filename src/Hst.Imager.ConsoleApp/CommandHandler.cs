@@ -91,7 +91,7 @@
                 Log.Logger.Error($"Command requires administrator privileges");
                 Environment.Exit(1);
             }
-            
+
             command.ProgressMessage += (_, progressMessage) => { Log.Logger.Debug(progressMessage); };
             var cancellationTokenSource = new CancellationTokenSource();
             Result result = null;
@@ -136,7 +136,8 @@
 
         public static async Task Info(string path)
         {
-            var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(), path);
+            var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+                path);
             command.DiskInfoRead += (sender, args) =>
             {
                 Log.Logger.Information(InfoPresenter.PresentInfo(args.DiskInfo));
@@ -147,10 +148,7 @@
         public static async Task List()
         {
             var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives());
-            command.ListRead += (_, args) =>
-            {
-                Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos));
-            };
+            command.ListRead += (_, args) => { Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos)); };
             await Execute(command, true);
         }
 
@@ -158,17 +156,8 @@
         {
             var command = new ConvertCommand(GetLogger<ConvertCommand>(), GetCommandHelper(), sourcePath,
                 destinationPath, ParseSize(size));
-
-            var lastProgressMessage = "";
-            command.DataProcessed += (_, args) =>
-            {
-                lastProgressMessage =
-                    $"{args.PercentComplete}%, [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed} / {args.TimeTotal}]\r";
-                Console.Write(lastProgressMessage);
-            };
+            command.DataProcessed += WriteProcessMessage;
             await Execute(command);
-            Console.WriteLine(new string(' ', lastProgressMessage.Length));
-            Console.WriteLine();
         }
 
         public static async Task Read(string sourcePath, string destinationPath, string size)
@@ -176,17 +165,8 @@
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
                 destinationPath, ParseSize(size));
-
-            var lastProgressMessage = "";
-            command.DataProcessed += (_, args) =>
-            {
-                lastProgressMessage =
-                    $"{args.PercentComplete}%, [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed} / {args.TimeTotal}]\r";
-                Console.Write(lastProgressMessage);
-            };
+            command.DataProcessed += WriteProcessMessage;
             await Execute(command);
-            Console.WriteLine(new string(' ', lastProgressMessage.Length));
-            Console.WriteLine();
         }
 
         public static async Task Write(string sourcePath, string destinationPath, string size)
@@ -194,18 +174,8 @@
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
                 destinationPath, ParseSize(size));
-
-            var lastProgressMessage = "";
-            command.DataProcessed += (_, args) =>
-            {
-                lastProgressMessage =
-                    $"{args.PercentComplete}%, [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed} / {args.TimeTotal}]\r";
-                Console.Write(lastProgressMessage);
-            };
-
+            command.DataProcessed += WriteProcessMessage;
             await Execute(command);
-            Console.WriteLine(new string(' ', lastProgressMessage.Length));
-            Console.WriteLine();
         }
 
         public static async Task Blank(string path, string size, bool compatibleSize)
@@ -286,24 +256,50 @@
                 maxTransfer, noMount, bootable, priority, blockSize));
         }
 
-        public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType, int? reserved,
-            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable, int? bootPriority, int? blockSize)
+        public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,
+            int? reserved,
+            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable,
+            int? bootPriority, int? blockSize)
         {
             await Execute(new RdbPartUpdateCommand(GetLogger<RdbPartUpdateCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
                 maxTransfer, mask, noMount, bootable, bootPriority, blockSize));
         }
-        
+
         public static async Task RdbPartDel(string path, int partitionNumber)
         {
             await Execute(new RdbPartDelCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
+        public static async Task RdbPartCopy(string sourcePath, int partitionNumber, string destinationPath,
+            string name)
+        {
+            var command = new RdbPartCopyCommand(GetLogger<RdbPartCopyCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath, name);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+        
         public static async Task RdbPartFormat(string path, int partitionNumber, string name)
         {
             await Execute(new RdbPartFormatCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name));
+        }
+
+        public static async Task SectorExtract(string path, string outputPath)
+        {
+            await Execute(new SectorExtractCommand(GetLogger<SectorExtractCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, outputPath));
+        }
+        
+        private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
+        {
+            var progressMessage =
+                $"{args.PercentComplete}%, [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed.FormatElapsed()} / {args.TimeTotal.FormatElapsed()}]\r";
+            Console.Write(args.PercentComplete >= 100
+                ? string.Concat(new string(' ', progressMessage.Length), "\r")
+                : progressMessage);
         }
     }
 }
