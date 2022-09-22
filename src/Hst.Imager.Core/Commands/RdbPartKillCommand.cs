@@ -100,6 +100,9 @@
 
             OnProgressMessage($"Writing boot bytes '0x{bootBytes.FormatHex()}'");
             
+            // seek partition offset
+            stream.Seek(partitionOffset, SeekOrigin.Begin);
+            
             // write block
             await Amiga.Disk.WriteBlock(stream, blockBytes);
             

@@ -357,7 +357,7 @@
                 new[] { "--name", "-n" },
                 description: "Name of the partition (eg. DH0).");
             
-            var rdbPartDelCommand = new Command("copy", "Copy partition.");
+            var rdbPartDelCommand = new Command("copy", "Copy partition from a physical drive or image file.");
             rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber, destinationPathArgument, nameOption);
             rdbPartDelCommand.AddArgument(sourcePathArgument);
             rdbPartDelCommand.AddArgument(partitionNumber);
