@@ -42,7 +42,8 @@ public class SectorExtractCommand : CommandBase
         {
             Directory.CreateDirectory(outputPath);
         }
-        
+
+        stream.Position = 0;
         await Amiga.Disk.FindUsedSectors(stream, 512, async (offset, bytes) =>
         {
             OnProgressMessage($"Writing sector offset '{offset}'");

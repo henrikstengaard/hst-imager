@@ -21,7 +21,13 @@
       <None Update="pfs3aio">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="16gb_rdb_mbr_hybrid_vhd.txt">
+      <None Update="create_16gb_rdb_mbr_hybrid_vhd.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="create_1gb_rdb_vhd.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="export_dh0_1gb_import_4gb.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

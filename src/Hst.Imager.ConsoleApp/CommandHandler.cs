@@ -280,11 +280,34 @@
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
         }
-        
+
+        public static async Task RdbPartExport(string sourcePath, int partitionNumber, string destinationPath)
+        {
+            var command = new RdbPartExportCommand(GetLogger<RdbPartExportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+
+        public static async Task RdbPartImport(string sourcePath, string destinationPath,
+            string name, string dosType, bool bootable)
+        {
+            var command = new RdbPartImportCommand(GetLogger<RdbPartImportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), sourcePath, destinationPath, name, dosType, bootable);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+
         public static async Task RdbPartFormat(string path, int partitionNumber, string name)
         {
             await Execute(new RdbPartFormatCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name));
+        }
+
+        public static async Task RdbPartKill(string path, int partitionNumber, string hexBootBytes)
+        {
+            await Execute(new RdbPartKillCommand(GetLogger<RdbPartKillCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, partitionNumber, hexBootBytes));
         }
 
         public static async Task SectorExtract(string path, string outputPath)
@@ -292,7 +315,7 @@
             await Execute(new SectorExtractCommand(GetLogger<SectorExtractCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, outputPath));
         }
-        
+
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
             var progressMessage =

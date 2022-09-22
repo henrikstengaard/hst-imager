@@ -125,6 +125,9 @@
             rdbPartCommand.AddCommand(CreateRdbPartUpdate());
             rdbPartCommand.AddCommand(CreateRdbPartDel());
             rdbPartCommand.AddCommand(CreateRdbPartCopy());
+            rdbPartCommand.AddCommand(CreateRdbPartExport());
+            rdbPartCommand.AddCommand(CreateRdbPartImport());
+            rdbPartCommand.AddCommand(CreateRdbPartKill());
             rdbPartCommand.AddCommand(CreateRdbPartFormat());
 
             return rdbPartCommand;
@@ -364,6 +367,86 @@
             return rdbPartDelCommand;
         }
 
+        private static Command CreateRdbPartExport()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var partitionNumber = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to export.");
+
+            var destinationPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination file (eg. DH0.hdf).");
+
+            var command = new Command("export", "Export partition to a hardfile.");
+            command.SetHandler(CommandHandler.RdbPartExport, sourcePathArgument, partitionNumber, destinationPathArgument);
+            command.AddArgument(sourcePathArgument);
+            command.AddArgument(partitionNumber);
+            command.AddArgument(destinationPathArgument);
+
+            return command;
+        }
+
+        private static Command CreateRdbPartImport()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var destinationPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination file (eg. DH0.hdf).");
+
+            var dosTypeArgument = new Argument<string>(
+                name: "DosType",
+                description: "DOS type for the partition to use (eg. DOS3, PFS3).");
+
+            var nameArgument = new Argument<string>(
+                name: "Name",
+                description: "Name of the partition (eg. DH0).");
+
+            var bootableOption = new Option<bool>(
+                new[] { "--bootable", "-b" },
+                description: "Set bootable.",
+                getDefaultValue: () => false);
+
+            
+            var command = new Command("import", "Import partition from a hardfile.");
+            command.SetHandler(CommandHandler.RdbPartImport, sourcePathArgument, destinationPathArgument, nameArgument, dosTypeArgument, bootableOption);
+            command.AddArgument(sourcePathArgument);
+            command.AddArgument(destinationPathArgument);
+            command.AddArgument(nameArgument);
+            command.AddArgument(dosTypeArgument);
+            command.AddOption(bootableOption);
+
+            return command;
+        }
+        
+        private static Command CreateRdbPartKill()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var partitionNumber = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to export.");
+
+            var hexBootBytesArgument = new Argument<string>(
+                name: "HexBootBytes",
+                description: "Boot bytes in hex to write (eg. 00000000).");
+
+            var command = new Command("kill", "Kill partition.");
+            command.SetHandler(CommandHandler.RdbPartKill, sourcePathArgument, partitionNumber, hexBootBytesArgument);
+            command.AddArgument(sourcePathArgument);
+            command.AddArgument(partitionNumber);
+            command.AddArgument(hexBootBytesArgument);
+
+            return command;
+        }
 
         private static Command CreateRdbPartFormat()
         {

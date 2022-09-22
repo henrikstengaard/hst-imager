@@ -7,13 +7,13 @@
     using Hst.Imager.Core;
     using Xunit;
 
-    public class GivenReaderWithDataSectors : SectorTestBase
+    public class GivenDataSectorReaderWithDataSectors : SectorTestBase
     {
         [Fact]
-        public async Task WhenReadNextThenDataSectorsAreReturned()
+        public async Task WhenReadSectorsThenDataSectorsAreReturned()
         {
             var zeroFilledSectorData = new byte[SectorSize];
-            
+
             var sector1 = CreateSector();
             var sector2 = CreateSector();
             var sector3 = CreateSector();
@@ -61,7 +61,7 @@
             Assert.Equal(3 * SectorSize - 1, sector.End);
             Assert.True(sector.IsZeroFilled);
             Assert.Equal(zeroFilledSectorData, sector.Data);
-            
+
             // read next sectors
             var result2 = await reader.ReadNext();
 

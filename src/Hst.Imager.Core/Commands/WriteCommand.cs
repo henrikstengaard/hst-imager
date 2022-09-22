@@ -74,13 +74,13 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
 
-            var imageConverter = new ImageConverter();
-            imageConverter.DataProcessed += (_, e) =>
+            var streamCopier = new StreamCopier();
+            streamCopier.DataProcessed += (_, e) =>
             {
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal);
             };
-            await imageConverter.Convert(token, sourceStream, destinationStream, writeSize);
+            await streamCopier.Copy(token, sourceStream, destinationStream, writeSize);
             
             return new Result();
         }

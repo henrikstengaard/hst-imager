@@ -22,7 +22,7 @@ rdb part format 16gb.vhd 2 Work
 # initialize master boot record at sector 0
 mbr init 16gb.vhd
 
-# add mbr partition of 1gb of type fat32
+# add mbr partition of remaining space of type fat32
 mbr part add 16gb.vhd fat32 *
 
 # format mbr partition number 1 with label "PC"

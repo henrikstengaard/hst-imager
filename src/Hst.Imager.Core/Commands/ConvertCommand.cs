@@ -80,13 +80,13 @@
                 destinationStream.SetLength(convertSize);
             }
 
-            var imageConverter = new ImageConverter();
-            imageConverter.DataProcessed += (_, e) =>
+            var streamCopier = new StreamCopier();
+            streamCopier.DataProcessed += (_, e) =>
             {
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal);
             };
-            return await imageConverter.Convert(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
+            return await streamCopier.Copy(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

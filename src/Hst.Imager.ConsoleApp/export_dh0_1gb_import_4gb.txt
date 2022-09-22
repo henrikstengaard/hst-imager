@@ -1,0 +1,20 @@
+﻿# export rdb partition 1 to dh0.hdf file
+rdb part export 1gb.vhd 1 dh0.hdf
+
+# create blank 4gb image with compatible size (cf/sd/ssd friendly)
+blank 4gb.vhd 4000000000 --compatible
+
+# initialize rigid disk block for entire disk
+rdb init 4gb.vhd
+
+# add rdb file system pfs3aio with dos type PDS3
+rdb fs add 4gb.vhd pfs3aio PDS3
+
+# import dh0.hdf partition with device name "DH0" and set bootable
+rdb part import dh0.hdf 4gb.vhd DH0 PDS3 --bootable
+
+# show info
+info 4gb.vhd
+
+# show rdb info
+rdb info 4gb.vhd

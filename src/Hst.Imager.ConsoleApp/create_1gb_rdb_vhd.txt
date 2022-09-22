@@ -1,0 +1,20 @@
+﻿# create blank 1gb image
+blank 1gb.vhd 1gb
+
+# initialize rigid disk block for entire disk
+rdb init 1gb.vhd
+
+# add rdb file system pfs3aio with dos type PDS3
+rdb fs add 1gb.vhd pfs3aio PDS3
+
+# add rdb partition of 100mb with device name "DH0" and set bootable
+rdb part add 1gb.vhd DH0 PDS3 100mb --bootable
+
+# format rdb partition number 1 with volume name "Workbench"
+rdb part format 1gb.vhd 1 Workbench
+
+# show info
+info 1gb.vhd
+
+# show rdb info
+rdb info 1gb.vhd

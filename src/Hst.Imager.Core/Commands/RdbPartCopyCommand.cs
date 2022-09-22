@@ -134,13 +134,13 @@
 
             OnProgressMessage($"Copying partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
             
-            var imageConverter = new ImageConverter();
-            imageConverter.DataProcessed += (_, e) =>
+            var streamCopier = new StreamCopier();
+            streamCopier.DataProcessed += (_, e) =>
             {
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal);
             };
-            await imageConverter.Convert(token, sourceStream, destinationStream, sourceSize, sourceOffset, destinationOffset, isVhd);
+            await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, sourceOffset, destinationOffset, isVhd);
             
             return new Result();
         }
