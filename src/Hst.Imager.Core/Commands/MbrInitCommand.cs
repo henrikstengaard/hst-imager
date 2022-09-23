@@ -28,7 +28,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var physicalDrivesList = physicalDrives.ToList();
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
@@ -41,7 +41,7 @@
             
             using var disk = new Disk(stream, Ownership.None);
             
-            OnProgressMessage("Initializing Master Boot Record");
+            OnDebugMessage("Initializing Master Boot Record");
 
             BiosPartitionTable.Initialize(disk);
 

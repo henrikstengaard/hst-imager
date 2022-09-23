@@ -34,7 +34,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Reading source path '{sourcePath}' to destination path '{destinationPath}'");
+            OnDebugMessage($"Reading source path '{sourcePath}' to destination path '{destinationPath}'");
             
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath);

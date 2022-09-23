@@ -64,7 +64,7 @@
                 return new Result(new Error("Block size must be dividable by 512"));
             }
 
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -75,7 +75,7 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage("Reading Rigid Disk Block");
+            OnDebugMessage("Reading Rigid Disk Block");
 
             var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
@@ -105,8 +105,8 @@
             
             var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size);
 
-            OnProgressMessage($"Adding partition number '{partitionBlocks.Count + 1}'");
-            OnProgressMessage($"Device name '{name}'");
+            OnDebugMessage($"Adding partition number '{partitionBlocks.Count + 1}'");
+            OnDebugMessage($"Device name '{name}'");
 
             var partitionBlock =
                 PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize,
@@ -136,18 +136,18 @@
             partitionBlock.BootPriority = (uint)priority;
             partitionBlock.SizeBlock = (uint)(blockSize / Hst.Amiga.SizeOf.Long);
 
-            OnProgressMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnProgressMessage($"Low cyl '{partitionBlock.LowCyl}'");
-            OnProgressMessage($"High cyl '{partitionBlock.HighCyl}'");
-            OnProgressMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnProgressMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnProgressMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnProgressMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnProgressMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
+            OnDebugMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnDebugMessage($"Low cyl '{partitionBlock.LowCyl}'");
+            OnDebugMessage($"High cyl '{partitionBlock.HighCyl}'");
+            OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
+            OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+            OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
+            OnDebugMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
             
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
             
-            OnProgressMessage("Writing Rigid Disk Block");
+            OnDebugMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
             return new Result();

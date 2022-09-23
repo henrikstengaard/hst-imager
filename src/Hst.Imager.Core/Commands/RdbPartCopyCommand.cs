@@ -37,7 +37,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening source path '{sourcePath}' for read");
+            OnDebugMessage($"Opening source path '{sourcePath}' for read");
 
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(physicalDrives, sourcePath);
@@ -49,13 +49,13 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            OnProgressMessage("Reading source Rigid Disk Block");
+            OnDebugMessage("Reading source Rigid Disk Block");
 
             var sourceRigidDiskBlock = await commandHelper.GetRigidDiskBlock(sourceStream);
 
             var sourcePartitionBlocks = sourceRigidDiskBlock.PartitionBlocks.ToList();
 
-            OnProgressMessage($"Copying source partition number '{partitionNumber}'");
+            OnDebugMessage($"Copying source partition number '{partitionNumber}'");
 
             if (partitionNumber < 1 || partitionNumber > sourcePartitionBlocks.Count)
             {
@@ -65,13 +65,13 @@
             // get partition block to copy
             var partitionBlock = sourcePartitionBlocks[partitionNumber - 1];
 
-            OnProgressMessage($"Source partition number '{partitionNumber}':");
-            OnProgressMessage($"Name '{partitionBlock.DriveName}'");
-            OnProgressMessage($"LowCyl '{partitionBlock.LowCyl}'");
-            OnProgressMessage($"HighCyl '{partitionBlock.HighCyl}'");
-            OnProgressMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnDebugMessage($"Source partition number '{partitionNumber}':");
+            OnDebugMessage($"Name '{partitionBlock.DriveName}'");
+            OnDebugMessage($"LowCyl '{partitionBlock.LowCyl}'");
+            OnDebugMessage($"HighCyl '{partitionBlock.HighCyl}'");
+            OnDebugMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
 
-            OnProgressMessage($"Opening destination path '{destinationPath}' for read/write");
+            OnDebugMessage($"Opening destination path '{destinationPath}' for read/write");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(physicalDrives, destinationPath);
@@ -83,7 +83,7 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
 
-            OnProgressMessage("Reading destination Rigid Disk Block");
+            OnDebugMessage("Reading destination Rigid Disk Block");
 
             var destinationRigidDiskBlock = await commandHelper.GetRigidDiskBlock(destinationStream);
             var destinationPartitionBlocks = destinationRigidDiskBlock.PartitionBlocks.ToList();
@@ -117,13 +117,13 @@
             destinationPartitionBlocks.Add(destinationPartitionBlock);
             destinationRigidDiskBlock.PartitionBlocks = destinationPartitionBlocks;
 
-            OnProgressMessage($"Destination partition number '{destinationPartitionBlocks.IndexOf(destinationPartitionBlock) + 1}':");
-            OnProgressMessage($"Name '{destinationPartitionBlock.DriveName}'");
-            OnProgressMessage($"LowCyl '{destinationPartitionBlock.LowCyl}'");
-            OnProgressMessage($"HighCyl '{destinationPartitionBlock.HighCyl}'");
-            OnProgressMessage($"Size '{destinationPartitionBlock.PartitionSize.FormatBytes()}' ({destinationPartitionBlock.PartitionSize} bytes)");
+            OnDebugMessage($"Destination partition number '{destinationPartitionBlocks.IndexOf(destinationPartitionBlock) + 1}':");
+            OnDebugMessage($"Name '{destinationPartitionBlock.DriveName}'");
+            OnDebugMessage($"LowCyl '{destinationPartitionBlock.LowCyl}'");
+            OnDebugMessage($"HighCyl '{destinationPartitionBlock.HighCyl}'");
+            OnDebugMessage($"Size '{destinationPartitionBlock.PartitionSize.FormatBytes()}' ({destinationPartitionBlock.PartitionSize} bytes)");
             
-            OnProgressMessage("Writing destination Rigid Disk Block");
+            OnDebugMessage("Writing destination Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
 
             var destinationCylinderSize = destinationRigidDiskBlock.Heads * destinationRigidDiskBlock.Sectors *
@@ -132,7 +132,7 @@
             
             var isVhd = commandHelper.IsVhd(destinationPath);
 
-            OnProgressMessage($"Copying partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
+            OnDebugMessage($"Copying partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
             
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>

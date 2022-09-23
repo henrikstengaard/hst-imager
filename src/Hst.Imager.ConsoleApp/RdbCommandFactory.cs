@@ -65,6 +65,9 @@
             rdbFsCommand.AddAlias("fs");
             rdbFsCommand.AddCommand(CreateRdbFsAdd());
             rdbFsCommand.AddCommand(CreateRdbFsDel());
+            rdbFsCommand.AddCommand(CreateRdbFsExport());
+            rdbFsCommand.AddCommand(CreateRdbFsImport());
+            rdbFsCommand.AddCommand(CreateRdbFsUpdate());
 
             return rdbFsCommand;
         }
@@ -117,6 +120,91 @@
             return rdbFsDelCommand;
         }
 
+        private static Command CreateRdbFsImport()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var fileSystemPathArgument = new Argument<string>(
+                name: "FileSystemPath",
+                description: "Path to file system to add.");
+
+            var dosTypeOption = new Option<string>(
+                new[] { "--dos-type", "-dt" },
+                description: "Dos Type for file system (eg. DOS3, PDS3).");
+
+            var fileSystemNameOption = new Option<string>(
+                new[] { "--name", "-n" },
+                description: "Name of file system.");
+
+            var command = new Command("import", "Import file systems from physical drive, image file (supports .adf).");
+            command.SetHandler(CommandHandler.RdbFsImport, pathArgument, fileSystemPathArgument, dosTypeOption,
+                fileSystemNameOption);
+            command.AddArgument(pathArgument);
+            command.AddArgument(fileSystemPathArgument);
+            command.AddOption(dosTypeOption);
+            command.AddOption(fileSystemNameOption);
+
+            return command;
+        }
+
+        private static Command CreateRdbFsExport()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var fileSystemNumber = new Argument<int>(
+                name: "FileSystemNumber",
+                description: "File system number to delete.");
+            
+            var fileSystemPathArgument = new Argument<string>(
+                name: "FileSystemPath",
+                description: "Path to file system.");
+
+            var command = new Command("export", "Export file system to a file.");
+            command.SetHandler(CommandHandler.RdbFsExport, pathArgument, fileSystemNumber, fileSystemPathArgument);
+            command.AddArgument(pathArgument);
+            command.AddArgument(fileSystemNumber);
+            command.AddArgument(fileSystemPathArgument);
+
+            return command;
+        }
+        
+        private static Command CreateRdbFsUpdate()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var fileSystemNumber = new Argument<int>(
+                name: "FileSystemNumber",
+                description: "File system number to delete.");
+
+            var dosTypeArgument = new Option<string>(
+                new[] { "--dos-type", "-dt" },
+                description: "Dos type for file system (eg. DOS3, PDS3).");
+
+            var fileSystemNameOption = new Option<string>(
+                new[] { "--name", "-n" },
+                description: "Name of file system.");
+
+            var fileSystemPathOption = new Option<string>(
+                new[] { "--path", "-p" },
+                description: "Path to file system.");
+            
+            var command = new Command("update", "Update file system.");
+            command.SetHandler(CommandHandler.RdbFsUpdate, pathArgument, fileSystemNumber, dosTypeArgument, fileSystemNameOption, fileSystemPathOption);
+            command.AddArgument(pathArgument);
+            command.AddArgument(fileSystemNumber);
+            command.AddOption(dosTypeArgument);
+            command.AddOption(fileSystemNameOption);
+            command.AddOption(fileSystemPathOption);
+
+            return command;
+        }
+        
         private static Command CreateRdbPart()
         {
             var rdbPartCommand = new Command("part", "Partition.");
@@ -381,7 +469,7 @@
                 name: "DestinationPath",
                 description: "Path to destination file (eg. DH0.hdf).");
 
-            var command = new Command("export", "Export partition to a hardfile.");
+            var command = new Command("export", "Export partition to a hard file (eg. DH0.hdf).");
             command.SetHandler(CommandHandler.RdbPartExport, sourcePathArgument, partitionNumber, destinationPathArgument);
             command.AddArgument(sourcePathArgument);
             command.AddArgument(partitionNumber);
@@ -414,7 +502,7 @@
                 getDefaultValue: () => false);
 
             
-            var command = new Command("import", "Import partition from a hardfile.");
+            var command = new Command("import", "Import partition from a hard file (eg. DH0.hdf).");
             command.SetHandler(CommandHandler.RdbPartImport, sourcePathArgument, destinationPathArgument, nameArgument, dosTypeArgument, bootableOption);
             command.AddArgument(sourcePathArgument);
             command.AddArgument(destinationPathArgument);

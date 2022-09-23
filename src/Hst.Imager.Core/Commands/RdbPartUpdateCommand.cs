@@ -64,7 +64,7 @@
                 return new Result(new Error("Block size must be dividable by 512"));
             }
 
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -75,7 +75,7 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage("Reading Rigid Disk Block");
+            OnDebugMessage("Reading Rigid Disk Block");
 
             var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
@@ -86,7 +86,7 @@
 
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnProgressMessage($"Updating partition number '{partitionNumber}'");
+            OnDebugMessage($"Updating partition number '{partitionNumber}'");
 
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -114,7 +114,7 @@
                 partitionBlock.DosType = dosTypeBytes;
 
                 hasChanges = true;
-                OnProgressMessage(
+                OnDebugMessage(
                     $"DOS Type '0x{partitionBlock.DosType.FormatHex().ToUpper()}, {partitionBlock.DosTypeFormatted}'");
             }
 
@@ -130,7 +130,7 @@
                 partitionBlock.DriveName = name;
 
                 hasChanges = true;
-                OnProgressMessage($"Drive name '{name}'");
+                OnDebugMessage($"Drive name '{name}'");
             }
 
             var flags = partitionBlock.Flags;
@@ -148,7 +148,7 @@
                 }
                 
                 hasChanges = true;
-                OnProgressMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.Bootable) == (int)PartitionBlock.PartitionFlagsEnum.Bootable}'");
+                OnDebugMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.Bootable) == (int)PartitionBlock.PartitionFlagsEnum.Bootable}'");
             }
             
             // update no mount
@@ -164,7 +164,7 @@
                 }
                 
                 hasChanges = true;
-                OnProgressMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
+                OnDebugMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
             }
 
             // update flags, if changed
@@ -178,7 +178,7 @@
             {
                 partitionBlock.Reserved = (uint)reserved;
                 hasChanges = true;
-                OnProgressMessage($"Reserved '{partitionBlock.Reserved}'");
+                OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
             }
 
             // update prealloc
@@ -186,7 +186,7 @@
             {
                 partitionBlock.PreAlloc = (uint)preAlloc;
                 hasChanges = true;
-                OnProgressMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+                OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
             }
 
             // update buffers
@@ -194,7 +194,7 @@
             {
                 partitionBlock.NumBuffer = (uint)buffers;
                 hasChanges = true;
-                OnProgressMessage($"Buffers '{partitionBlock.NumBuffer}'");
+                OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
             }
             
             // update max transfer
@@ -202,7 +202,7 @@
             {
                 partitionBlock.MaxTransfer = maxTransfer.Value;
                 hasChanges = true;
-                OnProgressMessage($"Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}, {partitionBlock.MaxTransfer}'");
+                OnDebugMessage($"Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}, {partitionBlock.MaxTransfer}'");
             }
 
             // update mask
@@ -210,7 +210,7 @@
             {
                 partitionBlock.Mask = mask.Value;
                 hasChanges = true;
-                OnProgressMessage($"Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}, {partitionBlock.Mask}'");
+                OnDebugMessage($"Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}, {partitionBlock.Mask}'");
             }
             
             // update boot priority
@@ -218,7 +218,7 @@
             {
                 partitionBlock.BootPriority = (uint)bootPriority;
                 hasChanges = true;
-                OnProgressMessage($"Boot priority '{partitionBlock.BootPriority}'");
+                OnDebugMessage($"Boot priority '{partitionBlock.BootPriority}'");
             }
 
             // update block size
@@ -226,16 +226,16 @@
             {
                 partitionBlock.SizeBlock = (uint)(blockSize / Hst.Amiga.SizeOf.Long);
                 hasChanges = true;
-                OnProgressMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
+                OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
             }
 
             if (!hasChanges)
             {
-                OnProgressMessage($"No Rigid Disk Block changes");
+                OnDebugMessage($"No Rigid Disk Block changes");
                 return new Result();
             }
             
-            OnProgressMessage("Writing Rigid Disk Block");
+            OnDebugMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
             return new Result();

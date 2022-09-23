@@ -41,11 +41,11 @@
 
             var mediaSize = Convert.ToInt64(compatibleSize ? size.Value * 0.95 : size.Value);
 
-            OnProgressMessage($"Creating blank image '{path}'");
-            OnProgressMessage($"Size '{mediaSize.FormatBytes()}' ({mediaSize} bytes)");
-            OnProgressMessage($"Compatible '{compatibleSize}'");
+            OnDebugMessage($"Creating blank image '{path}'");
+            OnDebugMessage($"Size '{mediaSize.FormatBytes()}' ({mediaSize} bytes)");
+            OnDebugMessage($"Compatible '{compatibleSize}'");
             
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
             
             var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false);
             if (mediaResult.IsFaulted)

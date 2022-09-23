@@ -31,7 +31,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -42,7 +42,7 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage("Reading Rigid Disk Block");
+            OnDebugMessage("Reading Rigid Disk Block");
 
             var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
@@ -53,7 +53,7 @@
             
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnProgressMessage($"Formatting partition number '{partitionNumber}' with volume name '{name}'");
+            OnDebugMessage($"Formatting partition number '{partitionNumber}' with volume name '{name}'");
             
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -62,7 +62,7 @@
 
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
-            OnProgressMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
+            OnDebugMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
             
             switch (partitionBlock.DosTypeFormatted)
             {

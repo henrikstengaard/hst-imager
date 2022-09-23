@@ -35,7 +35,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Converting source path '{sourcePath}' to destination path '{destinationPath}'");
+            OnDebugMessage($"Converting source path '{sourcePath}' to destination path '{destinationPath}'");
             
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), sourcePath, false);
@@ -62,7 +62,7 @@
                 .ToInt64(size.Value == 0 ? rigidDiskBlock?.DiskSize ?? sourceStream.Length : size.Value)
                 .ResolveSize(size);
             
-            OnProgressMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
+            OnDebugMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), destinationPath, convertSize, false);

@@ -92,7 +92,9 @@
                 Environment.Exit(1);
             }
 
-            command.ProgressMessage += (_, progressMessage) => { Log.Logger.Debug(progressMessage); };
+            command.DebugMessage += (_, progressMessage) => { Log.Logger.Debug(progressMessage); };
+            command.InformationMessage += (_, progressMessage) => { Log.Logger.Information(progressMessage); };
+
             var cancellationTokenSource = new CancellationTokenSource();
             Result result = null;
             try
@@ -238,16 +240,34 @@
 
         public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName)
         {
-            await Execute(new RdbFsAddCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName));
         }
 
         public static async Task RdbFsDel(string path, int fileSystemNumber)
         {
-            await Execute(new RdbFsDelCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            await Execute(new RdbFsDelCommand(GetLogger<RdbFsDelCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, fileSystemNumber));
         }
 
+        public static async Task RdbFsImport(string path, string fileSystemPath, string dosType, string fileSystemName)
+        {
+            await Execute(new RdbFsImportCommand(GetLogger<RdbFsImportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName));
+        }
+        
+        public static async Task RdbFsExport(string path, int fileSystemNumber, string fileSystemPath)
+        {
+            await Execute(new RdbFsExportCommand(GetLogger<RdbFsExportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, fileSystemNumber, fileSystemPath));
+        }
+
+        public static async Task RdbFsUpdate(string path, int fileSystemNumber, string dosType, string fileSystemName, string fileSystemPath)
+        {
+            await Execute(new RdbFsUpdateCommand(GetLogger<RdbFsUpdateCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath));
+        }
+        
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, int reserved,
             int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int blockSize)
         {

@@ -34,7 +34,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -45,13 +45,13 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage("Initializing Rigid Disk Block");
+            OnDebugMessage("Initializing Rigid Disk Block");
             
             var defaultName = media.IsPhysicalDrive ? media.Model : Path.GetFileNameWithoutExtension(media.Model);
 
             var rdbSize = Convert.ToInt64(size.Value == 0 ? stream.Length : size.Value).ResolveSize(size);
             
-            OnProgressMessage($"Size '{rdbSize.FormatBytes()}' ({rdbSize} bytes)");
+            OnDebugMessage($"Size '{rdbSize.FormatBytes()}' ({rdbSize} bytes)");
 
             var rigidDiskBlock =
                 Hst.Amiga.RigidDiskBlocks.RigidDiskBlock.Create(rdbSize);
@@ -64,10 +64,10 @@
                 rigidDiskBlock.RdbBlockLo = (uint)rdbBlockLo;
             }
 
-            OnProgressMessage($"RdbBlockLo '{rdbBlockLo}'");
-            OnProgressMessage($"RdbBlockHi '{rigidDiskBlock.RdbBlockHi}'");
+            OnDebugMessage($"RdbBlockLo '{rdbBlockLo}'");
+            OnDebugMessage($"RdbBlockHi '{rigidDiskBlock.RdbBlockHi}'");
             
-            OnProgressMessage("Writing Rigid Disk Block");
+            OnDebugMessage("Writing Rigid Disk Block");
             await Hst.Amiga.RigidDiskBlocks.RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
             
             return new Result();

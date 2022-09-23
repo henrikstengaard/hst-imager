@@ -31,7 +31,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var physicalDrivesList = physicalDrives.ToList();
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
@@ -44,7 +44,7 @@
             
             using var disk = new Disk(stream, Ownership.None);
             
-            OnProgressMessage("Reading Master Boot Record");
+            OnDebugMessage("Reading Master Boot Record");
             
             BiosPartitionTable biosPartitionTable;
             try
@@ -56,7 +56,7 @@
                 return new Result(new Error("Master Boot Record not found"));
             }
 
-            OnProgressMessage($"Deleting partition number '{partitionNumber}'");
+            OnDebugMessage($"Deleting partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {

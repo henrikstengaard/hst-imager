@@ -45,7 +45,7 @@
                 return new Result(new Error("DOS type must be 4 characters"));
             }
 
-            OnProgressMessage($"Opening source path '{sourcePath}' as readable");
+            OnDebugMessage($"Opening source path '{sourcePath}' as readable");
 
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(physicalDrives, sourcePath, allowPhysicalDrive: false);
@@ -57,7 +57,7 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            OnProgressMessage($"Opening destination path '{destinationPath}' as writable");
+            OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(physicalDrives, destinationPath, allowPhysicalDrive: false);
@@ -69,7 +69,7 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
 
-            OnProgressMessage("Reading destination Rigid Disk Block");
+            OnDebugMessage("Reading destination Rigid Disk Block");
 
             var destinationRigidDiskBlock = await commandHelper.GetRigidDiskBlock(destinationStream);
 
@@ -95,15 +95,15 @@
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
 
-            OnProgressMessage(
+            OnDebugMessage(
                 $"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnProgressMessage($"Low cyl '{partitionBlock.LowCyl}'");
-            OnProgressMessage($"High cyl '{partitionBlock.HighCyl}'");
-            OnProgressMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnProgressMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnProgressMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnProgressMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnProgressMessage($"SizeBlock '{partitionBlock.SizeBlock * SizeOf.Long}'");
+            OnDebugMessage($"Low cyl '{partitionBlock.LowCyl}'");
+            OnDebugMessage($"High cyl '{partitionBlock.HighCyl}'");
+            OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
+            OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+            OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
+            OnDebugMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * SizeOf.Long}'");
 
             destinationRigidDiskBlock.PartitionBlocks =
                 destinationRigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
@@ -113,8 +113,8 @@
                                           destinationRigidDiskBlock.BlockSize;
             var destinationOffset = partitionBlock.LowCyl * destinationCylinderSize;
 
-            OnProgressMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
-            OnProgressMessage($"destinationOffset '{destinationOffset}'");
+            OnDebugMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
+            OnDebugMessage($"destinationOffset '{destinationOffset}'");
 
             var isVhd = commandHelper.IsVhd(destinationPath);
 
@@ -127,7 +127,7 @@
             await streamCopier.Copy(token, sourceStream, destinationStream, sourceStream.Length, 0, destinationOffset,
                 isVhd);
 
-            OnProgressMessage("Writing destination Rigid Disk Block");
+            OnDebugMessage("Writing destination Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
 
             return new Result();

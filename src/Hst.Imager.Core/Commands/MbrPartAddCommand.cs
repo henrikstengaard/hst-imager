@@ -44,7 +44,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var physicalDrivesList = physicalDrives.ToList();
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
@@ -87,7 +87,7 @@
             var partitionSize = availableSize.ResolveSize(size);
             var partitionSectors = partitionSize / 512;
             
-            OnProgressMessage("Reading Master Boot Record");
+            OnDebugMessage("Reading Master Boot Record");
             
             BiosPartitionTable biosPartitionTable;
             try
@@ -111,8 +111,8 @@
                 partitionSize = partitionSectors * 512;
             }
             
-            OnProgressMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
-            OnProgressMessage($"Type '{type.ToUpper()}'");
+            OnDebugMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
+            OnDebugMessage($"Type '{type.ToUpper()}'");
 
             // get bios partition type
             var biosPartitionTypeResult = GetBiosPartitionType();
@@ -121,10 +121,10 @@
                 return new Result(biosPartitionTypeResult.Error);
             }
 
-            OnProgressMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
-            OnProgressMessage($"Start sector '{start}'");
-            OnProgressMessage($"End sector '{end}'");
-            OnProgressMessage($"Active '{active}'");
+            OnDebugMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
+            OnDebugMessage($"Start sector '{start}'");
+            OnDebugMessage($"End sector '{end}'");
+            OnDebugMessage($"Active '{active}'");
 
             // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);

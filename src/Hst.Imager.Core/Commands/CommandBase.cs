@@ -10,11 +10,17 @@
 
     public abstract class CommandBase
     {
-        public event EventHandler<string> ProgressMessage;
+        public event EventHandler<string> DebugMessage;
+        public event EventHandler<string> InformationMessage;
 
-        protected virtual void OnProgressMessage(string progressMessage)
+        protected virtual void OnDebugMessage(string message)
         {
-            ProgressMessage?.Invoke(this, progressMessage);
+            DebugMessage?.Invoke(this, message);
+        }        
+
+        protected virtual void OnInformationMessage(string message)
+        {
+            InformationMessage?.Invoke(this, message);
         }        
         
         protected static readonly JsonSerializerOptions JsonSerializerOptions = new()

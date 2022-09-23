@@ -27,7 +27,7 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnProgressMessage($"Opening '{path}' for read");
+            OnDebugMessage($"Opening '{path}' for read");
 
             var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -38,7 +38,7 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage($"Reading Rigid Disk Block from path '{path}'");
+            OnDebugMessage($"Reading Rigid Disk Block from path '{path}'");
             
             var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 

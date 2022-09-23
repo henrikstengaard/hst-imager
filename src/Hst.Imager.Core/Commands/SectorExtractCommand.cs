@@ -27,7 +27,7 @@ public class SectorExtractCommand : CommandBase
 
     public override async Task<Result> Execute(CancellationToken token)
     {
-        OnProgressMessage($"Opening '{path}' for read");
+        OnDebugMessage($"Opening '{path}' for read");
 
         var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path, allowPhysicalDrive: true);
         if (mediaResult.IsFaulted)
@@ -46,7 +46,7 @@ public class SectorExtractCommand : CommandBase
         stream.Position = 0;
         await Amiga.Disk.FindUsedSectors(stream, 512, async (offset, bytes) =>
         {
-            OnProgressMessage($"Writing sector offset '{offset}'");
+            OnDebugMessage($"Writing sector offset '{offset}'");
             var sectorPath = Path.Combine(outputPath, $"{offset}.bin");
             await File.WriteAllBytesAsync(sectorPath, bytes, token);
         });

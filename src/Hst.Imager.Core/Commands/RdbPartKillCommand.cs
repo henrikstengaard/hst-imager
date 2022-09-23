@@ -41,7 +41,7 @@
                 return new Result(new Error($"Hex boot bytes must be 8 characters {hexBootBytes}"));
             }
 
-            OnProgressMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -52,7 +52,7 @@
             using var media = mediaResult.Value;
             await using var stream = media.Stream;
 
-            OnProgressMessage("Reading Rigid Disk Block");
+            OnDebugMessage("Reading Rigid Disk Block");
             
             var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
 
@@ -63,7 +63,7 @@
 
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnProgressMessage($"Killing partition number '{partitionNumber}'");
+            OnDebugMessage($"Killing partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -84,7 +84,7 @@
             // read block
             var blockBytes = await Amiga.Disk.ReadBlock(stream, 512);
             
-            OnProgressMessage($"Current boot bytes '0x{blockBytes.Take(4).ToArray().FormatHex()}'");
+            OnDebugMessage($"Current boot bytes '0x{blockBytes.Take(4).ToArray().FormatHex()}'");
 
             if (string.IsNullOrEmpty(hexBootBytes))
             {
@@ -98,7 +98,7 @@
                 blockBytes[i] = bootBytes[i];
             }
 
-            OnProgressMessage($"Writing boot bytes '0x{bootBytes.FormatHex()}'");
+            OnDebugMessage($"Writing boot bytes '0x{bootBytes.FormatHex()}'");
             
             // seek partition offset
             stream.Seek(partitionOffset, SeekOrigin.Begin);
