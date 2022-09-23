@@ -162,6 +162,12 @@
             await Execute(command);
         }
 
+        public static async Task Optimize(string path, string size)
+        {
+            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size));
+            await Execute(command);
+        }
+        
         public static async Task Read(string sourcePath, string destinationPath, string size)
         {
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
@@ -171,6 +177,15 @@
             await Execute(command);
         }
 
+        public static async Task Verify(string sourcePath, string destinationPath, string size)
+        {
+            var command = new VerifyCommand(GetLogger<VerifyCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+                sourcePath,
+                destinationPath, ParseSize(size));
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+        
         public static async Task Write(string sourcePath, string destinationPath, string size)
         {
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),

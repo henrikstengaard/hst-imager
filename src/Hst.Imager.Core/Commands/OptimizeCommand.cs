@@ -27,14 +27,14 @@
         public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Optimizing image file at '{path}'");
-            
-            OnDebugMessage($"Opening '{path}' as writable");
-            
+
             if (commandHelper.IsVhd(path))
             {
                 return new Result(new UnsupportedImageError(path));
             }
 
+            OnDebugMessage($"Opening '{path}' as writable");
+            
             var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, allowPhysicalDrive: false);
             if (mediaResult.IsFaulted)
             {

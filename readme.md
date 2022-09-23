@@ -7,15 +7,37 @@ This tool can be used to create new blank images or create images of physical dr
 ## Features
 
 Hst Imager comes with following features:
-- List physical drives (*).
-- Display information about physical drive or image file (*).
-- Read physical drive to image file (*).
-- Write image file to physical drive (*).
+- List physical drives.
+- Read information from physical drive or image file.
+- Read physical drive to image file.
+- Write image file to physical drive.
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
-- Optimize image file.
+- Optimize image file size.
+- Master Boot Record:
+  - Read Master Boot Record information.
+  - Initialize Master Boot Record.
+  - Add partition to Master Boot Record.
+  - Delete partition from Master Boot Record.
+  - Format partition in Master Boot Record.
+- Rigid Disk Block;
+  - Read Rigid Disk Block information.
+  - Initialize Rigid Disk Block.
+  - Add file system to Rigid Disk Block.
+  - Delete file system from Rigid Disk Block.
+  - Export file system from Rigid Disk Block to file.
+  - Import file systems from Rigid Disk Block or ADF file.
+  - Update file system in Rigid Disk Block.
+  - Add partition to Rigid Disk Block.
+  - Copy partition from one Rigid Disk Block to another.
+  - Delete partition from Rigid Disk Block.
+  - Export partition from Rigid Disk Block to hard file.
+  - Format partition in Rigid Disk Block.
+  - Import partition from hard file to Rigid Disk Block.
+  - Kill and restore partition in Rigid Disk Block.
+  - Update partition in Rigid Disk Block.
 
-(*) requires administrative rights on Windows, macOS and Linux.
+**Read and write for physical drives requires administrative rights on Windows, macOS and Linux.**
 
 ## Supported operating systems
 
@@ -42,14 +64,9 @@ Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager wil
 
 ## Amiga support
 
- with Amiga emulators much faster than real Amiga hardware
- with support for Amiga rigid disk block (RDSK, partition table used by Amiga computers).
+Hst Imager supports Amiga Rigid Disk Block (RDSK, partition table used by Amiga computers) and can initialize new Rigid Disk Block and modify existing Rigid Disk Block.
 
-Hst Imager supports Amiga rigid disk block (RDSK, partition table used by Amiga computers) by reading first 16 blocks (512 bytes * 16) from source physical drive or image file.
-When creating an image file from a physical drive, Hst Imager uses Amiga rigid disk block to define the size of the image file to create.
-E.g. if a 120GB SSD contains a 16GB Amiga rigid disk block, Hst Imager will only read the 16GB used and not the entire 120GB.
-
-Image files are much faster to use with Amiga emulators on modern computers than t.
+Reading an Amiga hard drive to an image files is very useful with Amiga emulators to make changes much faster than real hardware and afterwards write the modified image file back to a hard drive.
 
 ### Amiga emulators with vhd support
 

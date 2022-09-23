@@ -22,14 +22,16 @@
 
             rootCommand.AddGlobalOption(LogFileOption);
             rootCommand.AddGlobalOption(VerboseOption);
-            rootCommand.AddCommand(CreateScriptCommand());
+            rootCommand.AddCommand(CreateBlankCommand());
+            rootCommand.AddCommand(CreateConvertCommand());
             rootCommand.AddCommand(CreateInfoCommand());
             rootCommand.AddCommand(CreateListCommand());
-            rootCommand.AddCommand(CreateConvertCommand());
+            rootCommand.AddCommand(CreateOptimizeCommand());
             rootCommand.AddCommand(CreateReadCommand());
-            rootCommand.AddCommand(CreateWriteCommand());
-            rootCommand.AddCommand(CreateBlankCommand());
+            rootCommand.AddCommand(CreateScriptCommand());
             rootCommand.AddCommand(CreateSectorCommand());
+            rootCommand.AddCommand(CreateVerifyCommand());
+            rootCommand.AddCommand(CreateWriteCommand());
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
 
@@ -161,6 +163,47 @@
             blankCommand.SetHandler(CommandHandler.Blank, pathArgument, sizeArgument, compatibleSizeOption);
 
             return blankCommand;
+        }
+        
+        public static Command CreateOptimizeCommand()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Source",
+                description: "Path to image file.");
+
+            var sizeOption = new Option<string>(
+                new[] { "--size", "-s" },
+                description: "Size to optimize to.");
+
+            var convertCommand = new Command("optimize", "Optimize image file size.");
+            convertCommand.AddArgument(pathArgument);
+            convertCommand.AddOption(sizeOption);
+            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption);
+
+            return convertCommand;
+        }
+        
+        public static Command CreateVerifyCommand()
+        {
+            var sourceArgument = new Argument<string>(
+                name: "Source",
+                description: "Path to source image file.");
+
+            var destinationArgument = new Argument<string>(
+                name: "Destination",
+                description: "Path to destination image file.");
+
+            var sizeOption = new Option<string>(
+                new[] { "--size", "-s" },
+                description: "Size to verify.");
+
+            var convertCommand = new Command("verify", "Verify source and destination.");
+            convertCommand.AddArgument(sourceArgument);
+            convertCommand.AddArgument(destinationArgument);
+            convertCommand.AddOption(sizeOption);
+            convertCommand.SetHandler(CommandHandler.Verify, sourceArgument, destinationArgument, sizeOption);
+
+            return convertCommand;
         }
         
         public static Command CreateSectorCommand()
