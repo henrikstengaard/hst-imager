@@ -64,7 +64,9 @@
                 return new Result(new Error("Block size must be dividable by 512"));
             }
 
-            OnDebugMessage($"Opening '{path}' for read/write");
+            OnInformationMessage($"Adding partition to Rigid Disk Block at '{path}'");
+            
+            OnDebugMessage($"Opening '{path}' as writable");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -101,12 +103,10 @@
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
             
-            // needs to calculate space left and not just use disk size
-            
             var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size);
 
-            OnDebugMessage($"Adding partition number '{partitionBlocks.Count + 1}'");
-            OnDebugMessage($"Device name '{name}'");
+            OnInformationMessage($"Adding partition number '{partitionBlocks.Count + 1}'");
+            OnInformationMessage($"Name '{name}'");
 
             var partitionBlock =
                 PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize,
@@ -134,16 +134,16 @@
             partitionBlock.NumBuffer = (uint)buffers;
             partitionBlock.Flags = flags;
             partitionBlock.BootPriority = (uint)priority;
-            partitionBlock.SizeBlock = (uint)(blockSize / Hst.Amiga.SizeOf.Long);
+            partitionBlock.SizeBlock = (uint)(blockSize / SizeOf.Long);
 
-            OnDebugMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnDebugMessage($"Low cyl '{partitionBlock.LowCyl}'");
-            OnDebugMessage($"High cyl '{partitionBlock.HighCyl}'");
-            OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnDebugMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
+            OnInformationMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"Reserved '{partitionBlock.Reserved}'");
+            OnInformationMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+            OnInformationMessage($"Buffers '{partitionBlock.NumBuffer}'");
+            OnInformationMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnInformationMessage($"Size Block '{partitionBlock.SizeBlock * SizeOf.Long}'");
             
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
             

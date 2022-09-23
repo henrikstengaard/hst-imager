@@ -34,7 +34,9 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Reading source path '{sourcePath}' to destination path '{destinationPath}'");
+            OnInformationMessage($"Reading from '{sourcePath}' to '{destinationPath}'");
+            
+            OnDebugMessage($"Opening '{sourcePath}' as readable");
             
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath);
@@ -47,12 +49,11 @@
 
             var sourceSize = sourceMedia.Size;
             var readSize = sourceSize.ResolveSize(size);
-            //var readSize = size is > 0 ? size.Value : rigidDiskBlock?.DiskSize ?? sourceSize;
 
-            logger.LogDebug($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
-            //logger.LogDebug($"Size '{size}'");
-            //logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
-            logger.LogDebug($"Read size '{readSize.FormatBytes()}' ({readSize} bytes)");
+            OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
+            OnDebugMessage($"Read size '{readSize.FormatBytes()}' ({readSize} bytes)");
+
+            OnDebugMessage($"Opening '{destinationPath}' as writable");
             
             var destinationMediaResult = commandHelper.GetWritableMedia(physicalDrivesList, destinationPath, readSize, false);
             if (destinationMediaResult.IsFaulted)

@@ -35,8 +35,10 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Converting source path '{sourcePath}' to destination path '{destinationPath}'");
+            OnInformationMessage($"Converting image file from '{sourcePath}' to '{destinationPath}'");
             
+            OnDebugMessage($"Opening '{sourcePath}' as readable");
+
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), sourcePath, false);
             if (sourceMediaResult.IsFaulted)
@@ -47,22 +49,13 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            RigidDiskBlock rigidDiskBlock = null;
-            try
-            {
-                var firstBytes = await sourceStream.ReadBytes(512 * 2048);
-                rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
-
             var convertSize = Convert
-                .ToInt64(size.Value == 0 ? rigidDiskBlock?.DiskSize ?? sourceStream.Length : size.Value)
+                .ToInt64(size.Value == 0 ? sourceStream.Length : size.Value)
                 .ResolveSize(size);
             
-            OnDebugMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
+            OnInformationMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
+
+            OnDebugMessage($"Opening '{destinationPath}' as writable");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), destinationPath, convertSize, false);

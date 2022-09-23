@@ -34,7 +34,9 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Writing source path '{sourcePath}' to destination path '{destinationPath}'");
+            OnInformationMessage($"Writing source path '{sourcePath}' to destination path '{destinationPath}'");
+            
+            OnDebugMessage($"Opening '{sourcePath}' as readable");
             
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath, false);
@@ -45,26 +47,13 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            // RigidDiskBlock rigidDiskBlock = null;
-            // try
-            // {
-            //     var firstBytes = await sourceStream.ReadBytes(512 * 2048);
-            //     rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
-            // }
-            // catch (Exception)
-            // {
-            //     // ignored
-            // }
+            var writeSize = Convert
+                .ToInt64(size.Value == 0 ? sourceStream.Length : size.Value)
+                .ResolveSize(size);
 
-            var sourceSize = sourceMedia.Size;
-            //var writeSize = size is > 0 ? size.Value : sourceSize;
-            var writeSize = sourceSize.ResolveSize(size);
-
-            logger.LogDebug($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
-            // logger.LogDebug($"Size '{(size is > 0 ? size.Value : "N/A")}'");
-            // logger.LogDebug($"Source size '{sourceSize}'");
-            //logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
-            logger.LogDebug($"Write size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
+            OnInformationMessage($"Size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
+            
+            OnDebugMessage($"Opening '{destinationPath}' as writable");
             
             var destinationMediaResult = commandHelper.GetWritableMedia(physicalDrivesList, destinationPath, writeSize);
             if (destinationMediaResult.IsFaulted)

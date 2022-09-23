@@ -63,8 +63,10 @@
             {
                 return new Result(new Error("Block size must be dividable by 512"));
             }
+            
+            OnInformationMessage($"Updating partition in Rigid Disk Block at '{path}'");
 
-            OnDebugMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' as readable");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)

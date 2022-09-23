@@ -32,6 +32,8 @@ public class RdbFsExportCommand : CommandBase
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        OnInformationMessage($"Exporting file system from Rigid Disk Block at '{path}' to '{fileSystemPath}'");
+        
         OnDebugMessage($"Opening '{path}' as readable");
 
         var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path, allowPhysicalDrive: true);

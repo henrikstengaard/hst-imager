@@ -2,14 +2,13 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Extensions;
     using Hst.Core;
-    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class VerifyCommand : CommandBase
     {
@@ -18,12 +17,12 @@
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string sourcePath;
         private readonly string destinationPath;
-        private readonly long? size;
+        private readonly Size size;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         
         public VerifyCommand(ILogger<VerifyCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, long? size = null)
+            string destinationPath, Size size)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -35,6 +34,10 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
+            OnInformationMessage($"Verifying '{sourcePath}' against '{destinationPath}'");
+            
+            OnDebugMessage($"Opening '{sourcePath}' as readable");
+
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath);
             if (sourceMediaResult.IsFaulted)
@@ -44,17 +47,14 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            RigidDiskBlock rigidDiskBlock = null;
-            try
-            {
-                var firstBytes = await sourceStream.ReadBytes(512 * 2048);
-                rigidDiskBlock = await commandHelper.GetRigidDiskBlock(new MemoryStream(firstBytes));
-            }
-            catch (Exception)
-            {
-                // ignored
-            }
+            var verifySize = Convert
+                .ToInt64(size.Value == 0 ? sourceStream.Length : size.Value)
+                .ResolveSize(size);
 
+            OnInformationMessage($"Size '{verifySize.FormatBytes()}' ({verifySize} bytes)");
+            
+            OnDebugMessage($"Opening '{destinationPath}' as writable");
+            
             var destinationMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, destinationPath);
             if (destinationMediaResult.IsFaulted)
             {
@@ -63,14 +63,6 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
             
-            var sourceSize = sourceMedia.Size;
-            var verifySize = size is > 0 ? size.Value : rigidDiskBlock?.DiskSize ?? sourceSize;
-
-            logger.LogDebug($"Size '{(size is > 0 ? size.Value : "N/A")}'");
-            logger.LogDebug($"Source size '{sourceSize}'");
-            logger.LogDebug($"Rigid disk block size '{(rigidDiskBlock == null ? "N/A" : rigidDiskBlock.DiskSize)}'");
-            logger.LogDebug($"Verify size '{verifySize}'");
-
             var imageVerifier = new ImageVerifier();
             imageVerifier.DataProcessed += (_, e) =>
             {

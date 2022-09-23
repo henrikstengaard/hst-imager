@@ -44,6 +44,15 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            // get bios partition type
+            var biosPartitionTypeResult = GetBiosPartitionType();
+            if (biosPartitionTypeResult.IsFaulted)
+            {
+                return new Result(biosPartitionTypeResult.Error);
+            }
+
+            OnInformationMessage($"Adding partition to Master Boot Record at '{path}'");
+            
             OnDebugMessage($"Opening '{path}' for read/write");
 
             var physicalDrivesList = physicalDrives.ToList();
@@ -111,20 +120,12 @@
                 partitionSize = partitionSectors * 512;
             }
             
-            OnDebugMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
-            OnDebugMessage($"Type '{type.ToUpper()}'");
-
-            // get bios partition type
-            var biosPartitionTypeResult = GetBiosPartitionType();
-            if (biosPartitionTypeResult.IsFaulted)
-            {
-                return new Result(biosPartitionTypeResult.Error);
-            }
-
-            OnDebugMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
-            OnDebugMessage($"Start sector '{start}'");
-            OnDebugMessage($"End sector '{end}'");
-            OnDebugMessage($"Active '{active}'");
+            OnInformationMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
+            OnInformationMessage($"Type '{type.ToUpper()}'");
+            OnInformationMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
+            OnInformationMessage($"Start sector '{start}'");
+            OnInformationMessage($"End sector '{end}'");
+            OnInformationMessage($"Active '{active}'");
 
             // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);

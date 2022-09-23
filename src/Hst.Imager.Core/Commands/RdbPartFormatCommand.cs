@@ -4,8 +4,8 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Amiga.FileSystems.FastFileSystem;
-    using Hst.Amiga.FileSystems.Pfs3;
+    using Amiga.FileSystems.FastFileSystem;
+    using Amiga.FileSystems.Pfs3;
     using Hst.Core;
     using Microsoft.Extensions.Logging;
 
@@ -31,7 +31,9 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Opening '{path}' for read/write");
+            OnInformationMessage($"Formatting partition in Rigid Disk Block at '{path}'");
+            
+            OnDebugMessage($"Opening '{path}' as writable");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
             if (mediaResult.IsFaulted)
@@ -53,7 +55,7 @@
             
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnDebugMessage($"Formatting partition number '{partitionNumber}' with volume name '{name}'");
+            OnDebugMessage($"Formatting partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -62,7 +64,9 @@
 
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
-            OnDebugMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
+            OnInformationMessage($"Name '{partitionBlock.DriveName}'");
+            OnInformationMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
+            OnInformationMessage($"Volume name '{name}'");
             
             switch (partitionBlock.DosTypeFormatted)
             {

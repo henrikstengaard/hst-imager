@@ -3,8 +3,9 @@
     using System;
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
+    using Core.Models;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
@@ -42,7 +43,7 @@
                 var verifyCommand =
                     new VerifyCommand(loggerFactory.CreateLogger<VerifyCommand>(), commandHelper, physicalDrives,
                         verifyBackgroundTask.SourcePath,
-                        verifyBackgroundTask.DestinationPath);
+                        verifyBackgroundTask.DestinationPath, new Size());
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

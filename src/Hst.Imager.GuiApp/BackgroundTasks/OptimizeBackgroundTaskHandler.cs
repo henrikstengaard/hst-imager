@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading.Tasks;
+    using Core.Models;
     using Extensions;
     using Hst.Imager.Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
@@ -42,7 +43,7 @@
                 }, context.Token);
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
-                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path);
+                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path, new Size(0, Unit.Bytes));
 
                 var result = await optimizeCommand.Execute(context.Token);
 

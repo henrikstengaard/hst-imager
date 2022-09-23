@@ -4,31 +4,38 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Core;
+    using Core;
+    using Extensions;
     using Microsoft.Extensions.Logging;
+    using Models;
 
     public class OptimizeCommand : CommandBase
     {
         private readonly ILogger<OptimizeCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly string path;
+        private readonly Size size;
 
-        public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path)
+        public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path, Size size)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.path = path;
+            this.size = size;
         }
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            logger.LogDebug($"Path '{path}'");
+            OnInformationMessage($"Optimizing image file at '{path}'");
+            
+            OnDebugMessage($"Opening '{path}' as writable");
             
             if (commandHelper.IsVhd(path))
             {
                 return new Result(new UnsupportedImageError(path));
             }
 
-            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
+            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, allowPhysicalDrive: false);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);
@@ -37,36 +44,18 @@
             await using var stream = media.Stream;
             var currentSize = stream.Length;
 
-            logger.LogDebug($"Size '{currentSize}'");
+            OnDebugMessage($"Size '{currentSize}'");
 
-            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
-
-            if (rigidDiskBlock == null)
+            if (size.Value == 0)
             {
-                logger.LogDebug($"No rigid disk block, image can't be optimized");
-                // unknown image format, not optimizable
-                return new Result();
-            }
-
-            if (rigidDiskBlock.DiskSize == currentSize)
-            {
-                logger.LogDebug($"Size equals rigid disk block disk size, image can't be optimized further");
-                // not optimizable
-                return new Result();
-            }
-            
-            if (rigidDiskBlock.DiskSize > currentSize)
-            {
-                logger.LogDebug($"Size is smaller than rigid disk block disk size, invalid image");
-                // invalid image, rigid disk block larger than media size
                 return new Result();
             }
 
             // optimize
-            var optimizedSize = rigidDiskBlock.DiskSize;
+            var optimizedSize = currentSize.ResolveSize(size);
             stream.SetLength(optimizedSize);
 
-            logger.LogDebug($"Optimized size '{optimizedSize}'");
+            OnInformationMessage($"Optimized size '{optimizedSize}'");
             
             return new Result();
         }

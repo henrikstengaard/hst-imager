@@ -45,6 +45,8 @@
                 return new Result(new Error("DOS type must be 4 characters"));
             }
 
+            OnInformationMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
+            
             OnDebugMessage($"Opening source path '{sourcePath}' as readable");
 
             var sourceMediaResult =
@@ -95,15 +97,15 @@
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
 
-            OnDebugMessage(
+            OnInformationMessage(
                 $"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnDebugMessage($"Low cyl '{partitionBlock.LowCyl}'");
-            OnDebugMessage($"High cyl '{partitionBlock.HighCyl}'");
-            OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnDebugMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * SizeOf.Long}'");
+            OnInformationMessage($"Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"Reserved '{partitionBlock.Reserved}'");
+            OnInformationMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+            OnInformationMessage($"Buffers '{partitionBlock.NumBuffer}'");
+            OnInformationMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnInformationMessage($"Size Block '{partitionBlock.SizeBlock * SizeOf.Long}'");
 
             destinationRigidDiskBlock.PartitionBlocks =
                 destinationRigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
@@ -112,9 +114,9 @@
             var destinationCylinderSize = destinationRigidDiskBlock.Heads * destinationRigidDiskBlock.Sectors *
                                           destinationRigidDiskBlock.BlockSize;
             var destinationOffset = partitionBlock.LowCyl * destinationCylinderSize;
+            const int sourceOffset = 0;
 
-            OnDebugMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
-            OnDebugMessage($"destinationOffset '{destinationOffset}'");
+            OnDebugMessage($"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
             var isVhd = commandHelper.IsVhd(destinationPath);
 

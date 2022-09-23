@@ -34,6 +34,8 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            OnInformationMessage($"Initializing Rigid Disk Block at '{path}'");
+            
             OnDebugMessage($"Opening '{path}' for read/write");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);

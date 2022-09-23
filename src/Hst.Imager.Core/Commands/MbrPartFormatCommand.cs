@@ -34,7 +34,9 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Opening '{path}' for read/write");
+            OnInformationMessage($"Deleting partition from Master Boot Record at '{path}'");
+
+            OnDebugMessage($"Opening '{path}' as writable");
 
             var physicalDrivesList = physicalDrives.ToList();
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);

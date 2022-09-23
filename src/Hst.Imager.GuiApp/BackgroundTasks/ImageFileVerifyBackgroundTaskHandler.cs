@@ -3,9 +3,10 @@
     using System;
     using System.Linq;
     using System.Threading.Tasks;
+    using Core.Models;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
@@ -40,7 +41,7 @@
                 var verifyCommand =
                     new VerifyCommand(loggerFactory.CreateLogger<VerifyCommand>(), commandHelper,
                         Enumerable.Empty<IPhysicalDrive>(), verifyBackgroundTask.SourcePath,
-                        verifyBackgroundTask.DestinationPath);
+                        verifyBackgroundTask.DestinationPath, new Size());
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubContext.SendProgress(new Progress

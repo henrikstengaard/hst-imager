@@ -42,6 +42,8 @@
             {
                 return new Result(new Error("DOS type must be 4 characters"));
             }
+            
+            OnInformationMessage($"Adding file system to Rigid Disk Block at '{path}'");
 
             OnDebugMessage($"Opening '{path}' as writable");
 

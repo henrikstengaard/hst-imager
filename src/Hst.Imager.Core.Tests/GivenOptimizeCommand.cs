@@ -4,16 +4,16 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
-    using Hst.Imager.Core.Commands;
-    using Hst.Imager.Core.Models;
+    using Amiga.RigidDiskBlocks;
+    using Commands;
+    using Models;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 
     public class GivenOptimizeCommand : CommandTestBase
     {
         [Fact]
-        public async Task WhenOptimizeImgWithoutRigidDiskBlockThenSizeIsNotChanged()
+        public async Task WhenOptimizeImgWithoutSizeSetThenSizeIsNotChanged()
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
@@ -24,7 +24,7 @@
             var cancellationTokenSource = new CancellationTokenSource();
             
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path);
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path, new Models.Size(0, Unit.Bytes));
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -35,7 +35,7 @@
         }
 
         [Fact]
-        public async Task WhenOptimizeImgWithRigidDiskBlockThenSizeIsChanged()
+        public async Task WhenOptimizeImgWithSizeSetThenSizeIsChanged()
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
@@ -50,7 +50,7 @@
             var cancellationTokenSource = new CancellationTokenSource();
 
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path);
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path, new Models.Size(rigidDiskBlockSize, Unit.Bytes));
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

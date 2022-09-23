@@ -33,6 +33,8 @@
             {
                 return new Result(new Error("Size must be in bytes"));
             }
+
+            OnInformationMessage($"Creating blank image at '{path}'");
             
             if (File.Exists(path))
             {
@@ -41,11 +43,10 @@
 
             var mediaSize = Convert.ToInt64(compatibleSize ? size.Value * 0.95 : size.Value);
 
-            OnDebugMessage($"Creating blank image '{path}'");
-            OnDebugMessage($"Size '{mediaSize.FormatBytes()}' ({mediaSize} bytes)");
+            OnInformationMessage($"Size '{mediaSize.FormatBytes()}' ({mediaSize} bytes)");
             OnDebugMessage($"Compatible '{compatibleSize}'");
             
-            OnDebugMessage($"Opening '{path}' for read/write");
+            OnDebugMessage($"Opening '{path}' as writable");
             
             var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false);
             if (mediaResult.IsFaulted)

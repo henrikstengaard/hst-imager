@@ -38,6 +38,8 @@ public class RdbFsUpdateCommand : CommandBase
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        OnInformationMessage($"Updating file system in Rigid Disk Block at '{path}'");
+        
         OnDebugMessage($"Opening '{path}' as writable");
 
         var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
@@ -82,6 +84,8 @@ public class RdbFsUpdateCommand : CommandBase
             }
             
             fileSystemHeaderBlock.DosType = dosTypeBytes;        
+            
+            OnInformationMessage($"DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}'");
         }
 
         if (!string.IsNullOrEmpty(fileSystemName))
@@ -89,6 +93,8 @@ public class RdbFsUpdateCommand : CommandBase
             OnDebugMessage($"Updating file system name '{fileSystemName}'");
             
             fileSystemHeaderBlock.FileSystemName = fileSystemName;
+            
+            OnInformationMessage($"File system name '{fileSystemHeaderBlock.FileSystemName}'");
         }
 
         if (!string.IsNullOrEmpty(fileSystemPath))
@@ -109,13 +115,10 @@ public class RdbFsUpdateCommand : CommandBase
             fileSystemHeaderBlock.LoadSegBlocks = loadSegBlocks;
             fileSystemHeaderBlock.FileSystemSize = fileSystemBytes.Length;
             fileSystemHeaderBlock.NextFileSysHeaderBlock = 0;
+            
+            OnInformationMessage($"Size '{((long)fileSystemHeaderBlock.FileSystemSize).FormatBytes()}' ({fileSystemHeaderBlock.FileSystemSize} bytes)");
         }
 
-        OnInformationMessage($"DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}'");
-        OnInformationMessage($"Version '{fileSystemHeaderBlock.VersionFormatted}'");
-        OnInformationMessage($"Size '{((long)fileSystemHeaderBlock.FileSystemSize).FormatBytes()}' ({fileSystemHeaderBlock.FileSystemSize} bytes)");
-        OnInformationMessage($"File system name '{fileSystemHeaderBlock.FileSystemName}'");
-        
         OnDebugMessage("Writing Rigid Disk Block");
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
             

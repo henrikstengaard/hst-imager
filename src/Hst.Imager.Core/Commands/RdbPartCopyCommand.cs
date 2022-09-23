@@ -37,7 +37,9 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Opening source path '{sourcePath}' for read");
+            OnInformationMessage($"Copying partition from '{sourcePath}' to '{destinationPath}'");
+
+            OnDebugMessage($"Opening source path '{sourcePath}' as readable");
 
             var sourceMediaResult =
                 commandHelper.GetReadableMedia(physicalDrives, sourcePath);
@@ -65,13 +67,13 @@
             // get partition block to copy
             var partitionBlock = sourcePartitionBlocks[partitionNumber - 1];
 
-            OnDebugMessage($"Source partition number '{partitionNumber}':");
-            OnDebugMessage($"Name '{partitionBlock.DriveName}'");
-            OnDebugMessage($"LowCyl '{partitionBlock.LowCyl}'");
-            OnDebugMessage($"HighCyl '{partitionBlock.HighCyl}'");
-            OnDebugMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"Source partition number '{partitionNumber}':");
+            OnInformationMessage($"Name '{partitionBlock.DriveName}'");
+            OnInformationMessage($"LowCyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"HighCyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
 
-            OnDebugMessage($"Opening destination path '{destinationPath}' for read/write");
+            OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
             var destinationMediaResult =
                 commandHelper.GetWritableMedia(physicalDrives, destinationPath);

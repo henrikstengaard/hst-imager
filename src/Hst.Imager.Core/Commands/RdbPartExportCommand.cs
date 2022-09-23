@@ -33,6 +33,8 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            OnInformationMessage($"Exporting partition from '{sourcePath}' to '{destinationPath}'");
+            
             OnDebugMessage($"Opening source path '{sourcePath}' as readable");
 
             var sourceMediaResult =
@@ -61,12 +63,12 @@
             // get partition block to copy
             var partitionBlock = sourcePartitionBlocks[partitionNumber - 1];
 
-            OnDebugMessage("Source:");
-            OnDebugMessage($"Partition number '{partitionNumber}'");
-            OnDebugMessage($"Name '{partitionBlock.DriveName}'");
-            OnDebugMessage($"LowCyl '{partitionBlock.LowCyl}'");
-            OnDebugMessage($"HighCyl '{partitionBlock.HighCyl}'");
-            OnDebugMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage("Source:");
+            OnInformationMessage($"Partition number '{partitionNumber}'");
+            OnInformationMessage($"Name '{partitionBlock.DriveName}'");
+            OnInformationMessage($"Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
 
             // calculate source cylinder size, offset and size
             var sourceCylinderSize = sourceRigidDiskBlock.Heads * sourceRigidDiskBlock.Sectors *
@@ -85,8 +87,9 @@
 
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
+            const int destinationOffset = 0;
 
-            OnDebugMessage($"Exporting partition from '{sourcePath}' to '{destinationPath}'");
+            OnDebugMessage($"Exporting partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
             
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
@@ -94,7 +97,7 @@
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal);
             };
-            await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, sourceOffset, 0, false);
+            await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, sourceOffset, destinationOffset, false);
             
             return new Result();
         }

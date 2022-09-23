@@ -47,6 +47,8 @@ public class RdbFsImportCommand : CommandBase
             return new Result(new Error("DOS type must be 4 characters"));
         }
 
+        OnInformationMessage($"Importing file systems from '{path}' to Rigid Disk Block at '{fileSystemPath}'");
+        
         OnDebugMessage($"Opening '{path}' as writable");
 
         var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
@@ -91,7 +93,7 @@ public class RdbFsImportCommand : CommandBase
         foreach (var fileSystemHeaderBlock in fileSystemHeaderBlocks)
         {
             long size = fileSystemHeaderBlock.FileSystemSize;
-            OnInformationMessage("Adding file system:");
+            OnInformationMessage("Imported file system:");
             OnInformationMessage($"- DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}'");
             OnInformationMessage($"- Version '{fileSystemHeaderBlock.VersionFormatted}'");
             OnInformationMessage($"- Size '{size.FormatBytes()}' ({size} bytes)");

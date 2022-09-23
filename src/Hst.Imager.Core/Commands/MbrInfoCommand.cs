@@ -13,7 +13,6 @@
 
     public class MbrInfoCommand : CommandBase
     {
-        private readonly ILogger<MbrInfoCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
@@ -21,7 +20,6 @@
         public MbrInfoCommand(ILogger<MbrInfoCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path)
         {
-            this.logger = logger;
             this.commandHelper = commandHelper;
             this.physicalDrives = physicalDrives;
             this.path = path;
@@ -31,7 +29,9 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnDebugMessage($"Opening '{path}' for read");
+            OnInformationMessage($"Reading Master Boot Record information from '{path}'");
+            
+            OnDebugMessage($"Opening '{path}' as readable");
 
             var physicalDrivesList = physicalDrives.ToList();
             var mediaResult = commandHelper.GetReadableMedia(physicalDrivesList, path);
@@ -82,8 +82,8 @@
                 PartitionSize = partitionSize
             };
         }
-        
-        protected virtual void OnMbrInfoRead(MbrInfo rdbInfo)
+
+        private void OnMbrInfoRead(MbrInfo rdbInfo)
         {
             MbrInfoRead?.Invoke(this, new MbrInfoReadEventArgs(rdbInfo));
         }        
