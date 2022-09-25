@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.PhysicalDrives
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -36,7 +37,7 @@
                 }
             }
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable));
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable), true);
         }
     }
 }

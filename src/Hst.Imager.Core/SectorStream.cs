@@ -8,11 +8,13 @@
     public class SectorStream : Stream
     {
         private readonly Stream stream;
+        private readonly bool writeFill;
         private const int SectorSize = 512;
 
-        public SectorStream(Stream baseStream)
+        public SectorStream(Stream baseStream, bool writeFill = false)
         {
             this.stream = baseStream;
+            this.writeFill = writeFill;
         }
 
         public override void Flush()
@@ -49,6 +51,12 @@
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            if (writeFill & count % SectorSize != 0)
+            {
+                var filledBuffer = new byte[count - (count % SectorSize) + SectorSize];
+                stream.Write(filledBuffer, offset, filledBuffer.Length);
+                return;
+            }
             ThrowIfValueIsNotASector(count);
             stream.Write(buffer, offset, count);
         }

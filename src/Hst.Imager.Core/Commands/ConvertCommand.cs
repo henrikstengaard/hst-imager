@@ -1,14 +1,11 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
     using System;
-    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Amiga.RigidDiskBlocks;
     using Hst.Core;
-    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 
@@ -19,6 +16,8 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private long statusBytesProcessed;
+        private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
@@ -31,6 +30,8 @@
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.statusBytesProcessed = 0;
+            this.statusTimeElapsed = TimeSpan.Zero;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -49,10 +50,12 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
-            var convertSize = Convert
-                .ToInt64(size.Value == 0 ? sourceStream.Length : size.Value)
-                .ResolveSize(size);
+            var sourceSize = sourceMedia.Size;
+            OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
             
+            var convertSize = Convert
+                .ToInt64(size.Value == 0 ? sourceSize : size.Value)
+                .ResolveSize(size);
             OnInformationMessage($"Size '{convertSize.FormatBytes()}' ({convertSize} bytes)");
 
             OnDebugMessage($"Opening '{destinationPath}' as writable");
@@ -76,18 +79,25 @@
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
+                statusBytesProcessed = e.BytesProcessed;
+                statusTimeElapsed = e.TimeElapsed;
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
-                    e.TimeRemaining, e.TimeTotal);
+                    e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
-            return await streamCopier.Copy(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
+            
+            var result = await streamCopier.Copy(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
+
+            OnInformationMessage($"Converted '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+
+            return result;
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal));
+                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

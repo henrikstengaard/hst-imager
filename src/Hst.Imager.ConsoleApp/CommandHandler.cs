@@ -167,7 +167,7 @@
             var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size));
             await Execute(command);
         }
-        
+
         public static async Task Read(string sourcePath, string destinationPath, string size)
         {
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
@@ -185,7 +185,7 @@
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
         }
-        
+
         public static async Task Write(string sourcePath, string destinationPath, string size)
         {
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
@@ -270,19 +270,20 @@
             await Execute(new RdbFsImportCommand(GetLogger<RdbFsImportCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName));
         }
-        
+
         public static async Task RdbFsExport(string path, int fileSystemNumber, string fileSystemPath)
         {
             await Execute(new RdbFsExportCommand(GetLogger<RdbFsExportCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, fileSystemNumber, fileSystemPath));
         }
 
-        public static async Task RdbFsUpdate(string path, int fileSystemNumber, string dosType, string fileSystemName, string fileSystemPath)
+        public static async Task RdbFsUpdate(string path, int fileSystemNumber, string dosType, string fileSystemName,
+            string fileSystemPath)
         {
             await Execute(new RdbFsUpdateCommand(GetLogger<RdbFsUpdateCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath));
         }
-        
+
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, int reserved,
             int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int blockSize)
         {
@@ -345,18 +346,18 @@
                 await GetPhysicalDrives(), path, partitionNumber, hexBootBytes));
         }
 
-        public static async Task SectorExtract(string path, string outputPath)
+        public static async Task SectorExtract(string path, string outputPath, int sectorSize, long? start, long? end)
         {
             await Execute(new SectorExtractCommand(GetLogger<SectorExtractCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, outputPath));
+                await GetPhysicalDrives(), path, outputPath, sectorSize, start, end));
         }
 
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
             var progressMessage =
-                $"{args.PercentComplete}%, [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed.FormatElapsed()} / {args.TimeTotal.FormatElapsed()}]\r";
+                $"{args.PercentComplete:0.0}% [{args.BytesPerSecond.FormatBytes(format: "0.0")}/s] [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed.FormatElapsed()} / {args.TimeTotal.FormatElapsed()}]   \r";
             Console.Write(args.PercentComplete >= 100
-                ? string.Concat(new string(' ', progressMessage.Length), "\r")
+                ? string.Concat(new string(' ', progressMessage.Length + 3), "\r")
                 : progressMessage);
         }
     }

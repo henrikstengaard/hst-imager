@@ -19,6 +19,8 @@
         private readonly int partitionNumber;
         private readonly string destinationPath;
         private readonly string name;
+        private long statusBytesProcessed;
+        private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
@@ -33,6 +35,8 @@
             this.partitionNumber = partitionNumber;
             this.destinationPath = destinationPath;
             this.name = name;
+            this.statusBytesProcessed = 0;
+            this.statusTimeElapsed = TimeSpan.Zero;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -139,20 +143,24 @@
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
+                statusBytesProcessed = e.BytesProcessed;
+                statusTimeElapsed = e.TimeElapsed;
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
-                    e.TimeRemaining, e.TimeTotal);
+                    e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
             await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, sourceOffset, destinationOffset, isVhd);
+            
+            OnInformationMessage($"Copied '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
             return new Result();
         }
         
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal));
+                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

@@ -21,6 +21,8 @@
         private readonly string name;
         private readonly string dosType;
         private readonly bool bootable;
+        private long statusBytesProcessed;
+        private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
@@ -36,6 +38,8 @@
             this.name = name;
             this.dosType = dosType;
             this.bootable = bootable;
+            this.statusBytesProcessed = 0;
+            this.statusTimeElapsed = TimeSpan.Zero;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -123,8 +127,10 @@
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
+                statusBytesProcessed = e.BytesProcessed;
+                statusTimeElapsed = e.TimeElapsed;
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
-                    e.TimeRemaining, e.TimeTotal);
+                    e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
             await streamCopier.Copy(token, sourceStream, destinationStream, sourceStream.Length, 0, destinationOffset,
                 isVhd);
@@ -132,15 +138,17 @@
             OnDebugMessage("Writing destination Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
 
+            OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            
             return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal));
+                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

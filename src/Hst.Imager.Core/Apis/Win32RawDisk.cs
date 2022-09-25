@@ -19,8 +19,8 @@
         public Win32RawDisk(string path, bool writeable = false)
         {
             safeFileHandle = DeviceApi.CreateFile(path,
-                writeable ? DeviceApi.GENERIC_READ | DeviceApi.GENERIC_WRITE : DeviceApi.GENERIC_READ,
-                writeable ? DeviceApi.FILE_SHARE_READ | DeviceApi.FILE_SHARE_WRITE : DeviceApi.FILE_SHARE_READ,
+                writeable ? DeviceApi.GENERIC_WRITE : DeviceApi.GENERIC_READ,
+                DeviceApi.FILE_SHARE_READ | DeviceApi.FILE_SHARE_WRITE,
                 IntPtr.Zero,
                 DeviceApi.OPEN_EXISTING,
                 0,
@@ -63,9 +63,9 @@
             DeviceApi.CloseHandle(safeFileHandle);
         }
 
-        public uint Read(byte[] buffer)
+        public uint Read(byte[] buffer, int count)
         {
-            if (DeviceApi.ReadFile(safeFileHandle, buffer, Convert.ToUInt32(buffer.Length), out var bytesRead,
+            if (DeviceApi.ReadFile(safeFileHandle, buffer, Convert.ToUInt32(count), out var bytesRead,
                     IntPtr.Zero))
             {
                 return bytesRead;
@@ -75,13 +75,14 @@
             throw new IOException($"Failed to ReadFile returned Win32 error {error}");
         }
         
-        public uint Write(byte[] buffer)
+        public uint Write(byte[] buffer, int count)
         {
-            if (DeviceApi.WriteFile(safeFileHandle, buffer, Convert.ToUInt32(buffer.Length), out var bytesWritten,
+            if (DeviceApi.WriteFile(safeFileHandle, buffer, Convert.ToUInt32(count), out var bytesWritten,
                     IntPtr.Zero))
             {
                 return bytesWritten;
             }
+            
             var error = Marshal.GetLastWin32Error();
             throw new IOException($"Failed to WriteFile returned Win32 error {error}");
         }

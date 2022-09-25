@@ -38,6 +38,9 @@
 
             var dataSectorReader = new DataSectorReader(source, bufferSize: bufferSize);
 
+            sendDataProcessed = true;
+            OnDataProcessed(0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
+            
             timer.Start();
 
             long bytesProcessed = 0;
@@ -49,7 +52,18 @@
                     return new Result<Error>(new Error("Cancelled"));
                 }
 
-                var sectorResult = await dataSectorReader.ReadNext();
+                var readBytes = Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
+                SectorResult sectorResult;
+                try
+                {
+                    sectorResult = await dataSectorReader.ReadNext(readBytes);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"processed: {bytesProcessed}, size {size}, buffer size {bufferSize}, read bytes {readBytes}     -");
+                    Console.WriteLine(e);
+                    throw;
+                }
                 length = Convert.ToInt32(bytesProcessed + sectorResult.BytesRead > size
                     ? size - bytesProcessed
                     : sectorResult.BytesRead);
@@ -85,22 +99,23 @@
                 var timeElapsed = stopwatch.Elapsed;
                 var timeRemaining = TimeHelper.CalculateTimeRemaining(percentComplete, timeElapsed);
                 var timeTotal = timeElapsed + timeRemaining;
+                var bytesPerSecond = Convert.ToInt64(bytesProcessed / timeElapsed.TotalSeconds);
 
                 OnDataProcessed(percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining,
-                    timeTotal);
+                    timeTotal, bytesPerSecond);
             } while (length == bufferSize && bytesProcessed < size);
 
             timer.Stop();
             stopwatch.Stop();
 
             sendDataProcessed = true;
-            OnDataProcessed(100, bytesProcessed, 0, size, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed);
+            OnDataProcessed(100, bytesProcessed, 0, size, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
 
             return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             if (!sendDataProcessed)
             {
@@ -109,7 +124,7 @@
 
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal));
+                    timeRemaining, timeTotal, bytesPerSecond));
             sendDataProcessed = false;
         }
     }

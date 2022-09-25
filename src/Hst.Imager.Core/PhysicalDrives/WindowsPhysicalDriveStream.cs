@@ -11,6 +11,7 @@
         private readonly IEnumerable<string> driveLetters;
 
         private readonly Win32RawDisk win32RawDisk;
+        private long position;
 
         public WindowsPhysicalDriveStream(string path, long size, IEnumerable<string> driveLetters, bool writable)
         {
@@ -18,6 +19,7 @@
             this.driveLetters = driveLetters;
             this.CanWrite = writable;
             this.win32RawDisk = new Win32RawDisk(path, writable);
+            this.position = 0;
         }
 
         protected override void Dispose(bool disposing)
@@ -38,27 +40,35 @@
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            Seek(position, SeekOrigin.Begin);
+            
             if (offset != 0)
             {
-                throw new ArgumentException("'Only offset 0 is allow", nameof(offset));
+                throw new ArgumentException("'Only offset 0 is allowed", nameof(offset));
             }
-            
-            return Convert.ToInt32(win32RawDisk.Read(buffer));
+
+            var bytesRead = Convert.ToInt32(win32RawDisk.Read(buffer, count));
+            position += bytesRead;
+            return bytesRead;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            return win32RawDisk.Seek(offset, origin);
+            position = win32RawDisk.Seek(offset, origin);
+            return position;
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
+            Seek(position, SeekOrigin.Begin);
+            
             if (offset != 0)
             {
-                throw new ArgumentException("Only offset 0 is allow", nameof(offset));
+                throw new ArgumentException("Only offset 0 is allowed", nameof(offset));
             }
 
-            win32RawDisk.Write(buffer);
+            var bytesWritten = win32RawDisk.Write(buffer, count);
+            position += bytesWritten;
         }
 
         public override void Flush()
@@ -76,8 +86,8 @@
 
         public override long Position
         {
-            get => win32RawDisk.Position();
-            set => win32RawDisk.Seek(value, SeekOrigin.Begin);
+            get => position;
+            set => Seek(value, SeekOrigin.Begin);
         } 
     }
 }

@@ -56,14 +56,14 @@
             var pathArgument = new Argument<string>(
                 name: "Path",
                 description: "Path to physical drive or image file.");
-            
+
             var command = new Command("info", "Show info about physical drive or image file.");
             command.AddArgument(pathArgument);
             command.SetHandler(CommandHandler.Info, pathArgument);
 
             return command;
         }
-        
+
         public static Command CreateListCommand()
         {
             var listCommand = new Command("list", "List physical drives.");
@@ -164,7 +164,7 @@
 
             return blankCommand;
         }
-        
+
         public static Command CreateOptimizeCommand()
         {
             var pathArgument = new Argument<string>(
@@ -182,7 +182,7 @@
 
             return convertCommand;
         }
-        
+
         public static Command CreateVerifyCommand()
         {
             var sourceArgument = new Argument<string>(
@@ -205,14 +205,14 @@
 
             return convertCommand;
         }
-        
+
         public static Command CreateSectorCommand()
         {
             var command = new Command("sector", "Sector.");
             command.AddCommand(CreateSectorExtractCommand());
             return command;
         }
-        
+
         public static Command CreateSectorExtractCommand()
         {
             var pathArgument = new Argument<string>(
@@ -223,10 +223,24 @@
                 name: "OutputPath",
                 description: "Output path to write sectors.");
 
+            var sectorSizeOption = new Option<int>(
+                new[] { "--sector-size", "-ss" },
+                description: "Sector size", getDefaultValue: () => 512);
+
+            var startOption = new Option<long?>(
+                new[] { "--start", "-s" },
+                description: "Start offset");
+
+            var endOption = new Option<long?>(
+                new[] { "--end", "-e" },
+                description: "End offset");
+
             var blankCommand = new Command("extract", "Extract sectors.");
+            blankCommand.SetHandler(CommandHandler.SectorExtract, pathArgument, outputPathArgument, sectorSizeOption,
+                startOption, endOption);
             blankCommand.AddArgument(pathArgument);
             blankCommand.AddArgument(outputPathArgument);
-            blankCommand.SetHandler(CommandHandler.SectorExtract, pathArgument, outputPathArgument);
+            blankCommand.AddOption(sectorSizeOption);
 
             return blankCommand;
         }

@@ -17,7 +17,7 @@ public class GivenDataSectorReaderWithZeroFilledSectors : SectorTestBase
 
         // create data sector reader
         var reader = new DataSectorReader(stream, bufferSize: SectorSize);
-        
+
         // act - read sectors
         var sectors = new List<Sector>();
         SectorResult result;
@@ -26,11 +26,11 @@ public class GivenDataSectorReaderWithZeroFilledSectors : SectorTestBase
             result = await reader.ReadNext();
             sectors.AddRange(result.Sectors);
         } while (!result.EndOfSectors);
-            
+
         // assert - all sectors are zero filled
         Assert.True(sectors.All(x => x.IsZeroFilled));
-        
+
         // assert - sum of sectors length is equal to  
         Assert.Equal(zeroFilledSectorBytes.Length, sectors.Sum(x => x.Data.Length));
-    }        
+    }
 }

@@ -18,6 +18,8 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private long statusBytesProcessed;
+        private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         
@@ -30,6 +32,8 @@
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.statusBytesProcessed = 0;
+            this.statusTimeElapsed = TimeSpan.Zero;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -48,11 +52,11 @@
             await using var sourceStream = sourceMedia.Stream;
 
             var sourceSize = sourceMedia.Size;
-            var readSize = sourceSize.ResolveSize(size);
-
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
-            OnDebugMessage($"Read size '{readSize.FormatBytes()}' ({readSize} bytes)");
-
+            
+            var readSize = sourceSize.ResolveSize(size);
+            OnInformationMessage($"Size '{readSize.FormatBytes()}' ({readSize} bytes)");
+            
             OnDebugMessage($"Opening '{destinationPath}' as writable");
             
             var destinationMediaResult = commandHelper.GetWritableMedia(physicalDrivesList, destinationPath, readSize, false);
@@ -72,20 +76,24 @@
             var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
+                statusBytesProcessed = e.BytesProcessed;
+                statusTimeElapsed = e.TimeElapsed;
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
-                    e.TimeRemaining, e.TimeTotal);
+                    e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
-            await streamCopier.Copy(token, sourceStream, destinationStream, readSize, 0, 0, isVhd);
+            var result = await streamCopier.Copy(token, sourceStream, destinationStream, readSize, 0, 0, isVhd);
             
-            return new Result();
+            OnInformationMessage($"Read '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            
+            return result;
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal));
+                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

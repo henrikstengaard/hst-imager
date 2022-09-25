@@ -3,7 +3,6 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using System.Threading.Tasks;
 
     public class DataSectorReader
@@ -20,12 +19,12 @@
             {
                 throw new ArgumentException("Sector size must be dividable by 512", nameof(sectorSize));
             }
-            
+
             if (bufferSize % 512 != 0)
             {
                 throw new ArgumentException("Buffer size must be dividable by 512", nameof(bufferSize));
             }
-            
+
             this.stream = stream;
             this.sectorSize = sectorSize;
             this.bufferSize = bufferSize;
@@ -33,11 +32,11 @@
             offset = this.stream.Position;
         }
 
-        public async Task<SectorResult> ReadNext()
+        public async Task<SectorResult> ReadNext(int? length = null)
         {
             var startOffset = offset;
-            var bytesRead = await stream.ReadAsync(buffer, 0, bufferSize);
-            var endOffset = offset + bufferSize - 1;
+            var readBytes = length.HasValue && length.Value > 0 && length < bufferSize ? length.Value : bufferSize;
+            var bytesRead = await stream.ReadAsync(buffer, 0, readBytes);
 
             var sectors = new List<Sector>();
 
@@ -45,19 +44,22 @@
             {
                 var data = new byte[sectorSize];
                 Array.Copy(buffer, start, data, 0, sectorSize);
-                
+                var sectorStart = offset + start;
+                var sectorEnd = sectorStart + sectorSize - 1;
+
                 sectors.Add(new Sector
                 {
-                    Start = offset + start,
-                    End = offset + start + sectorSize - 1,
+                    Start = sectorStart,
+                    End = sectorEnd,
                     Size = sectorSize,
-                    IsZeroFilled = data.All(x => x == 0),
+                    IsZeroFilled = IsZeroFilled(data, 0, sectorSize - 1),
                     Data = data
                 });
             }
 
             offset += bytesRead;
-            
+            var endOffset = offset - 1;
+
             return new SectorResult
             {
                 Start = startOffset,
@@ -69,11 +71,11 @@
             };
         }
 
-        private bool IsSectorZeroFilled(int sectorStart, int sectorEnd)
+        private bool IsZeroFilled(byte[] data, int start, int end)
         {
-            for (var i = sectorStart; i <= sectorEnd; i++)
+            for (var i = start; i <= end; i++)
             {
-                if (buffer[i] != 0 || buffer[sectorEnd - i] != 0)
+                if (data[i] != 0 || data[end - i] != 0)
                 {
                     return false;
                 }

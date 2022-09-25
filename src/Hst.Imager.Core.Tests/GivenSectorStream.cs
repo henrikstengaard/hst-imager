@@ -1,7 +1,7 @@
 ﻿namespace Hst.Imager.Core.Tests
 {
     using System.IO;
-    using Hst.Imager.Core;
+    using Core;
     using Xunit;
 
     public class GivenSectorStream
@@ -56,6 +56,19 @@
             var buffer = new byte[count];
 
             Assert.Throws<IOException>(() => sectorStream.Write(buffer, 0, count));
+        }
+
+        [Theory]
+        [InlineData(500, 512)]
+        [InlineData(940, 1024)]
+        public void WhenWriteInvalidCountWithWriteFillTrueThenBufferIsWritten(int count, int expected)
+        {
+            var sectorStream = new SectorStream(new MemoryStream(), true);
+
+            var buffer = new byte[count];
+            sectorStream.Write(buffer, 0, count);
+            
+            Assert.Equal(expected, sectorStream.Length);
         }
         
         [Theory]

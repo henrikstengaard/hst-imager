@@ -11,8 +11,10 @@
         public readonly TimeSpan TimeElapsed;
         public readonly TimeSpan TimeRemaining;
         public readonly TimeSpan TimeTotal;
-        
-        public DataProcessedEventArgs(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal, TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal)
+        public readonly long BytesPerSecond;
+
+        public DataProcessedEventArgs(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             PercentComplete = percentComplete;
             BytesProcessed = bytesProcessed;
@@ -21,6 +23,7 @@
             TimeElapsed = timeElapsed;
             TimeRemaining = timeRemaining;
             TimeTotal = timeTotal;
+            BytesPerSecond = bytesPerSecond;
         }
     }
 }

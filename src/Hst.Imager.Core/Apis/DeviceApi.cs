@@ -117,6 +117,11 @@
         public const uint OPEN_ALWAYS              = 4U;
 
         /// <summary>
+        /// The file or device is being opened with no system caching for data reads and writes. This flag does not affect hard disk caching or memory mapped files.
+        /// </summary>
+        public const uint FILE_FLAG_NO_BUFFERING = 0x20000000;
+
+        /// <summary>
         /// Opens a file and truncates it so that its size is zero bytes, only if it exists.
         /// 
         /// If the specified file does not exist, the function fails and the last-error code is set to 
