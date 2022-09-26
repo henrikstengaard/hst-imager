@@ -162,9 +162,9 @@
             await Execute(command);
         }
 
-        public static async Task Optimize(string path, string size)
+        public static async Task Optimize(string path, string size, bool rdb)
         {
-            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size));
+            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size), rdb);
             await Execute(command);
         }
 
@@ -346,10 +346,10 @@
                 await GetPhysicalDrives(), path, partitionNumber, hexBootBytes));
         }
 
-        public static async Task SectorExtract(string path, string outputPath, int sectorSize, long? start, long? end)
+        public static async Task BlockRead(string path, string outputPath, int blockSize, bool used, long? start, long? end)
         {
-            await Execute(new SectorExtractCommand(GetLogger<SectorExtractCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, outputPath, sectorSize, start, end));
+            await Execute(new BlockReadCommand(GetLogger<BlockReadCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)

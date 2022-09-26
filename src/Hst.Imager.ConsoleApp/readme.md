@@ -1,38 +1,56 @@
-﻿# HstWB Installer Imager
+﻿# Hst Imager
 
-HstWB Installer Imager is an imaging tool to read and write raw disk images to and from physical drives with support for Amiga rigid disk block (RDSK, partition table used by Amiga computers).
-This is useful for creating images on modern computers and write them to physical drives such as hard disks, SSD, CF- and MicroSD-cards or creating images of physical drives for backup or tweaking with Amiga emulators much faster than real Amiga hardware.  
+Hst Imager is an imaging tool to read and write disk images to and from physical drives.
+
+This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
 
 ## Features
 
-HstWB Installer Imager comes with following features:
-- List physical drives (*).
-- Display information about physical drive or image file (*).
-- Read physical drive to image file (*).
-- Write image file to physical drive (*).
+Hst Imager comes with following features:
+- List physical drives.
+- Read information from physical drive or image file.
+- Read physical drive to image file.
+- Write image file to physical drive.
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
-- Optimize image file.
+- Optimize image file size.
+- Master Boot Record (MBR):
+    - Read Master Boot Record information.
+    - Initialize Master Boot Record.
+    - Add partition to Master Boot Record.
+    - Delete partition from Master Boot Record.
+    - Format partition in Master Boot Record.
+- Rigid Disk Block (RDB);
+    - Read Rigid Disk Block information.
+    - Initialize Rigid Disk Block.
+    - Add file system to Rigid Disk Block.
+    - Delete file system from Rigid Disk Block.
+    - Export file system from Rigid Disk Block to file.
+    - Import file systems from Rigid Disk Block or ADF file.
+    - Update file system in Rigid Disk Block.
+    - Add partition to Rigid Disk Block.
+    - Copy partition from one Rigid Disk Block to another.
+    - Delete partition from Rigid Disk Block.
+    - Export partition from Rigid Disk Block to hard file.
+    - Format partition in Rigid Disk Block.
+    - Import partition from hard file to Rigid Disk Block.
+    - Kill and restore partition in Rigid Disk Block.
+    - Update partition in Rigid Disk Block.
 
-(*) requires administrative rights on Windows and Linux.
+**Read and write for physical drives requires administrative rights on Windows, macOS and Linux.**
 
 ## Supported operating systems
 
-HstWB Installer Imager supports following operating systems:
-- Windows 
+Hst Imager supports following operating systems:
+- Windows
+- macOS
 - Linux
-
-## Amiga rigid disk block support
-
-HstWB Installer Imager supports Amiga rigid disk block by reading first 16 blocks (512 bytes * 16) from source physical drive or image file.
-When creating an image file from a physical drive, HstWB Installer Imager uses Amiga rigid disk block to define the size of the image file to create.
-E.g. if a 120GB SSD contains a 16GB Amiga rigid disk block, HstWB Installer Imager will only read the 16GB used and not the entire 120GB.
 
 ## Img file format
 
-Img file format is a raw dumps of hard disks, SSD, CF- and MicroSD-cards and consists of a sector-by-sector binary copy of the source.
+Img file format is a raw dump of hard disks, SSD, CF- and MicroSD-cards and consists of a sector-by-sector binary copy of the source.
 
-Creating an .img image file from a 64GB CF-card using HstWB Installer Imager will require 64GB of free disk space on the specified destination path.
+Creating an .img image file from a 64GB CF-card using Hst Imager will require 64GB of free disk space on the specified destination path.
 
 ## Vhd file format
 
@@ -42,9 +60,15 @@ Fixed sized vhd file pre-allocates the requested size when created same way as .
 
 Dynamic sized vhd file only allocates storage to store actual data. Unused or zero filled parts of vhd file are not allocated resulting in smaller image files compared to img image files.
 
-Creating a dynamic sized vhd image file from a 64GB CF-card using HstWB Installer Imager will only require free disk space on the specified destination path matching disk space used on source physical drive.
+Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager will only require free disk space on the specified destination path matching disk space used on source physical drive. Zero filled (unused) sectors are skipped, when creating a vhd image.
 
-## Amiga emulators with vhd support
+## Amiga support
+
+Hst Imager supports Amiga Rigid Disk Block (RDSK, partition table used by Amiga computers) and can initialize new Rigid Disk Block and modify existing Rigid Disk Block.
+
+Reading an Amiga hard drive to an image files is very useful with Amiga emulators to make changes much faster than real hardware and afterwards write the modified image file back to a hard drive.
+
+### Amiga emulators with vhd support
 
 Following Amiga emulators support .vhd image files:
 - WinUAE 4.9.0: https://www.winuae.net/
@@ -57,84 +81,7 @@ hard_drive_0_type = rdb
 
 ## Usage
 
-### List physical drives
-
-Example of listing physical drives:
-```
-hstwb-installer.imager.exe -l
-```
-
-### Display information about a physical drive or image file
-
-Example of display information about a Windows physical drives:
-```
-hstwb-installer.imager.exe -i \\.\PHYSICALDRIVE2
-```
-
-Example of display information about a Linux physical drives:
-```
-hstwb-installer.imager.exe -i /dev/sdb
-```
-
-Example of display information about an image file:
-```
-hstwb-installer.imager.exe -i 4gb.vhd
-```
-
-### Read physical drive to image file
-
-Example of reading Windows physical drive to 4gb.vhd image file:
-```
-hstwb-installer.imager.exe -r \\.\PHYSICALDRIVE2 4gb.vhd
-```
-
-Example of reading Linux physical drive to 4gb.vhd image file:
-```
-hstwb-installer.imager.exe -r /dev/sdb 4gb.vhd
-```
-
-### Write image file to physical drive 
-
-Example of writing 4GB vhd image file to Windows physical drive:
-```
-hstwb-installer.imager.exe -w 4gb.vhd \\.\PHYSICALDRIVE2
-```
-
-Example of writing 4GB vhd image file to Linux physical drive:
-```
-hstwb-installer.imager.exe -w 4gb.vhd /dev/sdb
-```
-
-### Convert an image file
-
-Example of converting 4GB img image file to vhd image file:
-```
-hstwb-installer.imager.exe -c 4gb.img 4gb.vhd
-```
-
-Example of converting 4GB vhd image file to img image file:
-```
-hstwb-installer.imager.exe -c 4gb.vhd 4gb.img
-```
-
-### Create a blank image file
-
-Example of creating a blank 4GB vhd image file:
-```
-hstwb-installer.imager.exe -b 4gb.vhd -s 4gb
-```
-
-Example of creating a blank 4GB img image file:
-```
-hstwb-installer.imager.exe -b 4gb.img -s 4gb
-```
-
-### Optimizing an image file
-
-Example of optimizing a 4GB img image file:
-```
-hstwb-installer.imager.exe -o 4gb.img 4gb_optimized.img
-```
+See [Usage](usage). 
 
 ## References
 

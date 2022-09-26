@@ -13,7 +13,30 @@
     public class GivenOptimizeCommand : CommandTestBase
     {
         [Fact]
-        public async Task WhenOptimizeImgWithoutSizeSetThenSizeIsNotChanged()
+        public async Task WhenOptimizeImgWithSizeSetThenSizeIsChanged()
+        {
+            // arrange
+            var path = $"{Guid.NewGuid()}.img";
+            var size = 8192;
+            var fakeCommandHelper = new FakeCommandHelper();
+            // var bytes = fakeCommandHelper.CreateTestData();
+            fakeCommandHelper.WriteableMedias.Add(new Media(path, path, size, Media.MediaType.Raw, false,
+                new MemoryStream(new byte[16384])));
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // optimize
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+                new Models.Size(size, Unit.Bytes), false);
+            var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert media contains optimized rigid disk block size
+            var optimizedBytes = fakeCommandHelper.GetMedia(path).GetBytes();
+            Assert.Equal(size, optimizedBytes.Length);
+        }
+        
+        [Fact]
+        public async Task WhenOptimizeImgWithoutSizeSetThenResultIsFaulted()
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
@@ -22,20 +45,16 @@
             fakeCommandHelper.WriteableMedias.Add(new Media(path, path, bytes.Length, Media.MediaType.Raw, false,
                 new MemoryStream(bytes)));
             var cancellationTokenSource = new CancellationTokenSource();
-            
-            // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path, new Models.Size(0, Unit.Bytes));
-            var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(result.IsSuccess);
 
-            // assert bytes and media optimized bytes are identical
-            var optimizedBytes = fakeCommandHelper.GetMedia(path).GetBytes();
-            Assert.Equal(bytes.Length, optimizedBytes.Length);
-            Assert.Equal(bytes, optimizedBytes);
+            // optimize
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+                new Models.Size(0, Unit.Bytes), false);
+            var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsFaulted);
         }
 
         [Fact]
-        public async Task WhenOptimizeImgWithSizeSetThenSizeIsChanged()
+        public async Task WhenOptimizeImgWithRdbTrueSetThenSizeIsChangedToRdbSize()
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
@@ -50,7 +69,8 @@
             var cancellationTokenSource = new CancellationTokenSource();
 
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path, new Models.Size(rigidDiskBlockSize, Unit.Bytes));
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+                new Models.Size(rigidDiskBlockSize, Unit.Bytes), true);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

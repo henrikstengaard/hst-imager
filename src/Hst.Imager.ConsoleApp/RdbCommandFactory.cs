@@ -482,11 +482,11 @@
         {
             var sourcePathArgument = new Argument<string>(
                 name: "SourcePath",
-                description: "Path to source physical drive or image file.");
+                description: "Path to source hard file (eg. DH0.hdf).");
 
             var destinationPathArgument = new Argument<string>(
                 name: "DestinationPath",
-                description: "Path to destination file (eg. DH0.hdf).");
+                description: "Path to destination physical drive or image file.");
 
             var dosTypeArgument = new Argument<string>(
                 name: "DosType",

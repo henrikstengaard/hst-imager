@@ -38,7 +38,7 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnInformationMessage($"Verifying '{sourcePath}' against '{destinationPath}'");
+            OnInformationMessage($"Verifying '{sourcePath}' and '{destinationPath}'");
             
             OnDebugMessage($"Opening '{sourcePath}' as readable");
 

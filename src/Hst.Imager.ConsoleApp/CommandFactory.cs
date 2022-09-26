@@ -29,7 +29,7 @@
             rootCommand.AddCommand(CreateOptimizeCommand());
             rootCommand.AddCommand(CreateReadCommand());
             rootCommand.AddCommand(CreateScriptCommand());
-            rootCommand.AddCommand(CreateSectorCommand());
+            rootCommand.AddCommand(CreateBlockCommand());
             rootCommand.AddCommand(CreateVerifyCommand());
             rootCommand.AddCommand(CreateWriteCommand());
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
@@ -175,10 +175,15 @@
                 new[] { "--size", "-s" },
                 description: "Size to optimize to.");
 
+            var rdbOption = new Option<bool>(
+                new[] { "-rdb" },
+                description: "Optimize to size of Rigid Disk Block.");
+            
             var convertCommand = new Command("optimize", "Optimize image file size.");
             convertCommand.AddArgument(pathArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption);
+            convertCommand.AddOption(rdbOption);
+            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption, rdbOption);
 
             return convertCommand;
         }
@@ -206,14 +211,14 @@
             return convertCommand;
         }
 
-        public static Command CreateSectorCommand()
+        public static Command CreateBlockCommand()
         {
-            var command = new Command("sector", "Sector.");
-            command.AddCommand(CreateSectorExtractCommand());
+            var command = new Command("block", "Block.");
+            command.AddCommand(CreateBlockReadCommand());
             return command;
         }
 
-        public static Command CreateSectorExtractCommand()
+        public static Command CreateBlockReadCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
@@ -223,10 +228,14 @@
                 name: "OutputPath",
                 description: "Output path to write sectors.");
 
-            var sectorSizeOption = new Option<int>(
-                new[] { "--sector-size", "-ss" },
-                description: "Sector size", getDefaultValue: () => 512);
+            var blockSizeOption = new Option<int>(
+                new[] { "--block-size", "-bs" },
+                description: "Block size", getDefaultValue: () => 512);
 
+            var usedOption = new Option<bool>(
+                new[] { "--used", "-u" },
+                description: "Only used blocks");
+            
             var startOption = new Option<long?>(
                 new[] { "--start", "-s" },
                 description: "Start offset");
@@ -235,12 +244,15 @@
                 new[] { "--end", "-e" },
                 description: "End offset");
 
-            var blankCommand = new Command("extract", "Extract sectors.");
-            blankCommand.SetHandler(CommandHandler.SectorExtract, pathArgument, outputPathArgument, sectorSizeOption,
-                startOption, endOption);
+            var blankCommand = new Command("read", "Read blocks to file per block.");
+            blankCommand.SetHandler(CommandHandler.BlockRead, pathArgument, outputPathArgument, blockSizeOption,
+                usedOption, startOption, endOption);
             blankCommand.AddArgument(pathArgument);
             blankCommand.AddArgument(outputPathArgument);
-            blankCommand.AddOption(sectorSizeOption);
+            blankCommand.AddOption(blockSizeOption);
+            blankCommand.AddOption(usedOption);
+            blankCommand.AddOption(startOption);
+            blankCommand.AddOption(endOption);
 
             return blankCommand;
         }

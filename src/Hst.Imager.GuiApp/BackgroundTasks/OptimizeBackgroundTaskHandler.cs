@@ -43,7 +43,7 @@
                 }, context.Token);
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
-                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path, new Size(0, Unit.Bytes));
+                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path, new Size(0, Unit.Bytes), false);
 
                 var result = await optimizeCommand.Execute(context.Token);
 

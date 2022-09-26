@@ -15,13 +15,16 @@
         private readonly ICommandHelper commandHelper;
         private readonly string path;
         private readonly Size size;
+        private readonly bool rdb;
 
-        public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path, Size size)
+        public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path, Size size,
+            bool rdb)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.path = path;
             this.size = size;
+            this.rdb = rdb;
         }
         
         public override async Task<Result> Execute(CancellationToken token)
@@ -44,15 +47,32 @@
             await using var stream = media.Stream;
             var currentSize = stream.Length;
 
-            OnDebugMessage($"Size '{currentSize}'");
+            OnInformationMessage($"Size '{currentSize}'");
 
-            if (size.Value == 0)
+            long optimizedSize = 0;            
+            if (rdb)
             {
-                return new Result();
+                var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+
+                if (rigidDiskBlock == null)
+                {
+                    return new Result(new Error("Rigid Disk Block not found"));
+                }
+                
+                optimizedSize = rigidDiskBlock.DiskSize;
+            }
+            else if (size.Value != 0)
+            {
+                optimizedSize = currentSize.ResolveSize(size);
+            }
+
+            // return error, if optimized size is zero
+            if (optimizedSize == 0)
+            {
+                return new Result(new Error($"Invalid optimized size '{optimizedSize}'"));
             }
 
             // optimize
-            var optimizedSize = currentSize.ResolveSize(size);
             stream.SetLength(optimizedSize);
 
             OnInformationMessage($"Optimized size '{optimizedSize}'");
