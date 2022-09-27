@@ -57,7 +57,6 @@ jobs:
           name: hst-imager.release-tag
           path: hst-imager.release-tag.txt
           retention-days: 3
-        if: matrix.os == 'windows-latest'
 
       # upload release version
       - name: Upload release version artifact
@@ -66,7 +65,6 @@ jobs:
           name: hst-imager.release-version
           path: hst-imager.release-version.txt
           retention-days: 3
-        if: matrix.os == 'windows-latest'
   
   build-console:
     needs: prepare
@@ -105,14 +103,26 @@ jobs:
         run: |
           Get-ChildItem -recurse
 
-      - name: List console app output
+      - name: Build console app release
+        id: build_console_app_release
         working-directory: ./src/Hst.Imager.ConsoleApp/publish/${{ env.TARGET }}
         shell: pwsh
         run: |
-          "ARTIFACT_NAME=${{ env.RELEASE_VERSION }}.console.${{ env.TARGET }}" >> $env:GITHUB_ENV
+          $artifactName='${{ env.RELEASE_VERSION }}.console.${{ env.TARGET }}'
           Remove-Item -Path *.pdb
-          $exeFile=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
-          Compress-Archive -Path *.* -DestinationPath ${{ env.ARTIFACT_NAME }}.zip
+          $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
+          Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
+          Compress-Archive -Path *.* -DestinationPath "$artifactName.zip"
+          $artifactPath=((Get-ChildItem -Filter "$artifactName.zip") | Select -First 1).FullName
+          "::set-output name=artifact_name::$artifactName"
+          "::set-output name=artifact_path::$artifactPath"
+
+      - name: Upload console app artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "${{ steps.build_console_app_release.outputs.artifact_name }}"
+          path: "${{ steps.build_console_app_release.outputs.artifact_path }}"
+          retention-days: 3
   
   # build gui
   build-gui:
