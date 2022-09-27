@@ -47,13 +47,18 @@
                 new[] { "--rdb-block-lo" },
                 "Low block reserved for Rigid Disk Block (0-15).");
 
+            var chsOption = new Option<string>(
+                new[] { "-chs" },
+                description: "Initialize from cylinders, heads and sectors.");
+            
             var rdbInitCommand = new Command("initialize", "Initialize disk with empty Rigid Disk Block.");
             rdbInitCommand.AddAlias("init");
             rdbInitCommand.SetHandler(CommandHandler.RdbInit, pathArgument, sizeOption, nameOption,
-                rdbBlockLoOption);
+                chsOption, rdbBlockLoOption);
             rdbInitCommand.AddArgument(pathArgument);
             rdbInitCommand.AddOption(sizeOption);
             rdbInitCommand.AddOption(nameOption);
+            rdbInitCommand.AddOption(chsOption);
             rdbInitCommand.AddOption(rdbBlockLoOption);
 
             return rdbInitCommand;

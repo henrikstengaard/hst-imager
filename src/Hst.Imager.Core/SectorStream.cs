@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core
 {
+    using System;
     using System.IO;
 
     /// <summary>
@@ -8,12 +9,14 @@
     public class SectorStream : Stream
     {
         private readonly Stream stream;
+        private readonly bool readFill;
         private readonly bool writeFill;
         private const int SectorSize = 512;
 
-        public SectorStream(Stream baseStream, bool writeFill = false)
+        public SectorStream(Stream baseStream, bool readFill, bool writeFill)
         {
             this.stream = baseStream;
+            this.readFill = readFill;
             this.writeFill = writeFill;
         }
 
@@ -34,6 +37,14 @@
 
         public override int Read(byte[] buffer, int offset, int count)
         {
+            if (readFill & count % SectorSize != 0)
+            {
+                var filledBuffer = new byte[count - (count % SectorSize) + SectorSize];
+                var bytesRead = stream.Read(filledBuffer, offset, filledBuffer.Length);
+                var length = Math.Min(bytesRead, count);
+                Array.Copy(filledBuffer, 0, buffer, 0, length);
+                return length;
+            }
             ThrowIfValueIsNotASector(count);
             return stream.Read(buffer, offset, count);
         }

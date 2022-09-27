@@ -37,7 +37,7 @@
                 }
             }
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable), true);
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable), true, true);
         }
     }
 }

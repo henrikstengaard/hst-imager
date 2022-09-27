@@ -30,7 +30,7 @@
             rootCommand.AddCommand(CreateReadCommand());
             rootCommand.AddCommand(CreateScriptCommand());
             rootCommand.AddCommand(CreateBlockCommand());
-            rootCommand.AddCommand(CreateVerifyCommand());
+            rootCommand.AddCommand(CreateCompareCommand());
             rootCommand.AddCommand(CreateWriteCommand());
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
@@ -57,7 +57,7 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var command = new Command("info", "Show info about physical drive or image file.");
+            var command = new Command("info", "Display info about physical drive or image file.");
             command.AddArgument(pathArgument);
             command.SetHandler(CommandHandler.Info, pathArgument);
 
@@ -66,7 +66,7 @@
 
         public static Command CreateListCommand()
         {
-            var listCommand = new Command("list", "List physical drives.");
+            var listCommand = new Command("list", "Display list of physical drives.");
             listCommand.SetHandler(CommandHandler.List);
 
             return listCommand;
@@ -188,25 +188,25 @@
             return convertCommand;
         }
 
-        public static Command CreateVerifyCommand()
+        public static Command CreateCompareCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
-                description: "Path to source image file.");
+                description: "Path to source physical drive or image file.");
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
-                description: "Path to destination image file.");
+                description: "Path to destination physical drive or image file.");
 
             var sizeOption = new Option<string>(
                 new[] { "--size", "-s" },
                 description: "Size to verify.");
 
-            var convertCommand = new Command("verify", "Verify source and destination.");
+            var convertCommand = new Command("compare", "Compare source and destination.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.SetHandler(CommandHandler.Verify, sourceArgument, destinationArgument, sizeOption);
+            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption);
 
             return convertCommand;
         }
@@ -230,20 +230,21 @@
 
             var blockSizeOption = new Option<int>(
                 new[] { "--block-size", "-bs" },
-                description: "Block size", getDefaultValue: () => 512);
+                description: "Block size.",
+                getDefaultValue: () => 512);
 
             var usedOption = new Option<bool>(
                 new[] { "--used", "-u" },
-                description: "Only used blocks");
+                description: "Only used blocks.");
             
             var startOption = new Option<long?>(
                 new[] { "--start", "-s" },
-                description: "Start offset");
+                description: "Start offset.");
 
             var endOption = new Option<long?>(
                 new[] { "--end", "-e" },
-                description: "End offset");
-
+                description: "End offset.");
+            
             var blankCommand = new Command("read", "Read blocks to file per block.");
             blankCommand.SetHandler(CommandHandler.BlockRead, pathArgument, outputPathArgument, blockSizeOption,
                 usedOption, startOption, endOption);

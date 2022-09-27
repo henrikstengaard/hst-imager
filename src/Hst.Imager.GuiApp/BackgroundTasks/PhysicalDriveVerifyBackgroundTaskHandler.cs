@@ -41,7 +41,7 @@
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var verifyCommand =
-                    new VerifyCommand(loggerFactory.CreateLogger<VerifyCommand>(), commandHelper, physicalDrives,
+                    new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper, physicalDrives,
                         verifyBackgroundTask.SourcePath,
                         verifyBackgroundTask.DestinationPath, new Size());
                 verifyCommand.DataProcessed += async (_, args) =>

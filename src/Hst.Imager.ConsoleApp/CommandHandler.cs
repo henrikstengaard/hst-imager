@@ -177,9 +177,9 @@
             await Execute(command);
         }
 
-        public static async Task Verify(string sourcePath, string destinationPath, string size)
+        public static async Task Compare(string sourcePath, string destinationPath, string size)
         {
-            var command = new VerifyCommand(GetLogger<VerifyCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+            var command = new CompareCommand(GetLogger<CompareCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
                 destinationPath, ParseSize(size));
             command.DataProcessed += WriteProcessMessage;
@@ -247,10 +247,10 @@
             await Execute(command);
         }
 
-        public static async Task RdbInit(string path, string size, string name, int rdbBlockLo)
+        public static async Task RdbInit(string path, string size, string name, string chs, int rdbBlockLo)
         {
             await Execute(new RdbInitCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, name, ParseSize(size), rdbBlockLo));
+                await GetPhysicalDrives(), path, name, ParseSize(size), chs, rdbBlockLo));
         }
 
         public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName)

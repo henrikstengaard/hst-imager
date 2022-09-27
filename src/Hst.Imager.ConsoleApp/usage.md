@@ -2,9 +2,9 @@
 
 Hst Imager console app is invoked from the command line using the `hst.imager` command.
 
-Invoking `hst.imager` command without any arguments, which will show available commands and options.  
+Invoking `hst.imager` command without any arguments, which will display available commands and options.  
 
-Example of showing usage:
+Example of displaying usage:
 ```
 hst.imager
 ```
@@ -17,9 +17,11 @@ Commands accessing physical drives requires administrator privileges:
 - Windows: Run `hst.imager` command from Command Prompt started as Administrator.
 - macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, eg. `sudo hst.imager list` to list physical drives.
 
+Hst Imager will only allow access to removeable or USB attached physical drives.
+
 ## List physical drives
 
-Lists physical drives, only removeable or USB. Requires administrator privileges.
+Lists physical drives. Requires administrator privileges.
 
 Example of listing physical drives:
 ```
@@ -28,7 +30,7 @@ hst.imager list
 
 ## Display information about a physical drive or image file
 
-Displays information about a physical drive or image file by reading Master Boot Record and Rigid Disk Block and displays a table with partition tables present. Requires administrator privileges.
+Displays information about a physical drive or image file by reading Master Boot Record and Rigid Disk Block and displays a table with partition tables present. Physical drives requires administrator privileges.
 
 Example of display information about a Windows physical drive:
 ```
@@ -40,7 +42,7 @@ Example of display information about a Linux physical drive:
 hst.imager info /dev/sdb
 ```
 
-Example of display information about an image file:
+Example of display information about an 4GB vhd image file:
 ```
 hst.imager info 4gb.vhd
 ```
@@ -81,6 +83,30 @@ hst.imager write 4gb.vhd \\.\PHYSICALDRIVE2
 Example of writing 4GB vhd image file to Linux physical drive:
 ```
 hst.imager write 4gb.vhd /dev/sdb
+```
+
+## Compare physical drive and image file
+
+Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges.
+
+Example of displaying usage for writing an image file to a physical drive:
+```
+hst.imager compare
+```
+
+Example of comparing 4GB vhd image file and Windows physical drive:
+```
+hst.imager compare 4gb.vhd \\.\PHYSICALDRIVE2
+```
+
+Example of comparing 4GB vhd image file and Linux physical drive:
+```
+hst.imager compare 4gb.vhd /dev/sdb
+```
+
+Example of comparing 4GB vhd image file and 4GB img image file:
+```
+hst.imager compare 4gb.vhd 4gb.img
 ```
 
 ## Convert an image file
@@ -240,9 +266,14 @@ Example of displaying usage for initializing Rigid Disk Block:
 hst.imager rdb init
 ```
 
-Example of initializing Master Boot Record on a 4GB vhd image file:
+Example of initializing Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb init 4gb.vhd
+```
+
+Example of initializing Rigid Disk Block using cylinders, heads and sectors on a 4GB vhd image file:
+```
+hst.imager rdb init 4gb.vhd -chs 800,16,63
 ```
 
 ## Add file system to Rigid Disk Block

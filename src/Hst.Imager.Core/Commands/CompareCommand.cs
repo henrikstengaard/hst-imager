@@ -10,9 +10,9 @@
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class VerifyCommand : CommandBase
+    public class CompareCommand : CommandBase
     {
-        private readonly ILogger<VerifyCommand> logger;
+        private readonly ILogger<CompareCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string sourcePath;
@@ -23,7 +23,7 @@
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         
-        public VerifyCommand(ILogger<VerifyCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
+        public CompareCommand(ILogger<CompareCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
             string destinationPath, Size size)
         {
             this.logger = logger;
@@ -38,7 +38,7 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnInformationMessage($"Verifying '{sourcePath}' and '{destinationPath}'");
+            OnInformationMessage($"Compare '{sourcePath}' and '{destinationPath}'");
             
             OnDebugMessage($"Opening '{sourcePath}' as readable");
 
@@ -79,7 +79,7 @@
             };
             var result = await imageVerifier.Verify(token, sourceStream, destinationStream, verifySize);
 
-            OnInformationMessage($"Verified '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
+            OnInformationMessage($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
 
             return result;
         }
