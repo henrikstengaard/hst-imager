@@ -94,7 +94,7 @@ jobs:
         shell: pwsh
         run: |
           cd "Hst.Imager.ConsoleApp"
-          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.os }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.os }}
+          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
 
       - name: List console app output
         working-directory: ./src
@@ -108,8 +108,8 @@ jobs:
         working-directory: ./src
         shell: pwsh
         run: |
-          cd "Hst.Imager.ConsoleApp/publish/${{ env.TARGET }}"
-          $artifactName='${{ env.RELEASE_VERSION }}.console.${{ env.TARGET }}'
+          cd "Hst.Imager.ConsoleApp/publish/${{ matrix.target }}"
+          $artifactName='${{ env.RELEASE_VERSION }}.console.${{ matrix.target }}'
           Remove-Item -Path *.pdb
           $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
           Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
