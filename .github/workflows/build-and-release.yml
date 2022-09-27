@@ -88,19 +88,23 @@ jobs:
         shell: pwsh
         run: |
           "RELEASE_VERSION={0}" -f (gc hst-imager.release-version.txt) >> $env:GITHUB_ENV
-      
-      - name: Build console app
-        working-directory: ./src
+
+      - name: Where
         shell: pwsh
         run: |
-          cd "Hst.Imager.ConsoleApp"
+          pwd
+          Get-ChildItem -recurse
+      
+      - name: Build console app
+        working-directory: src/Hst.Imager.ConsoleApp
+        shell: pwsh
+        run: |
           dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
 
       - name: List console app output
-        working-directory: ./src
+        working-directory: src/Hst.Imager.ConsoleApp/publish
         shell: pwsh
         run: |
-          cd "Hst.Imager.ConsoleApp/publish"
           Get-ChildItem -recurse
 
       - name: Build console app release
