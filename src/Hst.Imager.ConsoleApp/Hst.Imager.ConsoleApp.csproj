@@ -15,9 +15,6 @@
     </ItemGroup>
     
     <ItemGroup>
-      <None Update="app.manifest">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
       <None Update="pfs3aio">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

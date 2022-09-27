@@ -6,107 +6,48 @@ name: Build and release
 # Allows you to run this workflow manually from the Actions tab
 on: [workflow_dispatch]
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            target: win
-          - os: macos-latest
-            target: osx
-          - os: ubuntu-latest
-            target: linux
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+  prepare:
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Set version
+      - name: Set version and tag
         working-directory: ./src
         shell: pwsh
         run: |
           "BUILD_VERSION=0.9.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
 
+      - name: Set tag
+        working-directory: ./src
+        shell: pwsh
+        run: |
+          "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
+          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
+
       - name: Show version
         shell: pwsh
         run: |
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
-
-      - name: Set Windows target
-        shell: pwsh
-        run: |
-          "TARGET=win" >> $env:GITHUB_ENV
-          "${{ env.BUILD_VERSION }}-imager" > hst-imager.release-tag.txt
-          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
-        if: matrix.os == 'windows-latest'
-
-      - name: Set macOS target
-        shell: pwsh
-        run: |
-          "TARGET=osx" >> $env:GITHUB_ENV
-        if: matrix.os == 'macos-latest'
-
-      - name: Set Linux target
-        shell: pwsh
-        run: |
-          "TARGET=linux" >> $env:GITHUB_ENV
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Update Electron manifest version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('HstWbInstaller.Imager.GuiApp/electron.manifest.json', ([System.IO.File]::ReadAllText('HstWbInstaller.Imager.GuiApp/electron.manifest.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
-
-      - name: Update package json version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('HstWbInstaller.Imager.GuiApp/ClientApp/package.json', ([System.IO.File]::ReadAllText('HstWbInstaller.Imager.GuiApp/ClientApp/package.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
-
-      - name: Update index html version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('HstWbInstaller.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('HstWbInstaller.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
-
-      - name: Update constants version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('HstWbInstaller.Imager.GuiApp/ClientApp/src/Constants.js', ([System.IO.File]::ReadAllText('HstWbInstaller.Imager.GuiApp/ClientApp/src/Constants.js') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
-
-      - name: Setup .NET Core 5.0
-        uses: actions/setup-dotnet@v1
+          
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: 5.0.x
+          dotnet-version: 6.0.x
 
       - name: Restore tool
         working-directory: ./src
         shell: pwsh
         run: dotnet tool restore
-
-      - name: Electronize build
+        
+      - name: Update directory build props version
+        shell: pwsh
         working-directory: ./src
-        shell: pwsh
         run: |
-          cd HstWbInstaller.Imager.GuiApp
-          dotnet electronize build /target ${{ env.TARGET }}
-          
-      - name: List Electron output
-        shell: pwsh
-        run: |
-          dir './src/HstWbInstaller.Imager.GuiApp/bin/Desktop'
+          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
 
       # upload release tag
       - name: Upload release tag artifact
@@ -125,6 +66,123 @@ jobs:
           path: hst-imager.release-version.txt
           retention-days: 3
         if: matrix.os == 'windows-latest'
+  
+  build-console:
+    needs: prepare
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: [win-x64, win-arm64]
+          - os: macos-latest
+            target: [osx-x64, linux-arm64]
+          - os: ubuntu-latest
+            target: [linux-x64, linux-arm64]
+            
+    steps:
+      - name: Download release version artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: hst-imager.release-version
+
+      - name: Set release version
+        shell: pwsh
+        run: |
+          "RELEASE_VERSION={0}" -f (gc hst-imager.release-version.txt) >> $env:GITHUB_ENV
+      
+      - name: Build console app
+        working-directory: ./src/Hst.Imager.ConsoleApp
+        shell: pwsh
+        run: |
+          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.os }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.os }}
+
+      - name: List console app output
+        working-directory: ./src/Hst.Imager.ConsoleApp/publish
+        shell: pwsh
+        run: |
+          Get-ChildItem -recurse
+
+      - name: List console app output
+        working-directory: ./src/Hst.Imager.ConsoleApp/publish/${{ env.TARGET }}
+        shell: pwsh
+        run: |
+          "ARTIFACT_NAME=${{ env.RELEASE_VERSION }}.console.${{ env.TARGET }}" >> $env:GITHUB_ENV
+          Remove-Item -Path *.pdb
+          $exeFile=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
+          Compress-Archive -Path *.* -DestinationPath ${{ env.ARTIFACT_NAME }}.zip
+  
+  # build gui
+  build-gui:
+    needs: prepare
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            target: win-x64
+          - os: macos-latest
+            target: osx-x64
+          - os: ubuntu-latest
+            target: linux-x64
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Set Windows target
+        shell: pwsh
+        run: |
+          "TARGET=win" >> $env:GITHUB_ENV
+        if: matrix.os == 'windows-latest'
+
+      - name: Set macOS target
+        shell: pwsh
+        run: |
+          "TARGET=osx" >> $env:GITHUB_ENV
+        if: matrix.os == 'macos-latest'
+
+      - name: Set Linux target
+        shell: pwsh
+        run: |
+          "TARGET=linux" >> $env:GITHUB_ENV
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Update Electron manifest version
+        shell: pwsh
+        working-directory: ./src
+        run: |
+          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/electron.manifest.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/electron.manifest.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
+
+      - name: Update package json version
+        shell: pwsh
+        working-directory: ./src
+        run: |
+          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/package.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/package.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
+
+      - name: Update index html version
+        shell: pwsh
+        working-directory: ./src
+        run: |
+          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
+
+      - name: Update constants version
+        shell: pwsh
+        working-directory: ./src
+        run: |
+          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
+
+      - name: Build gui app
+        working-directory: ./src
+        shell: pwsh
+        run: |
+          cd Hst.Imager.GuiApp
+          dotnet electronize build /target ${{ env.TARGET }}
+
+      - name: List gui app electron output
+        shell: pwsh
+        run: |
+          Get-ChildItem './src/Hst.Imager.GuiApp/bin/Desktop' -recurse
 
       # windows 64-bit setup exe
       - name: Set Windows 64-bit setup artifact
@@ -132,7 +190,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.win-x64-setup.exe'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -153,7 +211,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.win-x64-portable.exe'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -174,7 +232,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.win-x64.zip'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -195,7 +253,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.osx-x64.dmg'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -216,7 +274,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.linux-x64.AppImage'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -237,7 +295,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.linux-arm64.AppImage'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -258,7 +316,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.linux-x64.deb'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -279,7 +337,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.linux-arm64.deb'
-          $artifactFile=(gci './src/HstWbInstaller.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -295,7 +353,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
   publish:
-    needs: build
+    needs: [build-console, build-gui]
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact

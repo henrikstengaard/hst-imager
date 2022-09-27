@@ -19,7 +19,7 @@
             LoggingLevelSwitch = new LoggingLevelSwitch();
             
             var assembly = Assembly.GetExecutingAssembly();
-            Version = AssemblyName.GetAssemblyName(assembly.Location).Version;
+            Version = assembly.GetName().Version;
             BuildDate = GetBuildDate(assembly);
         }
 

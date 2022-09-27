@@ -425,6 +425,8 @@ hst.imager rdb part format 4gb.vhd 1 Workbench
 
 Imports a partition to Rigid Disk Block from a hard file .hdf.
 
+**Imported partition will use heads and sectors as defined in the Rigid Disk Block. If the imported partition uses different heads or sectors, the contents of partition will not work properly.**
+
 Example of displaying usage for importing a partition to Rigid Disk Block:
 ```
 hst.imager rdb part import

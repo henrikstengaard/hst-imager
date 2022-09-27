@@ -92,6 +92,17 @@
             OnDebugMessage("Reading destination Rigid Disk Block");
 
             var destinationRigidDiskBlock = await commandHelper.GetRigidDiskBlock(destinationStream);
+
+            if (sourceRigidDiskBlock.Heads != destinationRigidDiskBlock.Heads)
+            {
+                return new Result(new Error($"Source Rigid Disk Block heads '{sourceRigidDiskBlock.Heads}' is not equal to destination Rigid Disk Block heads '{destinationRigidDiskBlock.Heads}'"));
+            }
+
+            if (sourceRigidDiskBlock.Sectors != destinationRigidDiskBlock.Sectors)
+            {
+                return new Result(new Error($"Source Rigid Disk Block sectors '{sourceRigidDiskBlock.Sectors}' is not equal to destination Rigid Disk Block sectors '{destinationRigidDiskBlock.Sectors}'"));
+            }
+            
             var destinationPartitionBlocks = destinationRigidDiskBlock.PartitionBlocks.ToList();
             
             var driveName = (!string.IsNullOrWhiteSpace(name) ? name : partitionBlock.DriveName).ToUpper();
