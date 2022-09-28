@@ -11,13 +11,20 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
-            target: [win-x64, win-arm64]
+            target: win-x64
+          - os: windows-latest
+            target: win-arm64
           - os: macos-latest
-            target: [osx-x64, osx-arm64]
+            target: osx-x64
+          - os: macos-latest
+            target: osx-arm64
           - os: ubuntu-latest
-            target: [linux-x64, linux-arm64]
+            target: linux-x64
+          - os: ubuntu-latest
+            target: linux-arm64
     steps:
       - uses: actions/checkout@v2
         with:
