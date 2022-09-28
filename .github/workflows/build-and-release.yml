@@ -74,7 +74,7 @@ jobs:
         shell: pwsh
         working-directory: ./src
         run: |
-          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
+          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/electron.manifest.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/electron.manifest.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/package.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/package.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
