@@ -49,7 +49,7 @@ Hst Imager supports following operating systems:
 ## Installation and usage
 
 For installation and usage of Hst Imager see following pages:
-- [Hst Imager Console](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.ConsoleApp#hst-imager).
+- [Hst Imager Console](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.ConsoleApp#hst-imager-console).
 - [Hst Imager Gui](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.GuiApp#hst-imager-gui).
 
 ## Img file format
