@@ -297,7 +297,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
 
   publish:
-    needs: [build-console, build-gui]
+    needs: build
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
