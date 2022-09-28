@@ -184,7 +184,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit setup artifact
         uses: actions/upload-artifact@v2
@@ -192,7 +192,7 @@ jobs:
           name: "${{ steps.windows_x64_setup.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_setup.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Set Windows 64-bit portable artifact
         id: windows_x64_portable
@@ -204,7 +204,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit portable artifact
         uses: actions/upload-artifact@v2
