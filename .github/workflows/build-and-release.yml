@@ -86,7 +86,7 @@ jobs:
           Remove-Item -Path *.pdb
           $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
           Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
-          Compress-Archive -Path *.* -DestinationPath $artifactName
+          Compress-Archive -Path ./* -DestinationPath $artifactName
           $artifactPath=((Get-ChildItem -Filter $artifactName) | Select -First 1).FullName
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
