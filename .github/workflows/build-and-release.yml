@@ -7,24 +7,103 @@ name: Build and release
 on: [workflow_dispatch]
 
 jobs:
-  build:
+  build-console:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm64]
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set version and tag
+        shell: pwsh
+        run: |
+          "BUILD_VERSION=0.9.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
+          "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
+          "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
+          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
+
+      - name: Show version
+        shell: pwsh
+        run: |
+          "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
+          "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
+
+      - name: Upload release tag artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: hst-imager.release-tag
+          path: hst-imager.release-tag.txt
+          retention-days: 3
+        if: matrix.target == 'win-x64'
+
+      - name: Upload release version artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: hst-imager.release-version
+          path: hst-imager.release-version.txt
+          retention-days: 3
+        if: matrix.target == 'win-x64'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 6.0.x
+
+      - name: Restore tool
+        working-directory: ./src
+        shell: pwsh
+        run: dotnet tool restore
+
+      - name: Update version
+        shell: pwsh
+        working-directory: ./src
+        run: |
+          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
+
+      - name: Build console app
+        working-directory: src/Hst.Imager.ConsoleApp
+        shell: pwsh
+        run: |
+          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
+
+      - name: List console app output
+        working-directory: src/Hst.Imager.ConsoleApp/publish
+        shell: pwsh
+        run: |
+          Get-ChildItem -recurse
+
+      - name: Build console app artifact
+        id: build_console_app_artifact
+        working-directory: ./src
+        shell: pwsh
+        run: |
+          cd "Hst.Imager.ConsoleApp/publish/${{ matrix.target }}"
+          $artifactName='hst-imager.console.${{ matrix.target }}.zip'
+          Remove-Item -Path *.pdb
+          $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
+          Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
+          Compress-Archive -Path *.* -DestinationPath "$artifactName.zip"
+          $artifactPath=((Get-ChildItem -Filter "$artifactName.zip") | Select -First 1).FullName
+          "::set-output name=artifact_name::$artifactName"
+          "::set-output name=artifact_path::$artifactPath"
+
+      - name: Upload console app artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "${{ steps.build_console_app_artifact.outputs.artifact_name }}"
+          path: "${{ steps.build_console_app_artifact.outputs.artifact_path }}"
+          retention-days: 3
+  
+  build-gui:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-        include:
-          - os: windows-latest
-            target: win-x64
-          - os: windows-latest
-            target: win-arm64
-          - os: macos-latest
-            target: osx-x64
-          - os: macos-latest
-            target: osx-arm64
-          - os: ubuntu-latest
-            target: linux-x64
-          - os: ubuntu-latest
-            target: linux-arm64
+
     steps:
       - uses: actions/checkout@v2
         with:
@@ -44,22 +123,6 @@ jobs:
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
       
-      - name: Upload release tag artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: hst-imager.release-tag
-          path: hst-imager.release-tag.txt
-          retention-days: 3
-        if: (matrix.os == 'windows-latest' && matrix.target == 'win-x64')
-
-      - name: Upload release version artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: hst-imager.release-version
-          path: hst-imager.release-version.txt
-          retention-days: 3
-        if: (matrix.os == 'windows-latest' && matrix.target == 'win-x64')
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v2
         with:
@@ -120,7 +183,7 @@ jobs:
         run: |
           cd Hst.Imager.GuiApp
           dotnet electronize build /target win
-        if: (matrix.os == 'windows-latest' && matrix.target == 'win-x64')
+        if: matrix.os == 'windows-latest'
 
       - name: Build gui app for macOS
         working-directory: ./src
@@ -128,7 +191,7 @@ jobs:
         run: |
           cd Hst.Imager.GuiApp
           dotnet electronize build /target osx
-        if: (matrix.os == 'macos-latest' && matrix.target == 'osx-x64')
+        if: matrix.os == 'macos-latest'
 
       - name: Build gui app for Linux
         working-directory: ./src
@@ -136,7 +199,7 @@ jobs:
         run: |
           cd Hst.Imager.GuiApp
           dotnet electronize build /target linux
-        if: (matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64')
+        if: matrix.os == 'ubuntu-latest'
       
       - name: List gui app output
         shell: pwsh
@@ -181,7 +244,7 @@ jobs:
           name: "${{ steps.windows_x64_portable.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_portable.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Set Windows 64-bit zip artifact
         id: windows_x64_zip
@@ -193,7 +256,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit zip artifact
         uses: actions/upload-artifact@v2
@@ -201,7 +264,7 @@ jobs:
           name: "${{ steps.windows_x64_zip.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_zip.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'windows-latest' && matrix.target == 'win-x64'
+        if: matrix.os == 'windows-latest'
 
       - name: Set macOS 64-bit dmg artifact
         id: macos_x64_dmg
@@ -213,7 +276,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'macos-latest' && matrix.target == 'osx-x64'
+        if: matrix.os == 'macos-latest'
 
       - name: Upload macOS 64-bit dmg artifact
         uses: actions/upload-artifact@v2
@@ -221,7 +284,7 @@ jobs:
           name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
           path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'macos-latest' && matrix.target == 'osx-x64'
+        if: matrix.os == 'macos-latest'
 
       - name: Set Linux 64-bit appimage artifact
         id: linux_x64_appimage
@@ -233,7 +296,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux 64-bit appimage artifact
         uses: actions/upload-artifact@v2
@@ -241,7 +304,7 @@ jobs:
           name: "${{ steps.linux_x64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_x64_appimage.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Set Linux arm64 appimage artifact
         id: linux_arm64_appimage
@@ -253,7 +316,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux arm64 appimage artifact
         uses: actions/upload-artifact@v2
@@ -273,7 +336,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux 64-bit deb artifact
         uses: actions/upload-artifact@v2
@@ -281,7 +344,7 @@ jobs:
           name: "${{ steps.linux_x64_deb.outputs.artifact_name }}"
           path: "${{ steps.linux_x64_deb.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Set Linux arm64 deb artifact
         id: linux_arm64_deb
@@ -293,7 +356,7 @@ jobs:
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux arm64 deb artifact
         uses: actions/upload-artifact@v2
@@ -301,10 +364,10 @@ jobs:
           name: "${{ steps.linux_arm64_deb.outputs.artifact_name }}"
           path: "${{ steps.linux_arm64_deb.outputs.artifact_path }}"
           retention-days: 3
-        if: matrix.os == 'ubuntu-latest' && matrix.target == 'linux-x64'
+        if: matrix.os == 'ubuntu-latest'
 
   publish:
-    needs: build
+    needs: [build-console, build-gui]
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
@@ -316,7 +379,13 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: hst-imager.release-version
-      
+
+      - name: Set release tag version
+        shell: pwsh
+        run: |
+          "RELEASE_TAG={0}" -f (gc hst-imager.release-tag.txt) >> $env:GITHUB_ENV
+          "RELEASE_VERSION={0}" -f (gc hst-imager.release-version.txt) >> $env:GITHUB_ENV
+              
         # windows
       - name: Download Console Windows 64-bit zip artifact
         uses: actions/download-artifact@v2
@@ -389,12 +458,6 @@ jobs:
         uses: actions/download-artifact@v2
         with:
           name: hst-imager.gui.linux-arm64.deb
-
-      - name: Set release version
-        shell: pwsh
-        run: |
-          "RELEASE_TAG={0}" -f (gc hst-imager.release-tag.txt) >> $env:GITHUB_ENV
-          "RELEASE_VERSION={0}" -f (gc hst-imager.release-version.txt) >> $env:GITHUB_ENV
 
       - name: Create release
         uses: actions/create-release@v1
