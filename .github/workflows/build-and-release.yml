@@ -23,14 +23,14 @@ jobs:
         run: |
           "BUILD_VERSION=0.9.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
-          "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
-          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
-      - name: Show version
+      - name: Write version and tag
         shell: pwsh
         run: |
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
+          "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
+          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
       - name: Upload release tag artifact
         uses: actions/upload-artifact@v2
