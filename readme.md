@@ -37,7 +37,7 @@ Hst Imager comes with following features:
   - Kill and restore partition in Rigid Disk Block.
   - Update partition in Rigid Disk Block.
 
-**Read and write for physical drives requires administrative rights on Windows, macOS and Linux.**
+**Read and write to and from physical drives requires administrative rights on Windows, macOS and Linux.**
 
 ## Supported operating systems
 
@@ -45,6 +45,12 @@ Hst Imager supports following operating systems:
 - Windows 
 - macOS
 - Linux
+
+## Installation and usage
+
+For installation and usage of Hst Imager see following pages:
+- [Hst Imager Console](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.ConsoleApp#hst-imager).
+- [Hst Imager Gui](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.GuiApp#hst-imager-gui).
 
 ## Img file format
 
@@ -78,13 +84,3 @@ FS-UAE might require following custom option to force RDB mode by manually chang
 ```
 hard_drive_0_type = rdb
 ```
-
-## References
-
-References used for creating Hst Imager:
-
-- http://csharphelper.com/blog/2017/10/get-hard-drive-serial-number-c/
-- https://stackoverflow.com/questions/16679331/createfile-in-kernel32-dll-returns-an-invalid-handle
-- https://github.com/t00/TestCrypt/blob/master/TestCrypt/PhysicalDrive.cs
-- https://stackoverflow.com/questions/327718/how-to-list-physical-disks
-- https://blog.codeinside.eu/2019/09/30/enforce-administrator-mode-for-builded-dotnet-exe/

@@ -1,94 +1,491 @@
-﻿# Hst Imager
+﻿# Hst Imager Console
 
-Hst Imager is an imaging tool to read and write disk images to and from physical drives.
+See [Hst Imager](https://github.com/henrikstengaard/hst-imager#hst-imager) for description and features. 
 
-This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
+## Installation
 
-## Features
+- Download latest Hst Imager console version from [releases](https://github.com/henrikstengaard/hst-imager/releases).
+- Extract Hst Imager console zip file.
 
-Hst Imager comes with following features:
-- List physical drives.
-- Read information from physical drive or image file.
-- Read physical drive to image file.
-- Write image file to physical drive.
-- Convert image file between .img/.hdf and .vhd.
-- Create blank .img/.hdf and .vhd image file.
-- Optimize image file size.
-- Master Boot Record (MBR):
-    - Read Master Boot Record information.
-    - Initialize Master Boot Record.
-    - Add partition to Master Boot Record.
-    - Delete partition from Master Boot Record.
-    - Format partition in Master Boot Record.
-- Rigid Disk Block (RDB);
-    - Read Rigid Disk Block information.
-    - Initialize Rigid Disk Block.
-    - Add file system to Rigid Disk Block.
-    - Delete file system from Rigid Disk Block.
-    - Export file system from Rigid Disk Block to file.
-    - Import file systems from Rigid Disk Block or ADF file.
-    - Update file system in Rigid Disk Block.
-    - Add partition to Rigid Disk Block.
-    - Copy partition from one Rigid Disk Block to another.
-    - Delete partition from Rigid Disk Block.
-    - Export partition from Rigid Disk Block to hard file.
-    - Format partition in Rigid Disk Block.
-    - Import partition from hard file to Rigid Disk Block.
-    - Kill and restore partition in Rigid Disk Block.
-    - Update partition in Rigid Disk Block.
-
-**Read and write for physical drives requires administrative rights on Windows, macOS and Linux.**
-
-## Supported operating systems
-
-Hst Imager supports following operating systems:
-- Windows
-- macOS
-- Linux
-
-## Img file format
-
-Img file format is a raw dump of hard disks, SSD, CF- and MicroSD-cards and consists of a sector-by-sector binary copy of the source.
-
-Creating an .img image file from a 64GB CF-card using Hst Imager will require 64GB of free disk space on the specified destination path.
-
-## Vhd file format
-
-Vhd file format is a virtual hard disk drive with fixed and dynamic sizes.
-
-Fixed sized vhd file pre-allocates the requested size when created same way as .img file format.
-
-Dynamic sized vhd file only allocates storage to store actual data. Unused or zero filled parts of vhd file are not allocated resulting in smaller image files compared to img image files.
-
-Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager will only require free disk space on the specified destination path matching disk space used on source physical drive. Zero filled (unused) sectors are skipped, when creating a vhd image.
-
-## Amiga support
-
-Hst Imager supports Amiga Rigid Disk Block (RDSK, partition table used by Amiga computers) and can initialize new Rigid Disk Block and modify existing Rigid Disk Block.
-
-Reading an Amiga hard drive to an image files is very useful with Amiga emulators to make changes much faster than real hardware and afterwards write the modified image file back to a hard drive.
-
-### Amiga emulators with vhd support
-
-Following Amiga emulators support .vhd image files:
-- WinUAE 4.9.0: https://www.winuae.net/
-- FS-UAE v3.1.66: https://fs-uae.net/
-
-FS-UAE might require following custom option to force RDB mode by manually changing FS-UAE configuration file (replace 0 with other hard drive number if needed):
-```
-hard_drive_0_type = rdb
-```
+Hst Imager is now ready to use.
 
 ## Usage
 
-See [Usage](usage). 
+Hst Imager console app is invoked from the command line using the `hst.imager` command.
 
-## References
+Invoking `hst.imager` command without any arguments, which will display available commands and options.
 
-References used for creating HstWB Installer Imager:
+Example of displaying usage:
+```
+hst.imager
+```
 
-- http://csharphelper.com/blog/2017/10/get-hard-drive-serial-number-c/
-- https://stackoverflow.com/questions/16679331/createfile-in-kernel32-dll-returns-an-invalid-handle
-- https://github.com/t00/TestCrypt/blob/master/TestCrypt/PhysicalDrive.cs
-- https://stackoverflow.com/questions/327718/how-to-list-physical-disks
-- https://blog.codeinside.eu/2019/09/30/enforce-administrator-mode-for-builded-dotnet-exe/
+The command line options for the Hst Imager console app are listed in the following sections.
+
+## Administrator privileges
+
+Commands accessing physical drives requires administrator privileges:
+- Windows: Run `hst.imager` command from Command Prompt started as Administrator.
+- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, eg. `sudo hst.imager list` to list physical drives.
+
+Hst Imager will only allow access to removeable or USB attached physical drives.
+
+## List physical drives
+
+Lists physical drives. Requires administrator privileges.
+
+Example of listing physical drives:
+```
+hst.imager list
+```
+
+## Display information about a physical drive or image file
+
+Displays information about a physical drive or image file by reading Master Boot Record and Rigid Disk Block and displays a table with partition tables present. Physical drives requires administrator privileges.
+
+Example of display information about a Windows physical drive:
+```
+hst.imager info \\.\PHYSICALDRIVE2
+```
+
+Example of display information about a Linux physical drive:
+```
+hst.imager info /dev/sdb
+```
+
+Example of display information about an 4GB vhd image file:
+```
+hst.imager info 4gb.vhd
+```
+
+## Read physical drive to image file
+
+Reads physical drive to an image file. Requires administrator privileges.
+
+Example of displaying usage for reading a physical drive to an image file:
+```
+hst.imager read \\.\PHYSICALDRIVE2 4gb.vhd
+```
+
+Example of reading Windows physical drive to 4gb.vhd image file:
+```
+hst.imager read \\.\PHYSICALDRIVE2 4gb.vhd
+```
+
+Example of reading Linux physical drive to 4gb.vhd image file:
+```
+hst.imager read /dev/sdb 4gb.vhd
+```
+
+## Write image file to physical drive
+
+Writes an image file to physical drive. Requires administrator privileges.
+
+Example of displaying usage for writing an image file to a physical drive:
+```
+hst.imager write
+```
+
+Example of writing 4GB vhd image file to Windows physical drive:
+```
+hst.imager write 4gb.vhd \\.\PHYSICALDRIVE2
+```
+
+Example of writing 4GB vhd image file to Linux physical drive:
+```
+hst.imager write 4gb.vhd /dev/sdb
+```
+
+## Compare physical drive and image file
+
+Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges.
+
+Example of displaying usage for writing an image file to a physical drive:
+```
+hst.imager compare
+```
+
+Example of comparing 4GB vhd image file and Windows physical drive:
+```
+hst.imager compare 4gb.vhd \\.\PHYSICALDRIVE2
+```
+
+Example of comparing 4GB vhd image file and Linux physical drive:
+```
+hst.imager compare 4gb.vhd /dev/sdb
+```
+
+Example of comparing 4GB vhd image file and 4GB img image file:
+```
+hst.imager compare 4gb.vhd 4gb.img
+```
+
+## Convert an image file
+
+Converts an image file from one format to another.
+
+Example of displaying usage for converting an image file:
+```
+hst.imager convert
+```
+
+Example of converting 4GB img image file to vhd image file:
+```
+hst.imager convert 4gb.img 4gb.vhd
+```
+
+Example of converting 4GB vhd image file to img image file:
+```
+hst.imager convert 4gb.vhd 4gb.img
+```
+
+## Create a blank image file
+
+Creates a blank image file with a defined size.
+
+Example of displaying usage for creating a blank image file:
+```
+hst.imager blank
+```
+
+Example of creating a blank 4GB vhd image file:
+```
+hst.imager blank 4gb.vhd 4gb
+```
+
+Example of creating a blank 4GB img image file:
+```
+hst.imager blank 4gb.img 4gb
+```
+
+## Optimize image file size
+
+Optimize image file size changes image file size to a either defined size or size of Rigid Disk Block.
+
+Example of displaying usage for optimizing image file size:
+```
+hst.imager optimize
+```
+
+Example of optimizing the size of a 16GB img image file to 4GB:
+```
+hst.imager optimize 16gb.img -s 4gb
+```
+
+Example of optimizing the size of a 16GB img image file to size of Rigid Disk Block:
+```
+hst.imager optimize 16gb.img -rdb
+```
+
+## Read Master Boot Record information
+
+Reads Master Boot Record from sector 0 and displays a table with partitions.
+
+Example of displaying usage for reading Master Boot Record information:
+```
+hst.imager mbr info
+```
+
+Example of reading Master Boot Record information of a 4GB vhd image file:
+```
+hst.imager mbr info 4gb.vhd
+```
+
+## Initialize Master Boot Record
+
+Initializes a new Master Boot Record. Existing Master Boot Record will be overwritten.
+
+Example of displaying usage for initializing a new Master Boot Record:
+```
+hst.imager mbr init
+```
+
+Example of initializing Master Boot Record on a 4GB vhd image file:
+```
+hst.imager mbr init 4gb.vhd
+```
+
+## Add partition to Master Boot Record
+
+Adds a partition to Master Boot Record with a defined size.
+
+Automatically select next available start sector, if not defined
+
+Example of displaying usage for adding a partition to Master Boot Record:
+```
+hst.imager mbr part add
+```
+
+Example of adding a FAT32 partition of 100MB to Master Boot Record on a 4GB vhd image file:
+```
+hst.imager mbr part add 4gb.vhd FAT32 100mb
+```
+
+Example of adding a FAT32 partition of remaining space to Master Boot Record on a 4GB vhd image file:
+```
+hst.imager mbr part add 4gb.vhd FAT32 *
+```
+
+## Delete partition from Master Boot Record
+
+Deletes a partition from Master Boot Record.
+
+Example of displaying usage for deleting a partition from Master Boot Record:
+```
+hst.imager mbr part del
+```
+
+Example of delete partition number 1 from Master Boot Record on a 4GB vhd image file:
+```
+hst.imager mbr part del 4gb.vhd 1
+```
+
+## Format partition in Master Boot Record
+
+Formats a partition in Master Boot Record.
+
+Example of displaying usage for formatting a partition in Master Boot Record:
+```
+hst.imager mbr part format
+```
+
+Example of formatting partition number 1 with label "PC" in Master Boot Record on a 4GB vhd image file:
+```
+hst.imager mbr part format 4gb.vhd 1 PC
+```
+
+## Read Rigid Disk Block information
+
+Reads Rigid Disk Block from sector 0-15 and displays a table with partitions.
+
+Example of displaying usage for reading Rigid Disk Block information:
+```
+hst.imager rdb info
+```
+
+Example of reading Rigid Disk Block information from a 4GB vhd image file:
+```
+hst.imager rdb info 4gb.vhd
+```
+
+## Initialize Rigid Disk Block
+
+Initializes a new Rigid Disk Block. Existing Rigid Disk Block will be overwritten.
+
+Example of displaying usage for initializing Rigid Disk Block:
+```
+hst.imager rdb init
+```
+
+Example of initializing Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb init 4gb.vhd
+```
+
+Example of initializing Rigid Disk Block using cylinders, heads and sectors on a 4GB vhd image file:
+```
+hst.imager rdb init 4gb.vhd -chs 800,16,63
+```
+
+## Add file system to Rigid Disk Block
+
+Adds a file system to Rigid Disk Block.
+
+Example of displaying usage for adding file system to Rigid Disk Block:
+```
+hst.imager rdb fs add
+```
+
+Example of adding a file system with dos type PDS3 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs add 4gb.vhd pfs3aio PDS3
+```
+
+## Delete file system from Rigid Disk Block
+
+Deletes a file system from Rigid Disk Block.
+
+Example of displaying usage for deleting a file system from Rigid Disk Block:
+```
+hst.imager rdb fs del
+```
+
+Example of deleting file system number 1 from Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs del 4gb.vhd 1
+```
+
+## Export file system from Rigid Disk Block
+
+Exports a file system from Rigid Disk Block.
+
+Example of displaying usage for exporting a file system from Rigid Disk Block:
+```
+hst.imager rdb fs export
+```
+
+Example of exporting file system number 1 to file pfs3aio from Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs export 4gb.vhd 1 pfs3aio
+```
+
+## Import file systems to Rigid Disk Block
+
+Imports file systems from physical drive, image file or Amiga Disk File (.adf) to Rigid Disk Block.
+
+Example of displaying usage for importing file systems to Rigid Disk Block:
+```
+hst.imager rdb fs import
+```
+
+Example of importing file systems from a Windows physical drive to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs import 4gb.vhd \\.\PHYSICALDRIVE2
+```
+
+Example of importing file systems from a 16GB vhd image file to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs import 4gb.vhd 16gb.vhd
+```
+
+Example of importing FastFileSystem from Amiga OS 3.1 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs import 4gb.vhd amiga-os-310-install.adf DOS3 FastFileSystem
+```
+
+## Update file system in Rigid Disk Block
+
+Updates a file system in Rigid Disk Block.
+
+DOS Type updates will also update partitions using Dos type defined for file system.
+
+Example of displaying usage for updating a file system in Rigid Disk Block:
+```
+hst.imager rdb fs update
+```
+
+Example of updating file system number 1 with dos type PFS3 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs update 4gb.vhd 1 --dos-type PFS3
+```
+
+## Add partition to Rigid Disk Block
+
+Adds a partition to Rigid Disk Block with a defined size.
+
+Automatically select next available start cylinder.
+
+Example of displaying usage for add partition to Rigid Disk Block:
+```
+hst.imager rdb part add
+```
+
+Example of adding a bootable PDS3 partition of 100MB with device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part add 4gb.vhd DH0 PDS3 100mb --bootable
+```
+
+Example of adding a PDS3 partition of remaining space with device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part add 4gb.vhd DH0 PDS3 *
+```
+
+## Delete partition from Rigid Disk Block
+
+Deletes a partition from Rigid Disk Block.
+
+Example of displaying usage for deleting a partition from Rigid Disk Block:
+```
+hst.imager rdb part del
+```
+
+Example of delete partition number 1 from Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part del 4gb.vhd 1
+```
+
+## Export partition from Rigid Disk Block
+
+Exports a partition from Rigid Disk Block to a hard file .hdf.
+
+Example of displaying usage for exporting a partition from Rigid Disk Block:
+```
+hst.imager rdb part export
+```
+
+Example of exporting partition number 1 to dh0.hdf hard file from Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part export 4gb.vhd 1 dh0.hdf
+```
+
+## Format partition in Rigid Disk Block
+
+Formats a partition in Rigid Disk Block.
+
+Example of displaying usage for formatting a partition in Rigid Disk Block:
+```
+hst.imager rdb part format
+```
+
+Example of formatting partition number 1 with volume name "Workbench" in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part format 4gb.vhd 1 Workbench
+```
+
+## Import partition to Rigid Disk Block
+
+Imports a partition to Rigid Disk Block from a hard file .hdf.
+
+**Imported partition will use heads and sectors as defined in the Rigid Disk Block. If the imported partition uses different heads or sectors, the contents of partition will not work properly.**
+
+Example of displaying usage for importing a partition to Rigid Disk Block:
+```
+hst.imager rdb part import
+```
+
+Example of importing partition from dh0.hdf hard file with dos type PDS3 and device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part import dh0.hdf 4gb.vhd PDS3 DH0
+```
+
+## Kill partition in Rigid Disk Block
+
+Kills and restores a partition in Rigid Disk Block. Inspired by killpart from Thomas Rapp on EAB forum http://eab.abime.net/showthread.php?t=69128.
+
+A killed partition will appear as unformatted in Amiga OS.
+
+When killing a partition, current boot bytes are displaying, which can be used to restore partition.
+
+Example of displaying usage for killing a partition in Rigid Disk Block:
+```
+hst.imager rdb part kill
+```
+
+Example of killing partition number 1 with boot bytes hex values 00000000 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part kill 4gb.vhd 1 00000000
+```
+
+Example of restoring partition number 1 with PFS3 boot bytes hex values 50465301 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part kill 4gb.vhd 1 50465301
+```
+
+## Update partition in Rigid Disk Block
+
+Updates a partition in Rigid Disk Block.
+
+Example of displaying usage for updating a partition in Rigid Disk Block:
+```
+hst.imager rdb part update
+```
+
+Example of updating partition number 1 setting it bootable in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part update 4gb.vhd 1 --bootable true
+```
+
+Example of updating partition number 1 setting max transfer to 130560 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part update 4gb.vhd 1 --max-transfer 130560
+```

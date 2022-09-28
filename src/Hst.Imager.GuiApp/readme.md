@@ -1,58 +1,46 @@
-﻿nvm install 16.13.2
-npm install -g npm@8.3.2
-npm install -g npm@latest
+﻿# Hst Imager Gui
 
-dotnet new react -o HstWbInstaller.Imager.GuiApp --framework net5.0
+See [Hst Imager](https://github.com/henrikstengaard/hst-imager#hst-imager) for description and features.
 
-Browserslist: caniuse-lite is outdated. Please run:
-```
-npx browserslist@latest --update-db
-```
+## Installation
 
-https://medium.com/bb-tutorials-and-thoughts/how-to-develop-and-build-react-app-with-net-core-backend-59d4fc5e3041
+### Windows 64-bit
 
-install packages:
-- ElectronNET.API
-- Microsoft.Extensions.PlatformAbstractions
+Install Hst Imager for Windows 64-bit with following steps:
 
-Add to startup.cs at end of configure method
-```
-            var basePath = PlatformServices.Default.Application.ApplicationBasePath;
+1. Download Hst Imager Windows x64 setup .exe from [releases](https://github.com/henrikstengaard/hst-imager/releases).
+2. Double-click downloaded Hst Imager macOS setup .exe in Windows Explorer.
+3. First time Hst Imager started, SmartProtect will prevent it from starting as it's downloaded from web and not signed.
+4. Click "More info".
+5. Click "Run anyway".
 
-            // Open the Electron-Window here
-            Task.Run(async () => await Electron.WindowManager.CreateWindowAsync(
-                new BrowserWindowOptions
-                {
-                    Width = 800,
-                    Height = 600,
-                    Center = true,
-                    BackgroundColor = "#1A2933",
-                    Frame = false,
-                    WebPreferences = new WebPreferences
-                    {
-                        NodeIntegration = true
-                    },
-                    Icon = Path.Combine(basePath, "Assets", "icon.ico")
-                }));
-```
+Hst Imager for Windows 64-bit is now starting and ready to use.
 
+A portable version is also available for Windows, which can be started without installing Hst Imager.
 
-cmd, cd directory with .csproj
-electronize init
+### macOS 64-bit
 
-electronize start
+Install Hst Imager for macOS 64-bit with following steps:
 
+1. Download Hst Imager macOS x64 .dmg from [releases](https://github.com/henrikstengaard/hst-imager/releases).
+2. Double-click downloaded Hst Imager macOS .dmg in Finder, Downloads.
+3. Drag Hst Imager to Applications.
+4. Double-click Hst Imager in Applications to start Hst Imager.
+5. First time Hst Imager is started a warning will popup saying it's be opened because the developer cannot be verified.
+6. Click "Cancel".
+7. Open System Preferences, Security & Privacy, General and click "Open Anyway".
+8. A warning will popup if you are sure you want to open Hst Imager.
+9. Click "Open" to start Hst Imager.
 
+Hst Imager for macOS 64-bit is now starting and ready to use.
 
+### Linux 64-bit - Ubuntu with desktop
 
-## Remove unused
+Install Hst Imager for Linux 64-bit with following steps:
 
-PS ClientApp> npm uninstall bootstrap
-PS ClientApp> npm uninstall jquery
+1. Download Hst Imager Linux x64 .deb from [releases](https://github.com/henrikstengaard/hst-imager/releases).
+2. Open Terminal.
+3. Type `sudo dpkg -i .deb` and press enter to install Hst Imager debian package. Note path to .deb might be different depending on release downloaded and where it's extracted.
+4. Open Hst Imager in show applications.
 
-
-## update create react app
-
-npm install react-scripts@latest
-
-npm audit fix
+Hst Imager for 64-bit Linux is now starting and ready to use.
