@@ -143,40 +143,6 @@ jobs:
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
 
-      - name: Build console app
-        working-directory: src/Hst.Imager.ConsoleApp
-        shell: pwsh
-        run: |
-          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
-
-      - name: List console app output
-        working-directory: src/Hst.Imager.ConsoleApp/publish
-        shell: pwsh
-        run: |
-          Get-ChildItem -recurse
-
-      - name: Build console app artifact
-        id: build_console_app_artifact
-        working-directory: ./src
-        shell: pwsh
-        run: |
-          cd "Hst.Imager.ConsoleApp/publish/${{ matrix.target }}"
-          $artifactName='hst-imager.console.${{ matrix.target }}.zip'
-          Remove-Item -Path *.pdb
-          $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
-          Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
-          Compress-Archive -Path *.* -DestinationPath "$artifactName.zip"
-          $artifactPath=((Get-ChildItem -Filter "$artifactName.zip") | Select -First 1).FullName
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
-
-      - name: Upload console app artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: "${{ steps.build_console_app_artifact.outputs.artifact_name }}"
-          path: "${{ steps.build_console_app_artifact.outputs.artifact_path }}"
-          retention-days: 3
-  
       - name: Build gui app for Windows
         working-directory: ./src
         shell: pwsh
