@@ -56,7 +56,7 @@
 
                 diskGeometry = new DiskGeometry
                 {
-                    DiskSize = cylinders * heads * sectors * 512,
+                    DiskSize = (long)cylinders * heads * sectors * 512,
                     Cylinders = cylinders,
                     Heads = heads,
                     Sectors = sectors

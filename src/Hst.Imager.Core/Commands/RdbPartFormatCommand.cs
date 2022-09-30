@@ -71,6 +71,10 @@
             switch (partitionBlock.DosTypeFormatted)
             {
                 case "DOS\\3":
+                case "DOS\\4":
+                case "DOS\\5":
+                case "DOS\\6":
+                case "DOS\\7":
                     await FastFileSystemFormatter.FormatPartition(stream, partitionBlock, name);
                     break;
                 case "PDS\\3":
