@@ -18,13 +18,14 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private readonly long? start;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         
         public ReadCommand(ILogger<ReadCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size)
+            string destinationPath, Size size, long? start)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -32,6 +33,7 @@
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.start = start;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -51,6 +53,7 @@
             using var sourceMedia = sourceMediaResult.Value;
             await using var sourceStream = sourceMedia.Stream;
 
+            sourceStream.Position = start ?? 0;
             var sourceSize = sourceMedia.Size;
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
             

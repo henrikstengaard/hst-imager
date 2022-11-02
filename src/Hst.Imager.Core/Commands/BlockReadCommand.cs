@@ -65,12 +65,6 @@ public class BlockReadCommand : CommandBase
         using var media = mediaResult.Value;
         await using var stream = media.Stream;
 
-        if (start.HasValue)
-        {
-            var startOffset = start.Value / blockSize;
-            stream.Seek(startOffset, SeekOrigin.Begin);
-        }
-
         if (!Directory.Exists(outputPath))
         {
             Directory.CreateDirectory(outputPath);

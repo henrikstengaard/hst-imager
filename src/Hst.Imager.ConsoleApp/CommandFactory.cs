@@ -109,11 +109,16 @@
                 new[] { "--size", "-s" },
                 description: "Size of physical drive to read.");
 
+            var startOption = new Option<long?>(
+                new[] { "--start", "-s" },
+                description: "Start offset.");
+            
             var readCommand = new Command("read", "Write physical drive to image file.");
             readCommand.AddArgument(sourceArgument);
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);
-            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption);
+            readCommand.AddOption(startOption);
+            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, startOption);
 
             return readCommand;
         }

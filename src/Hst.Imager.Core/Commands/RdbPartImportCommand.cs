@@ -117,7 +117,7 @@
             // calculate source cylinder size, offset and size
             var destinationCylinderSize = destinationRigidDiskBlock.Heads * destinationRigidDiskBlock.Sectors *
                                           destinationRigidDiskBlock.BlockSize;
-            var destinationOffset = partitionBlock.LowCyl * destinationCylinderSize;
+            var destinationOffset = (long)partitionBlock.LowCyl * destinationCylinderSize;
             const int sourceOffset = 0;
 
             OnDebugMessage($"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");

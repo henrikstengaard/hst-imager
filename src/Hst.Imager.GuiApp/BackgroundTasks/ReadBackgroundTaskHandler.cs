@@ -3,8 +3,8 @@
     using System;
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
     using Hst.Imager.Core.Models;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
@@ -42,7 +42,7 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
-                        readBackgroundTask.SourcePath, readBackgroundTask.DestinationPath, new Size());
+                        readBackgroundTask.SourcePath, readBackgroundTask.DestinationPath, new Size(), 0);
                 readCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

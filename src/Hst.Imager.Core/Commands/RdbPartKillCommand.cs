@@ -78,7 +78,7 @@
             // calculate partition offset
             var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors *
                                      rigidDiskBlock.BlockSize;
-            var partitionOffset = partitionBlock.LowCyl * cylinderSize;
+            var partitionOffset = (long)partitionBlock.LowCyl * cylinderSize;
 
             // seek partition offset
             stream.Seek(partitionOffset, SeekOrigin.Begin);

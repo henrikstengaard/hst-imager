@@ -140,7 +140,7 @@
         {
             var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 path);
-            command.DiskInfoRead += (sender, args) =>
+            command.DiskInfoRead += (_, args) =>
             {
                 Log.Logger.Information(InfoPresenter.PresentInfo(args.DiskInfo));
             };
@@ -168,11 +168,11 @@
             await Execute(command);
         }
 
-        public static async Task Read(string sourcePath, string destinationPath, string size)
+        public static async Task Read(string sourcePath, string destinationPath, string size, long? start)
         {
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size));
+                destinationPath, ParseSize(size), start);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
         }

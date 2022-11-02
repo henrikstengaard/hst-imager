@@ -116,8 +116,8 @@
             // calculate source cylinder size, offset and size
             var sourceCylinderSize = sourceRigidDiskBlock.Heads * sourceRigidDiskBlock.Sectors *
                                      sourceRigidDiskBlock.BlockSize;
-            var sourceOffset = partitionBlock.LowCyl * sourceCylinderSize;
-            var sourceSize = (partitionBlock.HighCyl - partitionBlock.LowCyl + 1) * sourceCylinderSize;
+            var sourceOffset = (long)partitionBlock.LowCyl * sourceCylinderSize;
+            var sourceSize = ((long)partitionBlock.HighCyl - partitionBlock.LowCyl + 1) * sourceCylinderSize;
             
             // update partition block
             var destinationPartitionBlock = PartitionBlock.Create(destinationRigidDiskBlock, partitionBlock.DosType,
@@ -145,7 +145,7 @@
 
             var destinationCylinderSize = destinationRigidDiskBlock.Heads * destinationRigidDiskBlock.Sectors *
                                           destinationRigidDiskBlock.BlockSize;
-            var destinationOffset = destinationPartitionBlock.LowCyl * destinationCylinderSize;
+            var destinationOffset = (long)destinationPartitionBlock.LowCyl * destinationCylinderSize;
             
             var isVhd = commandHelper.IsVhd(destinationPath);
 
