@@ -50,7 +50,7 @@
             var chsOption = new Option<string>(
                 new[] { "-chs" },
                 description: "Initialize from cylinders, heads and sectors.");
-            
+
             var rdbInitCommand = new Command("initialize", "Initialize disk with empty Rigid Disk Block.");
             rdbInitCommand.AddAlias("init");
             rdbInitCommand.SetHandler(CommandHandler.RdbInit, pathArgument, sizeOption, nameOption,
@@ -163,7 +163,7 @@
             var fileSystemNumber = new Argument<int>(
                 name: "FileSystemNumber",
                 description: "File system number to delete.");
-            
+
             var fileSystemPathArgument = new Argument<string>(
                 name: "FileSystemPath",
                 description: "Path to file system.");
@@ -176,7 +176,7 @@
 
             return command;
         }
-        
+
         private static Command CreateRdbFsUpdate()
         {
             var pathArgument = new Argument<string>(
@@ -198,9 +198,10 @@
             var fileSystemPathOption = new Option<string>(
                 new[] { "--path", "-p" },
                 description: "Path to file system.");
-            
+
             var command = new Command("update", "Update file system.");
-            command.SetHandler(CommandHandler.RdbFsUpdate, pathArgument, fileSystemNumber, dosTypeArgument, fileSystemNameOption, fileSystemPathOption);
+            command.SetHandler(CommandHandler.RdbFsUpdate, pathArgument, fileSystemNumber, dosTypeArgument,
+                fileSystemNameOption, fileSystemPathOption);
             command.AddArgument(pathArgument);
             command.AddArgument(fileSystemNumber);
             command.AddOption(dosTypeArgument);
@@ -209,7 +210,7 @@
 
             return command;
         }
-        
+
         private static Command CreateRdbPart()
         {
             var rdbPartCommand = new Command("part", "Partition.");
@@ -370,9 +371,9 @@
                 new[] { "--boot-priority", "-bp" },
                 description: "Set boot priority (controls order of partitions to boot, lowest is booted first).");
 
-            var blockSizeOption = new Option<int?>(
+            var fileSystemBlockSizeOption = new Option<int?>(
                 new[] { "--block-size", "-bs" },
-                description: "Block size for the partition.");
+                description: "File system block size for the partition.");
 
             var command = new Command("update", "Update partition.");
             command.SetHandler(async context =>
@@ -389,12 +390,12 @@
                 var noMount = context.ParseResult.GetValueForOption(noMountOption);
                 var bootable = context.ParseResult.GetValueForOption(bootableOption);
                 var priority = context.ParseResult.GetValueForOption(priorityOption);
-                var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
+                var fileSystemBlockSize = context.ParseResult.GetValueForOption(fileSystemBlockSizeOption);
 
                 await CommandHandler.RdbPartUpdate(path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
                     maxTransfer,
                     mask, noMount.HasValue ? noMount.Value == BoolType.True : null,
-                    bootable.HasValue ? bootable.Value == BoolType.True : null, priority, blockSize);
+                    bootable.HasValue ? bootable.Value == BoolType.True : null, priority, fileSystemBlockSize);
             });
 
             command.AddArgument(pathArgument);
@@ -408,7 +409,7 @@
             command.AddOption(noMountOption);
             command.AddOption(bootableOption);
             command.AddOption(priorityOption);
-            command.AddOption(blockSizeOption);
+            command.AddOption(fileSystemBlockSizeOption);
 
             return command;
         }
@@ -449,9 +450,10 @@
             var nameOption = new Option<string>(
                 new[] { "--name", "-n" },
                 description: "Name of the partition (eg. DH0).");
-            
+
             var rdbPartDelCommand = new Command("copy", "Copy partition from a physical drive or image file.");
-            rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber, destinationPathArgument, nameOption);
+            rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber,
+                destinationPathArgument, nameOption);
             rdbPartDelCommand.AddArgument(sourcePathArgument);
             rdbPartDelCommand.AddArgument(partitionNumber);
             rdbPartDelCommand.AddArgument(destinationPathArgument);
@@ -475,7 +477,8 @@
                 description: "Path to destination file (eg. DH0.hdf).");
 
             var command = new Command("export", "Export partition to a hard file (eg. DH0.hdf).");
-            command.SetHandler(CommandHandler.RdbPartExport, sourcePathArgument, partitionNumber, destinationPathArgument);
+            command.SetHandler(CommandHandler.RdbPartExport, sourcePathArgument, partitionNumber,
+                destinationPathArgument);
             command.AddArgument(sourcePathArgument);
             command.AddArgument(partitionNumber);
             command.AddArgument(destinationPathArgument);
@@ -501,23 +504,29 @@
                 name: "Name",
                 description: "Name of the partition (eg. DH0).");
 
+            var fileSystemBlockSizeOption = new Option<int>(
+                new[] { "--block-size", "-bs" },
+                description: "File system block size for the partition.",
+                getDefaultValue: () => 512);
+
             var bootableOption = new Option<bool>(
                 new[] { "--bootable", "-b" },
                 description: "Set bootable.",
                 getDefaultValue: () => false);
 
-            
             var command = new Command("import", "Import partition from a hard file (eg. DH0.hdf).");
-            command.SetHandler(CommandHandler.RdbPartImport, sourcePathArgument, destinationPathArgument, nameArgument, dosTypeArgument, bootableOption);
+            command.SetHandler(CommandHandler.RdbPartImport, sourcePathArgument, destinationPathArgument, nameArgument,
+                dosTypeArgument, fileSystemBlockSizeOption, bootableOption);
             command.AddArgument(sourcePathArgument);
             command.AddArgument(destinationPathArgument);
             command.AddArgument(nameArgument);
             command.AddArgument(dosTypeArgument);
+            command.AddOption(fileSystemBlockSizeOption);
             command.AddOption(bootableOption);
 
             return command;
         }
-        
+
         private static Command CreateRdbPartKill()
         {
             var sourcePathArgument = new Argument<string>(

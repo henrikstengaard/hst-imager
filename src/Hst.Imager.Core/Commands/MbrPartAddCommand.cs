@@ -120,12 +120,12 @@
                 partitionSize = partitionSectors * 512;
             }
             
-            OnInformationMessage($"Adding partition number '{biosPartitionTable.Partitions.Count + 1}'");
-            OnInformationMessage($"Type '{type.ToUpper()}'");
-            OnInformationMessage($"Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
-            OnInformationMessage($"Start sector '{start}'");
-            OnInformationMessage($"End sector '{end}'");
-            OnInformationMessage($"Active '{active}'");
+            OnInformationMessage($"- Partition number '{biosPartitionTable.Partitions.Count + 1}'");
+            OnInformationMessage($"- Type '{type.ToUpper()}'");
+            OnInformationMessage($"- Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
+            OnInformationMessage($"- Start sector '{start}'");
+            OnInformationMessage($"- End sector '{end}'");
+            OnInformationMessage($"- Active '{active}'");
 
             // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);

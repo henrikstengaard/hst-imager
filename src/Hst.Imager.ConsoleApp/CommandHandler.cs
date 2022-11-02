@@ -285,21 +285,21 @@
         }
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, int reserved,
-            int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int blockSize)
+            int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
         {
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
-                maxTransfer, noMount, bootable, priority, blockSize));
+                maxTransfer, noMount, bootable, priority, fileSystemBlockSize));
         }
 
         public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,
             int? reserved,
             int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable,
-            int? bootPriority, int? blockSize)
+            int? bootPriority, int? fileSystemBlockSize)
         {
             await Execute(new RdbPartUpdateCommand(GetLogger<RdbPartUpdateCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
-                maxTransfer, mask, noMount, bootable, bootPriority, blockSize));
+                maxTransfer, mask, noMount, bootable, bootPriority, fileSystemBlockSize));
         }
 
         public static async Task RdbPartDel(string path, int partitionNumber)
@@ -326,10 +326,10 @@
         }
 
         public static async Task RdbPartImport(string sourcePath, string destinationPath,
-            string name, string dosType, bool bootable)
+            string name, string dosType, int fileSystemBlockSize, bool bootable)
         {
             var command = new RdbPartImportCommand(GetLogger<RdbPartImportCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), sourcePath, destinationPath, name, dosType, bootable);
+                await GetPhysicalDrives(), sourcePath, destinationPath, name, dosType, fileSystemBlockSize, bootable);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
         }

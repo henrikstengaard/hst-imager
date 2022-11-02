@@ -4,9 +4,10 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Amiga.Extensions;
     using Extensions;
-    using Hst.Amiga;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Amiga;
+    using Amiga.RigidDiskBlocks;
     using Hst.Core;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
@@ -29,11 +30,11 @@
         private readonly bool noMount;
         private readonly bool bootable;
         private readonly int priority;
-        private readonly int blockSize;
+        private readonly int fileSystemBlockSize;
 
         public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
-            int reserved, int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int blockSize)
+            int reserved, int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -49,7 +50,7 @@
             this.noMount = noMount;
             this.bootable = bootable;
             this.priority = priority;
-            this.blockSize = blockSize;
+            this.fileSystemBlockSize = fileSystemBlockSize;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -59,9 +60,9 @@
                 return new Result(new Error("DOS type must be 4 characters"));
             }
 
-            if (blockSize % 512 != 0)
+            if (fileSystemBlockSize % 512 != 0)
             {
-                return new Result(new Error("Block size must be dividable by 512"));
+                return new Result(new Error("File system block size must be dividable by 512"));
             }
 
             OnInformationMessage($"Adding partition to Rigid Disk Block at '{path}'");
@@ -105,11 +106,12 @@
             
             var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size);
 
-            OnInformationMessage($"Adding partition number '{partitionBlocks.Count + 1}'");
-            OnInformationMessage($"Name '{name}'");
+            OnInformationMessage($"- Partition number '{partitionBlocks.Count + 1}'");
+            OnInformationMessage($"- Name '{name}'");
+            OnInformationMessage($"- DOS type '{dosTypeBytes.FormatDosType()}'");
 
             var partitionBlock =
-                PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize,
+                PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize,
                     bootable);
             
             if (partitionBlock.HighCyl - partitionBlock.LowCyl + 1 <= 0)
@@ -134,16 +136,16 @@
             partitionBlock.NumBuffer = (uint)buffers;
             partitionBlock.Flags = flags;
             partitionBlock.BootPriority = (uint)priority;
-            partitionBlock.SizeBlock = (uint)(blockSize / SizeOf.Long);
+            partitionBlock.SizeBlock = rigidDiskBlock.BlockSize / SizeOf.ULong;
 
-            OnInformationMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnInformationMessage($"Low Cyl '{partitionBlock.LowCyl}'");
-            OnInformationMessage($"High Cyl '{partitionBlock.HighCyl}'");
-            OnInformationMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnInformationMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnInformationMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnInformationMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnInformationMessage($"Size Block '{partitionBlock.SizeBlock * SizeOf.Long}'");
+            OnInformationMessage($"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
+            OnInformationMessage($"- PreAlloc '{partitionBlock.PreAlloc}'");
+            OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
+            OnInformationMessage($"- Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnInformationMessage($"- File System Block Size '{partitionBlock.Sectors * rigidDiskBlock.BlockSize}'");
             
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
             

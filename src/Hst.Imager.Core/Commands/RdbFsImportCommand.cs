@@ -175,7 +175,7 @@ public class RdbFsImportCommand : CommandBase
 
         // read all entries from adf
         var entries =
-            (await Amiga.FileSystems.FastFileSystem.Directory.ReadEntries(volume, volume.RootBlock, true))
+            (await Amiga.FileSystems.FastFileSystem.Directory.ReadEntries(volume, volume.RootBlockOffset, true))
             .OrderBy(x => x.Name).ToList();
 
         var dosTypeBytes =
@@ -194,7 +194,7 @@ public class RdbFsImportCommand : CommandBase
         foreach (var fastFileSystemEntry in fileSystemEntries)
         {
             var entryStream = await Amiga.FileSystems.FastFileSystem.File.Open(volume, fastFileSystemEntry);
-            var entryBytes = await entryStream.ReadBytes(fastFileSystemEntry.Size);
+            var entryBytes = await entryStream.ReadBytes((int)fastFileSystemEntry.Size);
 
             var version = VersionStringReader.Read(entryBytes);
             if (string.IsNullOrWhiteSpace(version))

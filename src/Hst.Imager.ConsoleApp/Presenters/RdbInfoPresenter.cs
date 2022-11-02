@@ -1,9 +1,7 @@
 ﻿namespace Hst.Imager.ConsoleApp.Presenters
 {
-    using System;
     using System.Linq;
     using System.Text;
-    using Amiga.RigidDiskBlocks;
     using Core.Commands;
     using Core.Extensions;
 

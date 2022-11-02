@@ -55,7 +55,7 @@
             
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
 
-            OnDebugMessage($"Formatting partition number '{partitionNumber}'");
+            OnDebugMessage($"Formatting partition number '{partitionNumber}':");
             
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
@@ -64,9 +64,9 @@
 
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
-            OnInformationMessage($"Name '{partitionBlock.DriveName}'");
-            OnInformationMessage($"DOS type '{partitionBlock.DosTypeFormatted}'");
-            OnInformationMessage($"Volume name '{name}'");
+            OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
+            OnInformationMessage($"- DOS type '{partitionBlock.DosTypeFormatted}'");
+            OnInformationMessage($"- Volume name '{name}'");
             
             switch (partitionBlock.DosTypeFormatted)
             {

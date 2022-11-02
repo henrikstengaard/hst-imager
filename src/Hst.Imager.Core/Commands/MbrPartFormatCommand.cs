@@ -34,7 +34,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnInformationMessage($"Deleting partition from Master Boot Record at '{path}'");
+            OnInformationMessage($"Formatting partition in Master Boot Record at '{path}'");
 
             OnDebugMessage($"Opening '{path}' as writable");
 
@@ -61,7 +61,7 @@
                 return new Result(new Error("Master Boot Record not found"));
             }
 
-            OnDebugMessage($"Formatting partition number '{partitionNumber}'");
+            OnInformationMessage($"- Partition number '{partitionNumber}'");
 
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
@@ -75,7 +75,7 @@
                 return new Result(new Error("Unsupported partition type"));
             }
 
-            OnDebugMessage($"Partition name '{name}'");
+            OnInformationMessage($"- Partition name '{name}'");
             
             using var fatFileSystem = FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
             

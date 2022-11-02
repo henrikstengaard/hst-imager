@@ -20,6 +20,7 @@
         private readonly string destinationPath;
         private readonly string name;
         private readonly string dosType;
+        private readonly int fileSystemBlockSize;
         private readonly bool bootable;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
@@ -28,7 +29,7 @@
 
         public RdbPartImportCommand(ILogger<RdbPartImportCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string destinationPath, string name,
-            string dosType, bool bootable)
+            string dosType, int fileSystemBlockSize, bool bootable)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -38,6 +39,7 @@
             this.name = name;
             this.dosType = dosType;
             this.bootable = bootable;
+            this.fileSystemBlockSize = fileSystemBlockSize;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -49,6 +51,11 @@
                 return new Result(new Error("DOS type must be 4 characters"));
             }
 
+            if (fileSystemBlockSize % 512 != 0)
+            {
+                return new Result(new Error("File system block size must be dividable by 512"));
+            }
+            
             OnInformationMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
             
             OnDebugMessage($"Opening source path '{sourcePath}' as readable");
@@ -93,7 +100,7 @@
             }
 
             var partitionBlock = PartitionBlock.Create(destinationRigidDiskBlock, dosTypeBytes, name,
-                sourceStream.Length, bootable);
+                sourceStream.Length, fileSystemBlockSize, bootable);
 
             var nameBytes = AmigaTextHelper.GetBytes(name.ToUpper());
             if (destinationPartitionBlocks.Any(x => AmigaTextHelper.GetBytes(x.DriveName).SequenceEqual(nameBytes)))
@@ -102,14 +109,14 @@
             }
 
             OnInformationMessage(
-                $"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            OnInformationMessage($"Low Cyl '{partitionBlock.LowCyl}'");
-            OnInformationMessage($"High Cyl '{partitionBlock.HighCyl}'");
-            OnInformationMessage($"Reserved '{partitionBlock.Reserved}'");
-            OnInformationMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
-            OnInformationMessage($"Buffers '{partitionBlock.NumBuffer}'");
-            OnInformationMessage($"Max Transfer '{partitionBlock.MaxTransfer}'");
-            OnInformationMessage($"Size Block '{partitionBlock.SizeBlock * SizeOf.Long}'");
+                $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
+            OnInformationMessage($"- PreAlloc '{partitionBlock.PreAlloc}'");
+            OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
+            OnInformationMessage($"- Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnInformationMessage($"- File System Block Size '{partitionBlock.FileSystemBlockSize}'");
 
             destinationRigidDiskBlock.PartitionBlocks =
                 destinationRigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });

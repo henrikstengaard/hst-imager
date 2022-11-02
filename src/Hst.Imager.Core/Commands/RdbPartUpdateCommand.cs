@@ -27,12 +27,12 @@
         private readonly bool? noMount;
         private readonly bool? bootable;
         private readonly int? bootPriority;
-        private readonly int? blockSize;
+        private readonly int? fileSystemBlockSize;
 
         public RdbPartUpdateCommand(ILogger<RdbPartUpdateCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, string dosType,
             int? reserved,
-            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable, int? bootPriority, int? blockSize)
+            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable, int? bootPriority, int? fileSystemBlockSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -49,7 +49,7 @@
             this.noMount = noMount;
             this.bootable = bootable;
             this.bootPriority = bootPriority;
-            this.blockSize = blockSize;
+            this.fileSystemBlockSize = fileSystemBlockSize;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -59,9 +59,9 @@
                 return new Result(new Error("DOS type must be 4 characters"));
             }
 
-            if (blockSize.HasValue && blockSize % 512 != 0)
+            if (fileSystemBlockSize.HasValue && fileSystemBlockSize % 512 != 0)
             {
-                return new Result(new Error("Block size must be dividable by 512"));
+                return new Result(new Error("File system block size must be dividable by 512"));
             }
             
             OnInformationMessage($"Updating partition in Rigid Disk Block at '{path}'");
@@ -223,12 +223,12 @@
                 OnDebugMessage($"Boot priority '{partitionBlock.BootPriority}'");
             }
 
-            // update block size
-            if (blockSize.HasValue)
+            // update file system block size
+            if (fileSystemBlockSize.HasValue)
             {
-                partitionBlock.SizeBlock = (uint)(blockSize / Hst.Amiga.SizeOf.Long);
+                partitionBlock.Sectors = (uint)(fileSystemBlockSize / rigidDiskBlock.BlockSize);
                 hasChanges = true;
-                OnDebugMessage($"SizeBlock '{partitionBlock.SizeBlock * Hst.Amiga.SizeOf.Long}'");
+                OnDebugMessage($"File system block size '{fileSystemBlockSize}'");
             }
 
             if (!hasChanges)
