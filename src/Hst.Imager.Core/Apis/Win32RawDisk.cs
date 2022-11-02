@@ -72,7 +72,7 @@
             }
             
             var error = Marshal.GetLastWin32Error();
-            throw new IOException($"Failed to ReadFile returned Win32 error {error}");
+            throw new IOException($"Failed to read data '{buffer.Length}' and count '{count}', ReadFile returned Win32 error {error}");
         }
         
         public uint Write(byte[] buffer, int count)
@@ -84,7 +84,7 @@
             }
             
             var error = Marshal.GetLastWin32Error();
-            throw new IOException($"Failed to WriteFile returned Win32 error {error}");
+            throw new IOException($"Failed to write data '{buffer.Length}' and count '{count}', WriteFile returned Win32 error {error}");
         }
         
         public long Seek(long offset, SeekOrigin origin)
@@ -99,7 +99,7 @@
                 return newOffset;
             }
             var error = Marshal.GetLastWin32Error();
-            throw new IOException($"Failed to seek position offset {offset} and origin {origin}, SetFilePointerEx returned Win32 error {error}");
+            throw new IOException($"Failed to seek position offset '{offset}' and origin '{origin}', SetFilePointerEx returned Win32 error {error}");
         }        
 
         public long Position()

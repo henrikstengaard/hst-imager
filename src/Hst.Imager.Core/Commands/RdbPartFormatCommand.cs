@@ -70,6 +70,8 @@
             
             switch (partitionBlock.DosTypeFormatted)
             {
+                case "DOS\\1":
+                case "DOS\\2":
                 case "DOS\\3":
                 case "DOS\\4":
                 case "DOS\\5":

@@ -22,7 +22,7 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var rdbInfoCommand = new Command("info", "Initialize disk with empty Rigid Disk Block.");
+            var rdbInfoCommand = new Command("info", "Display info about Rigid Disk Block.");
             rdbInfoCommand.SetHandler(CommandHandler.RdbInfo, pathArgument);
             rdbInfoCommand.AddArgument(pathArgument);
 

@@ -21,7 +21,7 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var command = new Command("info", "Show Master Boot Record information.");
+            var command = new Command("info", "Display info about Master Boot Record.");
             command.SetHandler(CommandHandler.MbrInfo, pathArgument);
             command.AddArgument(pathArgument);
 

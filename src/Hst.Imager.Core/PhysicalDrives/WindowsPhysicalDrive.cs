@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.Core.PhysicalDrives
 {
-    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
@@ -19,10 +18,12 @@
         public override Stream Open()
         {
             var driveLetters = DriveLetters.Select(driveLetter => @"\\.\" + driveLetter + @"").ToList();
+
+            var dismountedDrives = new List<Win32RawDisk>();
             
             foreach (var driveLetter in driveLetters)
             {
-                using var win32RawDisk = new Win32RawDisk(driveLetter, true);
+                var win32RawDisk = new Win32RawDisk(driveLetter, true);
                 if (!win32RawDisk.LockDevice())
                 {
                     win32RawDisk.CloseDevice();
@@ -35,9 +36,11 @@
                     win32RawDisk.CloseDevice();
                     throw new IOException($"Failed to dismount device '{driveLetter}'");
                 }
+                
+                dismountedDrives.Add(win32RawDisk);
             }
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, driveLetters, Writable), true, true);
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), true, true);
         }
     }
 }
