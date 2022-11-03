@@ -179,7 +179,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.win-x64-setup.exe'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -199,7 +199,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.win-x64-portable.exe'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -219,7 +219,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.win-x64.zip'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -239,7 +239,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.osx-x64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -259,7 +259,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-x64.AppImage'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -279,7 +279,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-arm64.AppImage'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -299,7 +299,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-x64.deb'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
@@ -319,7 +319,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-arm64.deb'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           "::set-output name=artifact_name::$artifactName"
