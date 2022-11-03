@@ -172,7 +172,7 @@ jobs:
       - name: List gui app output
         shell: pwsh
         run: |
-          Get-ChildItem './src/Hst.Imager.GuiApp/bin/Desktop' -recurse
+          Get-ChildItem './src/Hst.Imager.GuiApp/bin/Desktop' -recurse -name
 
       - name: Set Windows 64-bit setup artifact
         id: windows_x64_setup
