@@ -110,7 +110,7 @@
                 description: "Size of physical drive to read.");
 
             var startOption = new Option<long?>(
-                new[] { "--start", "-s" },
+                new[] { "--start", "-st" },
                 description: "Start offset.");
             
             var readCommand = new Command("read", "Read physical drive to image file.");
