@@ -159,7 +159,7 @@
             var compatibleSizeOption = new Option<bool>(
                 new[] { "--compatible", "-c" },
                 description: "Make size compatible by reducing it with 5%.",
-                getDefaultValue: () => true);
+                getDefaultValue: () => false);
 
             var blankCommand = new Command("blank", "Blank image file.");
             blankCommand.AddArgument(pathArgument);

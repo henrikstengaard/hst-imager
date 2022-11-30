@@ -1,13 +1,13 @@
 {
-  "executable": "HstWbInstaller.Imager.GuiApp",
-  "name": "HstWbInstaller.Imager.GuiApp",
+  "executable": "Hst.Imager.GuiApp",
+  "name": "Hst.Imager.GuiApp",
   "author": "Henrik Nørfjand Stengaard <hstwbinstaller@gmail.com>",
   "singleInstance": false,
   "environment": "Production",
   "electronPort": 42000,
   "aspCoreBackendPort": 42001,
   "build": {
-    "appId": "com.HstWbInstaller.Imager.GuiApp.app",
+    "appId": "com.Hst.Imager.GuiApp.app",
     "productName": "Hst Imager",
     "copyright": "Copyright © 2022",
     "buildVersion": "0.1.0",
@@ -32,7 +32,7 @@
           "x64"
         ]
       }],
-      "icon": "../../../hstwb-installer.ico"
+      "icon": "../../../hst.imager.ico"
     },
     "mac": {
       "target": [{
@@ -41,7 +41,7 @@
           "x64"
         ]
       }],
-      "icon": "../../../hstwb-installer.icns"
+      "icon": "../../../hst.imager.icns"
     },
     "linux": {
       "target": [{
@@ -59,7 +59,7 @@
       }],
       "synopsis": "Disk imaging tool",
       "description": "Disk imaging tool to read and write disk images to and from physical drives",
-      "icon": "../../../hstwb-installer.icns"
+      "icon": "../../../hst.imager.icns"
     },
     "nsis": {
       "guid": "4bae923c-ea2c-4eee-9a47-ba053b7b78e5",

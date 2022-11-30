@@ -7,8 +7,8 @@ import {AppStateContext} from "../components/AppStateContext";
 import Typography from "@mui/material/Typography";
 import {HSTWB_INSTALLER_VERSION} from '../Constants'
 
-const payPalDonateUrl = 'https://www.paypal.com/donate/?business=7DZM5VEGWWNP8&no_recurring=0&item_name=Thanks+for+your+incredible+effort+creating+HstWB+Installer+and+Imager+in+your+spare+time.+I+want+to+support+future+development.&currency_code=EUR'
-const gitHubIssuesUrl = 'https://github.com/henrikstengaard/hstwb-installer/issues'
+const payPalDonateUrl = 'https://www.paypal.com/donate/?business=7DZM5VEGWWNP8&no_recurring=0&item_name=Thanks+for+your+incredible+effort+creating+HstWB+Installer+and+Hst+Imager+in+your+spare+time.+I+want+to+support+future+development.&currency_code=EUR'
+const gitHubIssuesUrl = 'https://github.com/henrikstengaard/hst-imager/issues'
 
 export default function About() {
     const electronIpc = new ElectronIpc()
