@@ -81,14 +81,15 @@
             var defaultName = media.IsPhysicalDrive ? media.Model : Path.GetFileNameWithoutExtension(media.Model);
 
             var diskSize = stream.Length;
+            var rigidDiskBlockSize = diskSize.ResolveSize(size);
+
             OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
 
             var rigidDiskBlock = diskGeometry != null
                 ? CreateFromDiskGeometry(diskGeometry)
-                : RigidDiskBlock.Create(Convert.ToInt64(size.Value == 0 ? stream.Length : size.Value)
-                    .ResolveSize(size));
+                : RigidDiskBlock.Create(rigidDiskBlockSize);
 
-            if (rigidDiskBlock.DiskSize > diskSize)
+            if (rigidDiskBlock.DiskSize > stream.Length)
             {
                 return new Result(new Error($"Invalid Rigid Disk Block size '{rigidDiskBlock.DiskSize}' is larger than disk size '{diskSize}'"));
             }
