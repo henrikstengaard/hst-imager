@@ -253,6 +253,13 @@
                 await GetPhysicalDrives(), path, name, ParseSize(size), chs, rdbBlockLo));
         }
 
+        public static async Task RdbUpdate(string path, uint? flags, uint? hostId, string diskProduct,
+            string diskRevision, string diskVendor)
+        {
+            await Execute(new RdbUpdateCommand(GetLogger<RdbUpdateCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, flags, hostId, diskProduct, diskRevision, diskVendor));
+        }
+        
         public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName)
         {
             await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), GetCommandHelper(),

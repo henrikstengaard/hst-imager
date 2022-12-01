@@ -287,6 +287,25 @@ Example of initializing Rigid Disk Block using cylinders, heads and sectors on a
 hst.imager rdb init 4gb.vhd -chs 800,16,63
 ```
 
+## Update Rigid Disk Block
+
+Updates Rigid Disk Block properties:
+- Flags
+- Host id
+- Disk product
+- Disk revision
+- Disk vendor
+
+Example of displaying usage for updating Rigid Disk Block:
+```
+hst.imager rdb update
+```
+
+Example of updating flags property to 7 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb update 4gb.vhd --flags 7
+```
+
 ## Add file system to Rigid Disk Block
 
 Adds a file system to Rigid Disk Block.
@@ -355,7 +374,10 @@ hst.imager rdb fs import 4gb.vhd amiga-os-310-install.adf DOS3 FastFileSystem
 
 ## Update file system in Rigid Disk Block
 
-Updates a file system in Rigid Disk Block.
+Updates file system properties in Rigid Disk Block:
+- DOS type
+- File system name
+- File system data
 
 DOS Type updates will also update partitions using Dos type defined for file system.
 
@@ -364,9 +386,14 @@ Example of displaying usage for updating a file system in Rigid Disk Block:
 hst.imager rdb fs update
 ```
 
-Example of updating file system number 1 with dos type PFS3 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating file system number 1 with dos type property to PFS3 in Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb fs update 4gb.vhd 1 --dos-type PFS3
+```
+
+Example of updating file system number 1 with data from file in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs update 4gb.vhd 1 --path pfs3aio
 ```
 
 ## Add partition to Rigid Disk Block
@@ -473,19 +500,29 @@ hst.imager rdb part kill 4gb.vhd 1 50465301
 
 ## Update partition in Rigid Disk Block
 
-Updates a partition in Rigid Disk Block.
+Updates partition properties in Rigid Disk Block:
+- Name
+- DOS Type
+- Reserved
+- Pre alloc
+- Buffers
+- Max transfer
+- Mask
+- No mount
+- Bootable
+- Priority
 
 Example of displaying usage for updating a partition in Rigid Disk Block:
 ```
 hst.imager rdb part update
 ```
 
-Example of updating partition number 1 setting it bootable in Rigid Disk Block on a 4GB vhd image file:
+Example of updating partition number 1 setting bootable property to true in Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --bootable true
 ```
 
-Example of updating partition number 1 setting max transfer to 130560 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating partition number 1 setting max transfer property to 130560 in Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --max-transfer 130560
 ```

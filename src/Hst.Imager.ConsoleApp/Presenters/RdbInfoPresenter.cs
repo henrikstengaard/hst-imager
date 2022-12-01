@@ -25,7 +25,7 @@
             {
                 Columns = new[]
                 {
-                    new Column { Name = "Name" },
+                    new Column { Name = "Product" },
                     new Column { Name = "Vendor" },
                     new Column { Name = "Revision" },
                     new Column { Name = "Size", Alignment = ColumnAlignment.Right },
@@ -33,6 +33,8 @@
                     new Column { Name = "Heads", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Sectors", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Block Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Flags", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Host Id", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Rdb Block Lo", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Rdb Block Hi", Alignment = ColumnAlignment.Right }
                 },
@@ -48,6 +50,8 @@
                             rigidDiskBlock.Heads.ToString(),
                             rigidDiskBlock.Sectors.ToString(),
                             rigidDiskBlock.BlockSize.ToString(),
+                            rigidDiskBlock.Flags.ToString(),
+                            rigidDiskBlock.HostId.ToString(),
                             rigidDiskBlock.RdbBlockLo.ToString(),
                             rigidDiskBlock.RdbBlockHi.ToString()
                         }

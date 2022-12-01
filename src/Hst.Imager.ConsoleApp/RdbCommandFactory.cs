@@ -12,6 +12,7 @@
             rdbCommand.AddCommand(CreateRdbInit());
             rdbCommand.AddCommand(CreateRdbFs());
             rdbCommand.AddCommand(CreateRdbPart());
+            rdbCommand.AddCommand(CreateRdbUpdate());
 
             return rdbCommand;
         }
@@ -572,6 +573,45 @@
             rdbPartFormatCommand.AddArgument(volumeNameArgument);
 
             return rdbPartFormatCommand;
+        }
+        
+        private static Command CreateRdbUpdate()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+            
+            var flagsOption = new Option<uint?>(
+                new[] { "--flags", "-f" },
+                description: "Flags.");
+
+            var hostIdOption = new Option<uint?>(
+                new[] { "--host-id", "-h" },
+                description: "Host id.");
+            
+            var diskProductOption = new Option<string>(
+                new[] { "--disk-product", "-dp" },
+                description: "Disk product.");
+
+            var diskRevisionOption = new Option<string>(
+                new[] { "--disk-revision", "-dr" },
+                description: "Disk revision.");
+            
+            var diskVendorOption = new Option<string>(
+                new[] { "--disk-vendor", "-dv" },
+                description: "Disk vendor.");
+            
+            var command = new Command("update", "Update Rigid Disk Block.");
+            command.SetHandler(CommandHandler.RdbUpdate, pathArgument, flagsOption, hostIdOption,
+                diskProductOption, diskRevisionOption, diskVendorOption);
+            command.AddArgument(pathArgument);
+            command.AddOption(flagsOption);
+            command.AddOption(hostIdOption);
+            command.AddOption(diskProductOption);
+            command.AddOption(diskRevisionOption);
+            command.AddOption(diskVendorOption);
+            
+            return command;
         }
     }
 }
