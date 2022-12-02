@@ -4,9 +4,11 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Amiga.Extensions;
     using Amiga.FileSystems.FastFileSystem;
     using Amiga.FileSystems.Pfs3;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartFormatCommand : CommandBase
@@ -65,7 +67,7 @@
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
             OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
-            OnInformationMessage($"- DOS type '{partitionBlock.DosTypeFormatted}'");
+            OnInformationMessage($"- DOS type '0x{partitionBlock.DosType.FormatHex()}' ({partitionBlock.DosType.FormatDosType()})");
             OnInformationMessage($"- Volume name '{name}'");
             
             switch (partitionBlock.DosTypeFormatted)

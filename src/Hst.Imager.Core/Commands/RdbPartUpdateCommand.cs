@@ -4,10 +4,10 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Extensions;
-    using Hst.Amiga;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Amiga;
+    using Amiga.RigidDiskBlocks;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartUpdateCommand : CommandBase
@@ -116,7 +116,7 @@
                 partitionBlock.DosType = dosTypeBytes;
 
                 hasChanges = true;
-                OnDebugMessage(
+                OnInformationMessage(
                     $"DOS Type '0x{partitionBlock.DosType.FormatHex().ToUpper()}, {partitionBlock.DosTypeFormatted}'");
             }
 
@@ -132,7 +132,7 @@
                 partitionBlock.DriveName = name;
 
                 hasChanges = true;
-                OnDebugMessage($"Drive name '{name}'");
+                OnInformationMessage($"Drive name '{name}'");
             }
 
             var flags = partitionBlock.Flags;
@@ -150,7 +150,7 @@
                 }
                 
                 hasChanges = true;
-                OnDebugMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.Bootable) == (int)PartitionBlock.PartitionFlagsEnum.Bootable}'");
+                OnInformationMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.Bootable) == (int)PartitionBlock.PartitionFlagsEnum.Bootable}'");
             }
             
             // update no mount
@@ -166,7 +166,7 @@
                 }
                 
                 hasChanges = true;
-                OnDebugMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
+                OnInformationMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
             }
 
             // update flags, if changed
@@ -180,7 +180,7 @@
             {
                 partitionBlock.Reserved = (uint)reserved;
                 hasChanges = true;
-                OnDebugMessage($"Reserved '{partitionBlock.Reserved}'");
+                OnInformationMessage($"Reserved '{partitionBlock.Reserved}'");
             }
 
             // update prealloc
@@ -188,7 +188,7 @@
             {
                 partitionBlock.PreAlloc = (uint)preAlloc;
                 hasChanges = true;
-                OnDebugMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
+                OnInformationMessage($"PreAlloc '{partitionBlock.PreAlloc}'");
             }
 
             // update buffers
@@ -196,7 +196,7 @@
             {
                 partitionBlock.NumBuffer = (uint)buffers;
                 hasChanges = true;
-                OnDebugMessage($"Buffers '{partitionBlock.NumBuffer}'");
+                OnInformationMessage($"Buffers '{partitionBlock.NumBuffer}'");
             }
             
             // update max transfer
@@ -204,7 +204,7 @@
             {
                 partitionBlock.MaxTransfer = maxTransfer.Value;
                 hasChanges = true;
-                OnDebugMessage($"Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}, {partitionBlock.MaxTransfer}'");
+                OnInformationMessage($"Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}' ({partitionBlock.MaxTransfer})");
             }
 
             // update mask
@@ -212,7 +212,7 @@
             {
                 partitionBlock.Mask = mask.Value;
                 hasChanges = true;
-                OnDebugMessage($"Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}, {partitionBlock.Mask}'");
+                OnInformationMessage($"Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}' ({partitionBlock.Mask})");
             }
             
             // update boot priority
@@ -220,7 +220,7 @@
             {
                 partitionBlock.BootPriority = (uint)bootPriority;
                 hasChanges = true;
-                OnDebugMessage($"Boot priority '{partitionBlock.BootPriority}'");
+                OnInformationMessage($"Boot priority '{partitionBlock.BootPriority}'");
             }
 
             // update file system block size
@@ -228,7 +228,7 @@
             {
                 partitionBlock.Sectors = (uint)(fileSystemBlockSize / rigidDiskBlock.BlockSize);
                 hasChanges = true;
-                OnDebugMessage($"File system block size '{fileSystemBlockSize}'");
+                OnInformationMessage($"File system block size '{fileSystemBlockSize}'");
             }
 
             if (!hasChanges)

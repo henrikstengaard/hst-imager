@@ -1,7 +1,6 @@
 ﻿namespace Hst.Imager.Core.Extensions
 {
     using System;
-    using System.Linq;
 
     public static class FormatExtensions
     {
@@ -14,18 +13,6 @@
 
             return string.Concat(string.IsNullOrWhiteSpace(format) ? formattedSize.ToString(format) : formattedSize,
                 $" {formattedUnit}");
-        }
-
-        public static string FormatHex(this byte[] bytes)
-        {
-            return string.Join("", bytes.Select(x => $"{x:x2}"));
-        }
-
-        public static string FormatHex(this uint value)
-        {
-            var bytes = BitConverter.GetBytes(value);
-            Array.Reverse(bytes);
-            return bytes.FormatHex();
         }
 
         public static string FormatElapsed(this TimeSpan value)

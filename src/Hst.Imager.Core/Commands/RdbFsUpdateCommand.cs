@@ -85,7 +85,7 @@ public class RdbFsUpdateCommand : CommandBase
             
             fileSystemHeaderBlock.DosType = dosTypeBytes;        
             
-            OnInformationMessage($"DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}'");
+            OnInformationMessage($"DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
         }
 
         if (!string.IsNullOrEmpty(fileSystemName))

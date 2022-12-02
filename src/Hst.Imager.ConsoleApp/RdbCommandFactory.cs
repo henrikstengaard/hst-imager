@@ -246,25 +246,25 @@
                 name: "Size",
                 description: "Size of the partition.");
 
-            var reservedOption = new Option<int>(
+            var reservedOption = new Option<uint?>(
                 new[] { "--reserved", "-r" },
-                description: "Set reserved blocks at start of partition.",
-                getDefaultValue: () => 2);
+                description: "Set reserved blocks at start of partition.");
 
-            var preAllocOption = new Option<int>(
+            var preAllocOption = new Option<uint?>(
                 new[] { "--pre-alloc", "-pa" },
-                description: "Set reserved blocks at end of partition",
-                getDefaultValue: () => 5);
+                description: "Set reserved blocks at end of partition");
 
-            var buffersOption = new Option<int>(
+            var buffersOption = new Option<uint?>(
                 new[] { "--buffers", "-bu" },
-                description: "Set buffers",
-                getDefaultValue: () => 30);
+                description: "Set buffers");
 
-            var maxTransferOption = new Option<int>(
+            var maxTransferOption = new Option<string>(
                 new[] { "--max-transfer", "-mt" },
-                description: "Set buffers",
-                getDefaultValue: () => 130560);
+                description: "Set buffers");
+
+            var maskOption = new Option<string>(
+                new[] { "--mask", "-ma" },
+                description: "Mask");
 
             var noMountOption = new Option<bool>(
                 new[] { "--no-mount", "-nm" },
@@ -297,12 +297,13 @@
                 var preAlloc = context.ParseResult.GetValueForOption(preAllocOption);
                 var buffers = context.ParseResult.GetValueForOption(buffersOption);
                 var maxTransfer = context.ParseResult.GetValueForOption(maxTransferOption);
+                var mask = context.ParseResult.GetValueForOption(maskOption);
                 var noMount = context.ParseResult.GetValueForOption(noMountOption);
                 var bootable = context.ParseResult.GetValueForOption(bootableOption);
                 var priority = context.ParseResult.GetValueForOption(priorityOption);
                 var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
 
-                await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer,
+                await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer, mask,
                     noMount, bootable, priority, blockSize);
             });
 
@@ -314,6 +315,7 @@
             rdbPartAddCommand.AddOption(preAllocOption);
             rdbPartAddCommand.AddOption(buffersOption);
             rdbPartAddCommand.AddOption(maxTransferOption);
+            rdbPartAddCommand.AddOption(maskOption);
             rdbPartAddCommand.AddOption(noMountOption);
             rdbPartAddCommand.AddOption(bootableOption);
             rdbPartAddCommand.AddOption(priorityOption);
@@ -352,11 +354,11 @@
                 new[] { "--buffers", "-bu" },
                 description: "Buffers");
 
-            var maxTransferOption = new Option<uint?>(
+            var maxTransferOption = new Option<string>(
                 new[] { "--max-transfer", "-mt" },
                 description: "Max transfer");
 
-            var maskOption = new Option<uint?>(
+            var maskOption = new Option<string>(
                 new[] { "--mask", "-ma" },
                 description: "Mask");
 
@@ -407,6 +409,7 @@
             command.AddOption(preAllocOption);
             command.AddOption(buffersOption);
             command.AddOption(maxTransferOption);
+            command.AddOption(maskOption);
             command.AddOption(noMountOption);
             command.AddOption(bootableOption);
             command.AddOption(priorityOption);

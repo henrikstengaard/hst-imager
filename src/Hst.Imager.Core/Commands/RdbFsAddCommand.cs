@@ -106,7 +106,7 @@
             long size = fileSystemHeaderBlock.FileSystemSize; 
             
             OnInformationMessage("Adding file system:");
-            OnInformationMessage($"- DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}'");
+            OnInformationMessage($"- DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
             OnInformationMessage($"- Version '{fileSystemHeaderBlock.VersionFormatted}'");
             OnInformationMessage($"- Size '{size.FormatBytes()}' ({size} bytes)");
             OnInformationMessage($"- File system name '{fileSystemHeaderBlock.FileSystemName}'");

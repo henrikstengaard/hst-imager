@@ -9,6 +9,7 @@
     using Amiga;
     using Amiga.RigidDiskBlocks;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
     using PartitionBlock = Amiga.RigidDiskBlocks.PartitionBlock;
@@ -22,10 +23,11 @@
         private readonly string path;
         private readonly string name;
         private readonly Size size;
-        private readonly int reserved;
-        private readonly int preAlloc;
-        private readonly int buffers;
-        private readonly int maxTransfer;
+        private readonly uint? reserved;
+        private readonly uint? preAlloc;
+        private readonly uint? buffers;
+        private readonly uint? maxTransfer;
+        private readonly uint? mask;
         private readonly string dosType;
         private readonly bool noMount;
         private readonly bool bootable;
@@ -34,7 +36,7 @@
 
         public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
-            int reserved, int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
+            uint? reserved, uint? preAlloc, uint? buffers, uint? maxTransfer, uint? mask, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -46,6 +48,7 @@
             this.preAlloc = preAlloc;
             this.buffers = buffers;
             this.maxTransfer = maxTransfer;
+            this.mask = mask;
             this.dosType = dosType;
             this.noMount = noMount;
             this.bootable = bootable;
@@ -130,10 +133,31 @@
                 flags += (int)PartitionBlock.PartitionFlagsEnum.NoMount;
             }
 
-            partitionBlock.Reserved = (uint)reserved;
-            partitionBlock.PreAlloc = (uint)preAlloc;
-            partitionBlock.MaxTransfer = (uint)maxTransfer;
-            partitionBlock.NumBuffer = (uint)buffers;
+            if (reserved.HasValue)
+            {
+                partitionBlock.Reserved = reserved.Value;
+            }
+            
+            if (preAlloc.HasValue)
+            {
+                partitionBlock.PreAlloc = preAlloc.Value;
+            }
+            
+            if (maxTransfer.HasValue)
+            {
+                partitionBlock.MaxTransfer = maxTransfer.Value;
+            }
+
+            if (mask.HasValue)
+            {
+                partitionBlock.Mask = mask.Value;
+            }
+
+            if (buffers.HasValue)
+            {
+                partitionBlock.NumBuffer = buffers.Value; 
+            }
+            
             partitionBlock.Flags = flags;
             partitionBlock.BootPriority = (uint)priority;
             partitionBlock.SizeBlock = rigidDiskBlock.BlockSize / SizeOf.ULong;
@@ -144,7 +168,8 @@
             OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
             OnInformationMessage($"- PreAlloc '{partitionBlock.PreAlloc}'");
             OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
-            OnInformationMessage($"- Max Transfer '{partitionBlock.MaxTransfer}'");
+            OnInformationMessage($"- Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}' ({partitionBlock.MaxTransfer})");
+            OnInformationMessage($"- Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}' ({partitionBlock.Mask})");
             OnInformationMessage($"- File System Block Size '{partitionBlock.Sectors * rigidDiskBlock.BlockSize}'");
             
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });

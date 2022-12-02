@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Amiga.Extensions;
 using Extensions;
 using Hst.Core;
+using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging;
 
 public class RdbFsExportCommand : CommandBase
@@ -67,7 +68,7 @@ public class RdbFsExportCommand : CommandBase
         var fileSystemBytes = fileSystemHeaderBlock.LoadSegBlocks.SelectMany(x => x.Data).ToArray();
         long fileSystemSize = fileSystemBytes.Length;
             
-        OnDebugMessage($"DOS type '{fileSystemHeaderBlock.DosType.FormatDosType()}' {fileSystemSize.FormatBytes()} ({fileSystemSize} bytes)");
+        OnDebugMessage($"DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
         OnDebugMessage($"Version '{fileSystemHeaderBlock.VersionFormatted}'");
         OnDebugMessage($"Size '{fileSystemSize.FormatBytes()}' ({fileSystemSize} bytes)");
         OnDebugMessage($"File system name '{fileSystemHeaderBlock.FileSystemName}'");

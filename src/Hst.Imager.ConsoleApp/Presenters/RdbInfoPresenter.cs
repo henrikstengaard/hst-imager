@@ -2,8 +2,10 @@
 {
     using System.Linq;
     using System.Text;
+    using Amiga.Extensions;
     using Core.Commands;
     using Core.Extensions;
+    using Hst.Core.Extensions;
 
     public static class RigidDiskBlockPresenter
     {
@@ -82,7 +84,7 @@
                         Columns = new[]
                         {
                             (++fileSystemNumber).ToString(),
-                            $"0x{x.DosType.FormatHex().ToUpper()}, {x.DosTypeFormatted}",
+                            $"0x{x.DosType.FormatHex().ToUpper()} ({x.DosType.FormatDosType()})",
                             x.VersionFormatted,
                             x.FileSystemName ?? string.Empty,
                             ((long)x.FileSystemSize).FormatBytes()
@@ -128,9 +130,9 @@
                             x.DriveName, x.PartitionSize.FormatBytes(), x.LowCyl.ToString(), x.HighCyl.ToString(),
                             x.Reserved.ToString(), x.PreAlloc.ToString(), x.FileSystemBlockSize.ToString(),
                             x.NumBuffer.ToString(),
-                            $"0x{x.DosType.FormatHex().ToUpper()}, {x.DosTypeFormatted}",
-                            $"0x{x.MaxTransfer.FormatHex().ToUpper()}, {x.MaxTransfer}",
-                            $"0x{x.Mask.FormatHex().ToUpper()}, {x.Mask}",
+                            $"0x{x.DosType.FormatHex().ToUpper()} ({x.DosTypeFormatted})",
+                            $"0x{x.MaxTransfer.FormatHex().ToUpper()} ({x.MaxTransfer})",
+                            $"0x{x.Mask.FormatHex().ToUpper()} ({x.Mask})",
                             x.Bootable.ToString(), x.NoMount.ToString(),
                             x.BootPriority.ToString()
                         }

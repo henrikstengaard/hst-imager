@@ -50,8 +50,34 @@
             return (await physicalDriveManager.GetPhysicalDrives()).ToList();
         }
 
+        private static readonly Regex IntRegex =
+            new("^(\\d+)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static readonly Regex HexRegex =
+            new("^0x([\\da-f])+$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        private static uint? ParseHexOrIntegerValue(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+            
+            if (HexRegex.IsMatch(value))
+            {
+                return System.Convert.ToUInt32(value, 16);
+            }
+
+            if (IntRegex.IsMatch(value) && uint.TryParse(value, out var uintValue))
+            {
+                return uintValue;
+            }
+            
+            throw new ArgumentException("Invalid hex or integer value", nameof(value));
+        }
+        
         private static readonly Regex SizeUnitRegex =
-            new("(\\d+)([\\.]{1}\\d+)?(kb|mb|gb|%)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            new("^(\\d+)([\\.]{1}\\d+)?(kb|mb|gb|%)?$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         private static Size ParseSize(string size)
         {
@@ -291,22 +317,25 @@
                 await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath));
         }
 
-        public static async Task RdbPartAdd(string path, string name, string dosType, string size, int reserved,
-            int preAlloc, int buffers, int maxTransfer, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
+        public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,
+            uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int priority,
+            int fileSystemBlockSize)
         {
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
-                maxTransfer, noMount, bootable, priority, fileSystemBlockSize));
+                ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, priority,
+                fileSystemBlockSize));
         }
 
         public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,
             int? reserved,
-            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable,
+            int? preAlloc, int? buffers, string maxTransfer, string mask, bool? noMount, bool? bootable,
             int? bootPriority, int? fileSystemBlockSize)
         {
             await Execute(new RdbPartUpdateCommand(GetLogger<RdbPartUpdateCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
-                maxTransfer, mask, noMount, bootable, bootPriority, fileSystemBlockSize));
+                ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, bootPriority,
+                fileSystemBlockSize));
         }
 
         public static async Task RdbPartDel(string path, int partitionNumber)
