@@ -15,7 +15,7 @@ The command line options for the Hst Imager console app are listed in the follow
 
 Commands accessing physical drives requires administrator privileges:
 - Windows: Run `hst.imager` command from Command Prompt started as Administrator.
-- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, eg. `sudo hst.imager list` to list physical drives.
+- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, e.g. `sudo hst.imager list` to list physical drives.
 
 Hst Imager will only allow access to removeable or USB attached physical drives.
 

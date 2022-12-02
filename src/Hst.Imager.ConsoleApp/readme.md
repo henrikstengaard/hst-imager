@@ -26,7 +26,7 @@ The command line options for the Hst Imager console app are listed in the follow
 
 Commands accessing physical drives requires administrator privileges:
 - Windows: Run `hst.imager` command from Command Prompt started as Administrator.
-- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, eg. `sudo hst.imager list` to list physical drives.
+- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, e.g. `sudo hst.imager list` to list physical drives.
 
 Hst Imager will only allow access to removeable or USB attached physical drives.
 
@@ -398,7 +398,17 @@ hst.imager rdb fs update 4gb.vhd 1 --path pfs3aio
 
 ## Add partition to Rigid Disk Block
 
-Adds a partition to Rigid Disk Block with a defined size.
+Adds a partition to Rigid Disk Block with a defined size and following optional options:
+- Reserved
+- Pre alloc
+- Buffers
+- Max transfer
+- Mask
+- No mount
+- Bootable
+- Priority
+
+Max transfer and mask can be either integer or hex value, e.g. integer value `130560` or hex value `0x1fe00` for max transfer.
 
 Automatically select next available start cylinder.
 
@@ -512,6 +522,8 @@ Updates partition properties in Rigid Disk Block:
 - Bootable
 - Priority
 
+Max transfer and mask can be either integer or hex value, e.g. integer value `130560` or hex value `0x1fe00` for max transfer.
+
 Example of displaying usage for updating a partition in Rigid Disk Block:
 ```
 hst.imager rdb part update
@@ -525,4 +537,9 @@ hst.imager rdb part update 4gb.vhd 1 --bootable true
 Example of updating partition number 1 setting max transfer property to 130560 in Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --max-transfer 130560
+```
+
+Example of updating partition number 1 setting max transfer property to hex value 0x1fe00 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part update 4gb.vhd 1 --max-transfer 0x1fe00
 ```

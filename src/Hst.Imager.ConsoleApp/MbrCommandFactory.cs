@@ -61,7 +61,7 @@
 
             var typeArgument = new Argument<string>(
                 name: "Type",
-                description: "Type for the partition to use (eg. FAT32).");
+                description: "Type for the partition to use (e.g. FAT32).");
 
             var sizeArgument = new Argument<string>(
                 name: "Size",

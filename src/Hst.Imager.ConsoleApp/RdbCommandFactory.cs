@@ -90,7 +90,7 @@
 
             var dosTypeArgument = new Argument<string>(
                 name: "DosType",
-                description: "Dos Type for file system (eg. DOS3, PDS3).");
+                description: "Dos Type for file system (e.g. DOS3, PDS3).");
 
             var fileSystemNameOption = new Option<string>(
                 new[] { "--name", "-n" },
@@ -138,7 +138,7 @@
 
             var dosTypeOption = new Option<string>(
                 new[] { "--dos-type", "-dt" },
-                description: "Dos Type for file system (eg. DOS3, PDS3).");
+                description: "Dos Type for file system (e.g. DOS3, PDS3).");
 
             var fileSystemNameOption = new Option<string>(
                 new[] { "--name", "-n" },
@@ -190,7 +190,7 @@
 
             var dosTypeArgument = new Option<string>(
                 new[] { "--dos-type", "-dt" },
-                description: "Dos type for file system (eg. DOS3, PDS3).");
+                description: "Dos type for file system (e.g. DOS3, PDS3).");
 
             var fileSystemNameOption = new Option<string>(
                 new[] { "--name", "-n" },
@@ -236,11 +236,11 @@
 
             var dosTypeArgument = new Argument<string>(
                 name: "DosType",
-                description: "DOS type for the partition to use (eg. DOS3, PFS3).");
+                description: "DOS type for the partition to use (e.g. DOS3, PFS3).");
 
             var nameArgument = new Argument<string>(
                 name: "Name",
-                description: "Name of the partition (eg. DH0).");
+                description: "Name of the partition (e.g. DH0).");
 
             var sizeArgument = new Argument<string>(
                 name: "Size",
@@ -260,11 +260,11 @@
 
             var maxTransferOption = new Option<string>(
                 new[] { "--max-transfer", "-mt" },
-                description: "Set buffers");
+                description: "Max transfer (integer or hex value e.g. 0x1fe00)");
 
             var maskOption = new Option<string>(
                 new[] { "--mask", "-ma" },
-                description: "Mask");
+                description: "Mask (integer or hex value e.g. 0x7ffffffe)");
 
             var noMountOption = new Option<bool>(
                 new[] { "--no-mount", "-nm" },
@@ -336,11 +336,11 @@
 
             var dosTypeOption = new Option<string>(
                 new[] { "--dos-type", "-dt" },
-                description: "DOS type for the partition to use (eg. DOS3, PFS3).");
+                description: "DOS type for the partition to use (e.g. DOS3, PFS3).");
 
             var nameOption = new Option<string>(
                 new[] { "--name", "-n" },
-                description: "Name of the partition (eg. DH0).");
+                description: "Name of the partition (e.g. DH0).");
 
             var reservedOption = new Option<int?>(
                 new[] { "--reserved", "-r" },
@@ -356,11 +356,11 @@
 
             var maxTransferOption = new Option<string>(
                 new[] { "--max-transfer", "-mt" },
-                description: "Max transfer");
+                description: "Max transfer (integer or hex value e.g. 0x1fe00)");
 
             var maskOption = new Option<string>(
                 new[] { "--mask", "-ma" },
-                description: "Mask");
+                description: "Mask (integer or hex value e.g. 0x7ffffffe)");
 
             var noMountOption = new Option<BoolType?>(
                 new[] { "--no-mount", "-nm" },
@@ -453,7 +453,7 @@
 
             var nameOption = new Option<string>(
                 new[] { "--name", "-n" },
-                description: "Name of the partition (eg. DH0).");
+                description: "Name of the partition (e.g. DH0).");
 
             var rdbPartDelCommand = new Command("copy", "Copy partition from a physical drive or image file.");
             rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber,
@@ -478,9 +478,9 @@
 
             var destinationPathArgument = new Argument<string>(
                 name: "DestinationPath",
-                description: "Path to destination file (eg. DH0.hdf).");
+                description: "Path to destination file (e.g. DH0.hdf).");
 
-            var command = new Command("export", "Export partition to a hard file (eg. DH0.hdf).");
+            var command = new Command("export", "Export partition to a hard file (e.g. DH0.hdf).");
             command.SetHandler(CommandHandler.RdbPartExport, sourcePathArgument, partitionNumber,
                 destinationPathArgument);
             command.AddArgument(sourcePathArgument);
@@ -494,7 +494,7 @@
         {
             var sourcePathArgument = new Argument<string>(
                 name: "SourcePath",
-                description: "Path to source hard file (eg. DH0.hdf).");
+                description: "Path to source hard file (e.g. DH0.hdf).");
 
             var destinationPathArgument = new Argument<string>(
                 name: "DestinationPath",
@@ -502,11 +502,11 @@
 
             var dosTypeArgument = new Argument<string>(
                 name: "DosType",
-                description: "DOS type for the partition to use (eg. DOS3, PFS3).");
+                description: "DOS type for the partition to use (e.g. DOS3, PFS3).");
 
             var nameArgument = new Argument<string>(
                 name: "Name",
-                description: "Name of the partition (eg. DH0).");
+                description: "Name of the partition (e.g. DH0).");
 
             var fileSystemBlockSizeOption = new Option<int>(
                 new[] { "--block-size", "-bs" },
@@ -518,7 +518,7 @@
                 description: "Set bootable.",
                 getDefaultValue: () => false);
 
-            var command = new Command("import", "Import partition from a hard file (eg. DH0.hdf).");
+            var command = new Command("import", "Import partition from a hard file (e.g. DH0.hdf).");
             command.SetHandler(CommandHandler.RdbPartImport, sourcePathArgument, destinationPathArgument, nameArgument,
                 dosTypeArgument, fileSystemBlockSizeOption, bootableOption);
             command.AddArgument(sourcePathArgument);
@@ -543,7 +543,7 @@
 
             var hexBootBytesArgument = new Argument<string>(
                 name: "HexBootBytes",
-                description: "Boot bytes in hex to write (eg. 00000000).");
+                description: "Boot bytes in hex to write (e.g. 00000000).");
 
             var command = new Command("kill", "Kill partition.");
             command.SetHandler(CommandHandler.RdbPartKill, sourcePathArgument, partitionNumber, hexBootBytesArgument);
@@ -566,7 +566,7 @@
 
             var volumeNameArgument = new Argument<string>(
                 name: "VolumeName",
-                description: "Name of the volume (eg. Workbench).");
+                description: "Name of the volume (e.g. Workbench).");
 
             var rdbPartFormatCommand = new Command("format", "Format partition.");
             rdbPartFormatCommand.SetHandler(CommandHandler.RdbPartFormat, pathArgument, partitionNumber,
