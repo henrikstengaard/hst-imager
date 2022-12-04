@@ -78,7 +78,7 @@
         }
 
         public virtual Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
-            long? size = null, bool allowPhysicalDrive = true)
+            long? size = null, bool allowPhysicalDrive = true, bool create = false)
         {
             var physicalDrive =
                 physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
@@ -110,29 +110,40 @@
 
             var model = Path.GetFileName(path);
 
+            if (create)
+            {
+                if (size == null || size.Value == 0)
+                {
+                    throw new ArgumentNullException(nameof(size), "Size is required for creating image file");
+                }
+
+                if (!IsVhd(path))
+                {
+                    return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
+                        CreateWriteableStream(path)));
+                }
+                
+                var stream = CreateWriteableStream(path);
+                var newVhdDisk = Disk.InitializeDynamic(stream, Ownership.None, GetVhdSize(size.Value));
+                return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
+                    newVhdDisk, stream));
+            }
+            
+            if (!File.Exists(path)) 
+            {
+                return new Result<Media>(new PathNotFoundError($"Path '{path}' not found", nameof(path)));
+            }
+            
             if (!IsVhd(path))
             {
                 return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
                     CreateWriteableStream(path)));
             }
 
-            if (File.Exists(path))
-            {
-                var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
-                vhdDisk.Content.Position = 0;
-                return new Result<Media>(new VhdMedia(path, model, vhdDisk.Capacity, Media.MediaType.Vhd, false,
-                    vhdDisk));
-            }
-
-            if (size == null || size.Value == 0)
-            {
-                throw new ArgumentNullException(nameof(size), "Size required for vhd");
-            }
-
-            var stream = CreateWriteableStream(path);
-            var newVhdDisk = Disk.InitializeDynamic(stream, Ownership.None, GetVhdSize(size.Value));
-            return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
-                newVhdDisk, stream));
+            var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
+            vhdDisk.Content.Position = 0;
+            return new Result<Media>(new VhdMedia(path, model, vhdDisk.Capacity, Media.MediaType.Vhd, false,
+                vhdDisk));
         }
 
         public virtual long GetVhdSize(long size)

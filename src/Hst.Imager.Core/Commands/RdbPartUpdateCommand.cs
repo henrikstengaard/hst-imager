@@ -31,8 +31,8 @@
 
         public RdbPartUpdateCommand(ILogger<RdbPartUpdateCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, string dosType,
-            int? reserved,
-            int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable, int? bootPriority, int? fileSystemBlockSize)
+            int? reserved, int? preAlloc, int? buffers, uint? maxTransfer, uint? mask, bool? noMount, bool? bootable,
+            int? bootPriority, int? fileSystemBlockSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -218,7 +218,7 @@
             // update boot priority
             if (bootPriority.HasValue)
             {
-                partitionBlock.BootPriority = (uint)bootPriority;
+                partitionBlock.BootPriority = bootPriority.Value;
                 hasChanges = true;
                 OnInformationMessage($"Boot priority '{partitionBlock.BootPriority}'");
             }

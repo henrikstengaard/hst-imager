@@ -276,12 +276,11 @@
                 description: "Set bootable.",
                 getDefaultValue: () => false);
 
-            var priorityOption = new Option<int>(
+            var bootPriorityOption = new Option<int?>(
                 new[] { "--boot-priority", "-bp" },
-                description: "Set boot priority.",
-                getDefaultValue: () => 0);
+                description: "Set boot priority.");
 
-            var blockSizeOption = new Option<int>(
+            var blockSizeOption = new Option<int?>(
                 new[] { "--block-size", "-bs" },
                 description: "Block size for the partition.",
                 getDefaultValue: () => 512);
@@ -300,11 +299,11 @@
                 var mask = context.ParseResult.GetValueForOption(maskOption);
                 var noMount = context.ParseResult.GetValueForOption(noMountOption);
                 var bootable = context.ParseResult.GetValueForOption(bootableOption);
-                var priority = context.ParseResult.GetValueForOption(priorityOption);
+                var bootPriority = context.ParseResult.GetValueForOption(bootPriorityOption);
                 var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
 
                 await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer, mask,
-                    noMount, bootable, priority, blockSize);
+                    noMount, bootable, bootPriority, blockSize);
             });
 
             rdbPartAddCommand.AddArgument(pathArgument);
@@ -318,7 +317,7 @@
             rdbPartAddCommand.AddOption(maskOption);
             rdbPartAddCommand.AddOption(noMountOption);
             rdbPartAddCommand.AddOption(bootableOption);
-            rdbPartAddCommand.AddOption(priorityOption);
+            rdbPartAddCommand.AddOption(bootPriorityOption);
             rdbPartAddCommand.AddOption(blockSizeOption);
 
             return rdbPartAddCommand;
@@ -370,7 +369,7 @@
                 new[] { "--bootable", "-b" },
                 description: "Set bootable for partition.");
 
-            var priorityOption = new Option<int?>(
+            var bootPriorityOption = new Option<int?>(
                 new[] { "--boot-priority", "-bp" },
                 description: "Set boot priority (controls order of partitions to boot, lowest is booted first).");
 
@@ -392,13 +391,13 @@
                 var mask = context.ParseResult.GetValueForOption(maskOption);
                 var noMount = context.ParseResult.GetValueForOption(noMountOption);
                 var bootable = context.ParseResult.GetValueForOption(bootableOption);
-                var priority = context.ParseResult.GetValueForOption(priorityOption);
+                var bootPriority = context.ParseResult.GetValueForOption(bootPriorityOption);
                 var fileSystemBlockSize = context.ParseResult.GetValueForOption(fileSystemBlockSizeOption);
 
                 await CommandHandler.RdbPartUpdate(path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
                     maxTransfer,
                     mask, noMount.HasValue ? noMount.Value == BoolType.True : null,
-                    bootable.HasValue ? bootable.Value == BoolType.True : null, priority, fileSystemBlockSize);
+                    bootable.HasValue ? bootable.Value == BoolType.True : null, bootPriority, fileSystemBlockSize);
             });
 
             command.AddArgument(pathArgument);
@@ -412,7 +411,7 @@
             command.AddOption(maskOption);
             command.AddOption(noMountOption);
             command.AddOption(bootableOption);
-            command.AddOption(priorityOption);
+            command.AddOption(bootPriorityOption);
             command.AddOption(fileSystemBlockSizeOption);
 
             return command;

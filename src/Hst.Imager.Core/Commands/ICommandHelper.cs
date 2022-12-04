@@ -11,7 +11,7 @@
     {
         Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool allowPhysicalDrive = true);
         Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, long? size = null,
-            bool allowPhysicalDrive = true);
+            bool allowPhysicalDrive = true, bool create = false);
         long GetVhdSize(long size);
         bool IsVhd(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);

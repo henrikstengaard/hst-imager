@@ -4,9 +4,9 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
-    using Hst.Imager.Core.Models;
+    using Core;
+    using Commands;
+    using Models;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 

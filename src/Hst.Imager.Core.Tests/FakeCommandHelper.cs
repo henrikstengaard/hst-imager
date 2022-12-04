@@ -5,11 +5,11 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Amiga.RigidDiskBlocks;
     using Hst.Core;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
-    using Hst.Imager.Core.Models;
+    using Core;
+    using Commands;
+    using Models;
 
     public class FakeCommandHelper : CommandHelper
     {
@@ -77,31 +77,12 @@
         }
 
         public override Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, long? size = null,
-            bool allowPhysicalDrive = true)
+            bool allowPhysicalDrive = true, bool create = false)
         {
             return path.EndsWith(".img", StringComparison.OrdinalIgnoreCase)
                 ? new Result<Media>(WriteableMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase)))
-                : base.GetWritableMedia(physicalDrives, path, size, allowPhysicalDrive);
+                : base.GetWritableMedia(physicalDrives, path, size, allowPhysicalDrive, create);
         }
-
-        // public void CreateWritableMedia(string path, long size)
-        // {
-        //     var mediaResult = GetWritableMedia(new List<IPhysicalDrive>(), path, size, false);
-        //     using var media = mediaResult.Value;
-        // }
-        //
-        // public async Task AppendWriteableMediaData(string path, long size, byte[] data = null)
-        // {
-        //     var destinationMediaResult = GetWritableMedia(new List<IPhysicalDrive>(), path,
-        //         size, false);
-        //     var destinationStream = destinationMediaResult.Value.Stream;
-        //     if (data == null)
-        //     {
-        //         return;
-        //     }
-        //
-        //     await destinationStream.WriteAsync(data, 0, data.Length);
-        // }
         
         public async Task AppendWriteableMediaDataVhd(string path, long size, byte[] data = null)
         {
@@ -111,7 +92,7 @@
             }
             
             var destinationMediaResult = GetWritableMedia(new List<IPhysicalDrive>(), path,
-                size, false);
+                size, false, true);
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
             if (data == null)

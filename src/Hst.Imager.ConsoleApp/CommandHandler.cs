@@ -318,8 +318,8 @@
         }
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,
-            uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int priority,
-            int fileSystemBlockSize)
+            uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int? priority,
+            int? fileSystemBlockSize)
         {
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,

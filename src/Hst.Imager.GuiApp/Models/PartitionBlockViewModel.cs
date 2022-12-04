@@ -20,7 +20,7 @@
         public uint Mask { get; set; }
         public string MaskHex { get; set; }
         
-        public uint BootPriority { get; set; }
+        public int BootPriority { get; set; }
         public byte[] DosType { get; set; }
         public string DosTypeFormatted { get; set; }
         public string DosTypeHex { get; set; }

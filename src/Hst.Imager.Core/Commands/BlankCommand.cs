@@ -48,7 +48,7 @@
             
             OnDebugMessage($"Opening '{path}' as writable");
             
-            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false);
+            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false, true);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);

@@ -31,12 +31,13 @@
         private readonly string dosType;
         private readonly bool noMount;
         private readonly bool bootable;
-        private readonly int priority;
-        private readonly int fileSystemBlockSize;
+        private readonly int? bootPriority;
+        private readonly int? fileSystemBlockSize;
 
         public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
-            uint? reserved, uint? preAlloc, uint? buffers, uint? maxTransfer, uint? mask, bool noMount, bool bootable, int priority, int fileSystemBlockSize)
+            uint? reserved, uint? preAlloc, uint? buffers, uint? maxTransfer, uint? mask, bool noMount, bool bootable,
+            int? bootPriority, int? fileSystemBlockSize)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -52,7 +53,7 @@
             this.dosType = dosType;
             this.noMount = noMount;
             this.bootable = bootable;
-            this.priority = priority;
+            this.bootPriority = bootPriority;
             this.fileSystemBlockSize = fileSystemBlockSize;
         }
 
@@ -114,7 +115,7 @@
             OnInformationMessage($"- DOS type '{dosTypeBytes.FormatDosType()}'");
 
             var partitionBlock =
-                PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize,
+                PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize ?? 512,
                     bootable);
             
             if (partitionBlock.HighCyl - partitionBlock.LowCyl + 1 <= 0)
@@ -159,7 +160,12 @@
             }
             
             partitionBlock.Flags = flags;
-            partitionBlock.BootPriority = (uint)priority;
+            
+            if (bootPriority.HasValue)
+            {
+                partitionBlock.BootPriority = bootPriority.Value;
+            }
+            
             partitionBlock.SizeBlock = rigidDiskBlock.BlockSize / SizeOf.ULong;
 
             OnInformationMessage($"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
@@ -170,6 +176,9 @@
             OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
             OnInformationMessage($"- Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}' ({partitionBlock.MaxTransfer})");
             OnInformationMessage($"- Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}' ({partitionBlock.Mask})");
+            OnInformationMessage($"- Bootable '{partitionBlock.Bootable.ToString()}'");
+            OnInformationMessage($"- Boot priority '{partitionBlock.BootPriority}'");
+            OnInformationMessage($"- No mount '{partitionBlock.NoMount}'");
             OnInformationMessage($"- File System Block Size '{partitionBlock.Sectors * rigidDiskBlock.BlockSize}'");
             
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
