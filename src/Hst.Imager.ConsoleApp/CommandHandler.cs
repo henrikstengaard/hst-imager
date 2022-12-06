@@ -106,6 +106,7 @@
                 "kb" => new Size(sizeValue * 1024, Unit.Bytes),
                 "mb" => new Size(sizeValue * (long)Math.Pow(1024, 2), Unit.Bytes),
                 "gb" => new Size(sizeValue * (long)Math.Pow(1024, 3), Unit.Bytes),
+                "tb" => new Size(sizeValue * (long)Math.Pow(1024, 4), Unit.Bytes),
                 _ => throw new ArgumentException("Invalid size", nameof(size))
             };
         }

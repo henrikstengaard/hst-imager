@@ -108,7 +108,7 @@
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
             
-            var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size);
+            var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size).ToSectorSize();
 
             OnInformationMessage($"- Partition number '{partitionBlocks.Count + 1}'");
             OnInformationMessage($"- Name '{name}'");
@@ -186,6 +186,9 @@
             OnDebugMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
+            stream.Close();
+            media.Dispose();
+            
             return new Result();
         }
     }

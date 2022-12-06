@@ -8,6 +8,7 @@
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 
@@ -81,7 +82,7 @@
             var defaultName = media.IsPhysicalDrive ? media.Model : Path.GetFileNameWithoutExtension(media.Model);
 
             var diskSize = stream.Length;
-            var rigidDiskBlockSize = diskSize.ResolveSize(size);
+            var rigidDiskBlockSize = diskSize.ResolveSize(size).ToSectorSize();
 
             OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
 

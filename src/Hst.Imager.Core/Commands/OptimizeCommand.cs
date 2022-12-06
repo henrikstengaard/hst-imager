@@ -6,6 +6,7 @@
     using Hst.Core;
     using Core;
     using Extensions;
+    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Models;
 
@@ -63,7 +64,7 @@
             }
             else if (size.Value != 0)
             {
-                optimizedSize = currentSize.ResolveSize(size);
+                optimizedSize = currentSize.ResolveSize(size).ToSectorSize();
             }
 
             // return error, if optimized size is zero

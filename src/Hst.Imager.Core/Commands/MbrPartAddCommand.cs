@@ -93,7 +93,7 @@
             }
             
             // calculate partition size and sectors
-            var partitionSize = availableSize.ResolveSize(size);
+            var partitionSize = availableSize.ResolveSize(size).ToSectorSize();
             var partitionSectors = partitionSize / 512;
             
             OnDebugMessage("Reading Master Boot Record");
