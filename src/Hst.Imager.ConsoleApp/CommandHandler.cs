@@ -371,10 +371,10 @@
             await Execute(command);
         }
 
-        public static async Task RdbPartFormat(string path, int partitionNumber, string name)
+        public static async Task RdbPartFormat(string path, int partitionNumber, string name, bool nonRdb, string chs, string dosType)
         {
             await Execute(new RdbPartFormatCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, partitionNumber, name));
+                await GetPhysicalDrives(), path, partitionNumber, name, nonRdb, chs, dosType));
         }
 
         public static async Task RdbPartKill(string path, int partitionNumber, string hexBootBytes)

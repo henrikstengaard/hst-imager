@@ -567,12 +567,28 @@
                 name: "VolumeName",
                 description: "Name of the volume (e.g. Workbench).");
 
+            var nonRdbOption = new Option<bool>(
+                new[] { "--non-rdb" },
+                description: "Set non-RDB.",
+                getDefaultValue: () => false);
+            
+            var chsOption = new Option<string>(
+                new[] { "-chs" },
+                description: "Format from cylinders, heads and sectors. Optional for non-RDB partition.");
+
+            var dosTypeOption = new Option<string>(
+                new[] { "--dos-type", "-dt" },
+                description: "DOS type for the partition to use (e.g. DOS3, PFS3). Required for non-RDB partition.");
+            
             var rdbPartFormatCommand = new Command("format", "Format partition.");
             rdbPartFormatCommand.SetHandler(CommandHandler.RdbPartFormat, pathArgument, partitionNumber,
-                volumeNameArgument);
+                volumeNameArgument, nonRdbOption, chsOption, dosTypeOption);
             rdbPartFormatCommand.AddArgument(pathArgument);
             rdbPartFormatCommand.AddArgument(partitionNumber);
             rdbPartFormatCommand.AddArgument(volumeNameArgument);
+            rdbPartFormatCommand.AddOption(nonRdbOption);
+            rdbPartFormatCommand.AddOption(chsOption);
+            rdbPartFormatCommand.AddOption(dosTypeOption);
 
             return rdbPartFormatCommand;
         }

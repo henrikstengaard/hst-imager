@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
@@ -7,6 +8,8 @@
     using Amiga.Extensions;
     using Amiga.FileSystems.FastFileSystem;
     using Amiga.FileSystems.Pfs3;
+    using Amiga.RigidDiskBlocks;
+    using Extensions;
     using Hst.Core;
     using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
@@ -19,9 +22,13 @@
         private readonly string path;
         private readonly int partitionNumber;
         private readonly string name;
+        private readonly bool nonRdb;
+        private readonly string chs;
+        private readonly string dosType;
 
         public RdbPartFormatCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name)
+            IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, bool nonRdb,
+            string chs, string dosType)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -29,12 +36,50 @@
             this.path = path;
             this.partitionNumber = partitionNumber;
             this.name = name;
+            this.nonRdb = nonRdb;
+            this.chs = chs;
+            this.dosType = dosType;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
         {
+            DiskGeometry nonRdbDiskGeometry = new DiskGeometry
+            {
+                Heads = 16,
+                Sectors = 63
+            };
+
+            if (nonRdb && string.IsNullOrWhiteSpace(dosType))
+            {
+                return new Result(new Error($"DOS type is required for formatting a non-RDB partition"));
+            }
+
+            if (nonRdb && !string.IsNullOrWhiteSpace(chs))
+            {
+                var values = chs.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+                if (values.Length != 3)
+                {
+                    return new Result(new Error($"Invalid cylinders, heads and sectors value '{chs}'"));
+                }
+
+                if (!int.TryParse(values[0], out var cylinders) || !int.TryParse(values[1], out var heads) ||
+                    !int.TryParse(values[2], out var sectors))
+                {
+                    return new Result(new Error($"Invalid cylinders, heads and sectors value '{chs}'"));
+                }
+
+                nonRdbDiskGeometry = new DiskGeometry
+                {
+                    DiskSize = (long)cylinders * heads * sectors * 512,
+                    Cylinders = cylinders,
+                    Heads = heads,
+                    Sectors = sectors
+                };
+            }
+
             OnInformationMessage($"Formatting partition in Rigid Disk Block at '{path}'");
-            
+
             OnDebugMessage($"Opening '{path}' as writable");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
@@ -44,21 +89,60 @@
             }
 
             using var media = mediaResult.Value;
+
+            if (nonRdb && media.IsPhysicalDrive)
+            {
+                return new Result(new Error($"Physical drives doesn't support non RDB"));
+            }
+
             await using var stream = media.Stream;
 
-            OnDebugMessage("Reading Rigid Disk Block");
-
-            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
-
-            if (rigidDiskBlock == null)
+            List<PartitionBlock> partitionBlocks;
+            if (!nonRdb)
             {
-                return new Result(new Error("Rigid Disk Block not found"));
+                OnDebugMessage("Reading Rigid Disk Block");
+
+                var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+
+                if (rigidDiskBlock == null)
+                {
+                    return new Result(new Error("Rigid Disk Block not found"));
+                }
+
+                partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
             }
-            
-            var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+            else
+            {
+                var cylinderSize = (long)nonRdbDiskGeometry.Heads * nonRdbDiskGeometry.Sectors * 512;
+                var cylinders = nonRdbDiskGeometry.Cylinders == 0
+                    ? Convert.ToInt64((double)stream.Length / cylinderSize)
+                    : nonRdbDiskGeometry.Cylinders;
+                var partitionSize = cylinderSize * cylinders;
+
+                if (stream.Length != partitionSize)
+                {
+                    stream.SetLength(partitionSize);
+                }
+
+                partitionBlocks = new List<PartitionBlock>
+                {
+                    new PartitionBlock
+                    {
+                        DriveName = "DH0",
+                        DosType = DosTypeHelper.FormatDosType(dosType),
+                        Surfaces = (uint)nonRdbDiskGeometry.Heads,
+                        BlocksPerTrack = (uint)nonRdbDiskGeometry.Sectors,
+                        Reserved = 2,
+                        PartitionSize = partitionSize,
+                        LowCyl = 0,
+                        HighCyl = (uint)(cylinders - 1),
+                        FileSystemBlockSize = 512
+                    }
+                };
+            }
 
             OnDebugMessage($"Formatting partition number '{partitionNumber}':");
-            
+
             if (partitionNumber < 1 || partitionNumber > partitionBlocks.Count)
             {
                 return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
@@ -66,10 +150,27 @@
 
             var partitionBlock = partitionBlocks[partitionNumber - 1];
 
-            OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
-            OnInformationMessage($"- DOS type '0x{partitionBlock.DosType.FormatHex()}' ({partitionBlock.DosType.FormatDosType()})");
+            OnInformationMessage(
+                $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            if (nonRdb)
+            {
+                OnInformationMessage($"- Cylinders '{(partitionBlock.HighCyl - partitionBlock.LowCyl + 1)}'");
+                OnInformationMessage($"- Heads '{partitionBlock.Surfaces}'");
+                OnInformationMessage($"- Sectors '{partitionBlock.BlocksPerTrack}'");
+            }
+
+            OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
+            if (!nonRdb)
+            {
+                OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
+            }
+
+            OnInformationMessage(
+                $"- DOS type '0x{partitionBlock.DosType.FormatHex()}' ({partitionBlock.DosType.FormatDosType()})");
             OnInformationMessage($"- Volume name '{name}'");
-            
+
             switch (partitionBlock.DosTypeFormatted)
             {
                 case "DOS\\1":

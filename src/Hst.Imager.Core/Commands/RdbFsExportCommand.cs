@@ -56,9 +56,7 @@ public class RdbFsExportCommand : CommandBase
         }
 
         var fileSystemHeaderBlocks = rigidDiskBlock.FileSystemHeaderBlocks.ToList();
-
-        OnDebugMessage($"Exporting file system number '{fileSystemNumber}'");
-            
+        
         if (fileSystemNumber < 1 || fileSystemNumber > fileSystemHeaderBlocks.Count)
         {
             return new Result(new Error($"Invalid file system number '{fileSystemNumber}'"));
@@ -68,10 +66,11 @@ public class RdbFsExportCommand : CommandBase
         var fileSystemBytes = fileSystemHeaderBlock.LoadSegBlocks.SelectMany(x => x.Data).ToArray();
         long fileSystemSize = fileSystemBytes.Length;
             
-        OnDebugMessage($"DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
-        OnDebugMessage($"Version '{fileSystemHeaderBlock.VersionFormatted}'");
-        OnDebugMessage($"Size '{fileSystemSize.FormatBytes()}' ({fileSystemSize} bytes)");
-        OnDebugMessage($"File system name '{fileSystemHeaderBlock.FileSystemName}'");
+        OnInformationMessage($"- File system number '{fileSystemNumber}'");
+        OnInformationMessage($"- DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
+        OnInformationMessage($"- Version '{fileSystemHeaderBlock.VersionFormatted}'");
+        OnInformationMessage($"- Size '{fileSystemSize.FormatBytes()}' ({fileSystemSize} bytes)");
+        OnInformationMessage($"- File system name '{fileSystemHeaderBlock.FileSystemName}'");
 
         OnDebugMessage($"Writing file system to '{fileSystemPath}'");
         await File.WriteAllBytesAsync(fileSystemPath, fileSystemBytes, token);
