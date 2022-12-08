@@ -389,6 +389,17 @@
                 await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
+        public static async Task FsDir(string path, string fsPath)
+        {
+            var command = new FsDirCommand(GetLogger<FsDirCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, fsPath);
+            command.EntriesRead += (_, args) =>
+            {
+                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo));
+            };
+            await Execute(command);
+        }
+
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
             var progressMessage =

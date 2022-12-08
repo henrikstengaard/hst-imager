@@ -7,6 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
+using Directory = System.IO.Directory;
+using File = System.IO.File;
 
 public class BlockReadCommand : CommandBase
 {
@@ -51,7 +53,7 @@ public class BlockReadCommand : CommandBase
         {
             return new Result(new Error($"End offset must be dividable by block size {blockSize}"));
         }
-        
+
         OnInformationMessage($"Reading blocks from '{path}' to '{outputPath}'");
 
         OnDebugMessage($"Opening '{path}' as readable");
