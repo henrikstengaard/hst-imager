@@ -4,7 +4,6 @@
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using System.Threading.Tasks;
     using DiscUtils;
     using DiscUtils.Partitions;
@@ -18,9 +17,6 @@
     {
         private readonly bool isAdministrator;
 
-        private static readonly Regex PhysicalDrivePathRegex =
-            new("^(\\\\\\\\\\.\\\\PHYSICALDRIVE|/dev)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         public CommandHelper(bool isAdministrator)
         {
             this.isAdministrator = isAdministrator;
@@ -31,7 +27,8 @@
         public virtual Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             bool allowPhysicalDrive = true)
         {
-            if (!isAdministrator && PhysicalDrivePathRegex.IsMatch(path))
+            if (!isAdministrator && (Regexs.PhysicalDrivePathRegex.IsMatch(path) || 
+                                     Regexs.DevicePathRegex.IsMatch(path)))
             {
                 return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
@@ -122,18 +119,18 @@
                     return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
                         CreateWriteableStream(path)));
                 }
-                
+
                 var stream = CreateWriteableStream(path);
                 var newVhdDisk = Disk.InitializeDynamic(stream, Ownership.None, GetVhdSize(size.Value));
                 return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
                     newVhdDisk, stream));
             }
-            
-            if (!File.Exists(path)) 
+
+            if (!File.Exists(path))
             {
                 return new Result<Media>(new PathNotFoundError($"Path '{path}' not found", nameof(path)));
             }
-            
+
             if (!IsVhd(path))
             {
                 return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
@@ -191,7 +188,7 @@
             if (biosPartitionTable != null)
             {
                 var mbrPartitionNumber = 0;
-                
+
                 partitionTables.Add(new PartitionTableInfo
                 {
                     Type = PartitionTableInfo.PartitionTableType.MasterBootRecord,
@@ -213,7 +210,7 @@
             {
                 disk.Dispose();
             }
-            
+
             if (rigidDiskBlock != null)
             {
                 var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
@@ -234,7 +231,7 @@
                     EndOffset = ((rigidDiskBlock.RdbBlockHi + 1) * rigidDiskBlock.BlockSize) - 1
                 });
             }
-            
+
             return new DiskInfo
             {
                 Path = media.Path,

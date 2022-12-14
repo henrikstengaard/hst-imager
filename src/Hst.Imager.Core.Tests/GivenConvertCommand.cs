@@ -2,13 +2,16 @@
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
+    using Amiga.FileSystems.Pfs3;
     using Core;
     using Commands;
     using Models;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
+    using File = System.IO.File;
 
     public class GivenConvertCommand : CommandTestBase
     {
@@ -18,20 +21,17 @@
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
-            
+
             // act - convert source img to destination img
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath, 
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
                 destinationPath, new Size());
             DataProcessedEventArgs dataProcessedEventArgs = null;
-            convertCommand.DataProcessed += (_, args) =>
-            {
-                dataProcessedEventArgs = args;
-            };
+            convertCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
-            
+
             Assert.NotNull(dataProcessedEventArgs);
             Assert.NotEqual(0, dataProcessedEventArgs.PercentComplete);
             Assert.NotEqual(0, dataProcessedEventArgs.BytesProcessed);
@@ -51,11 +51,11 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
-            
+
             // act - convert source img to destination img
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath, 
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
                 destinationPath, new Size(size, Unit.Bytes));
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
@@ -66,16 +66,16 @@
             var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
             Assert.Equal(sourceBytes, destinationBytes);
         }
-        
+
         [Fact]
         public async Task WhenConvertSourceToVhdDestinationThenReadDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
-            
+
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
                 destinationPath, new Size());
@@ -92,11 +92,11 @@
             // assert length is not the same (vhd file format different than img) and bytes are the same
             Assert.NotEqual(sourceBytes.Length, destinationPathSize);
             Assert.Equal(sourceBytes, destinationBytes);
-            
+
             // delete destination path vhd
             File.Delete(destinationPath);
         }
-        
+
         [Fact]
         public async Task WhenConvertSourceToVhdDestinationWithSizeThenReadDataIsIdentical()
         {
@@ -104,9 +104,9 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new []{sourcePath}, new []{destinationPath});
+            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
             var cancellationTokenSource = new CancellationTokenSource();
-            
+
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
                 destinationPath, new Size(size, Unit.Bytes));
@@ -124,7 +124,7 @@
             // assert length is not the same (vhd file format different than img) and bytes are the same
             Assert.NotEqual(sourceBytes.Length, destinationPathSize);
             Assert.Equal(sourceBytes, destinationBytes);
-            
+
             // delete destination path vhd
             File.Delete(destinationPath);
         }

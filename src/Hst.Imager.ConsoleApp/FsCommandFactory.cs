@@ -9,6 +9,7 @@ public static class FsCommandFactory
         var command = new Command("fs", "File system.");
 
         command.AddCommand(CreateFsDir());
+        command.AddCommand(CreateFsCopy());
 
         return command;
     }
@@ -30,6 +31,30 @@ public static class FsCommandFactory
         fsDirCommand.SetHandler(CommandHandler.FsDir, pathArgument, fsPathArgument);
         fsDirCommand.AddArgument(pathArgument);
         fsDirCommand.AddArgument(fsPathArgument);
+
+        return fsDirCommand;
+    }
+    
+    private static Command CreateFsCopy()
+    {
+        var sourcePathArgument = new Argument<string>(
+            name: "SourcePath",
+            description: "Path to source physical drive or image file.");
+
+        var destinationPathArgument = new Argument<string>(
+            name: "DestinationPath",
+            description: "Path to destination physical drive or image file.");
+
+        var recursiveOption = new Option<bool>(
+            new[] { "--recursive", "-r" },
+            description: "Recursively copy sub-directories.",
+            getDefaultValue: () => false);
+        
+        var fsDirCommand = new Command("copy", "Copy files or subdirectories from source to destination.");
+        fsDirCommand.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption);
+        fsDirCommand.AddArgument(sourcePathArgument);
+        fsDirCommand.AddArgument(destinationPathArgument);
+        fsDirCommand.AddOption(recursiveOption);
 
         return fsDirCommand;
     }

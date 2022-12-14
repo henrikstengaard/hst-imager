@@ -400,6 +400,18 @@
             await Execute(command);
         }
 
+        public static async Task FsCopy(string srcPath, string destPath, bool recursive)
+        {
+            var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), srcPath, destPath, recursive);
+            // command.EntriesRead += (_, args) =>
+            // {
+            //     Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo));
+            // };
+            await Execute(command);
+        }
+
+        
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
             var progressMessage =
