@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,97 +9,83 @@ using Models.FileSystems;
 
 public class DirectoryEntryIterator : IEntryIterator
 {
-    private readonly string path;
+    private readonly Stack<Entry> nextEntries;
+    private readonly string rootPath;
     private readonly bool recursive;
-    private readonly Queue<DirectoryInfo> dirs;
-    private readonly Queue<FileInfo> files;
-    private string currentPath;
     private Entry currentEntry;
+    private bool isFirst;
 
     public DirectoryEntryIterator(string path, bool recursive)
     {
-        this.path = path;
+        this.nextEntries = new Stack<Entry>();
+        this.rootPath = Path.GetFullPath(path);
         this.recursive = recursive;
-        this.dirs = new Queue<DirectoryInfo>();
-        this.files = new Queue<FileInfo>();
+        this.isFirst = true;
     }
 
     public Entry Current => currentEntry;
 
     public Task<bool> Next()
     {
-        // first time, current path is null and enqueue root path
-        if (string.IsNullOrEmpty(currentPath))
+        if (isFirst)
         {
+            isFirst = false;
             currentEntry = null;
-            currentPath = path;
-            var currentDir = new DirectoryInfo(currentPath);
-            EnqueueDir(currentDir);
+            EnqueueDirectory(rootPath);
         }
-
-        // no more files left in queue, enqueue next directory
-        if (this.files.Count == 0)
+        
+        if (this.nextEntries.Count <= 0)
         {
-            if (!this.recursive || this.dirs.Count == 0)
-            {
-                currentEntry = null;
-                return Task.FromResult(false);
-            }
-
-            var nextDirInfo = this.dirs.Dequeue();
-            var nextDirPath = Path.GetDirectoryName(nextDirInfo.FullName) ?? string.Empty;
-            currentEntry = new Entry
-            {
-                Name = nextDirInfo.Name,
-                Path = nextDirPath.Length >= this.path.Length + 1
-                    ? nextDirPath.Substring(this.path.Length + 1)
-                    : string.Empty,
-                Date = nextDirInfo.LastWriteTime,
-                Size = 0,
-                Type = EntryType.Dir,
-                Attributes = ""
-            };
-            EnqueueDir(nextDirInfo);
-            return Task.FromResult(true);
-        }
-
-        // no more files, return null
-        if (this.files.Count == 0)
-        {
-            currentEntry = null;
             return Task.FromResult(false);
         }
 
-        var nextFileInfo = this.files.Dequeue();
-        var nextEntryPath = Path.GetDirectoryName(nextFileInfo.FullName) ?? string.Empty;
-        currentEntry = new Entry
+        currentEntry = this.nextEntries.Pop();
+        if (this.recursive && currentEntry.Type == EntryType.Dir)
         {
-            Name = nextFileInfo.Name,
-            Path = nextEntryPath.Length >= this.path.Length + 1
-                ? nextEntryPath.Substring(this.path.Length + 1)
-                : string.Empty,
-            Date = nextFileInfo.LastWriteTime,
-            Size = nextFileInfo.Length,
-            Type = EntryType.File,
-            Attributes = ""
-        };
+            EnqueueDirectory(currentEntry.Path);
+        }
 
         return Task.FromResult(true);
     }
 
-    private void EnqueueDir(DirectoryInfo currentDir)
+    public Task<Stream> OpenEntry(string entryPath)
     {
-        if (this.recursive)
-        {
-            foreach (var dirInfo in currentDir.GetDirectories().OrderBy(x => x.Name).ToList())
-            {
-                this.dirs.Enqueue(dirInfo);
-            }
-        }
+        return Task.FromResult<Stream>(File.OpenRead(Path.Combine(this.rootPath, entryPath)));
+    }
 
-        foreach (var fileInfo in currentDir.GetFiles().OrderBy(x => x.Name).ToList())
+    private string GetEntryPath(string entryPath)
+    {
+        return entryPath.Length >= this.rootPath.Length + 1
+            ? entryPath.Substring(this.rootPath.Length + 1)
+            : string.Empty;
+    }
+
+    private void EnqueueDirectory(string currentPath)
+    {
+        var currentDir = new DirectoryInfo(currentPath); 
+        
+        foreach (var dirInfo in currentDir.GetDirectories().OrderByDescending(x => x.Name).ToList())
         {
-            this.files.Enqueue(fileInfo);
+            this.nextEntries.Push(new Entry
+            {
+                Name = dirInfo.Name,
+                Path = GetEntryPath(dirInfo.FullName),
+                Date = dirInfo.LastWriteTime,
+                Size = 0,
+                Type = EntryType.Dir
+            });
+        }
+        
+        foreach (var fileInfo in currentDir.GetFiles().OrderByDescending(x => x.Name).ToList())
+        {
+            this.nextEntries.Push(new Entry
+            {
+                Name = fileInfo.Name,
+                Path = GetEntryPath(fileInfo.FullName),
+                Date = fileInfo.LastWriteTime,
+                Size = fileInfo.Length,
+                Type = EntryType.File
+            });
         }
     }
 

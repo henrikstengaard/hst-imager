@@ -1,7 +1,6 @@
 ﻿namespace Hst.Imager.ConsoleApp.Presenters;
 
 using System.Collections.Generic;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using Core.Commands;
@@ -28,7 +27,7 @@ public static class EntriesPresenter
                     filesCount++;
                     break;
             }
-            
+
             rows.Add(new Row
             {
                 Columns = new[]

@@ -35,6 +35,7 @@
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
             rootCommand.AddCommand(FsCommandFactory.CreateFsCommand());
+            rootCommand.AddCommand(AdfCommandFactory.CreateAdfCommand());
 
             return rootCommand;
         }

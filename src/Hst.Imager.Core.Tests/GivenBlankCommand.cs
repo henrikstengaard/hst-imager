@@ -4,10 +4,11 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Imager.Core.Commands;
-    using Hst.Imager.Core.Models;
+    using Commands;
+    using Models;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
+    using File = System.IO.File;
 
     public class GivenBlankCommand : CommandTestBase
     {

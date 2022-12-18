@@ -1,11 +1,15 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Extensions;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
-using Directory = System.IO.Directory;
+using Models.FileSystems;
 
 public class FsCopyCommand : FsCommandBase
 {
@@ -13,122 +17,104 @@ public class FsCopyCommand : FsCommandBase
     private readonly string srcPath;
     private readonly string destPath;
     private readonly bool recursive;
+    private readonly bool quiet;
 
     public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive) 
+        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool quiet)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
         this.srcPath = srcPath;
         this.destPath = destPath;
         this.recursive = recursive;
+        this.quiet = quiet;
     }
 
     public override async Task<Result> Execute(CancellationToken token)
     {
-        OnInformationMessage($"Source Path: '{srcPath}'");
-        // var resolvedSrcPathResult = ResolvePath(srcPath);
-        // var resolvedDestPathResult = ResolvePath(destPath);
-        //
-        // OnInformationMessage($"Existing Path: '{resolvedSrcPathResult.Value.ExistingPath}'");
-        // OnInformationMessage($"Virtual Path: '{resolvedSrcPathResult.Value.VirtualPath}'");
-        
-        var isSrcDirectory = Directory.Exists(srcPath);
-        var isDestDirectory = Directory.Exists(destPath);
-        
+        OnInformationMessage($"Copying source Path '{srcPath}' to destination path '{destPath}'");
+
+        var stopwatch = new Stopwatch();
+
+        // get source entry iterator
         var srcEntryIteratorResult = await GetEntryIterator(srcPath, recursive);
         if (srcEntryIteratorResult.IsFaulted)
         {
             return new Result(srcEntryIteratorResult.Error);
         }
 
+        // get destination entry writer
+        var destEntryWriterResult = await GetEntryWriter(destPath);
+        if (destEntryWriterResult.IsFaulted)
+        {
+            return new Result(destEntryWriterResult.Error);
+        }
+
+        // iterate through source entries and write in destination
+        var filesCount = 0;
+        var dirsCount = 0;
+        var totalBytes = 0L;
+
+        stopwatch.Start();
+
         using (var srcEntryIterator = srcEntryIteratorResult.Value)
         {
             while (await srcEntryIterator.Next())
             {
                 var entry = srcEntryIterator.Current;
-                OnInformationMessage($"[{entry.Type}] {entry.Name} ({entry.Path})");
+
+                switch (entry.Type)
+                {
+                    case EntryType.Dir:
+                        if (!recursive)
+                        {
+                            continue;
+                        }
+                        dirsCount++;
+                        await destEntryWriterResult.Value.CreateDirectory(entry);
+                        break;
+                    case EntryType.File:
+                    {
+                        filesCount++;
+                        totalBytes += entry.Size;
+                        if (!quiet)
+                        {
+                            OnInformationMessage($"{entry.Path} ({entry.Size.FormatBytes()})");
+                        }
+
+                        await using var stream = await srcEntryIterator.OpenEntry(entry.Path);
+                        await destEntryWriterResult.Value.WriteEntry(entry, stream);
+                        break;
+                    }
+                }
             }
         }
-        
+
+        stopwatch.Stop();
+
+        OnInformationMessage(
+            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}, {totalBytes.FormatBytes()} copied in {stopwatch.Elapsed.FormatElapsed()}");
+
         return new Result();
     }
 
+    private static string RemoveDiacritics(string text)
+    {
+        var normalizedString = text.Normalize(NormalizationForm.FormD);
+        var stringBuilder = new StringBuilder(capacity: normalizedString.Length);
 
-    // private Result<MediaResult> ResolvePath(string path)
-    // {
-    //     string existingPath;
-    //     var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
-    //     if (physicalDrivePathMatch.Success)
-    //     {
-    //         existingPath = physicalDrivePathMatch.Value;
-    //         var firstSeparatorIndex = path.IndexOf("\\", existingPath.Length, StringComparison.Ordinal);
-    //
-    //         return new Result<MediaResult>(new MediaResult
-    //         {
-    //             MediaPath = existingPath,
-    //             VirtualPath = firstSeparatorIndex >= 0 ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1)) : string.Empty
-    //         });
-    //     }
-    //
-    //     var lastSeparatorIndex = path.Length;
-    //     var exists = false;
-    //
-    //     do
-    //     {
-    //         existingPath = path.Substring(0, lastSeparatorIndex);
-    //         if (System.IO.File.Exists(existingPath))
-    //         {
-    //             exists = true;
-    //             break;
-    //         }
-    //
-    //         var start = lastSeparatorIndex - 1;
-    //         lastSeparatorIndex = path.LastIndexOf("\\", start, StringComparison.Ordinal);
-    //         if (lastSeparatorIndex == -1)
-    //         {
-    //             lastSeparatorIndex = path.LastIndexOf("/", start, StringComparison.Ordinal);
-    //         }
-    //     } while (lastSeparatorIndex != -1);
-    //
-    //     if (!exists)
-    //     {
-    //         return new Result<MediaResult>(new PathNotFoundError("Path not found", path));
-    //     }
-    //     
-    //     return new Result<MediaResult>(new MediaResult
-    //     {
-    //         MediaPath = existingPath,
-    //         VirtualPath = path.Substring(existingPath.Length + 1, path.Length - (existingPath.Length + 1))
-    //     });
-    // }
+        for (int i = 0; i < normalizedString.Length; i++)
+        {
+            char c = normalizedString[i];
+            var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
+            if (unicodeCategory != UnicodeCategory.NonSpacingMark)
+            {
+                stringBuilder.Append(c);
+            }
+        }
 
-    // private async Task<Result<IEnumerable<Entry>>> ReadEntries(Stream stream, string[] parts)
-    // {
-    //     if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
-    //     {
-    //         OnDebugMessage($"Listing partition tables");
-    //
-    //         var entries = new List<Entry>();
-    //         var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
-    //
-    //         if (rigidDiskBlock != null)
-    //         {
-    //             entries.Add(new Entry
-    //             {
-    //                 Name = "RDB",
-    //                 Type = EntryType.Dir,
-    //                 Size = 0
-    //             });
-    //         }
-    //
-    //         return new Result<IEnumerable<Entry>>(entries);
-    //     }
-    //
-    //     return parts[0] switch
-    //     {
-    //         "rdb" => await MountRdbFileSystemVolume(stream, parts.Skip(1).ToArray()),
-    //         _ => new Result<IEnumerable<Entry>>(new Error($"Unsupported partition table '{parts[0]}'"))
-    //     };
-    // }
+        return stringBuilder
+            .ToString()
+            .Normalize(NormalizationForm.FormC);
+    }
 }

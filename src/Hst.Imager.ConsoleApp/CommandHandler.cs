@@ -389,10 +389,10 @@
                 await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
-        public static async Task FsDir(string path, string fsPath)
+        public static async Task FsDir(string path, bool recursive)
         {
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, fsPath);
+                await GetPhysicalDrives(), path, recursive);
             command.EntriesRead += (_, args) =>
             {
                 Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo));
@@ -400,17 +400,19 @@
             await Execute(command);
         }
 
-        public static async Task FsCopy(string srcPath, string destPath, bool recursive)
+        public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool quiet)
         {
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), srcPath, destPath, recursive);
-            // command.EntriesRead += (_, args) =>
-            // {
-            //     Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo));
-            // };
+                await GetPhysicalDrives(), srcPath, destPath, recursive, quiet);
             await Execute(command);
         }
 
+        public static async Task AdfCreate(string adfPath, bool format, string name, string dosType, bool recursive)
+        {
+            var command = new AdfCreateCommand(GetLogger<AdfCreateCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), adfPath, format, name, dosType, recursive);
+            await Execute(command);
+        }
         
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {

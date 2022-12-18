@@ -20,17 +20,15 @@ public static class FsCommandFactory
             name: "DiskPath",
             description: "Path to physical drive or image file.");
 
-        var fsPathArgument = new Argument<string>(
-            name: "FileSystemPath",
-            description: "Path in file system.")
-        {
-            Arity = ArgumentArity.ZeroOrOne
-        };
-            
+        var recursiveOption = new Option<bool>(
+            new[] { "--recursive", "-r" },
+            description: "Recursively list sub-directories.",
+            getDefaultValue: () => false);
+        
         var fsDirCommand = new Command("dir", "Displays a list of files and subdirectories in a directory.");
-        fsDirCommand.SetHandler(CommandHandler.FsDir, pathArgument, fsPathArgument);
+        fsDirCommand.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption);
         fsDirCommand.AddArgument(pathArgument);
-        fsDirCommand.AddArgument(fsPathArgument);
+        fsDirCommand.AddOption(recursiveOption);
 
         return fsDirCommand;
     }
@@ -49,12 +47,18 @@ public static class FsCommandFactory
             new[] { "--recursive", "-r" },
             description: "Recursively copy sub-directories.",
             getDefaultValue: () => false);
-        
+
+        var quietOption = new Option<bool>(
+            new[] { "--quiet", "-q" },
+            description: "Quiet mode.",
+            getDefaultValue: () => false);
+
         var fsDirCommand = new Command("copy", "Copy files or subdirectories from source to destination.");
-        fsDirCommand.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption);
+        fsDirCommand.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, quietOption);
         fsDirCommand.AddArgument(sourcePathArgument);
         fsDirCommand.AddArgument(destinationPathArgument);
         fsDirCommand.AddOption(recursiveOption);
+        fsDirCommand.AddOption(quietOption);
 
         return fsDirCommand;
     }

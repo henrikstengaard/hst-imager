@@ -11,27 +11,27 @@ using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
 using Hst.Core;
 using Directory = System.IO.Directory;
-using EntryType = Models.FileSystems.EntryType;
 using File = System.IO.File;
+using FileMode = System.IO.FileMode;
 
 public abstract class FsCommandBase : CommandBase
 {
-    private readonly ICommandHelper commandHelper;
-    private readonly IEnumerable<IPhysicalDrive> physicalDrives;
+    protected readonly ICommandHelper commandHelper;
+    protected readonly IEnumerable<IPhysicalDrive> physicalDrives;
 
     protected FsCommandBase(ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives)
     {
         this.commandHelper = commandHelper;
         this.physicalDrives = physicalDrives;
     }
-    
+
     protected async Task<Result<IEntryIterator>> GetEntryIterator(string path, bool recursive)
     {
         if (Directory.Exists(path))
         {
             return new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive));
         }
-        
+
         var mediaResult = ResolveMedia(path);
         if (mediaResult.IsFaulted)
         {
@@ -41,11 +41,35 @@ public abstract class FsCommandBase : CommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
 
+        if (string.IsNullOrWhiteSpace(mediaResult.Value.MediaPath))
+        {
+            return new Result<IEntryIterator>(
+                new PathNotFoundError($"Media path not defined",
+                    mediaResult.Value.MediaPath));
+        }
+
+        // adf
+        if (File.Exists(mediaResult.Value.MediaPath) && (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var adfStream = File.OpenRead(mediaResult.Value.MediaPath);
+            var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
+            if (fileSystemVolumeResult.IsFaulted)
+            {
+                return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
+            }
+
+            return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(adfStream,
+                mediaResult.Value.VirtualPath, fileSystemVolumeResult.Value, recursive));
+        }
+
+        // disk
         if (string.IsNullOrEmpty(mediaResult.Value.VirtualPath))
         {
-            return new Result<IEntryIterator>(new Error($"Partition table not found in path '{mediaResult.Value.VirtualPath}'"));
+            return new Result<IEntryIterator>(
+                new Error($"Partition table not found in path '{mediaResult.Value.VirtualPath}'"));
         }
-        
+
         var media = commandHelper.GetReadableMedia(physicalDrives, mediaResult.Value.MediaPath);
         if (media.IsFaulted)
         {
@@ -56,23 +80,80 @@ public abstract class FsCommandBase : CommandBase
 
         if (parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
         {
-            var fileSystemParts = parts.Skip(1).ToArray();
-            var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, fileSystemParts);
+            var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
             if (fileSystemVolumeResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
             }
 
-            return new Result<IEntryIterator>(new MediaEntryIterator(media.Value, string.Join("/", fileSystemParts.Skip(1)), fileSystemVolumeResult.Value, recursive));
+            var rootPath = string.Join("/", parts.Skip(2));
+            return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media.Value.Stream, rootPath,
+                fileSystemVolumeResult.Value, recursive));
         }
 
         return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"));
     }
 
+    protected async Task<Result<IEntryWriter>> GetEntryWriter(string path)
+    {
+        // directory must exist, should be able to handle only part of the directory exists
+        if (Directory.Exists(path))
+        {
+            return new Result<IEntryWriter>(new DirectoryEntryWriter(path));
+        }
+
+        var mediaResult = ResolveMedia(path);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryWriter>(mediaResult.Error);
+        }
+
+        OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
+        OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
+
+        // adf
+        if (File.Exists(mediaResult.Value.MediaPath) && (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var adfStream = File.Open(mediaResult.Value.MediaPath, FileMode.Open, FileAccess.ReadWrite);
+            var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
+            if (fileSystemVolumeResult.IsFaulted)
+            {
+                return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
+            }
+
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfStream,
+                mediaResult.Value.VirtualPath, fileSystemVolumeResult.Value));
+        }
+        
+        // disk
+        var media = commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
+        if (media.IsFaulted)
+        {
+            return new Result<IEntryWriter>(media.Error);
+        }
+
+        var parts = mediaResult.Value.VirtualPath.Split('\\', '/');
+
+        if (parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
+        {
+            var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
+            if (fileSystemVolumeResult.IsFaulted)
+            {
+                return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
+            }
+
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream,
+                string.Join("/", parts.Skip(2)), fileSystemVolumeResult.Value));
+        }
+
+        return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
+    }
+
     protected Result<MediaResult> ResolveMedia(string path)
     {
         string mediaPath;
-        
+
         // physical drive
         var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
         if (physicalDrivePathMatch.Success)
@@ -88,7 +169,7 @@ public abstract class FsCommandBase : CommandBase
                     : string.Empty
             });
         }
-        
+
         // media file
         var next = 0;
         do
@@ -112,11 +193,22 @@ public abstract class FsCommandBase : CommandBase
                 break;
             }
         } while (next != -1);
-        
-        return new Result<MediaResult>(new PathNotFoundError("Media not found", path));
+
+        return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Stream stream, string[] parts)
+    protected async Task<Result<IFileSystemVolume>> MountAdfFileSystemVolume(Stream stream)
+    {
+        OnDebugMessage("Mounting ADF file system volume using Fast File System");
+        
+        var fileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
+
+        OnDebugMessage($"Volume '{fileSystemVolume.Name}'");
+
+        return new Result<IFileSystemVolume>(fileSystemVolume);
+    }
+
+    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Stream stream, string partitionName)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
@@ -126,13 +218,6 @@ public abstract class FsCommandBase : CommandBase
         {
             return new Result<IFileSystemVolume>(new Error("No rigid disk block"));
         }
-
-        if (!parts.Any() || string.IsNullOrWhiteSpace(parts[0]))
-        {
-            return new Result<IFileSystemVolume>(new Error("Path does not contain any partition"));
-        }
-
-        var partitionName = parts[0];
 
         OnDebugMessage($"Partition '{partitionName}'");
 
@@ -145,7 +230,7 @@ public abstract class FsCommandBase : CommandBase
         }
 
         OnDebugMessage($"Mounting file system");
-        
+
         var fileSystemVolumeResult = await MountPartitionFileSystemVolume(stream, partitionBlock);
         if (fileSystemVolumeResult.IsFaulted)
         {
@@ -160,30 +245,11 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IFileSystemVolume>(new Error("No file system volume mounted"));
         }
 
-        // var fileSystemPath = string.Join("/", parts.Skip(1));
-        //
-        // if (!string.IsNullOrWhiteSpace(fileSystemPath))
-        // {
-        //     OnDebugMessage($"Change directory to path '{fileSystemPath}'");
-        //
-        //     await fileSystemVolume.ChangeDirectory(fileSystemPath);
-        // }
-
         return new Result<IFileSystemVolume>(fileSystemVolume);
-
-        // var entries = await fileSystemVolume.ListEntries();
-        //
-        // return new Result<IEnumerable<Entry>>(entries.Select(x => new Entry
-        // {
-        //     Name = x.Name,
-        //     Type = GetEntryType(x.Type),
-        //     Size = x.Size,
-        //     Date = x.Date,
-        //     Attributes = EntryFormatter.FormatProtectionBits(x.ProtectionBits)
-        // }).ToList());
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Stream stream, PartitionBlock partitionBlock)
+    protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Stream stream,
+        PartitionBlock partitionBlock)
     {
         switch (partitionBlock.DosTypeFormatted)
         {
@@ -201,18 +267,5 @@ public abstract class FsCommandBase : CommandBase
         }
 
         return new Result<IFileSystemVolume>(new Error($"Unsupported file system '{partitionBlock.DosTypeFormatted}'"));
-    }
-
-    protected EntryType GetEntryType(Hst.Amiga.FileSystems.EntryType type)
-    {
-        return type switch
-        {
-            Amiga.FileSystems.EntryType.Dir => EntryType.Dir,
-            Amiga.FileSystems.EntryType.DirLink => EntryType.Dir,
-            Amiga.FileSystems.EntryType.File => EntryType.File,
-            Amiga.FileSystems.EntryType.FileLink => EntryType.File,
-            Amiga.FileSystems.EntryType.SoftLink => EntryType.File,
-            _ => throw new IOException($"Invalid entry type '{type}'")
-        };
     }
 }
