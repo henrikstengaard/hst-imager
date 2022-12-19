@@ -50,6 +50,8 @@ public class FsCopyCommand : FsCommandBase
             return new Result(destEntryWriterResult.Error);
         }
 
+        var srcRootPath = srcEntryIteratorResult.Value.RootPath;
+
         // iterate through source entries and write in destination
         var filesCount = 0;
         var dirsCount = 0;
@@ -70,19 +72,23 @@ public class FsCopyCommand : FsCommandBase
                         {
                             continue;
                         }
+
                         dirsCount++;
+                        entry.Path = TrimRootPath(srcRootPath, entry.Path);
                         await destEntryWriterResult.Value.CreateDirectory(entry);
                         break;
                     case EntryType.File:
                     {
                         filesCount++;
                         totalBytes += entry.Size;
+                        var entryPath = TrimRootPath(srcRootPath, entry.Path);
                         if (!quiet)
                         {
-                            OnInformationMessage($"{entry.Path} ({entry.Size.FormatBytes()})");
+                            OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
                         }
 
                         await using var stream = await srcEntryIterator.OpenEntry(entry.Path);
+                        entry.Path = entryPath;
                         await destEntryWriterResult.Value.WriteEntry(entry, stream);
                         break;
                     }
@@ -96,6 +102,15 @@ public class FsCopyCommand : FsCommandBase
             $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}, {totalBytes.FormatBytes()} copied in {stopwatch.Elapsed.FormatElapsed()}");
 
         return new Result();
+    }
+
+    private static string TrimRootPath(string rootPath, string entryPath)
+    {
+        var trimmedEntryPath = rootPath.Length > 0 ? entryPath.Substring(rootPath.Length) : entryPath;
+
+        return trimmedEntryPath.StartsWith("\\") || trimmedEntryPath.StartsWith("/")
+            ? trimmedEntryPath.Substring(1)
+            : trimmedEntryPath;
     }
 
     private static string RemoveDiacritics(string text)

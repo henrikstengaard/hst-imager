@@ -49,7 +49,8 @@ public abstract class FsCommandBase : CommandBase
         }
 
         // adf
-        if (File.Exists(mediaResult.Value.MediaPath) && (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
+        if (File.Exists(mediaResult.Value.MediaPath) &&
+            (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
                 StringComparison.OrdinalIgnoreCase))
         {
             var adfStream = File.OpenRead(mediaResult.Value.MediaPath);
@@ -94,25 +95,25 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"));
     }
 
-    protected async Task<Result<IEntryWriter>> GetEntryWriter(string path)
+    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath)
     {
-        // directory must exist, should be able to handle only part of the directory exists
-        if (Directory.Exists(path))
-        {
-            return new Result<IEntryWriter>(new DirectoryEntryWriter(path));
-        }
+        // resolve media path
+        var mediaResult = ResolveMedia(destPath);
 
-        var mediaResult = ResolveMedia(path);
+        // return directory writer, if media path doesn't exist. otherwise return error
         if (mediaResult.IsFaulted)
         {
-            return new Result<IEntryWriter>(mediaResult.Error);
+            return mediaResult.Error is PathNotFoundError
+                ? new Result<IEntryWriter>(new DirectoryEntryWriter(destPath))
+                : new Result<IEntryWriter>(mediaResult.Error);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
 
         // adf
-        if (File.Exists(mediaResult.Value.MediaPath) && (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
+        if (File.Exists(mediaResult.Value.MediaPath) &&
+            (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
                 StringComparison.OrdinalIgnoreCase))
         {
             var adfStream = File.Open(mediaResult.Value.MediaPath, FileMode.Open, FileAccess.ReadWrite);
@@ -125,7 +126,7 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfStream,
                 mediaResult.Value.VirtualPath, fileSystemVolumeResult.Value));
         }
-        
+
         // disk
         var media = commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
         if (media.IsFaulted)
@@ -200,7 +201,7 @@ public abstract class FsCommandBase : CommandBase
     protected async Task<Result<IFileSystemVolume>> MountAdfFileSystemVolume(Stream stream)
     {
         OnDebugMessage("Mounting ADF file system volume using Fast File System");
-        
+
         var fileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
 
         OnDebugMessage($"Volume '{fileSystemVolume.Name}'");
@@ -253,6 +254,7 @@ public abstract class FsCommandBase : CommandBase
     {
         switch (partitionBlock.DosTypeFormatted)
         {
+            case "DOS\\0":
             case "DOS\\1":
             case "DOS\\2":
             case "DOS\\3":

@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -23,6 +22,8 @@ public class DirectoryEntryIterator : IEntryIterator
         this.isFirst = true;
     }
 
+    public string RootPath => rootPath;
+    
     public Entry Current => currentEntry;
 
     public Task<bool> Next()

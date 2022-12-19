@@ -37,7 +37,7 @@ public static class AdfCommandFactory
             description: "Set bootable.",
             getDefaultValue: () => false);
         
-        var adfCreateCommand = new Command("create", "Create ADF file.");
+        var adfCreateCommand = new Command("create", "Create ADF disk image file.");
         adfCreateCommand.SetHandler(CommandHandler.AdfCreate, adfPathArgument, formatOption, nameOption, dosTypeOption, bootableOption);
         adfCreateCommand.AddArgument(adfPathArgument);
         adfCreateCommand.AddOption(formatOption);

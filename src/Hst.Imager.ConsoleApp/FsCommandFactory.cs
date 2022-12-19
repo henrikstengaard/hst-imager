@@ -25,7 +25,7 @@ public static class FsCommandFactory
             description: "Recursively list sub-directories.",
             getDefaultValue: () => false);
         
-        var fsDirCommand = new Command("dir", "Displays a list of files and subdirectories in a directory.");
+        var fsDirCommand = new Command("dir", "List files and subdirectories in a directory.");
         fsDirCommand.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption);
         fsDirCommand.AddArgument(pathArgument);
         fsDirCommand.AddOption(recursiveOption);

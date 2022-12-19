@@ -173,6 +173,7 @@
 
             switch (partitionBlock.DosTypeFormatted)
             {
+                case "DOS\\0":
                 case "DOS\\1":
                 case "DOS\\2":
                 case "DOS\\3":

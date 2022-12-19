@@ -48,6 +48,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public string RootPath => rootPath;
+    
     public Entry Current => currentEntry;
 
     public async Task<bool> Next()

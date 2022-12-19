@@ -36,7 +36,7 @@ public class AdfCreateCommand : CommandBase
     }
 
     private static readonly Regex
-        DosTypeRegex = new Regex("^DOS[1-7]$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        DosTypeRegex = new Regex("^DOS[0-7]$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public override async Task<Result> Execute(CancellationToken token)
     {
