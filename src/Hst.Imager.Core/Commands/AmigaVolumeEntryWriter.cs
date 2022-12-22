@@ -46,49 +46,42 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     
     public async Task CreateDirectory(Entry entry)
     {
-        var dirPath = Path.GetDirectoryName(entry.Path) ?? "/";
-        var dirName = Path.GetFileName(entry.Path);
-        IEnumerable<Hst.Amiga.FileSystems.Entry> entries;
+        await fileSystemVolume.ChangeDirectory("/");
+        var parts = entry.Path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
-        if (currentPath != dirPath)
+        for (var i = 0; i < parts.Length; i++)
         {
-            await fileSystemVolume.ChangeDirectory("/");
-            var parts = dirPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-    
-            foreach (var part in parts)
+            var part = parts[i];
+            
+            IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
+
+            var dirEntry = entries.FirstOrDefault(x =>
+                x.Name.Equals(part, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
+            
+            if (dirEntry == null)
             {
-                entries = (await fileSystemVolume.ListEntries()).ToList();
-
-                if (!entries.Any(x => x.Name.Equals(part, StringComparison.OrdinalIgnoreCase)))
-                {
-                    await fileSystemVolume.CreateDirectory(part);
-                }
-
-                await fileSystemVolume.ChangeDirectory(part);
+                await fileSystemVolume.CreateDirectory(part);
             }
 
-            currentPath = dirPath;
+            if (i == parts.Length - 1)
+            {
+                await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
+        
+                if (entry.Date.HasValue)
+                {
+                    await fileSystemVolume.SetDate(part, entry.Date.Value);
+                }
+        
+                if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
+                {
+                    await fileSystemVolume.SetComment(part, entry.Properties["Comment"]);
+                }
+            }
+
+            await fileSystemVolume.ChangeDirectory(part);
         }
-        
-        entries = (await fileSystemVolume.ListEntries()).ToList();
-        if (entries.Any(x => x.Name.Equals(dirName, StringComparison.OrdinalIgnoreCase)))
-        {
-            return;
-        }
-        
-        await fileSystemVolume.CreateDirectory(dirName);
-        
-        await fileSystemVolume.SetProtectionBits(dirName, GetProtectionBits(entry.Attributes));
-        
-        if (entry.Date.HasValue)
-        {
-            await fileSystemVolume.SetDate(dirName, entry.Date.Value);
-        }
-        
-        if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
-        {
-            await fileSystemVolume.SetComment(dirName, entry.Properties["Comment"]);
-        }
+
+        currentPath = entry.Path;
     }
 
     public async Task WriteEntry(Entry entry, Stream stream)
@@ -122,26 +115,27 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         }
 
         await fileSystemVolume.CreateFile(fileName);
-        await using var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append);
-        
-        int bytesRead;
-        do
+
+        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append))
         {
-            bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-            await entryStream.WriteAsync(buffer, 0, bytesRead);
-        } while (bytesRead == buffer.Length);
+            int bytesRead;
+            do
+            {
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                await entryStream.WriteAsync(buffer, 0, bytesRead);
+            } while (bytesRead == buffer.Length);
+        }
 
         await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
         
-        if (entry.Date.HasValue)
-        {
-            Console.WriteLine($"set date '{entry.Date.Value}'");
-            await fileSystemVolume.SetDate(fileName, entry.Date.Value);
-        }
-
         if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
         {
             await fileSystemVolume.SetComment(fileName, entry.Properties["Comment"]);
+        }
+        
+        if (entry.Date.HasValue)
+        {
+            await fileSystemVolume.SetDate(fileName, entry.Date.Value);
         }
     }
 

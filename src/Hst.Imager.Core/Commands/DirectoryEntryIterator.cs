@@ -70,7 +70,7 @@ public class DirectoryEntryIterator : IEntryIterator
             this.nextEntries.Push(new Entry
             {
                 Name = dirInfo.Name,
-                Path = GetEntryPath(dirInfo.FullName),
+                Path = dirInfo.FullName,
                 Date = dirInfo.LastWriteTime,
                 Size = 0,
                 Type = EntryType.Dir
@@ -82,7 +82,7 @@ public class DirectoryEntryIterator : IEntryIterator
             this.nextEntries.Push(new Entry
             {
                 Name = fileInfo.Name,
-                Path = GetEntryPath(fileInfo.FullName),
+                Path = fileInfo.FullName,
                 Date = fileInfo.LastWriteTime,
                 Size = fileInfo.Length,
                 Type = EntryType.File

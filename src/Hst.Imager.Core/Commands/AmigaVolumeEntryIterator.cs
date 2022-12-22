@@ -77,9 +77,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
     public async Task<Stream> OpenEntry(string path)
     {
-        
         await fileSystemVolume.ChangeDirectory("/");
-        var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
         
         for (var i = 0; i < parts.Length - 1; i++)
         {
@@ -92,7 +91,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     private async Task EnqueueDirectory(string currentPath)
     {
         await fileSystemVolume.ChangeDirectory("/");
-        foreach (var name in currentPath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var name in currentPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries))
         {
             await fileSystemVolume.ChangeDirectory(name);
         }

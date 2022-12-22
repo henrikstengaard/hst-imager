@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -59,38 +60,41 @@ public class FsCopyCommand : FsCommandBase
 
         stopwatch.Start();
 
-        using (var srcEntryIterator = srcEntryIteratorResult.Value)
+        using (var destEntryWriter = destEntryWriterResult.Value)
         {
-            while (await srcEntryIterator.Next())
+            using (var srcEntryIterator = srcEntryIteratorResult.Value)
             {
-                var entry = srcEntryIterator.Current;
-
-                switch (entry.Type)
+                while (await srcEntryIterator.Next())
                 {
-                    case EntryType.Dir:
-                        if (!recursive)
-                        {
-                            continue;
-                        }
+                    var entry = srcEntryIterator.Current;
 
-                        dirsCount++;
-                        entry.Path = TrimRootPath(srcRootPath, entry.Path);
-                        await destEntryWriterResult.Value.CreateDirectory(entry);
-                        break;
-                    case EntryType.File:
+                    switch (entry.Type)
                     {
-                        filesCount++;
-                        totalBytes += entry.Size;
-                        var entryPath = TrimRootPath(srcRootPath, entry.Path);
-                        if (!quiet)
-                        {
-                            OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
-                        }
+                        case EntryType.Dir:
+                            if (!recursive)
+                            {
+                                continue;
+                            }
 
-                        await using var stream = await srcEntryIterator.OpenEntry(entry.Path);
-                        entry.Path = entryPath;
-                        await destEntryWriterResult.Value.WriteEntry(entry, stream);
-                        break;
+                            dirsCount++;
+                            entry.Path = TrimRootPath(srcRootPath, entry.Path);
+                            await destEntryWriter.CreateDirectory(entry);
+                            break;
+                        case EntryType.File:
+                        {
+                            filesCount++;
+                            totalBytes += entry.Size;
+                            var entryPath = TrimRootPath(srcRootPath, entry.Path);
+                            if (!quiet)
+                            {
+                                OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
+                            }
+
+                            await using var stream = await srcEntryIterator.OpenEntry(entry.Path);
+                            entry.Path = entryPath;
+                            await destEntryWriter.WriteEntry(entry, stream);
+                            break;
+                        }
                     }
                 }
             }
