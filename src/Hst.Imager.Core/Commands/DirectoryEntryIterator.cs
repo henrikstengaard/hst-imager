@@ -49,9 +49,9 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.FromResult(true);
     }
 
-    public Task<Stream> OpenEntry(string entryPath)
+    public Task<Stream> OpenEntry(Entry entry)
     {
-        return Task.FromResult<Stream>(File.OpenRead(Path.Combine(this.rootPath, entryPath)));
+        return Task.FromResult<Stream>(File.OpenRead(Path.Combine(this.rootPath, entry.Path)));
     }
 
     private string GetEntryPath(string entryPath)

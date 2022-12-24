@@ -89,7 +89,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         var entryPath = Path.Combine(path, entry.Path).Replace("\\", "/");
         var dirPath = Path.GetDirectoryName(entryPath) ?? string.Empty;
         var fileName = Path.GetFileName(entryPath);
-        
+
         if (currentPath != dirPath)
         {
             await fileSystemVolume.ChangeDirectory("/");
@@ -114,9 +114,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             currentPath = dirPath;
         }
 
-        await fileSystemVolume.CreateFile(fileName);
+        await fileSystemVolume.CreateFile(fileName, true, true);
 
-        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append))
+        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true))
         {
             int bytesRead;
             do

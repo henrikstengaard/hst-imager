@@ -10,5 +10,5 @@ public interface IEntryIterator : IDisposable
     string RootPath { get; }
     Entry Current { get; }
     Task<bool> Next();
-    Task<Stream> OpenEntry(string path);
+    Task<Stream> OpenEntry(Entry entry);
 }

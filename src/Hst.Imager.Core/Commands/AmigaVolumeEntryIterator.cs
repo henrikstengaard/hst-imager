@@ -75,17 +75,17 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         return true;
     }
 
-    public async Task<Stream> OpenEntry(string path)
+    public async Task<Stream> OpenEntry(Entry entry)
     {
         await fileSystemVolume.ChangeDirectory("/");
-        var parts = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var components = entry.Path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
         
-        for (var i = 0; i < parts.Length - 1; i++)
+        for (var i = 0; i < components.Length - 1; i++)
         {
-            await fileSystemVolume.ChangeDirectory(parts[i]);
+            await fileSystemVolume.ChangeDirectory(components[i]);
         }
 
-        return await fileSystemVolume.OpenFile(parts[^1], FileMode.Read);
+        return await fileSystemVolume.OpenFile(components[^1], FileMode.Read, true);
     }
 
     private async Task EnqueueDirectory(string currentPath)

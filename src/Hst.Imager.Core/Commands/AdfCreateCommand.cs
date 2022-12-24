@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Amiga;
 using Amiga.Extensions;
 using Amiga.FileSystems.FastFileSystem;
+using Amiga.FileSystems.FastFileSystem.Blocks;
 using Amiga.RigidDiskBlocks;
 using Hst.Core;
 using Hst.Core.Extensions;
@@ -75,14 +76,21 @@ public class AdfCreateCommand : CommandBase
             FloppyDiskConstants.BlockSize,
             FloppyDiskConstants.BlockSize, dosTypeBytes, name);
 
-        if (bootable)
+        if (!bootable)
         {
-            OnInformationMessage($"- Bootable");
-            adfStream.Seek(4, SeekOrigin.Begin);
-            await adfStream.WriteAsync(FloppyDiskConstants.BootableBootBlockBytes, 0,
-                FloppyDiskConstants.BootableBootBlockBytes.Length);
+            return new Result();
         }
         
+        OnInformationMessage($"- Bootable");
+        adfStream.Seek(0, SeekOrigin.Begin);
+
+        var bootBlock = new BootBlock
+        {
+            DosType = dosTypeBytes
+        };
+        var bootBlockBytes = BootBlockBuilder.Build(bootBlock, 1024);
+        await adfStream.WriteAsync(bootBlockBytes, 0, bootBlockBytes.Length);
+
         return new Result();
     }
 }

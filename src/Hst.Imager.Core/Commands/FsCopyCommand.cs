@@ -90,7 +90,7 @@ public class FsCopyCommand : FsCommandBase
                                 OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
                             }
 
-                            await using var stream = await srcEntryIterator.OpenEntry(entry.Path);
+                            await using var stream = await srcEntryIterator.OpenEntry(entry);
                             entry.Path = entryPath;
                             await destEntryWriter.WriteEntry(entry, stream);
                             break;

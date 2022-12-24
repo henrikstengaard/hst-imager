@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DiscUtils.Iso9660;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
 using Entry = Models.FileSystems.Entry;
@@ -59,6 +60,19 @@ public class FsDirCommand : FsCommandBase
             return new Result();
         }
 
+        // iso
+        if (File.Exists(pathResult.Value.MediaPath) &&
+            (Path.GetExtension(pathResult.Value.MediaPath) ?? string.Empty).Equals(".iso",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var isoStream = File.OpenRead(pathResult.Value.MediaPath);
+            var cdReader = new CDReader(isoStream, true);
+
+            var entryIterator = new IsoEntryIterator(isoStream, pathResult.Value.VirtualPath, cdReader, recursive);
+            await ListEntries(entryIterator, pathResult.Value.VirtualPath);
+            return new Result();
+        }
+        
         var mediaResult =
             commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath, allowPhysicalDrive: true);
         if (mediaResult.IsFaulted)

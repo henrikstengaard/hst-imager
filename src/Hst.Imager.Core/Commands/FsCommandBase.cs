@@ -9,6 +9,7 @@ using Amiga.FileSystems;
 using Amiga.FileSystems.FastFileSystem;
 using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
+using DiscUtils.Iso9660;
 using Hst.Core;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
@@ -64,6 +65,18 @@ public abstract class FsCommandBase : CommandBase
                 mediaResult.Value.VirtualPath, fileSystemVolumeResult.Value, recursive));
         }
 
+        // iso
+        if (File.Exists(mediaResult.Value.MediaPath) &&
+            (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".iso",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var isoStream = File.OpenRead(mediaResult.Value.MediaPath);
+            var cdReader = new CDReader(isoStream, true);
+
+            return new Result<IEntryIterator>(new IsoEntryIterator(isoStream,
+                mediaResult.Value.VirtualPath, cdReader, recursive));
+        }
+        
         // disk
         if (string.IsNullOrEmpty(mediaResult.Value.VirtualPath))
         {
