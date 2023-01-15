@@ -5,7 +5,7 @@ using Models.FileSystems;
 
 public class EntriesInfo
 {
-    public string DiskPath { get; set; }
-    public string FileSystemPath { get; set; }
+    public string Path { get; set; }
     public IEnumerable<Entry> Entries { get; set; }
+    public bool Recursive { get; set; }
 }

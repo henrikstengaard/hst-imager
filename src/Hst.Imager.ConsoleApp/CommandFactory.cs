@@ -2,6 +2,7 @@
 {
     using System.CommandLine;
     using System.IO;
+    using Core.Commands;
 
     public static class CommandFactory
     {
@@ -13,6 +14,11 @@
             new[] { "--verbose" },
             description: "Verbose output.");
 
+        public static readonly Option<FormatEnum> FormatOption = new(
+            new[] { "--format", "-f" },
+            description: "Format of output.",
+            getDefaultValue: () => FormatEnum.Table);
+        
         public static Command CreateRootCommand()
         {
             var rootCommand = new RootCommand

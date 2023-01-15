@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using DiscUtils.Iso9660;
 using Entry = Models.FileSystems.Entry;
 
-public class IsoEntryIterator : IEntryIterator
+public class Iso9660EntryIterator : IEntryIterator
 {
     private readonly Stream stream;
     private readonly string rootPath;
@@ -20,7 +20,7 @@ public class IsoEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool disposed;
 
-    public IsoEntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
+    public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
         this.rootPath = rootPath ?? string.Empty;
@@ -77,7 +77,7 @@ public class IsoEntryIterator : IEntryIterator
 
     public Task<Stream> OpenEntry(Entry entry)
     {
-        if (entry is IsoEntry isoEntry)
+        if (entry is Iso9660Entry isoEntry)
         {
             return Task.FromResult<Stream>(cdReader.OpenFile(isoEntry.IsoPath, FileMode.Open));
         }
@@ -89,9 +89,9 @@ public class IsoEntryIterator : IEntryIterator
     {
         foreach (var dirName in cdReader.GetDirectories(currentPath).OrderByDescending(x => x).ToList())
         {
-            this.nextEntries.Push(new IsoEntry
+            this.nextEntries.Push(new Iso9660Entry
             {
-                Name = Path.GetFileName(dirName),
+                Name = FormatPath(Path.Combine(currentPath, Path.GetFileName(dirName))),
                 Path = dirName,
                 IsoPath = dirName,
                 Date = cdReader.GetLastWriteTime(dirName),
@@ -102,9 +102,9 @@ public class IsoEntryIterator : IEntryIterator
         
         foreach (var fileName in cdReader.GetFiles(currentPath).OrderByDescending(x => x).ToList())
         {
-            this.nextEntries.Push(new IsoEntry
+            this.nextEntries.Push(new Iso9660Entry
             {
-                Name = GetFileName(fileName),
+                Name = FormatPath(Path.Combine(currentPath, GetFileName(fileName))),
                 Path = Iso9660ExtensionRegex.Replace(fileName, string.Empty),
                 IsoPath = fileName,
                 Date = cdReader.GetLastWriteTime(fileName),
@@ -119,6 +119,11 @@ public class IsoEntryIterator : IEntryIterator
     private static readonly Regex Iso9660ExtensionRegex =
         new Regex(";\\d+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+    private string FormatPath(string path)
+    {
+        return path.StartsWith("\\") ? path.Substring(1) : path;
+    }
+    
     private string GetFileName(string path)
     {
         return Path.GetFileName(Iso9660ExtensionRegex.Replace(path, ""));

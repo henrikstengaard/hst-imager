@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -12,15 +11,15 @@ using Hst.Core;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
-public class FsCopyCommand : FsCommandBase
+public class FsExtractCommand : FsCommandBase
 {
-    private readonly ILogger<FsCopyCommand> logger;
+    private readonly ILogger<FsExtractCommand> logger;
     private readonly string srcPath;
     private readonly string destPath;
     private readonly bool recursive;
     private readonly bool quiet;
 
-    public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
+    public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool quiet)
         : base(commandHelper, physicalDrives)
     {
@@ -33,12 +32,12 @@ public class FsCopyCommand : FsCommandBase
 
     public override async Task<Result> Execute(CancellationToken token)
     {
-        OnInformationMessage($"Copying from source Path '{srcPath}' to destination path '{destPath}'");
+        OnInformationMessage($"Extracting from source path '{srcPath}' to destination path '{destPath}'");
 
         var stopwatch = new Stopwatch();
 
-        // get source copy entry iterator
-        var srcEntryIteratorResult = await GetCopyEntryIterator(srcPath, recursive);
+        // get source extract entry iterator
+        var srcEntryIteratorResult = await GetExtractEntryIterator(srcPath, recursive);
         if (srcEntryIteratorResult.IsFaulted)
         {
             return new Result(srcEntryIteratorResult.Error);
@@ -107,23 +106,9 @@ public class FsCopyCommand : FsCommandBase
 
         return new Result();
     }
-
-    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(string path, bool recursive)
+    
+    protected async Task<Result<IEntryIterator>> GetExtractEntryIterator(string path, bool recursive)
     {
-        // directory entry iterator
-        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
-        if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
-        {
-            return new Result<IEntryIterator>(directoryEntryIterator.Value);
-        }
-
-        // file entry iterator
-        var fileEntryIterator = await GetFileEntryIterator(path, recursive);
-        if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
-        {
-            return new Result<IEntryIterator>(fileEntryIterator.Value);
-        }
-        
         OnDebugMessage($"Resolving path '{path}'");
 
         var mediaResult = ResolveMedia(path);
@@ -134,15 +119,36 @@ public class FsCopyCommand : FsCommandBase
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
-        
-        // disk entry iterator
-        var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive);
-        if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
+
+        if (string.IsNullOrWhiteSpace(mediaResult.Value.MediaPath))
         {
-            return new Result<IEntryIterator>(diskEntryIterator.Value);
+            return new Result<IEntryIterator>(
+                new PathNotFoundError($"Media path not defined",
+                    mediaResult.Value.MediaPath));
+        }
+        
+        // lha
+        var lhaEntryIterator = await GetLhaEntryIterator(mediaResult.Value, recursive);
+        if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(lhaEntryIterator.Value);
         }
 
-        return new Result<IEntryIterator>(new Error($"Unsupported path '{path}'"));
+        // adf
+        var adfEntryIterator = await GetAdfEntryIterator(mediaResult.Value, recursive);
+        if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(adfEntryIterator.Value);
+        }
+        
+        // iso
+        var iso9660EntryIterator = await GetIso9660EntryIterator(mediaResult.Value, recursive);
+        if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(iso9660EntryIterator.Value);
+        }
+        
+        return new Result<IEntryIterator>(new Error($"File system at path '{path}' not supported"));
     }
 
     private static string TrimRootPath(string rootPath, string entryPath)

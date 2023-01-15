@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Amiga.FileSystems.Pfs3;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -36,6 +37,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
         if (disposing)
         {
+            Console.WriteLine("Flushing...");
+            fileSystemVolume.Flush().GetAwaiter().GetResult();
             stream.Dispose();
         }
 
@@ -90,8 +93,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         var dirPath = Path.GetDirectoryName(entryPath) ?? string.Empty;
         var fileName = Path.GetFileName(entryPath);
 
-        if (currentPath != dirPath)
-        {
+        // if (currentPath != dirPath)
+        // {
             await fileSystemVolume.ChangeDirectory("/");
 
             if (!string.IsNullOrEmpty(dirPath))
@@ -111,8 +114,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 }
             }
             
-            currentPath = dirPath;
-        }
+        //     currentPath = dirPath;
+        // }
 
         await fileSystemVolume.CreateFile(fileName, true, true);
 
@@ -127,7 +130,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         }
 
         await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
-        
+
         if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
         {
             await fileSystemVolume.SetComment(fileName, entry.Properties["Comment"]);

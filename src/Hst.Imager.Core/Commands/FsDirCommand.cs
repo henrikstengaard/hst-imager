@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DiscUtils.Iso9660;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
 using Entry = Models.FileSystems.Entry;
@@ -42,45 +41,39 @@ public class FsDirCommand : FsCommandBase
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{pathResult.Value.VirtualPath}'");
 
-        // adf
-        if (System.IO.File.Exists(pathResult.Value.MediaPath) &&
-            (Path.GetExtension(pathResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
-                StringComparison.OrdinalIgnoreCase))
+        // lha
+        var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
+        if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
-            var adfStream = System.IO.File.OpenRead(pathResult.Value.MediaPath);
-            var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
-            if (fileSystemVolumeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
-            }
-
-            var entryIterator = new AmigaVolumeEntryIterator(adfStream,
-                pathResult.Value.VirtualPath, fileSystemVolumeResult.Value, recursive);
-            await ListEntries(entryIterator, pathResult.Value.VirtualPath);
+            await ListEntries(lhaEntryIterator.Value, pathResult.Value.VirtualPath);
             return new Result();
         }
 
-        // iso
-        if (File.Exists(pathResult.Value.MediaPath) &&
-            (Path.GetExtension(pathResult.Value.MediaPath) ?? string.Empty).Equals(".iso",
-                StringComparison.OrdinalIgnoreCase))
+        // adf
+        var adfEntryIterator = await GetAdfEntryIterator(pathResult.Value, recursive);
+        if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
         {
-            var isoStream = File.OpenRead(pathResult.Value.MediaPath);
-            var cdReader = new CDReader(isoStream, true);
-
-            var entryIterator = new IsoEntryIterator(isoStream, pathResult.Value.VirtualPath, cdReader, recursive);
-            await ListEntries(entryIterator, pathResult.Value.VirtualPath);
+            await ListEntries(adfEntryIterator.Value, pathResult.Value.VirtualPath);
             return new Result();
         }
         
-        var mediaResult =
-            commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath, allowPhysicalDrive: true);
-        if (mediaResult.IsFaulted)
+        // iso
+        var iso9660EntryIterator = await GetIso9660EntryIterator(pathResult.Value, recursive);
+        if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
         {
-            return new Result(mediaResult.Error);
+            await ListEntries(iso9660EntryIterator.Value, pathResult.Value.VirtualPath);
+            return new Result();
+        }
+        
+        // disk
+        var readableMediaResult =
+            commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath, allowPhysicalDrive: true);
+        if (readableMediaResult.IsFaulted)
+        {
+            return new Result(readableMediaResult.Error);
         }
 
-        using var media = mediaResult.Value;
+        using var media = readableMediaResult.Value;
         await using var stream = media.Stream;
 
         var parts = (pathResult.Value.VirtualPath ?? string.Empty).Split(new[] { '\\', '/' });
@@ -138,8 +131,7 @@ public class FsDirCommand : FsCommandBase
 
         OnEntriesRead(new EntriesInfo
         {
-            DiskPath = path,
-            FileSystemPath = string.Empty,
+            Path = path,
             Entries = entries
         });
 
@@ -159,8 +151,7 @@ public class FsDirCommand : FsCommandBase
 
         OnEntriesRead(new EntriesInfo
         {
-            DiskPath = path,
-            FileSystemPath = fileSystemPath,
+            Path = path,
             Entries = rigidDiskBlock.PartitionBlocks.Select(x => new Entry
             {
                 Name = x.DriveName,
@@ -190,28 +181,19 @@ public class FsDirCommand : FsCommandBase
 
     private async Task ListEntries(IEntryIterator entryIterator, string fileSystemPath)
     {
-        var dirs = new List<Entry>();
-        var files = new List<Entry>();
+        var entries = new List<Entry>();
 
         while (await entryIterator.Next())
         {
             var entry = entryIterator.Current;
-            switch (entry.Type)
-            {
-                case EntryType.Dir:
-                    dirs.Add(entry);
-                    break;
-                case EntryType.File:
-                    files.Add(entry);
-                    break;
-            }
+            entries.Add(entry);
         }
 
         OnEntriesRead(new EntriesInfo
         {
-            DiskPath = path,
-            FileSystemPath = fileSystemPath,
-            Entries = dirs.OrderBy(x => x.Name).Concat(files.OrderBy(x => x.Name)).ToList()
+            Path = path,
+            Recursive = recursive,
+            Entries = entries.OrderBy(x => x.Path)
         });
     }
 

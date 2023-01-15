@@ -389,13 +389,13 @@
                 await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
-        public static async Task FsDir(string path, bool recursive)
+        public static async Task FsDir(string path, bool recursive, FormatEnum format)
         {
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, recursive);
             command.EntriesRead += (_, args) =>
             {
-                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo));
+                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, format));
             };
             await Execute(command);
         }
@@ -407,6 +407,24 @@
             await Execute(command);
         }
 
+        public static async Task ArcList(string path, bool recursive)
+        {
+            var command = new ArcListCommand(GetLogger<ArcListCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, recursive);
+            command.EntriesRead += (_, args) =>
+            {
+                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, FormatEnum.Table));
+            };
+            await Execute(command);
+        }
+
+        public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool quiet)
+        {
+            var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), srcPath, destPath, recursive, quiet);
+            await Execute(command);
+        }
+        
         public static async Task AdfCreate(string adfPath, bool format, string name, string dosType, bool recursive)
         {
             var command = new AdfCreateCommand(GetLogger<AdfCreateCommand>(), GetCommandHelper(),

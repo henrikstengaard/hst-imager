@@ -106,13 +106,19 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                 ? entry.Name
                 : string.Concat(currentPath, "/", entry.Name);
 
+            var entryName = entryPath;
+            if (!string.IsNullOrEmpty(rootPath))
+            {
+                entryName = entryName.Substring(rootPath.Length + 1);
+            }
+            
             switch (entry.Type)
             {
                 case EntryType.DirLink:
                 case EntryType.Dir:
                     directories.Add(new Entry
                     {
-                        Name = entry.Name,
+                        Name = entryName,
                         Path = entryPath,
                         Date = entry.Date,
                         Size = 0,
@@ -128,7 +134,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                 case EntryType.File:
                     files.Add(new Entry
                     {
-                        Name = entry.Name,
+                        Name = entryName,
                         Path = entryPath,
                         Date = entry.Date,
                         Size = entry.Size,

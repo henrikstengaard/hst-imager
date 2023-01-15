@@ -6,9 +6,12 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
+    using Amiga.FileSystems.Pfs3;
+    using Core.Commands;
     using Serilog;
     using Serilog.Core;
     using Serilog.Events;
+    using ILogger = Serilog.ILogger;
 
     public static class Program
     {
@@ -36,6 +39,7 @@
         {
             Log.Logger = loggerConfig
                 .CreateLogger();
+            var inMemoryPfs3Logger = new InMemoryPfs3Logger();
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
@@ -46,23 +50,37 @@
             {
                 var verbose = context.ParseResult.GetValueForOption(CommandFactory.VerboseOption);
                 var logFile = context.ParseResult.GetValueForOption(CommandFactory.LogFileOption);
+                var format = context.ParseResult.GetValueForOption(CommandFactory.FormatOption);
 
                 AppState.Instance.LoggingLevelSwitch.MinimumLevel =
                     verbose ? LogEventLevel.Debug : LogEventLevel.Information;
-                
+
+                if (format == FormatEnum.Json)
+                {
+                    AppState.Instance.LoggingLevelSwitch.MinimumLevel = LogEventLevel.Error;
+                }
+
                 AddLogFile(logFile);
 
+                if (verbose)
+                {
+                    Pfs3Logger.Instance.RegisterLogger(new SerilogPfs3Logger());
+                }
+
                 var appState = AppState.Instance;
-                var app = $"Hst Imager v{appState.Version.Major}.{appState.Version.Minor}.{appState.Version.Build} ({appState.BuildDate})";
+                var app =
+                    $"Hst Imager v{appState.Version.Major}.{appState.Version.Minor}.{appState.Version.Build} ({appState.BuildDate})";
                 var author = "Henrik Noerfjand Stengaard";
-            
+
                 Log.Logger.Information(app);
                 Log.Logger.Information(author);
                 Log.Logger.Information($"[CMD] {string.Join(" ", args)}");
-                
+
                 await next(context);
             }).UseDefaults().Build();
 
+            //args = new[] { "fs", "extract", @"D:\Work\First Realize\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net6.0\WHDLoad_usr.lha\WHDLoad\C", @"D:\Work\First Realize\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net6.0\Superfrog_v1.5_0035.vhd\rdb\dh0\C", "--verbose" };
+            
             return await parser.InvokeAsync(args);
         }
     }
