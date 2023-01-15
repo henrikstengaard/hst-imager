@@ -80,7 +80,7 @@ public static class FsCommandFactory
         var recursiveOption = new Option<bool>(
             new[] { "--recursive", "-r" },
             description: "Recursively extract sub-directories.",
-            getDefaultValue: () => false);
+            getDefaultValue: () => true);
         
         var quietOption = new Option<bool>(
             new[] { "--quiet", "-q" },

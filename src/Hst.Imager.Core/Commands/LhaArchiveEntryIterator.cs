@@ -80,7 +80,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
         {
             throw new IOException($"Entry '{entry.Path}' not found");
         }
-        
+
         var output = new MemoryStream();
         this.lhaArchive.Extract(lhaEntryIndex[entry.Path], output);
         output.Position = 0;
@@ -97,15 +97,22 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
             var entryName = GetEntryName(lhaEntry.Name);
             var entryPath = entryName;
-            
+
             if (!string.IsNullOrEmpty(currentPath))
             {
-                if (lhaEntry.Name.Replace("\\", "/").IndexOf(currentPath.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase) < 0)
+                if (lhaEntry.Name.Replace("\\", "/")
+                        .IndexOf(currentPath.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
 
                 entryName = entryName.Substring(currentPath.Length + 1);
+            }
+
+            if (!recursive && (entryName.IndexOf("/", StringComparison.Ordinal) >= 0 ||
+                entryName.IndexOf("\\", StringComparison.Ordinal) >= 0))
+            {
+                continue;
             }
 
             lhaEntryIndex.Add(entryPath, lhaEntry);
@@ -119,7 +126,8 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 Type = (lhaEntry.UnixMode & Constants.UNIX_FILE_DIRECTORY) == Constants.UNIX_FILE_DIRECTORY
                     ? Models.FileSystems.EntryType.Dir
                     : Models.FileSystems.EntryType.File,
-                Attributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute)),
+                Attributes =
+                    EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute)),
                 Properties = new Dictionary<string, string>
                 {
                     { "Comment", GetEntryComment(lhaEntry.Name) }
@@ -139,9 +147,10 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 break;
             }
         }
+
         return name.Substring(0, i);
     }
-    
+
     // get lha entry name by stripping away other chars after zero byte
     private string GetEntryComment(string name)
     {
@@ -153,6 +162,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 break;
             }
         }
+
         return i < name.Length - 1 ? name.Substring(i + 1) : string.Empty;
     }
 }

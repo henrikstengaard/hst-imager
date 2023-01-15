@@ -89,9 +89,21 @@ public class Iso9660EntryIterator : IEntryIterator
     {
         foreach (var dirName in cdReader.GetDirectories(currentPath).OrderByDescending(x => x).ToList())
         {
+            var entryName = FormatPath(Path.Combine(currentPath, Path.GetFileName(dirName)));
+            
+            if (!string.IsNullOrEmpty(rootPath))
+            {
+                if (entryName.Replace("\\", "/").IndexOf(rootPath.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                entryName = entryName.Substring(rootPath.Length + 1);
+            }
+            
             this.nextEntries.Push(new Iso9660Entry
             {
-                Name = FormatPath(Path.Combine(currentPath, Path.GetFileName(dirName))),
+                Name = entryName,
                 Path = dirName,
                 IsoPath = dirName,
                 Date = cdReader.GetLastWriteTime(dirName),
@@ -102,9 +114,21 @@ public class Iso9660EntryIterator : IEntryIterator
         
         foreach (var fileName in cdReader.GetFiles(currentPath).OrderByDescending(x => x).ToList())
         {
+            var entryName = FormatPath(Path.Combine(currentPath, GetFileName(fileName)));
+            
+            if (!string.IsNullOrEmpty(rootPath))
+            {
+                if (entryName.Replace("\\", "/").IndexOf(rootPath.Replace("\\", "/"), StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    continue;
+                }
+
+                entryName = entryName.Substring(rootPath.Length + 1);
+            }
+            
             this.nextEntries.Push(new Iso9660Entry
             {
-                Name = FormatPath(Path.Combine(currentPath, GetFileName(fileName))),
+                Name = entryName,
                 Path = Iso9660ExtensionRegex.Replace(fileName, string.Empty),
                 IsoPath = fileName,
                 Date = cdReader.GetLastWriteTime(fileName),
