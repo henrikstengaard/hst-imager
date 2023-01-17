@@ -26,7 +26,7 @@
             // act - compare source img to destination img
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             await compareCommand.Execute(cancellationTokenSource.Token);
@@ -58,7 +58,7 @@
 
             // act - compare source img to destination img
             var compareCommand = new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size());
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -79,7 +79,7 @@
             // act - compare source img to destination img
             var compareCommand = new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(), sourcePath,
-                destinationPath, new Size(size, Unit.Bytes));
+                destinationPath, new Size(size, Unit.Bytes), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -118,7 +118,7 @@
             // act - compare source img to destination img
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.False(result.IsSuccess);
             Assert.Equal(typeof(ByteNotEqualError), result.Error.GetType());
@@ -154,7 +154,7 @@
             // act - compare source img to destination img
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.False(result.IsSuccess);
 
@@ -187,7 +187,7 @@
             // act - compare source img to destination img
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
         }
@@ -215,7 +215,7 @@
             // act - compare source img to destination img
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.False(result.IsSuccess);
 

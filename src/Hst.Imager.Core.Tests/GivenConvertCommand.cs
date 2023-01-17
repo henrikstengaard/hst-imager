@@ -26,7 +26,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size());
+                destinationPath, new Size(), 0);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             convertCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
@@ -56,7 +56,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes));
+                destinationPath, new Size(size, Unit.Bytes), 0);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -78,7 +78,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size());
+                destinationPath, new Size(), 0);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -109,7 +109,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes));
+                destinationPath, new Size(size, Unit.Bytes), 0);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

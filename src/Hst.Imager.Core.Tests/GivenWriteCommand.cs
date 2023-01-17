@@ -25,7 +25,7 @@
             // act - write source img to destination img
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size());
+                    sourcePath, destinationPath, new Size(), 0);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -57,7 +57,7 @@
 
             // act - write source img to destination vhd
             var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(sourceBytes.Length, Unit.Bytes));
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(sourceBytes.Length, Unit.Bytes), 0);
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

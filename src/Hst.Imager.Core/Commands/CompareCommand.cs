@@ -18,13 +18,16 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private readonly int retries;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
+        public event EventHandler<IoErrorEventArgs> SrcError;
+        public event EventHandler<IoErrorEventArgs> DestError;
         
         public CompareCommand(ILogger<CompareCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size)
+            string destinationPath, Size size, int retries)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -32,6 +35,7 @@
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.retries = retries;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -69,7 +73,7 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
             
-            var imageVerifier = new ImageVerifier();
+            var imageVerifier = new ImageVerifier(retries: retries);
             imageVerifier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -77,6 +81,9 @@
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
+            imageVerifier.SrcError += (_, args) => OnSrcError(args);
+            imageVerifier.DestError += (_, args) => OnDestError(args);
+
             var result = await imageVerifier.Verify(token, sourceStream, destinationStream, verifySize);
 
             OnInformationMessage($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
@@ -91,5 +98,9 @@
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
         }
+        
+        private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
+
+        private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);
     }
 }

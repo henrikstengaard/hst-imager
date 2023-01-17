@@ -16,20 +16,24 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private readonly int retries;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
+        public event EventHandler<IoErrorEventArgs> SrcError;
+        public event EventHandler<IoErrorEventArgs> DestError;
 
         public ConvertCommand(ILogger<ConvertCommand> logger, ICommandHelper commandHelper,
             string sourcePath,
-            string destinationPath, Size size)
+            string destinationPath, Size size, int retries)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.retries = retries;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -76,7 +80,7 @@
                 destinationStream.SetLength(convertSize);
             }
 
-            var streamCopier = new StreamCopier();
+            var streamCopier = new StreamCopier(retries: retries);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -84,6 +88,8 @@
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
+            streamCopier.SrcError += (_, args) => OnSrcError(args);
+            streamCopier.DestError += (_, args) => OnDestError(args);
             
             var result = await streamCopier.Copy(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
 
@@ -99,5 +105,9 @@
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
         }
+
+        private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
+
+        private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);
     }
 }

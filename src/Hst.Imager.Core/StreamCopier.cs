@@ -12,14 +12,18 @@
     public class StreamCopier
     {
         private readonly int bufferSize;
+        private readonly int retries;
         private readonly System.Timers.Timer timer;
         private bool sendDataProcessed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
+        public event EventHandler<IoErrorEventArgs> SrcError;
+        public event EventHandler<IoErrorEventArgs> DestError;
 
-        public StreamCopier(int bufferSize = 1024 * 1024)
+        public StreamCopier(int bufferSize = 1024 * 1024, int retries = 0)
         {
             this.bufferSize = bufferSize;
+            this.retries = retries;
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
@@ -53,17 +57,34 @@
                 }
 
                 var readBytes = Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
-                SectorResult sectorResult;
-                try
+                SectorResult sectorResult = null;
+
+                var srcRetry = 0;
+                do
                 {
-                    sectorResult = await dataSectorReader.ReadNext(readBytes);
-                }
-                catch (Exception e)
+                    try
+                    {
+                        sectorResult = await dataSectorReader.ReadNext(readBytes);
+                    }
+                    catch (Exception e)
+                    {
+                        if (srcRetry >= retries)
+                        {
+                            throw;
+                        }
+                        
+                        OnSrcError(sourceOffset + bytesProcessed, readBytes, e.ToString());
+                        source.Seek(sourceOffset + bytesProcessed, SeekOrigin.Begin);
+                    }
+
+                    srcRetry++;
+                } while (srcRetry <= retries);
+
+                if (sectorResult == null)
                 {
-                    Console.WriteLine($"processed: {bytesProcessed}, size {size}, buffer size {bufferSize}, read bytes {readBytes}     -");
-                    Console.WriteLine(e);
-                    throw;
+                    throw new IOException("Failed to read from source");
                 }
+                
                 length = Convert.ToInt32(bytesProcessed + sectorResult.BytesRead > size
                     ? size - bytesProcessed
                     : sectorResult.BytesRead);
@@ -79,18 +100,55 @@
                             break;
                         }
 
-                        destination.Seek(destinationOffset + sectorOffsetDiff, SeekOrigin.Begin);
+                        var destRetry = 0;
+                        do
+                        {
+                            var sectorSize = Convert.ToInt32(bytesProcessed + sector.Data.Length > size
+                                ? size - bytesProcessed
+                                : sector.Data.Length);
 
-                        var sectorSize = Convert.ToInt32(bytesProcessed + sector.Data.Length > size
-                            ? size - bytesProcessed
-                            : sector.Data.Length);
+                            try
+                            {
+                                destination.Seek(destinationOffset + sectorOffsetDiff, SeekOrigin.Begin);
 
-                        await destination.WriteAsync(sector.Data, 0, sectorSize, token);
+                                await destination.WriteAsync(sector.Data, 0, sectorSize, token);
+                            }
+                            catch (Exception e)
+                            {
+                                if (destRetry >= retries)
+                                {
+                                    throw;
+                                }
+                        
+                                OnDestError(destinationOffset + bytesProcessed, sectorSize, e.ToString());
+                            }
+
+                            destRetry++;
+                        } while (destRetry <= retries);
                     }
                 }
                 else
                 {
-                    await destination.WriteAsync(sectorResult.Data, 0, length, token);
+                    var destRetry = 0;
+                    do
+                    {
+                        try
+                        {
+                            await destination.WriteAsync(sectorResult.Data, 0, length, token);
+                        }
+                        catch (Exception e)
+                        {
+                            if (destRetry >= retries)
+                            {
+                                throw;
+                            }
+
+                            OnDestError(destinationOffset + bytesProcessed, length, e.ToString());
+                            destination.Seek(destinationOffset + bytesProcessed, SeekOrigin.Begin);
+                        }
+
+                        destRetry++;
+                    } while (destRetry <= retries);
                 }
 
                 bytesProcessed += length;
@@ -126,6 +184,16 @@
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
             sendDataProcessed = false;
+        }
+        
+        private void OnSrcError(long offset, int count, string errorMessage)
+        {
+            SrcError?.Invoke(this, new IoErrorEventArgs(new IoError(offset, count, errorMessage)));
+        }
+        
+        private void OnDestError(long offset, int count, string errorMessage)
+        {
+            DestError?.Invoke(this, new IoErrorEventArgs(new IoError(offset, count, errorMessage)));
         }
     }
 }

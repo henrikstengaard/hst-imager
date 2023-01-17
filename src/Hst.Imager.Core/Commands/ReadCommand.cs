@@ -18,14 +18,17 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private readonly int retries;
         private readonly long? start;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
+        public event EventHandler<IoErrorEventArgs> SrcError;
+        public event EventHandler<IoErrorEventArgs> DestError;
         
         public ReadCommand(ILogger<ReadCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, long? start)
+            string destinationPath, Size size, int retries, long? start)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -33,6 +36,7 @@
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.retries = retries;
             this.start = start;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
@@ -76,7 +80,7 @@
                 destinationStream.SetLength(readSize);
             }
             
-            var streamCopier = new StreamCopier();
+            var streamCopier = new StreamCopier(retries: retries);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -84,6 +88,9 @@
                 OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
+            streamCopier.SrcError += (_, args) => OnSrcError(args);
+            streamCopier.DestError += (_, args) => OnDestError(args);
+
             var result = await streamCopier.Copy(token, sourceStream, destinationStream, readSize, 0, 0, isVhd);
             
             OnInformationMessage($"Read '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
@@ -92,11 +99,13 @@
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond) =>
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
-        }
+
+        private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
+
+        private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);
     }
 }

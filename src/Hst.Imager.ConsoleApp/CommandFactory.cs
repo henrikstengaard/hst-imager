@@ -94,11 +94,17 @@
                 new[] { "--size", "-s" },
                 description: "Size of image file to write.");
 
+            var retriesOption = new Option<int>(
+                new[] { "--retries", "-r" },
+                description: "Number of retries to try read or write data.",
+                getDefaultValue: () => 5);
+            
             var writeCommand = new Command("write", "Write image file to physical drive.");
             writeCommand.AddArgument(sourceArgument);
             writeCommand.AddArgument(destinationArgument);
             writeCommand.AddOption(sizeOption);
-            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption);
+            writeCommand.AddOption(retriesOption);
+            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption, retriesOption);
 
             return writeCommand;
         }
@@ -117,6 +123,11 @@
                 new[] { "--size", "-s" },
                 description: "Size of physical drive to read.");
 
+            var retriesOption = new Option<int>(
+                new[] { "--retries", "-r" },
+                description: "Number of retries to try read or write data.",
+                getDefaultValue: () => 5);
+            
             var startOption = new Option<long?>(
                 new[] { "--start", "-st" },
                 description: "Start offset.");
@@ -125,8 +136,9 @@
             readCommand.AddArgument(sourceArgument);
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);
+            readCommand.AddOption(retriesOption);
             readCommand.AddOption(startOption);
-            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, startOption);
+            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, retriesOption, startOption);
 
             return readCommand;
         }
@@ -145,11 +157,17 @@
                 new[] { "--size", "-s" },
                 description: "Size of image file convert.");
 
+            var retriesOption = new Option<int>(
+                new[] { "--retries", "-r" },
+                description: "Number of retries to try read or write data.",
+                getDefaultValue: () => 5);
+            
             var convertCommand = new Command("convert", "Convert image file.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption);
+            convertCommand.AddOption(retriesOption);
+            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption, retriesOption);
 
             return convertCommand;
         }
@@ -214,12 +232,18 @@
             var sizeOption = new Option<string>(
                 new[] { "--size", "-s" },
                 description: "Size to verify.");
-
+            
+            var retriesOption = new Option<int>(
+                new[] { "--retries", "-r" },
+                description: "Number of retries to try read or write data.",
+                getDefaultValue: () => 5);
+            
             var convertCommand = new Command("compare", "Compare source and destination.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption);
+            convertCommand.AddOption(retriesOption);
+            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption, retriesOption);
 
             return convertCommand;
         }
