@@ -13,6 +13,8 @@
             rdbCommand.AddCommand(CreateRdbFs());
             rdbCommand.AddCommand(CreateRdbPart());
             rdbCommand.AddCommand(CreateRdbUpdate());
+            rdbCommand.AddCommand(CreateRdbBackup());
+            rdbCommand.AddCommand(CreateRdbRestore());
 
             return rdbCommand;
         }
@@ -629,6 +631,42 @@
             command.AddOption(diskRevisionOption);
             command.AddOption(diskVendorOption);
             
+            return command;
+        }
+        
+        private static Command CreateRdbBackup()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var backupPathArgument = new Argument<string>(
+                name: "BackupPath",
+                description: "Path to Rigid disk block backup file.");
+            
+            var command = new Command("backup", "Backup Rigid Disk Block to file.");
+            command.SetHandler(CommandHandler.RdbBackup, pathArgument, backupPathArgument);
+            command.AddArgument(pathArgument);
+            command.AddArgument(backupPathArgument);
+
+            return command;
+        }
+        
+        private static Command CreateRdbRestore()
+        {
+            var backupPathArgument = new Argument<string>(
+                name: "BackupPath",
+                description: "Path to Rigid disk block backup file.");
+            
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var command = new Command("restore", "Restore Rigid Disk Block from backup file.");
+            command.SetHandler(CommandHandler.RdbRestore, backupPathArgument, pathArgument);
+            command.AddArgument(backupPathArgument);
+            command.AddArgument(pathArgument);
+
             return command;
         }
     }

@@ -314,7 +314,19 @@
             await Execute(new RdbUpdateCommand(GetLogger<RdbUpdateCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, flags, hostId, diskProduct, diskRevision, diskVendor));
         }
-        
+
+        public static async Task RdbBackup(string path, string backupPath)
+        {
+            await Execute(new RdbBackupCommand(GetLogger<RdbBackupCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, backupPath));
+        }
+
+        public static async Task RdbRestore(string backupPath, string path)
+        {
+            await Execute(new RdbRestoreCommand(GetLogger<RdbRestoreCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), backupPath, path));
+        }
+
         public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName)
         {
             await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), GetCommandHelper(),
