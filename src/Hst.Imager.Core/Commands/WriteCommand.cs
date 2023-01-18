@@ -19,6 +19,7 @@
         private readonly string destinationPath;
         private readonly Size size;
         private readonly int retries;
+        private readonly bool force;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
@@ -27,7 +28,7 @@
         public event EventHandler<IoErrorEventArgs> DestError;
         
         public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries)
+            string destinationPath, Size size, int retries, bool force)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -36,6 +37,7 @@
             this.destinationPath = destinationPath;
             this.size = size;
             this.retries = retries;
+            this.force = force;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -73,7 +75,7 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
 
-            var streamCopier = new StreamCopier(retries: retries);
+            var streamCopier = new StreamCopier(retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

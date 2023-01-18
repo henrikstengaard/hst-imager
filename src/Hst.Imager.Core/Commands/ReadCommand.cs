@@ -19,6 +19,7 @@
         private readonly string destinationPath;
         private readonly Size size;
         private readonly int retries;
+        private readonly bool force;
         private readonly long? start;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
@@ -28,7 +29,7 @@
         public event EventHandler<IoErrorEventArgs> DestError;
         
         public ReadCommand(ILogger<ReadCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, long? start)
+            string destinationPath, Size size, int retries, bool force, long? start)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -37,6 +38,7 @@
             this.destinationPath = destinationPath;
             this.size = size;
             this.retries = retries;
+            this.force = force;
             this.start = start;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
@@ -80,7 +82,7 @@
                 destinationStream.SetLength(readSize);
             }
             
-            var streamCopier = new StreamCopier(retries: retries);
+            var streamCopier = new StreamCopier(retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

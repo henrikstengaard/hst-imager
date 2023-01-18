@@ -43,7 +43,7 @@
                 var verifyCommand =
                     new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper, physicalDrives,
                         verifyBackgroundTask.SourcePath,
-                        verifyBackgroundTask.DestinationPath, new Size(), 0);
+                        verifyBackgroundTask.DestinationPath, new Size(), 0, false);
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

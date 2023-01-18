@@ -98,13 +98,19 @@
                 new[] { "--retries", "-r" },
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
+
+            var forceOption = new Option<bool>(
+                new[] { "--force", "-f" },
+                description: "Force write to ignore write errors.",
+                getDefaultValue: () => false);
             
             var writeCommand = new Command("write", "Write image file to physical drive.");
             writeCommand.AddArgument(sourceArgument);
             writeCommand.AddArgument(destinationArgument);
             writeCommand.AddOption(sizeOption);
             writeCommand.AddOption(retriesOption);
-            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption, retriesOption);
+            writeCommand.AddOption(forceOption);
+            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption);
 
             return writeCommand;
         }
@@ -128,6 +134,11 @@
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
             
+            var forceOption = new Option<bool>(
+                new[] { "--force", "-f" },
+                description: "Force read to ignore read errors.",
+                getDefaultValue: () => false);
+            
             var startOption = new Option<long?>(
                 new[] { "--start", "-st" },
                 description: "Start offset.");
@@ -137,8 +148,9 @@
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);
             readCommand.AddOption(retriesOption);
+            readCommand.AddOption(forceOption);
             readCommand.AddOption(startOption);
-            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, retriesOption, startOption);
+            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption, startOption);
 
             return readCommand;
         }
@@ -157,17 +169,11 @@
                 new[] { "--size", "-s" },
                 description: "Size of image file convert.");
 
-            var retriesOption = new Option<int>(
-                new[] { "--retries", "-r" },
-                description: "Number of retries to try read or write data.",
-                getDefaultValue: () => 5);
-            
             var convertCommand = new Command("convert", "Convert image file.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.AddOption(retriesOption);
-            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption, retriesOption);
+            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption);
 
             return convertCommand;
         }
@@ -238,12 +244,18 @@
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
             
+            var forceOption = new Option<bool>(
+                new[] { "--force", "-f" },
+                description: "Force compare to ignore read errors.",
+                getDefaultValue: () => false);
+            
             var convertCommand = new Command("compare", "Compare source and destination.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
             convertCommand.AddOption(retriesOption);
-            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption, retriesOption);
+            convertCommand.AddOption(forceOption);
+            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption);
 
             return convertCommand;
         }

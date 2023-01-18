@@ -13,6 +13,7 @@
     {
         private readonly int bufferSize;
         private readonly int retries;
+        private readonly bool force;
         private readonly System.Timers.Timer timer;
         private bool sendDataProcessed;
 
@@ -20,10 +21,11 @@
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
 
-        public StreamCopier(int bufferSize = 1024 * 1024, int retries = 0)
+        public StreamCopier(int bufferSize = 1024 * 1024, int retries = 0, bool force = false)
         {
             this.bufferSize = bufferSize;
             this.retries = retries;
+            this.force = force;
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
@@ -68,7 +70,7 @@
                     }
                     catch (Exception e)
                     {
-                        if (srcRetry >= retries)
+                        if (!force && srcRetry >= retries)
                         {
                             throw;
                         }
@@ -115,7 +117,7 @@
                             }
                             catch (Exception e)
                             {
-                                if (destRetry >= retries)
+                                if (!force && destRetry >= retries)
                                 {
                                     throw;
                                 }
@@ -138,7 +140,7 @@
                         }
                         catch (Exception e)
                         {
-                            if (destRetry >= retries)
+                            if (!force && destRetry >= retries)
                             {
                                 throw;
                             }

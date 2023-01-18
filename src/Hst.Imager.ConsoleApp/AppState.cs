@@ -7,7 +7,7 @@
 
     public class AppState
     {
-        private static readonly Lazy<AppState> appState = new(() => new AppState(),
+        private static readonly Lazy<AppState> AppStateInstance = new(() => new AppState(),
             LazyThreadSafetyMode.ExecutionAndPublication);
 
         public readonly LoggingLevelSwitch LoggingLevelSwitch;
@@ -23,7 +23,7 @@
             BuildDate = GetBuildDate(assembly);
         }
 
-        public static AppState Instance => appState.Value;
+        public static AppState Instance => AppStateInstance.Value;
         
         private static DateTime GetBuildDate(Assembly assembly)
         {

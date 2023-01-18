@@ -184,12 +184,12 @@
             await Execute(command, true);
         }
 
-        public static async Task Convert(string sourcePath, string destinationPath, string size, int retries)
+        public static async Task Convert(string sourcePath, string destinationPath, string size)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new ConvertCommand(GetLogger<ConvertCommand>(), GetCommandHelper(), sourcePath,
-                destinationPath, ParseSize(size), retries);
+                destinationPath, ParseSize(size));
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -204,13 +204,13 @@
             await Execute(command);
         }
 
-        public static async Task Read(string sourcePath, string destinationPath, string size, int retries, long? start)
+        public static async Task Read(string sourcePath, string destinationPath, string size, int retries, bool force, long? start)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, start);
+                destinationPath, ParseSize(size), retries, force, start);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -220,13 +220,13 @@
 
         }
 
-        public static async Task Compare(string sourcePath, string destinationPath, string size, int retries)
+        public static async Task Compare(string sourcePath, string destinationPath, string size, int retries, bool force)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new CompareCommand(GetLogger<CompareCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries);
+                destinationPath, ParseSize(size), retries, force);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -235,13 +235,13 @@
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Write(string sourcePath, string destinationPath, string size, int retries)
+        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool force)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries);
+                destinationPath, ParseSize(size), retries, force);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);

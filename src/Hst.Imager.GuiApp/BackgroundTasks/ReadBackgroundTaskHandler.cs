@@ -42,7 +42,7 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
-                        readBackgroundTask.SourcePath, readBackgroundTask.DestinationPath, new Size(), 0, 0);
+                        readBackgroundTask.SourcePath, readBackgroundTask.DestinationPath, new Size(), 0, false, 0);
                 readCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

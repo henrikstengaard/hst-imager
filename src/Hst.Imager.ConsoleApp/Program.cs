@@ -11,7 +11,6 @@
     using Serilog;
     using Serilog.Core;
     using Serilog.Events;
-    using ILogger = Serilog.ILogger;
 
     public static class Program
     {
@@ -39,7 +38,6 @@
         {
             Log.Logger = loggerConfig
                 .CreateLogger();
-            var inMemoryPfs3Logger = new InMemoryPfs3Logger();
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 

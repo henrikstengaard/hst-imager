@@ -2,10 +2,8 @@
 {
     using System;
     using System.IO;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Amiga.FileSystems.Pfs3;
     using Core;
     using Commands;
     using Models;
@@ -26,7 +24,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(), 0);
+                destinationPath, new Size());
             DataProcessedEventArgs dataProcessedEventArgs = null;
             convertCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
@@ -56,7 +54,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), 0);
+                destinationPath, new Size(size, Unit.Bytes));
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -78,7 +76,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(), 0);
+                destinationPath, new Size());
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -109,7 +107,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), 0);
+                destinationPath, new Size(size, Unit.Bytes));
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

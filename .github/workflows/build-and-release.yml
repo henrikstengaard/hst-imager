@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        target: [win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm64]
+        target: [win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm, linux-arm64]
 
     steps:
       - uses: actions/checkout@v2
@@ -84,9 +84,10 @@ jobs:
           cd "Hst.Imager.ConsoleApp/publish/${{ matrix.target }}"
           $artifactName='hst-imager.console.${{ matrix.target }}.zip'
           Remove-Item -Path *.pdb
+          Remove-Item -Path *.so
           $exeFileName=((Get-ChildItem -Filter 'Hst.Imager.ConsoleApp*') | Select -First 1).Name
           Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
-          Compress-Archive -Path ./* -DestinationPath $artifactName
+          zip -r $artifactName *
           $artifactPath=((Get-ChildItem -Filter $artifactName) | Select -First 1).FullName
           "::set-output name=artifact_name::$artifactName"
           "::set-output name=artifact_path::$artifactPath"
@@ -382,6 +383,11 @@ jobs:
         with:
           name: hst-imager.console.linux-x64.zip
 
+      - name: Download Console Linux arm-bit zip artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: hst-imager.console.linux-arm.zip
+
       - name: Download Console Linux arm64-bit zip artifact
         uses: actions/download-artifact@v2
         with:
@@ -505,6 +511,16 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: hst-imager.console.linux-x64.zip
           asset_name: '${{ env.RELEASE_VERSION }}_console_linux_x64.zip'
+          asset_content_type: 'application/octet-stream'
+
+      - name: Upload Console Linux arm zip artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: hst-imager.console.linux-arm.zip
+          asset_name: '${{ env.RELEASE_VERSION }}_console_linux_arm.zip'
           asset_content_type: 'application/octet-stream'
 
       - name: Upload Console Linux arm64-bit zip artifact

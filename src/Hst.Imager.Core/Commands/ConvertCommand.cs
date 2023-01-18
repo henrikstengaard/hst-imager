@@ -16,7 +16,6 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
-        private readonly int retries;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
@@ -26,14 +25,13 @@
 
         public ConvertCommand(ILogger<ConvertCommand> logger, ICommandHelper commandHelper,
             string sourcePath,
-            string destinationPath, Size size, int retries)
+            string destinationPath, Size size)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
-            this.retries = retries;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -80,7 +78,7 @@
                 destinationStream.SetLength(convertSize);
             }
 
-            var streamCopier = new StreamCopier(retries: retries);
+            var streamCopier = new StreamCopier(retries: 0);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
