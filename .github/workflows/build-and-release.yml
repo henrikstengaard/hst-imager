@@ -295,25 +295,25 @@ jobs:
           retention-days: 3
         if: matrix.os == 'ubuntu-latest'
 
-      - name: Set Linux arm64 deb artifact
-        id: linux_x64_deb
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.linux-arm64.deb'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'ubuntu-latest'
+#      - name: Set Linux arm64 deb artifact
+#        id: linux_x64_deb
+#        shell: pwsh
+#        run: |
+#          $artifactName='hst-imager.gui.linux-arm64.deb'
+#          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
+#          Rename-Item $artifactFile -NewName $artifactName
+#          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+#          "::set-output name=artifact_name::$artifactName"
+#          "::set-output name=artifact_path::$artifactPath"
+#        if: matrix.os == 'ubuntu-latest'
 
-      - name: Upload Linux 64-bit deb artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: "${{ steps.linux_x64_deb.outputs.artifact_name }}"
-          path: "${{ steps.linux_x64_deb.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'ubuntu-latest'
+#      - name: Upload Linux 64-bit deb artifact
+#        uses: actions/upload-artifact@v2
+#        with:
+#          name: "${{ steps.linux_x64_deb.outputs.artifact_name }}"
+#          path: "${{ steps.linux_x64_deb.outputs.artifact_path }}"
+#          retention-days: 3
+#        if: matrix.os == 'ubuntu-latest'
 
   publish:
     needs: [build-console, build-gui]
@@ -403,10 +403,10 @@ jobs:
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
-      - name: Download Gui Linux arm64-bit deb artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: hst-imager.gui.linux-arm64.deb
+#      - name: Download Gui Linux arm64-bit deb artifact
+#        uses: actions/download-artifact@v2
+#        with:
+#          name: hst-imager.gui.linux-arm64.deb
 
       - name: Create release
         uses: actions/create-release@v1
@@ -553,12 +553,12 @@ jobs:
           asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage'
           asset_content_type: 'application/octet-stream'
           
-      - name: Upload Gui Linux arm64 deb artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.linux-arm64.deb
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb'
-          asset_content_type: 'application/octet-stream'
+#      - name: Upload Gui Linux arm64 deb artifact
+#        uses: actions/upload-release-asset@v1
+#        env:
+#          GITHUB_TOKEN: ${{ github.token }}
+#        with:
+#          upload_url: ${{ steps.create_release.outputs.upload_url }}
+#          asset_path: hst-imager.gui.linux-arm64.deb
+#          asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb'
+#          asset_content_type: 'application/octet-stream'
