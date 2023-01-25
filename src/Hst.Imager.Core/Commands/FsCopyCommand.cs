@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -68,6 +67,8 @@ public class FsCopyCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
+                    string entryPath;
+                    string[] entryPathComponents;
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
@@ -77,22 +78,24 @@ public class FsCopyCommand : FsCommandBase
                             }
 
                             dirsCount++;
-                            entry.Path = TrimRootPath(srcRootPath, entry.Path);
-                            await destEntryWriter.CreateDirectory(entry);
+                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
+                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
+                            await destEntryWriter.CreateDirectory(entry, entryPathComponents);
                             break;
                         case EntryType.File:
                         {
                             filesCount++;
                             totalBytes += entry.Size;
-                            var entryPath = TrimRootPath(srcRootPath, entry.Path);
+
                             if (!quiet)
                             {
-                                OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
+                                OnInformationMessage($"{entry.FormattedName} ({entry.Size.FormatBytes()})");
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            entry.Path = entryPath;
-                            await destEntryWriter.WriteEntry(entry, stream);
+                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
+                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
+                            await destEntryWriter.WriteEntry(entry, entryPathComponents, stream);
                             break;
                         }
                     }
@@ -133,10 +136,10 @@ public class FsCopyCommand : FsCommandBase
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
-        OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
+        OnDebugMessage($"File system Path: '{mediaResult.Value.FileSystemPath}'");
         
         // disk entry iterator
-        var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive);
+        var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
         if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
         {
             return new Result<IEntryIterator>(diskEntryIterator.Value);

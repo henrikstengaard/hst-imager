@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -43,7 +44,7 @@ public class DirectoryEntryIterator : IEntryIterator
         currentEntry = this.nextEntries.Pop();
         if (this.recursive && currentEntry.Type == EntryType.Dir)
         {
-            EnqueueDirectory(currentEntry.Path);
+            EnqueueDirectory(currentEntry.RawPath);
         }
 
         return Task.FromResult(true);
@@ -51,7 +52,12 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public Task<Stream> OpenEntry(Entry entry)
     {
-        return Task.FromResult<Stream>(File.OpenRead(Path.Combine(this.rootPath, entry.Path)));
+        return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
+    }
+
+    public string[] GetPathComponents(string path)
+    {
+        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
     }
 
     private string GetEntryPath(string entryPath)
@@ -70,7 +76,8 @@ public class DirectoryEntryIterator : IEntryIterator
             this.nextEntries.Push(new Entry
             {
                 Name = dirInfo.Name,
-                Path = dirInfo.FullName,
+                RawPath = dirInfo.FullName,
+                PathComponents = dirInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
                 Date = dirInfo.LastWriteTime,
                 Size = 0,
                 Type = EntryType.Dir
@@ -82,7 +89,8 @@ public class DirectoryEntryIterator : IEntryIterator
             this.nextEntries.Push(new Entry
             {
                 Name = fileInfo.Name,
-                Path = fileInfo.FullName,
+                RawPath = fileInfo.FullName,
+                PathComponents = fileInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
                 Date = fileInfo.LastWriteTime,
                 Size = fileInfo.Length,
                 Type = EntryType.File

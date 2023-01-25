@@ -13,6 +13,7 @@ using Compression.Lha;
 using DiscUtils.Iso9660;
 using Hst.Core;
 using Hst.Core.Extensions;
+// using Hst.Core.IO;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using FileMode = System.IO.FileMode;
@@ -28,11 +29,23 @@ public abstract class FsCommandBase : CommandBase
         this.physicalDrives = physicalDrives;
     }
 
-    private static readonly byte[] VhdMagicNumber = new byte[]{ 0x63, 0x6F, 0x6E, 0x6E, 0x65, 0x63, 0x74, 0x69 , 0x78}; // "connectix" at offset 0 (Windows Virtual PC Virtual Hard Disk file format)
-    private static readonly byte[] RdbMagicNumber = new byte[]{ 0x52, 0x44, 0x53, 0x4B}; // "RDSK" at sector 0-15 (Amiga Rigid Disk Block)
-    private static readonly byte[] Iso9660MagicNumber = new byte[]{ 0x43, 0x44, 0x30, 0x30, 0x31}; // CD001 at offset 0x8001, 0x8801 or 0x9001 (ISO9660 CD/DVD image file)
-    private static readonly byte[] AdfDosMagicNumber = new byte[]{ 0x44, 0x4f, 0x53 }; // "DOS" at offset 0 (Amiga Disk File)
-    private static readonly byte[] LhaMagicNumber = new byte[]{ 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
+    private static readonly byte[]
+        VhdMagicNumber = new byte[]
+        {
+            0x63, 0x6F, 0x6E, 0x65, 0x63, 0x74, 0x69, 0x78
+        }; // "conectix" at offset 0 (Windows Virtual PC Virtual Hard Disk file format)
+
+    private static readonly byte[]
+        RdbMagicNumber = new byte[] { 0x52, 0x44, 0x53, 0x4B }; // "RDSK" at sector 0-15 (Amiga Rigid Disk Block)
+
+    private static readonly byte[]
+        Iso9660MagicNumber = new byte[]
+            { 0x43, 0x44, 0x30, 0x30, 0x31 }; // CD001 at offset 0x8001, 0x8801 or 0x9001 (ISO9660 CD/DVD image file)
+
+    private static readonly byte[]
+        AdfDosMagicNumber = new byte[] { 0x44, 0x4f, 0x53 }; // "DOS" at offset 0 (Amiga Disk File)
+
+    private static readonly byte[] LhaMagicNumber = new byte[] { 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
 
     private async Task<bool> IsAdfMedia(MediaResult mediaResult)
     {
@@ -41,12 +54,12 @@ public abstract class FsCommandBase : CommandBase
         {
             return false;
         }
-        
+
         await using var stream = File.OpenRead(mediaResult.MediaPath);
 
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
-        
+
         if (!HasMagicNumber(AdfDosMagicNumber, sectorBytes, 0))
         {
             return false;
@@ -62,7 +75,7 @@ public abstract class FsCommandBase : CommandBase
         {
             return false;
         }
-        
+
         await using var stream = File.OpenRead(mediaResult.MediaPath);
 
         stream.Seek(0, SeekOrigin.Begin);
@@ -70,7 +83,7 @@ public abstract class FsCommandBase : CommandBase
 
         return HasMagicNumber(LhaMagicNumber, sectorBytes, 2);
     }
-    
+
     private async Task<bool> IsIso9660Media(MediaResult mediaResult)
     {
         // return false, if media file doesnt exist
@@ -78,7 +91,7 @@ public abstract class FsCommandBase : CommandBase
         {
             return false;
         }
-        
+
         await using var stream = File.OpenRead(mediaResult.MediaPath);
 
         // offset: 0x8000 / sector 64
@@ -108,16 +121,16 @@ public abstract class FsCommandBase : CommandBase
         // return true, if offset 0x9001 has iso magic number
         return HasMagicNumber(Iso9660MagicNumber, sectorBytes, 1);
     }
-    
+
     private async Task<bool> IsDiskMedia(MediaResult mediaResult)
     {
         // physical drive
-        if (Regexs.PhysicalDrivePathRegex.IsMatch(mediaResult.MediaPath) || 
-                                 Regexs.DevicePathRegex.IsMatch(mediaResult.MediaPath))
+        if (Regexs.PhysicalDrivePathRegex.IsMatch(mediaResult.MediaPath) ||
+            Regexs.DevicePathRegex.IsMatch(mediaResult.MediaPath))
         {
             return true;
         }
-        
+
         // return false, if media file doesnt exist
         if (!File.Exists(mediaResult.MediaPath))
         {
@@ -140,7 +153,7 @@ public abstract class FsCommandBase : CommandBase
         }
 
         // rigid disk block
-        for(var i = 1; i <= 16; i++)
+        for (var i = 1; i <= 16; i++)
         {
             if (HasMagicNumber(RdbMagicNumber, sectorBytes, 0))
             {
@@ -152,7 +165,7 @@ public abstract class FsCommandBase : CommandBase
             {
                 break;
             }
-            
+
             stream.Seek(i * 512, SeekOrigin.Begin);
             sectorBytes = await stream.ReadBytes(VhdMagicNumber.Length);
         }
@@ -175,25 +188,28 @@ public abstract class FsCommandBase : CommandBase
 
     protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
     {
-        return Task.FromResult(!Directory.Exists(path) ? null : new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive)));
+        return Task.FromResult(!Directory.Exists(path)
+            ? null
+            : new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive)));
     }
 
     protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)
     {
         return Task.FromResult(!File.Exists(path) ? null : new Result<IEntryIterator>(new FileEntryIterator(path)));
     }
-    
+
     protected async Task<Result<IEntryIterator>> GetLhaEntryIterator(MediaResult mediaResult, bool recursive)
     {
         if (!await IsLhaMedia(mediaResult))
         {
             return null;
         }
-        
+
         var lhaStream = File.OpenRead(mediaResult.MediaPath);
         var lhaArchive = new LhaArchive(lhaStream, LhaOptions.AmigaLhaOptions);
 
-        return new Result<IEntryIterator>(new LhaArchiveEntryIterator(lhaStream, mediaResult.VirtualPath, lhaArchive, recursive));
+        return new Result<IEntryIterator>(new LhaArchiveEntryIterator(lhaStream, mediaResult.FileSystemPath, lhaArchive,
+            recursive));
     }
 
     protected async Task<Result<IEntryIterator>> GetAdfEntryIterator(MediaResult mediaResult, bool recursive)
@@ -202,7 +218,7 @@ public abstract class FsCommandBase : CommandBase
         {
             return null;
         }
-        
+
         var adfStream = File.OpenRead(mediaResult.MediaPath);
         var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
         if (fileSystemVolumeResult.IsFaulted)
@@ -210,34 +226,36 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
         }
 
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(adfStream, mediaResult.VirtualPath,
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(adfStream, mediaResult.FileSystemPath,
             fileSystemVolumeResult.Value, recursive));
     }
-    
+
     protected async Task<Result<IEntryIterator>> GetIso9660EntryIterator(MediaResult mediaResult, bool recursive)
     {
         if (!await IsIso9660Media(mediaResult))
         {
             return null;
         }
-        
+
         var iso96690Stream = File.OpenRead(mediaResult.MediaPath);
         var cdReader = new CDReader(iso96690Stream, true);
 
-        return new Result<IEntryIterator>(new Iso9660EntryIterator(iso96690Stream, mediaResult.VirtualPath, cdReader, recursive));
+        return new Result<IEntryIterator>(new Iso9660EntryIterator(iso96690Stream, mediaResult.FileSystemPath, cdReader,
+            recursive));
     }
 
-    protected async Task<Result<IEntryIterator>> GetDiskEntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetDiskEntryIterator(MediaResult mediaResult, bool recursive,
+        bool useCache, int cacheSize, int blockSize)
     {
         if (!await IsDiskMedia(mediaResult))
         {
             return null;
         }
-        
-        if (string.IsNullOrEmpty(mediaResult.VirtualPath))
+
+        if (string.IsNullOrEmpty(mediaResult.FileSystemPath))
         {
             return new Result<IEntryIterator>(
-                new Error($"Partition table not found in path '{mediaResult.VirtualPath}'"));
+                new Error($"Partition table not found in path '{mediaResult.FileSystemPath}'"));
         }
 
         var media = commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath);
@@ -246,14 +264,29 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(media.Error);
         }
 
-        var parts = mediaResult.VirtualPath.Split('\\', '/');
+        var parts = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
 
         if (!parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
         {
             return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"));
         }
+
+        if (blockSize < 1024 * 512)
+        {
+            blockSize = 1024 * 512;
+        }
+
+        var blocksLimit = cacheSize / blockSize;
+
+        if (blocksLimit < 10)
+        {
+            blocksLimit = 10;
+        }
         
-        var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
+        // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
+        var stream = media.Value.Stream;
+
+        var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
@@ -278,7 +311,7 @@ public abstract class FsCommandBase : CommandBase
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
-        OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
+        OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 
         // adf
         if (File.Exists(mediaResult.Value.MediaPath) &&
@@ -293,7 +326,7 @@ public abstract class FsCommandBase : CommandBase
             }
 
             return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfStream,
-                mediaResult.Value.VirtualPath, fileSystemVolumeResult.Value));
+                mediaResult.Value.FileSystemPath.Split('/'), fileSystemVolumeResult.Value));
         }
 
         // disk
@@ -303,7 +336,7 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(media.Error);
         }
 
-        var parts = mediaResult.Value.VirtualPath.Split('\\', '/');
+        var parts = mediaResult.Value.FileSystemPath.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
 
         if (parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
         {
@@ -313,8 +346,9 @@ public abstract class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
             }
 
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream,
-                string.Join("/", parts.Skip(2)), fileSystemVolumeResult.Value));
+            // skip 2 first parts, partition table and device/drive name
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream, parts.Skip(2).ToArray(),
+                fileSystemVolumeResult.Value));
         }
 
         return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
@@ -323,21 +357,32 @@ public abstract class FsCommandBase : CommandBase
     protected Result<MediaResult> ResolveMedia(string path)
     {
         string mediaPath;
+        var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
+
+        for (var i = 0; i < path.Length; i++)
+        {
+            if (path[i] == '\\' || path[i] == '/')
+            {
+                directorySeparatorChar = path[i].ToString();
+                break;
+            }
+        }
 
         // physical drive
         var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
         if (physicalDrivePathMatch.Success)
         {
             mediaPath = physicalDrivePathMatch.Value;
-            var firstSeparatorIndex = path.IndexOf("\\", mediaPath.Length, StringComparison.Ordinal);
+            var firstSeparatorIndex = path.IndexOf(directorySeparatorChar, mediaPath.Length, StringComparison.Ordinal);
 
             return new Result<MediaResult>(new MediaResult
             {
                 FullPath = path,
                 MediaPath = mediaPath,
-                VirtualPath = firstSeparatorIndex >= 0
+                FileSystemPath = firstSeparatorIndex >= 0
                     ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1))
-                    : string.Empty
+                    : string.Empty,
+                DirectorySeparatorChar = directorySeparatorChar
             });
         }
 
@@ -345,7 +390,7 @@ public abstract class FsCommandBase : CommandBase
         var next = 0;
         do
         {
-            next = path.IndexOf(Path.DirectorySeparatorChar.ToString(), next + 1, StringComparison.OrdinalIgnoreCase);
+            next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
             mediaPath = path.Substring(0, next == -1 ? path.Length : next);
 
             if (File.Exists(mediaPath))
@@ -354,9 +399,10 @@ public abstract class FsCommandBase : CommandBase
                 {
                     FullPath = path,
                     MediaPath = mediaPath,
-                    VirtualPath = mediaPath.Length + 1 < path.Length
+                    FileSystemPath = mediaPath.Length + 1 < path.Length
                         ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
-                        : string.Empty
+                        : string.Empty,
+                    DirectorySeparatorChar = directorySeparatorChar
                 });
             }
 

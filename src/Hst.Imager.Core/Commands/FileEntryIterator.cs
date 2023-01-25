@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -45,7 +46,7 @@ public class FileEntryIterator : IEntryIterator
 
     public Task<Stream> OpenEntry(Entry entry)
     {
-        return Task.FromResult<Stream>(File.OpenRead(entry.Path));
+        return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
     }
     
     public void Dispose()
@@ -59,10 +60,16 @@ public class FileEntryIterator : IEntryIterator
         this.nextEntries.Push(new Entry
         {
             Name = fileInfo.Name,
-            Path = fileInfo.FullName,
+            RawPath = fileInfo.FullName,
+            PathComponents = fileInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
             Date = fileInfo.LastWriteTime,
             Size = fileInfo.Length,
             Type = EntryType.File
         });        
+    }
+    
+    public string[] GetPathComponents(string path)
+    {
+        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
     }
 }

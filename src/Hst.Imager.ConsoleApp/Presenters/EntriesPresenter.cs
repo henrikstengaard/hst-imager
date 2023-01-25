@@ -60,7 +60,7 @@ public static class EntriesPresenter
         var propertiesOrdered = propertiesIndex.OrderBy(x => x).ToList();
         
         var orderedEntries = entriesInfo.Recursive
-            ? entries.OrderBy(x => x.Path)
+            ? entries.OrderBy(x => x.RawPath)
             : entries.OrderBy(x => x.Type).ThenBy(x => x.Name);
         
         foreach (var entry in orderedEntries)
@@ -77,7 +77,7 @@ public static class EntriesPresenter
 
             var columns = new List<string>(new[]
             {
-                entry.Name,
+                entry.FormattedName,
                 entry.Type == EntryType.Dir ? "<DIR>" : entry.Size.FormatBytes(),
                 entry.Date == null ? string.Empty : entry.Date.Value.ToString(CultureInfo.CurrentCulture),
                 entry.Attributes ?? string.Empty

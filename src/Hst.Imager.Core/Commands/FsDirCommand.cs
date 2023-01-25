@@ -39,13 +39,13 @@ public class FsDirCommand : FsCommandBase
         }
 
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
-        OnDebugMessage($"Virtual Path: '{pathResult.Value.VirtualPath}'");
+        OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
         // lha
         var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
-            await ListEntries(lhaEntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
@@ -53,7 +53,7 @@ public class FsDirCommand : FsCommandBase
         var adfEntryIterator = await GetAdfEntryIterator(pathResult.Value, recursive);
         if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
         {
-            await ListEntries(adfEntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(adfEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
@@ -61,7 +61,7 @@ public class FsDirCommand : FsCommandBase
         var iso9660EntryIterator = await GetIso9660EntryIterator(pathResult.Value, recursive);
         if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
         {
-            await ListEntries(iso9660EntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(iso9660EntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
@@ -76,7 +76,7 @@ public class FsDirCommand : FsCommandBase
         using var media = readableMediaResult.Value;
         await using var stream = media.Stream;
 
-        var parts = (pathResult.Value.VirtualPath ?? string.Empty).Split(new[] { '\\', '/' });
+        var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
         {
@@ -89,7 +89,7 @@ public class FsDirCommand : FsCommandBase
                 case "rdb":
                     if (parts.Length == 1)
                     {
-                        var listPartitionsResult = await ListRdbPartitions(stream, pathResult.Value.VirtualPath);
+                        var listPartitionsResult = await ListRdbPartitions(stream, pathResult.Value.FileSystemPath);
                         if (listPartitionsResult.IsFaulted)
                         {
                             return new Result(listPartitionsResult.Error);
@@ -193,7 +193,7 @@ public class FsDirCommand : FsCommandBase
         {
             Path = path,
             Recursive = recursive,
-            Entries = entries.OrderBy(x => x.Path)
+            Entries = entries
         });
     }
 

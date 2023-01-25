@@ -67,6 +67,8 @@ public class FsExtractCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
+                    string entryPath;
+                    string[] entryPathComponents;
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
@@ -76,22 +78,24 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             dirsCount++;
-                            entry.Path = TrimRootPath(srcRootPath, entry.Path);
-                            await destEntryWriter.CreateDirectory(entry);
+                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
+                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
+                            await destEntryWriter.CreateDirectory(entry, entryPathComponents);
                             break;
                         case EntryType.File:
                         {
                             filesCount++;
                             totalBytes += entry.Size;
-                            var entryPath = TrimRootPath(srcRootPath, entry.Path);
+
                             if (!quiet)
                             {
-                                OnInformationMessage($"{entryPath} ({entry.Size.FormatBytes()})");
+                                OnInformationMessage($"{entry.FormattedName} ({entry.Size.FormatBytes()})");
                             }
-
+                            
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            entry.Path = entryPath;
-                            await destEntryWriter.WriteEntry(entry, stream);
+                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
+                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
+                            await destEntryWriter.WriteEntry(entry, entryPathComponents, stream);
                             break;
                         }
                     }
@@ -118,7 +122,7 @@ public class FsExtractCommand : FsCommandBase
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
-        OnDebugMessage($"Virtual Path: '{mediaResult.Value.VirtualPath}'");
+        OnDebugMessage($"File System Path: '{mediaResult.Value.FileSystemPath}'");
 
         if (string.IsNullOrWhiteSpace(mediaResult.Value.MediaPath))
         {

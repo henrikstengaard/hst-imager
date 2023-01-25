@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Amiga.FileSystems.Pfs3;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -14,18 +13,18 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer;
     private readonly Stream stream;
-    private readonly string path;
+    private readonly string[] pathComponents;
     private readonly IFileSystemVolume fileSystemVolume;
-    private string currentPath;
+    private string[] currentPathComponents;
     private bool disposed;
 
-    public AmigaVolumeEntryWriter(Stream stream, string path, IFileSystemVolume fileSystemVolume)
+    public AmigaVolumeEntryWriter(Stream stream, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
         this.buffer = new byte[4096];
         this.stream = stream;
-        this.path = path;
+        this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
-        this.currentPath = null;
+        this.currentPathComponents = null;
     }
     
     private void Dispose(bool disposing)
@@ -37,7 +36,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
         if (disposing)
         {
-            Console.WriteLine("Flushing...");
             fileSystemVolume.Flush().GetAwaiter().GetResult();
             stream.Dispose();
         }
@@ -47,14 +45,13 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
     public void Dispose() => Dispose(true);
     
-    public async Task CreateDirectory(Entry entry)
+    public async Task CreateDirectory(Entry entry, string[] entryPathComponents)
     {
         await fileSystemVolume.ChangeDirectory("/");
-        var parts = entry.Path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
-        for (var i = 0; i < parts.Length; i++)
+        for (var i = 0; i < entryPathComponents.Length; i++)
         {
-            var part = parts[i];
+            var part = entryPathComponents[i];
             
             IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
 
@@ -66,7 +63,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 await fileSystemVolume.CreateDirectory(part);
             }
 
-            if (i == parts.Length - 1)
+            if (i == entryPathComponents.Length - 1)
             {
                 await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
         
@@ -84,34 +81,29 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             await fileSystemVolume.ChangeDirectory(part);
         }
 
-        currentPath = entry.Path;
+        currentPathComponents = entry.PathComponents;
     }
 
-    public async Task WriteEntry(Entry entry, Stream stream)
+    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
     {
-        var entryPath = Path.Combine(path, entry.Path).Replace("\\", "/");
-        var dirPath = Path.GetDirectoryName(entryPath) ?? string.Empty;
-        var fileName = Path.GetFileName(entryPath);
+        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        var fileName = fullPathComponents[^1];
 
         // if (currentPath != dirPath)
         // {
             await fileSystemVolume.ChangeDirectory("/");
 
-            if (!string.IsNullOrEmpty(dirPath))
+            for (var i = 0; i < fullPathComponents.Length - 1; i++)
             {
-                var parts = dirPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
-    
-                for (var i = 0; i < parts.Length; i++)
+                var entries = (await fileSystemVolume.ListEntries()).ToList();
+
+                if (!entries.Any(x => x.Name.Equals(fullPathComponents[i], StringComparison.OrdinalIgnoreCase)))
                 {
-                    var entries = (await fileSystemVolume.ListEntries()).ToList();
-
-                    if (!entries.Any(x => x.Name.Equals(parts[i], StringComparison.OrdinalIgnoreCase)))
-                    {
-                        await fileSystemVolume.CreateDirectory(parts[i]);
-                    }
-
-                    await fileSystemVolume.ChangeDirectory(parts[i]);
+                    await fileSystemVolume.CreateDirectory(fullPathComponents[i]);
                 }
+
+                await fileSystemVolume.ChangeDirectory(fullPathComponents[i]);
+                
             }
             
         //     currentPath = dirPath;

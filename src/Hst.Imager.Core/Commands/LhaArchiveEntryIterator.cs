@@ -76,13 +76,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
     public Task<Stream> OpenEntry(Entry entry)
     {
-        if (!lhaEntryIndex.ContainsKey(entry.Path))
+        if (!lhaEntryIndex.ContainsKey(entry.RawPath))
         {
-            throw new IOException($"Entry '{entry.Path}' not found");
+            throw new IOException($"Entry '{entry.RawPath}' not found");
         }
 
         var output = new MemoryStream();
-        this.lhaArchive.Extract(lhaEntryIndex[entry.Path], output);
+        this.lhaArchive.Extract(lhaEntryIndex[entry.RawPath], output);
         output.Position = 0;
         return Task.FromResult<Stream>(output);
     }
@@ -120,7 +120,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
             nextEntries.Push(new Entry
             {
                 Name = entryName,
-                Path = entryPath,
+                FormattedName = entryName,
+                RawPath = entryPath,
+                PathComponents = entryPath.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
                 Date = lhaEntry.UnixLastModifiedStamp,
                 Size = lhaEntry.OriginalSize,
                 Type = (lhaEntry.UnixMode & Constants.UNIX_FILE_DIRECTORY) == Constants.UNIX_FILE_DIRECTORY
@@ -164,5 +166,10 @@ public class LhaArchiveEntryIterator : IEntryIterator
         }
 
         return i < name.Length - 1 ? name.Substring(i + 1) : string.Empty;
+    }
+    
+    public string[] GetPathComponents(string path)
+    {
+        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
     }
 }

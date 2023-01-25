@@ -6,7 +6,15 @@ using System.Collections.Generic;
 public class Entry
 {
     public string Name { get; set; }
-    public string Path { get; set; }
+    public string FormattedName { get; set; }
+    /// <summary>
+    /// raw path for internal use
+    /// </summary>
+    public string RawPath { get; set; }
+    /// <summary>
+    /// Path to entry (dir and filename) split into components for os independency
+    /// </summary>
+    public string[] PathComponents { get; set; }
     public long Size { get; set; }
     public EntryType Type { get; set; }
     public DateTime? Date { get; set; }

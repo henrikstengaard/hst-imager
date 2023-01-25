@@ -13,7 +13,9 @@ public class MediaResult
     public string MediaPath { get; set; }
     
     /// <summary>
-    /// virtual path in media
+    /// File system path in media
     /// </summary>
-    public string VirtualPath { get; set; }
+    public string FileSystemPath { get; set; }
+    
+    public string DirectorySeparatorChar { get; set; }
 }

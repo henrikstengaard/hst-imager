@@ -23,7 +23,7 @@ public class Iso9660EntryIterator : IEntryIterator
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
-        this.rootPath = rootPath ?? string.Empty;
+        this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath.Replace("/", "\\");
         this.cdReader = cdReader;
         this.recursive = recursive;
         this.nextEntries = new Stack<Entry>();
@@ -69,7 +69,7 @@ public class Iso9660EntryIterator : IEntryIterator
         currentEntry = this.nextEntries.Pop();
         if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
         {
-            await EnqueueDirectory(currentEntry.Path);
+            await EnqueueDirectory(currentEntry.RawPath);
         }
 
         return true;
@@ -82,7 +82,7 @@ public class Iso9660EntryIterator : IEntryIterator
             return Task.FromResult<Stream>(cdReader.OpenFile(isoEntry.IsoPath, FileMode.Open));
         }
 
-        throw new ArgumentException("Entry is not IsoEntry", nameof(entry));
+        throw new ArgumentException("Entry is not Iso9660Entry", nameof(entry));
     }
 
     private Task EnqueueDirectory(string currentPath)
@@ -104,7 +104,9 @@ public class Iso9660EntryIterator : IEntryIterator
             this.nextEntries.Push(new Iso9660Entry
             {
                 Name = entryName,
-                Path = dirName,
+                FormattedName = entryName,
+                RawPath = dirName,
+                PathComponents = dirName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
                 IsoPath = dirName,
                 Date = cdReader.GetLastWriteTime(dirName),
                 Size = 0,
@@ -114,7 +116,8 @@ public class Iso9660EntryIterator : IEntryIterator
         
         foreach (var fileName in cdReader.GetFiles(currentPath).OrderByDescending(x => x).ToList())
         {
-            var entryName = FormatPath(Path.Combine(currentPath, GetFileName(fileName)));
+            var formattedFilename = Iso9660ExtensionRegex.Replace(fileName, string.Empty);
+            var entryName = FormatPath(Path.Combine(currentPath, GetFileName(formattedFilename)));
             
             if (!string.IsNullOrEmpty(rootPath))
             {
@@ -125,11 +128,13 @@ public class Iso9660EntryIterator : IEntryIterator
 
                 entryName = entryName.Substring(rootPath.Length + 1);
             }
-            
+
             this.nextEntries.Push(new Iso9660Entry
             {
                 Name = entryName,
-                Path = Iso9660ExtensionRegex.Replace(fileName, string.Empty),
+                FormattedName = entryName,
+                RawPath = formattedFilename,
+                PathComponents = formattedFilename.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
                 IsoPath = fileName,
                 Date = cdReader.GetLastWriteTime(fileName),
                 Size = cdReader.GetFileLength(fileName),
@@ -151,5 +156,10 @@ public class Iso9660EntryIterator : IEntryIterator
     private string GetFileName(string path)
     {
         return Path.GetFileName(Iso9660ExtensionRegex.Replace(path, ""));
+    }
+    
+    public string[] GetPathComponents(string path)
+    {
+        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
     }
 }

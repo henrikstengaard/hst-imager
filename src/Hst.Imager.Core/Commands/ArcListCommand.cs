@@ -37,7 +37,7 @@ public class ArcListCommand : FsCommandBase
         }
 
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
-        OnDebugMessage($"Virtual Path: '{pathResult.Value.VirtualPath}'");
+        OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
         if (string.IsNullOrWhiteSpace(pathResult.Value.MediaPath))
         {
@@ -50,7 +50,7 @@ public class ArcListCommand : FsCommandBase
         var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
-            await ListEntries(lhaEntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
@@ -58,7 +58,7 @@ public class ArcListCommand : FsCommandBase
         var adfEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
         if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
         {
-            await ListEntries(adfEntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(adfEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
@@ -66,7 +66,7 @@ public class ArcListCommand : FsCommandBase
         var isoEntryIterator = await GetIso9660EntryIterator(pathResult.Value, recursive);
         if (isoEntryIterator != null && isoEntryIterator.IsSuccess)
         {
-            await ListEntries(isoEntryIterator.Value, pathResult.Value.VirtualPath);
+            await ListEntries(isoEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
