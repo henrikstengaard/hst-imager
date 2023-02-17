@@ -25,7 +25,7 @@ namespace Hst.Imager.Core.Tests
 
             // act - read source img to destination img
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, 0);
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, false, 0);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             readCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -55,7 +55,7 @@ namespace Hst.Imager.Core.Tests
 
             // act - read source img to destination img
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, 0);
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -80,7 +80,7 @@ namespace Hst.Imager.Core.Tests
 
             // act: read source img to destination vhd
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, 0);
+                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, false, 0);
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -112,7 +112,7 @@ namespace Hst.Imager.Core.Tests
 
             // act - read source img to destination vhd
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, 0);
+                Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

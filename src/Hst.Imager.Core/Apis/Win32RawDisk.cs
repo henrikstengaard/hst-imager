@@ -19,7 +19,7 @@
         public Win32RawDisk(string path, bool writeable = false)
         {
             safeFileHandle = DeviceApi.CreateFile(path,
-                writeable ? DeviceApi.GENERIC_WRITE : DeviceApi.GENERIC_READ,
+                writeable ? DeviceApi.GENERIC_WRITE | DeviceApi.GENERIC_READ : DeviceApi.GENERIC_READ,
                 DeviceApi.FILE_SHARE_READ | DeviceApi.FILE_SHARE_WRITE,
                 IntPtr.Zero,
                 DeviceApi.OPEN_EXISTING,

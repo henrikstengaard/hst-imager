@@ -19,6 +19,7 @@
         private readonly string destinationPath;
         private readonly Size size;
         private readonly int retries;
+        private readonly bool verify;
         private readonly bool force;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
@@ -28,7 +29,7 @@
         public event EventHandler<IoErrorEventArgs> DestError;
         
         public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, bool force)
+            string destinationPath, Size size, int retries, bool verify, bool force)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -37,6 +38,7 @@
             this.destinationPath = destinationPath;
             this.size = size;
             this.retries = retries;
+            this.verify = verify;
             this.force = force;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
@@ -75,7 +77,7 @@
             using var destinationMedia = destinationMediaResult.Value;
             await using var destinationStream = destinationMedia.Stream;
 
-            var streamCopier = new StreamCopier(retries: retries, force: force);
+            var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -87,10 +89,19 @@
             streamCopier.DestError += (_, args) => OnDestError(args);
 
             var result = await streamCopier.Copy(token, sourceStream, destinationStream, writeSize);
+            if (result.IsFaulted)
+            {
+                return new Result(result.Error);
+            }
 
+            if (statusBytesProcessed != writeSize)
+            {
+                return new Result(new Error($"Written '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{writeSize.FormatBytes()}' ({writeSize} bytes)"));
+            }
+            
             OnInformationMessage($"Written '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
-            return result;
+            return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

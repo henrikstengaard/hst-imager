@@ -87,10 +87,19 @@
             imageVerifier.DestError += (_, args) => OnDestError(args);
 
             var result = await imageVerifier.Verify(token, sourceStream, destinationStream, verifySize);
+            if (result.IsFaulted)
+            {
+                return new Result(result.Error);
+            }
+
+            if (statusBytesProcessed != verifySize)
+            {
+                return new Result(new Error($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{verifySize.FormatBytes()}' ({verifySize} bytes)"));
+            }
 
             OnInformationMessage($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
 
-            return result;
+            return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

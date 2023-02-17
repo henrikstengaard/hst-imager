@@ -77,8 +77,6 @@
                 await next(context);
             }).UseDefaults().Build();
 
-            //args = new[] { "fs", "extract", @"D:\Work\First Realize\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net6.0\WHDLoad_usr.lha\WHDLoad\C", @"D:\Work\First Realize\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net6.0\Superfrog_v1.5_0035.vhd\rdb\dh0\C", "--verbose" };
-            
             return await parser.InvokeAsync(args);
         }
     }

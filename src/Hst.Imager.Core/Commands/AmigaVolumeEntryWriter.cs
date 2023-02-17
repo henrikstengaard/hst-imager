@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Amiga.FileSystems.Pfs3;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -17,6 +18,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     private readonly IFileSystemVolume fileSystemVolume;
     private string[] currentPathComponents;
     private bool disposed;
+    private int writeOperations;
 
     public AmigaVolumeEntryWriter(Stream stream, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
@@ -25,6 +27,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
         this.currentPathComponents = null;
+        this.writeOperations = 0;
     }
     
     private void Dispose(bool disposing)
@@ -44,7 +47,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     }
 
     public void Dispose() => Dispose(true);
-    
+
     public async Task CreateDirectory(Entry entry, string[] entryPathComponents)
     {
         await fileSystemVolume.ChangeDirectory("/");
@@ -79,9 +82,12 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             }
 
             await fileSystemVolume.ChangeDirectory(part);
+            writeOperations++;
         }
 
         currentPathComponents = entry.PathComponents;
+        
+        await Flush();
     }
 
     public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
@@ -89,8 +95,22 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
         var fileName = fullPathComponents[^1];
 
-        // if (currentPath != dirPath)
-        // {
+        var directoryChanged = currentPathComponents.Length != fullPathComponents.Length - 1;
+        if (!directoryChanged)
+        {
+            for (var i = fullPathComponents.Length - 2; i >= 0; i--)
+            {
+                if (currentPathComponents[i] == fullPathComponents[i])
+                {
+                    continue;
+                }
+                directoryChanged = true;
+                break;
+            }
+        }
+
+        if (directoryChanged)
+        {
             await fileSystemVolume.ChangeDirectory("/");
 
             for (var i = 0; i < fullPathComponents.Length - 1; i++)
@@ -105,9 +125,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 await fileSystemVolume.ChangeDirectory(fullPathComponents[i]);
                 
             }
-            
-        //     currentPath = dirPath;
-        // }
+
+            currentPathComponents = fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
+        }
 
         await fileSystemVolume.CreateFile(fileName, true, true);
 
@@ -132,6 +152,20 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         {
             await fileSystemVolume.SetDate(fileName, entry.Date.Value);
         }
+
+        writeOperations++;
+        await Flush();
+    }
+
+    private async Task Flush()
+    {
+        if (this.writeOperations <= 100)
+        {
+            return;
+        }
+
+        this.writeOperations = 0;
+        await this.fileSystemVolume.Flush();
     }
 
     private ProtectionBits GetProtectionBits(string attributes)

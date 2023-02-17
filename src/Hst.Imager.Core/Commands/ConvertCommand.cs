@@ -16,6 +16,7 @@
         private readonly string sourcePath;
         private readonly string destinationPath;
         private readonly Size size;
+        private readonly bool verify;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
@@ -25,13 +26,14 @@
 
         public ConvertCommand(ILogger<ConvertCommand> logger, ICommandHelper commandHelper,
             string sourcePath,
-            string destinationPath, Size size)
+            string destinationPath, Size size, bool verify)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
             this.size = size;
+            this.verify = verify;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -78,7 +80,7 @@
                 destinationStream.SetLength(convertSize);
             }
 
-            var streamCopier = new StreamCopier(retries: 0);
+            var streamCopier = new StreamCopier(verify: verify, retries: 0);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -90,10 +92,19 @@
             streamCopier.DestError += (_, args) => OnDestError(args);
             
             var result = await streamCopier.Copy(token, sourceStream, destinationStream, convertSize, 0, 0, isVhd);
+            if (result.IsFaulted)
+            {
+                return new Result(result.Error);
+            }
+            
+            if (statusBytesProcessed != convertSize)
+            {
+                return new Result(new Error($"Converted '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{convertSize.FormatBytes()}' ({convertSize} bytes)"));
+            }
 
             OnInformationMessage($"Converted '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
-            return result;
+            return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

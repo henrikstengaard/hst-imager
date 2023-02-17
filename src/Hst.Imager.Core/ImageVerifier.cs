@@ -60,48 +60,52 @@
 
                 var verifyBytes = Convert.ToInt32(offset + bufferSize > size ? size - offset : bufferSize);
                 
+                var srcReadFailed = false;
                 var srcRetry = 0;
                 do
                 {
                     try
                     {
+                        source.Seek(offset, SeekOrigin.Begin);
                         srcBytesRead = await source.ReadAsync(srcBuffer, 0, verifyBytes, token);
                     }
                     catch (Exception e)
                     {
+                        srcReadFailed = true;
                         if (!force && srcRetry >= retries)
                         {
                             throw;
                         }
                         
                         OnSrcError(offset, verifyBytes, e.ToString());
-                        source.Seek(offset, SeekOrigin.Begin);
                     }
 
                     srcRetry++;
-                } while (srcRetry <= retries);
+                } while (srcReadFailed && srcRetry <= retries);
 
+                var destReadFailed = false;
                 var destBytesRead = 0;
-                var destRetry = 0;
+                var destRetry = retries;
                 do
                 {
                     try
                     {
+                        destination.Seek(offset, SeekOrigin.Begin);
                         destBytesRead = await destination.ReadAsync(destBuffer, 0, verifyBytes, token);
                     }
                     catch (Exception e)
                     {
+                        destReadFailed = true;
                         if (!force && destRetry >= retries)
                         {
                             throw;
                         }
 
                         OnDestError(offset, verifyBytes, e.ToString());
-                        destination.Seek(offset, SeekOrigin.Begin);
                     }
 
                     destRetry++;
-                } while (destRetry <= retries);
+                } while (destReadFailed && destRetry <= retries);
                 
                 if (size < bufferSize)
                 {
@@ -118,7 +122,7 @@
                     return new Result(new SizeNotEqualError(offset, size));
                 }
 
-                for (int i = 0; i < verifyBytes; i++)
+                for (var i = 0; i < verifyBytes; i++)
                 {
                     if (srcBuffer[i] == destBuffer[i])
                     {

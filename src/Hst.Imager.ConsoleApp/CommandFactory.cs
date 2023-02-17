@@ -99,6 +99,10 @@
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
 
+            var verifyOption = new Option<bool>(
+                new[] { "--verify", "-v" },
+                description: "Verify data written.");
+            
             var forceOption = new Option<bool>(
                 new[] { "--force", "-f" },
                 description: "Force write to ignore write errors.",
@@ -109,8 +113,10 @@
             writeCommand.AddArgument(destinationArgument);
             writeCommand.AddOption(sizeOption);
             writeCommand.AddOption(retriesOption);
+            writeCommand.AddOption(verifyOption);
             writeCommand.AddOption(forceOption);
-            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption);
+            writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption,
+                retriesOption, verifyOption, forceOption);
 
             return writeCommand;
         }
@@ -134,6 +140,10 @@
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
             
+            var verifyOption = new Option<bool>(
+                new[] { "--verify", "-v" },
+                description: "Verify data read.");
+
             var forceOption = new Option<bool>(
                 new[] { "--force", "-f" },
                 description: "Force read to ignore read errors.",
@@ -148,9 +158,11 @@
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);
             readCommand.AddOption(retriesOption);
+            readCommand.AddOption(verifyOption);
             readCommand.AddOption(forceOption);
             readCommand.AddOption(startOption);
-            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption, startOption);
+            readCommand.SetHandler(CommandHandler.Read, sourceArgument, destinationArgument, sizeOption, retriesOption, 
+                verifyOption, forceOption, startOption);
 
             return readCommand;
         }
@@ -169,11 +181,16 @@
                 new[] { "--size", "-s" },
                 description: "Size of image file convert.");
 
+            var verifyOption = new Option<bool>(
+                new[] { "--verify", "-v" },
+                description: "Verify data converted.");
+            
             var convertCommand = new Command("convert", "Convert image file.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption);
+            convertCommand.AddOption(verifyOption);
+            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption, verifyOption);
 
             return convertCommand;
         }

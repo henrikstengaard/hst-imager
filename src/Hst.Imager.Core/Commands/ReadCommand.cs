@@ -19,6 +19,7 @@
         private readonly string destinationPath;
         private readonly Size size;
         private readonly int retries;
+        private readonly bool verify;
         private readonly bool force;
         private readonly long? start;
         private long statusBytesProcessed;
@@ -29,7 +30,7 @@
         public event EventHandler<IoErrorEventArgs> DestError;
         
         public ReadCommand(ILogger<ReadCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, bool force, long? start)
+            string destinationPath, Size size, int retries, bool verify, bool force, long? start)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -38,6 +39,7 @@
             this.destinationPath = destinationPath;
             this.size = size;
             this.retries = retries;
+            this.verify = verify;
             this.force = force;
             this.start = start;
             this.statusBytesProcessed = 0;
@@ -82,7 +84,7 @@
                 destinationStream.SetLength(readSize);
             }
             
-            var streamCopier = new StreamCopier(retries: retries, force: force);
+            var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -94,10 +96,19 @@
             streamCopier.DestError += (_, args) => OnDestError(args);
 
             var result = await streamCopier.Copy(token, sourceStream, destinationStream, readSize, 0, 0, isVhd);
+            if (result.IsFaulted)
+            {
+                return new Result(result.Error);
+            }
             
+            if (statusBytesProcessed != readSize)
+            {
+                return new Result(new Error($"Read '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{readSize.FormatBytes()}' ({readSize} bytes)"));
+            }
+
             OnInformationMessage($"Read '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
-            return result;
+            return new Result();
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

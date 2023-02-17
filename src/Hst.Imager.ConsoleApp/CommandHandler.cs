@@ -184,12 +184,12 @@
             await Execute(command, true);
         }
 
-        public static async Task Convert(string sourcePath, string destinationPath, string size)
+        public static async Task Convert(string sourcePath, string destinationPath, string size, bool verify)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new ConvertCommand(GetLogger<ConvertCommand>(), GetCommandHelper(), sourcePath,
-                destinationPath, ParseSize(size));
+                destinationPath, ParseSize(size), verify);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -204,13 +204,14 @@
             await Execute(command);
         }
 
-        public static async Task Read(string sourcePath, string destinationPath, string size, int retries, bool force, long? start)
+        public static async Task Read(string sourcePath, string destinationPath, string size, int retries, bool verify, bool force, 
+            long? start)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, force, start);
+                destinationPath, ParseSize(size), retries, verify, force, start);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -235,13 +236,13 @@
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool force)
+        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool verify, bool force)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, force);
+                destinationPath, ParseSize(size), retries, verify, force);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
