@@ -56,12 +56,9 @@
         {
             var data = new byte[ImageSize];
 
-            for (byte s = 1; s <= 10; s++)
+            for (var i = 0; i < data.Length; i++)
             {
-                for (var i = 0; i < 512; i++)
-                {
-                    data[(s - 1) * 10 * 512 + i] = s;
-                }
+                data[i] = (byte)(i % 256);
             }
 
             return data;

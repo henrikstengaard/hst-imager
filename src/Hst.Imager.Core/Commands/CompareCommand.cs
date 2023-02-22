@@ -65,7 +65,7 @@
                 .ResolveSize(size);
             OnInformationMessage($"Size '{verifySize.FormatBytes()}' ({verifySize} bytes)");
             
-            OnDebugMessage($"Opening '{destinationPath}' as writable");
+            OnDebugMessage($"Opening '{destinationPath}' as readable");
             
             var destinationMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, destinationPath);
             if (destinationMediaResult.IsFaulted)

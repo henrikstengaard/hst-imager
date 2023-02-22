@@ -1,87 +1,58 @@
-﻿namespace Hst.Imager.Core
+﻿namespace Hst.Imager.Core;
+
+using System;
+using System.Collections.Generic;
+
+public static class DataSectorReader
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Threading.Tasks;
-
-    public class DataSectorReader
+    /// <summary>
+    /// Reads sectors containing data, optionally include zero filled sectors
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="sectorSize"></param>
+    /// <param name="length"></param>
+    /// <param name="includeZeroFilled"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentException"></exception>
+    public static IEnumerable<Sector> Read(byte[] data, int sectorSize = 512, int? length = null, bool includeZeroFilled = false)
     {
-        private readonly Stream stream;
-        private readonly int sectorSize;
-        private readonly int bufferSize;
-        private readonly byte[] buffer;
-        private long offset;
-
-        public DataSectorReader(Stream stream, int sectorSize = 512, int bufferSize = 1024 * 1024)
+        if (data.Length % 512 != 0)
         {
-            if (sectorSize % 512 != 0)
-            {
-                throw new ArgumentException("Sector size must be dividable by 512", nameof(sectorSize));
-            }
-
-            if (bufferSize % 512 != 0)
-            {
-                throw new ArgumentException("Buffer size must be dividable by 512", nameof(bufferSize));
-            }
-
-            this.stream = stream;
-            this.sectorSize = sectorSize;
-            this.bufferSize = bufferSize;
-            this.buffer = new byte[bufferSize];
-            offset = this.stream.Position;
+            throw new ArgumentException("Data length must be dividable by 512", nameof(data));
         }
 
-        public async Task<SectorResult> ReadNext(int? length = null)
+        if (length.HasValue && length > data.Length)
         {
-            var startOffset = offset;
-            var readBytes = length.HasValue && length.Value > 0 && length < bufferSize ? length.Value : bufferSize;
-            var bytesRead = await stream.ReadAsync(buffer, 0, readBytes);
-
-            var sectors = new List<Sector>();
-
-            for (var start = 0; start < bytesRead; start += sectorSize)
-            {
-                var data = new byte[sectorSize];
-                Array.Copy(buffer, start, data, 0, sectorSize);
-                var sectorStart = offset + start;
-                var sectorEnd = sectorStart + sectorSize - 1;
-
-                sectors.Add(new Sector
-                {
-                    Start = sectorStart,
-                    End = sectorEnd,
-                    Size = sectorSize,
-                    IsZeroFilled = IsZeroFilled(data, 0, sectorSize - 1),
-                    Data = data
-                });
-            }
-
-            offset += bytesRead;
-            var endOffset = offset - 1;
-
-            return new SectorResult
-            {
-                Start = startOffset,
-                End = endOffset,
-                Data = buffer,
-                BytesRead = bytesRead,
-                EndOfSectors = bytesRead != bufferSize,
-                Sectors = sectors
-            };
+            throw new ArgumentException($"Length {length} is greater than data length {data.Length}", nameof(length));
         }
-
-        private bool IsZeroFilled(byte[] data, int start, int end)
+        
+        for (var start = 0; start < (length ?? data.Length); start += sectorSize)
         {
-            for (var i = start; i <= end; i++)
+            var isZeroFilled = true;
+
+            var offset = start;
+            for (var i = 0; i <= sectorSize - i; i++, offset++)
             {
-                if (data[i] != 0 || data[end - i] != 0)
+                if (data[offset] == 0 && data[offset + sectorSize - i - 1] == 0)
                 {
-                    return false;
+                    continue;
                 }
+                isZeroFilled = false;
+                break;
             }
 
-            return true;
+            if (isZeroFilled && !includeZeroFilled)
+            {
+                continue;
+            }
+            
+            yield return new Sector
+            {
+                Start = start,
+                End = start + sectorSize - 1,
+                Size = sectorSize,
+                IsZeroFilled = isZeroFilled
+            };
         }
     }
 }

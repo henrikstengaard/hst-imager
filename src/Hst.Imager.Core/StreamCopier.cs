@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.Core
 {
     using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Linq;
@@ -14,6 +15,7 @@
         private readonly bool verify;
         private readonly int bufferSize;
         private readonly byte[] buffer;
+        private readonly byte[] verifyBuffer;
         private readonly int retries;
         private readonly bool force;
         private readonly System.Timers.Timer timer;
@@ -28,6 +30,7 @@
             this.verify = verify;
             this.bufferSize = bufferSize;
             this.buffer = new byte[this.bufferSize];
+            this.verifyBuffer = new byte[this.bufferSize];
             this.retries = retries;
             this.force = force;
             timer = new System.Timers.Timer();
@@ -46,16 +49,13 @@
             source.Seek(sourceOffset, SeekOrigin.Begin);
             destination.Seek(destinationOffset, SeekOrigin.Begin);
 
-            var dataSectorReader = new DataSectorReader(source, bufferSize: bufferSize);
-
             sendDataProcessed = true;
             OnDataProcessed(0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
             
             timer.Start();
 
             long bytesProcessed = 0;
-            int length;
-            SectorResult sectorResult = null;
+            var bytesRead = 0;
             do
             {
                 if (token.IsCancellationRequested)
@@ -72,7 +72,7 @@
                     try
                     {
                         source.Seek(sourceOffset + bytesProcessed, SeekOrigin.Begin);
-                        sectorResult = await dataSectorReader.ReadNext(readBytes);
+                        bytesRead = await source.ReadAsync(this.buffer, 0, readBytes, token);
                     }
                     catch (Exception e)
                     {
@@ -87,75 +87,44 @@
 
                     srcRetry++;
                 } while (srcReadFailed && srcRetry <= retries);
+                
+                var dataSectors = skipZeroFilled
+                    ? DataSectorReader.Read(this.buffer, 512, bytesRead, !skipZeroFilled).ToList()
+                    : new List<Sector>
+                    {
+                        new Sector
+                        {
+                            Start = 0,
+                            End = bytesRead - 1,
+                            Size = bytesRead,
+                            IsZeroFilled = false
+                        }
+                    };
 
-                if (sectorResult == null)
+                if (dataSectors.Count == 0)
                 {
-                    throw new IOException("Failed to read from source");
+                    continue;
                 }
                 
-                length = Convert.ToInt32(bytesProcessed + sectorResult.BytesRead > size
-                    ? size - bytesProcessed
-                    : sectorResult.BytesRead);
-
-                if (skipZeroFilled)
+                foreach (var dataSector in dataSectors)
                 {
-                    foreach (var sector in sectorResult.Sectors.Where(x => !x.IsZeroFilled))
-                    {
-                        var sectorOffsetDiff = sourceOffset == 0 ? sector.Start : sector.Start - sourceOffset;
-
-                        if (sectorOffsetDiff > size)
-                        {
-                            break;
-                        }
-
-                        var destWriteFailed = false;
-                        var destRetry = 0;
-                        do
-                        {
-                            var sectorSize = Convert.ToInt32(bytesProcessed + sector.Data.Length > size
-                                ? size - bytesProcessed
-                                : sector.Data.Length);
-
-                            try
-                            {
-                                destination.Seek(destinationOffset + sectorOffsetDiff, SeekOrigin.Begin);
-                                await destination.WriteAsync(sector.Data, 0, sectorSize, token);
-                                
-                                if (verify && !await Verify(sectorResult.Data, destination,
-                                        destinationOffset + bytesProcessed, length, token))
-                                {
-                                    destWriteFailed = true;
-                                }
-                            }
-                            catch (Exception e)
-                            {
-                                destWriteFailed = true;
-                                if (!force && destRetry >= retries)
-                                {
-                                    throw;
-                                }
-                        
-                                OnDestError(destinationOffset + sectorOffsetDiff, sectorSize, e.ToString());
-                            }
-
-                            destRetry++;
-                        } while (destWriteFailed && destRetry <= retries);
-                    }
-                }
-                else
-                {
+                    var sectorSize = bytesProcessed + dataSector.Start + dataSector.Size > size
+                        ? (int)(size - bytesProcessed + dataSector.Start)
+                        : dataSector.Size;
+                            
                     var destWriteFailed = false;
                     var destRetry = 0;
                     do
                     {
                         try
                         {
-                            destination.Seek(destinationOffset + bytesProcessed, SeekOrigin.Begin);
-                            await destination.WriteAsync(sectorResult.Data, 0, length, token);
+                            destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
+                            await destination.WriteAsync(this.buffer, dataSector.Start, sectorSize, token);
 
-                            if (verify && !await Verify(sectorResult.Data, destination,
-                                    destinationOffset + bytesProcessed, length, token))
+                            if (verify && !await Verify(this.buffer, destination,
+                                    destinationOffset + dataSector.Start, sectorSize, token))
                             {
+                                OnDestError(destinationOffset + dataSector.Start, sectorSize, "Verify error");
                                 destWriteFailed = true;
                             }
                         }
@@ -167,14 +136,15 @@
                                 throw;
                             }
 
-                            OnDestError(destinationOffset + bytesProcessed, length, e.ToString());
+                            OnDestError(destinationOffset + dataSector.Start, sectorSize, e.ToString());
                         }
 
                         destRetry++;
                     } while (destWriteFailed && destRetry <= retries);
                 }
 
-                bytesProcessed += length;
+                bytesProcessed += bytesRead;
+                destinationOffset += bytesRead;
                 var bytesRemaining = size - bytesProcessed;
                 var percentComplete = bytesProcessed == 0 ? 0 : Math.Round((double)100 / size * bytesProcessed, 1);
                 var timeElapsed = stopwatch.Elapsed;
@@ -184,7 +154,7 @@
 
                 OnDataProcessed(percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining,
                     timeTotal, bytesPerSecond);
-            } while (length == bufferSize && bytesProcessed < size);
+            } while (bytesRead == bufferSize && bytesProcessed < size);
 
             timer.Stop();
             stopwatch.Stop();
@@ -198,7 +168,7 @@
         private async Task<bool> Verify(byte[] srcBytes, Stream destStream, long offset, int length, CancellationToken token)
         {
             destStream.Seek(offset, SeekOrigin.Begin);
-            var verifyBytes = await destStream.ReadAsync(this.buffer, 0, length, token);
+            var verifyBytes = await destStream.ReadAsync(this.verifyBuffer, 0, length, token);
 
             if (verifyBytes != length)
             {
@@ -207,12 +177,10 @@
 
             for (var i = 0; i < verifyBytes; i++)
             {
-                if (srcBytes[i] == this.buffer[i])
+                if (srcBytes[i] != this.verifyBuffer[i])
                 {
-                    continue;
+                    return false;
                 }
-
-                return false;
             }
 
             return true;

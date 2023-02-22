@@ -2,10 +2,9 @@ namespace Hst.Imager.Core
 {
     public class Sector
     {
-        public long Start { get; set; }
-        public long End { get; set; }
-        public long Size { get; set; }
+        public int Start { get; set; }
+        public int End { get; set; }
+        public int Size { get; set; }
         public bool IsZeroFilled { get; set; }
-        public byte[] Data { get; set; }
     }
 }

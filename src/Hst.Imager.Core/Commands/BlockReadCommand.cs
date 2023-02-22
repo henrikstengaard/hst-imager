@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -13,6 +14,7 @@ using File = System.IO.File;
 public class BlockReadCommand : CommandBase
 {
     private readonly ILogger<BlockReadCommand> logger;
+    private readonly byte[] buffer;
     private readonly ICommandHelper commandHelper;
     private readonly IEnumerable<IPhysicalDrive> physicalDrives;
     private readonly string path;
@@ -27,6 +29,8 @@ public class BlockReadCommand : CommandBase
         long? start, long? end)
     {
         this.logger = logger;
+        
+        this.buffer = new byte[blockSize > 1024 * 1024 ? blockSize : 1024 * 1024];
         this.commandHelper = commandHelper;
         this.physicalDrives = physicalDrives;
         this.path = path;
@@ -74,34 +78,53 @@ public class BlockReadCommand : CommandBase
 
         stream.Position = start ?? 0;
         var cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token);
-        var dataSectorReader = new DataSectorReader(stream, blockSize);
 
-        SectorResult sectorResult;
+        var offset = start ?? 0;
         long blocksRead = 0;
+        int bytesRead;
         do
         {
-            sectorResult = await dataSectorReader.ReadNext();
+            
+            try
+            {
+                stream.Seek(offset, SeekOrigin.Begin);
+                bytesRead = await stream.ReadAsync(this.buffer, 0, this.buffer.Length, token);
+            }
+            catch (Exception e)
+            {
+                return new Result(new Error($"Failed to read: {e}"));
+            }
 
-            var sectors = used ? sectorResult.Sectors.Where(x => !x.IsZeroFilled) : sectorResult.Sectors;
-
+            var sectors = DataSectorReader.Read(buffer, blockSize, bytesRead, !used).ToList();
+            
             foreach (var sector in sectors)
             {
+                if (start.HasValue && sector.Start < start.Value)
+                {
+                    continue;
+                }
+                
                 if (end.HasValue && sector.Start >= end.Value)
                 {
-                    cancellationTokenSource.Cancel();
                     break;
                 }
 
+                OnDebugMessage($"Writing block offset {sector.Start}");
+
                 var sectorPath = Path.Combine(outputPath, $"{sector.Start}.bin");
-                await File.WriteAllBytesAsync(sectorPath, sector.Data, cancellationTokenSource.Token);
+                var sectorBytes = new byte[blockSize];
+                Array.Copy(buffer, sector.Start, sectorBytes, 0, sector.Size);
+                await File.WriteAllBytesAsync(sectorPath, sectorBytes, cancellationTokenSource.Token);
                 blocksRead++;
             }
 
-            if (end.HasValue && sectorResult.Start > end.Value || cancellationTokenSource.Token.IsCancellationRequested)
+            offset += bytesRead;
+
+            if (end.HasValue && offset > end.Value || cancellationTokenSource.Token.IsCancellationRequested)
             {
                 break;
             }
-        } while (!sectorResult.EndOfSectors);
+        } while (bytesRead == this.buffer.Length);
 
         OnInformationMessage($"Read {blocksRead} blocks");
 

@@ -183,17 +183,10 @@ public class GivenStreamCopier
         // act - copy from source to destination
         await streamCopier.Copy(cancellationTokenSource.Token, source, destination, size, sourceOffset, destinationOffset, skipZeroFilled);
 
-        // assert - copied source bytes are equal to destination bytes
+        // assert - destination bytes contain first 1024 zero bytes and data bytes copied from source
         var destinationBytes = destination.ToArray();
-        var expectedDestinationBytesAtByteShiftOffset =
-            new byte[] { 0 }.Concat(sourceBytes.Skip(bytesShiftAtOffset)).ToArray();
-        var actualDestinationBytes = destinationBytes.Skip(1024).ToArray();
-        Assert.Equal(expectedDestinationBytesAtByteShiftOffset.Length, actualDestinationBytes.Length);
-        Assert.Equal(expectedDestinationBytesAtByteShiftOffset, actualDestinationBytes);
-        
-        // assert - destination bytes contain first 1024 bytes and bytes copied from source
         var expectedDestinationBytes =
-            new byte[1024].Concat(new byte[] { 0 }.Concat(sourceBytes.Skip(bytesShiftAtOffset))).ToArray();
+            new byte[1024].Concat(sourceBytes.Skip(sourceOffset).Take(size)).ToArray();
         Assert.Equal(expectedDestinationBytes.Length, destinationBytes.Length);
         Assert.Equal(expectedDestinationBytes, destinationBytes);
     }
