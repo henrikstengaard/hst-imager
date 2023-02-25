@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Amiga.FileSystems.Pfs3;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -26,7 +25,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         this.stream = stream;
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
-        this.currentPathComponents = null;
+        this.currentPathComponents = pathComponents;
         this.writeOperations = 0;
     }
     
@@ -52,9 +51,11 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     {
         await fileSystemVolume.ChangeDirectory("/");
 
-        for (var i = 0; i < entryPathComponents.Length; i++)
+        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        
+        for (var i = 0; i < fullPathComponents.Length; i++)
         {
-            var part = entryPathComponents[i];
+            var part = fullPathComponents[i];
             
             IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
 
@@ -66,7 +67,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 await fileSystemVolume.CreateDirectory(part);
             }
 
-            if (i == entryPathComponents.Length - 1)
+            if (i == fullPathComponents.Length - 1)
             {
                 await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
         
@@ -85,7 +86,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             writeOperations++;
         }
 
-        currentPathComponents = entry.PathComponents;
+        currentPathComponents = fullPathComponents;
         
         await Flush();
     }

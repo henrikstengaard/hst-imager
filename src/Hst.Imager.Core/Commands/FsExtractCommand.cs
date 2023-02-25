@@ -1,8 +1,10 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,6 +53,7 @@ public class FsExtractCommand : FsCommandBase
         }
 
         var srcRootPath = srcEntryIteratorResult.Value.RootPath;
+        var srcPathComponents = srcRootPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
 
         // iterate through source entries and write in destination
         var filesCount = 0;
@@ -67,8 +70,9 @@ public class FsExtractCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
-                    string entryPath;
-                    string[] entryPathComponents;
+                    var entryPathComponents = srcPathComponents
+                        .Concat(srcEntryIterator.GetPathComponents(entry.RawPath)).ToArray();
+
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
@@ -78,8 +82,6 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             dirsCount++;
-                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
-                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
                             await destEntryWriter.CreateDirectory(entry, entryPathComponents);
                             break;
                         case EntryType.File:
@@ -91,10 +93,8 @@ public class FsExtractCommand : FsCommandBase
                             {
                                 OnInformationMessage($"{entry.FormattedName} ({entry.Size.FormatBytes()})");
                             }
-                            
+
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
-                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
                             await destEntryWriter.WriteEntry(entry, entryPathComponents, stream);
                             break;
                         }
@@ -110,7 +110,7 @@ public class FsExtractCommand : FsCommandBase
 
         return new Result();
     }
-    
+
     protected async Task<Result<IEntryIterator>> GetExtractEntryIterator(string path, bool recursive)
     {
         OnDebugMessage($"Resolving path '{path}'");
@@ -130,7 +130,14 @@ public class FsExtractCommand : FsCommandBase
                 new PathNotFoundError($"Media path not defined",
                     mediaResult.Value.MediaPath));
         }
-        
+
+        // zip
+        var zipEntryIterator = await GetZipEntryIterator(mediaResult.Value, recursive);
+        if (zipEntryIterator != null && zipEntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(zipEntryIterator.Value);
+        }
+
         // lha
         var lhaEntryIterator = await GetLhaEntryIterator(mediaResult.Value, recursive);
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
@@ -144,14 +151,14 @@ public class FsExtractCommand : FsCommandBase
         {
             return new Result<IEntryIterator>(adfEntryIterator.Value);
         }
-        
+
         // iso
         var iso9660EntryIterator = await GetIso9660EntryIterator(mediaResult.Value, recursive);
         if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
         {
             return new Result<IEntryIterator>(iso9660EntryIterator.Value);
         }
-        
+
         return new Result<IEntryIterator>(new Error($"File system at path '{path}' not supported"));
     }
 

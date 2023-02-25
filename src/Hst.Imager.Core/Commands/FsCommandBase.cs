@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
@@ -13,7 +14,6 @@ using Compression.Lha;
 using DiscUtils.Iso9660;
 using Hst.Core;
 using Hst.Core.Extensions;
-// using Hst.Core.IO;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using FileMode = System.IO.FileMode;
@@ -47,6 +47,10 @@ public abstract class FsCommandBase : CommandBase
 
     private static readonly byte[] LhaMagicNumber = new byte[] { 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
 
+    private static readonly byte[] ZipMagicNumber1 = new byte[] { 0x50, 0x4B, 0x03, 0x04 }; // "PK" at offset 0 (Zip archive, normal archive)
+    private static readonly byte[] ZipMagicNumber2 = new byte[] { 0x50, 0x4B, 0x05, 0x06 }; // "PK" at offset 0 (Zip archive, empty archive)
+    private static readonly byte[] ZipMagicNumber3 = new byte[] { 0x50, 0x4B, 0x07, 0x08 }; // "PK" at offset 0 (Zip archive, spanned archive)
+    
     private async Task<bool> IsAdfMedia(MediaResult mediaResult)
     {
         // return false, if media file doesnt exist
@@ -68,6 +72,23 @@ public abstract class FsCommandBase : CommandBase
         return sectorBytes[3] <= 7;
     }
 
+    private async Task<bool> IsZipMedia(MediaResult mediaResult)
+    {
+        // return false, if media file doesnt exist
+        if (!File.Exists(mediaResult.MediaPath))
+        {
+            return false;
+        }
+
+        await using var stream = File.OpenRead(mediaResult.MediaPath);
+
+        stream.Seek(0, SeekOrigin.Begin);
+        var sectorBytes = await stream.ReadBytes(512);
+
+        return HasMagicNumber(ZipMagicNumber1, sectorBytes, 0) || HasMagicNumber(ZipMagicNumber2, sectorBytes, 0) ||
+               HasMagicNumber(ZipMagicNumber3, sectorBytes, 0);
+    }
+    
     private async Task<bool> IsLhaMedia(MediaResult mediaResult)
     {
         // return false, if media file doesnt exist
@@ -198,6 +219,20 @@ public abstract class FsCommandBase : CommandBase
         return Task.FromResult(!File.Exists(path) ? null : new Result<IEntryIterator>(new FileEntryIterator(path)));
     }
 
+    protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult mediaResult, bool recursive)
+    {
+        if (!await IsZipMedia(mediaResult))
+        {
+            return null;
+        }
+
+        var zipStream = File.OpenRead(mediaResult.MediaPath);
+        var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+
+        return new Result<IEntryIterator>(new ZipArchiveEntryIterator(zipStream, mediaResult.FileSystemPath, zipArchive,
+            recursive));
+    }
+    
     protected async Task<Result<IEntryIterator>> GetLhaEntryIterator(MediaResult mediaResult, bool recursive)
     {
         if (!await IsLhaMedia(mediaResult))

@@ -41,6 +41,14 @@ public class FsDirCommand : FsCommandBase
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
         OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
+        // zip
+        var zipEntryIterator = await GetZipEntryIterator(pathResult.Value, recursive);
+        if (zipEntryIterator != null && zipEntryIterator.IsSuccess)
+        {
+            await ListEntries(zipEntryIterator.Value, pathResult.Value.FileSystemPath);
+            return new Result();
+        }
+        
         // lha
         var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
