@@ -11,6 +11,7 @@ public class DirectoryEntryIterator : IEntryIterator
 {
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
+    private readonly string[] rootPathComponents;
     private readonly bool recursive;
     private Entry currentEntry;
     private bool isFirst;
@@ -19,6 +20,7 @@ public class DirectoryEntryIterator : IEntryIterator
     {
         this.nextEntries = new Stack<Entry>();
         this.rootPath = Path.GetFullPath(path);
+        this.rootPathComponents = GetPathComponents(this.rootPath);
         this.recursive = recursive;
         this.isFirst = true;
     }
@@ -57,15 +59,10 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public string[] GetPathComponents(string path)
     {
-        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
+        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    private string GetEntryPath(string entryPath)
-    {
-        return entryPath.Length >= this.rootPath.Length + 1
-            ? entryPath.Substring(this.rootPath.Length + 1)
-            : string.Empty;
-    }
+    public bool UsesFileNameMatcher => false;
 
     private void EnqueueDirectory(string currentPath)
     {
@@ -73,11 +70,17 @@ public class DirectoryEntryIterator : IEntryIterator
         
         foreach (var dirInfo in currentDir.GetDirectories().OrderByDescending(x => x.Name).ToList())
         {
+            var fullPathComponents = GetPathComponents(dirInfo.FullName);
+            var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
+            var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
+            
             this.nextEntries.Push(new Entry
             {
-                Name = dirInfo.Name,
+                Name = relativePath,
+                FormattedName = relativePath,
                 RawPath = dirInfo.FullName,
-                PathComponents = dirInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
+                FullPathComponents = fullPathComponents,
+                RelativePathComponents = relativePathComponents,
                 Date = dirInfo.LastWriteTime,
                 Size = 0,
                 Type = EntryType.Dir
@@ -86,11 +89,17 @@ public class DirectoryEntryIterator : IEntryIterator
         
         foreach (var fileInfo in currentDir.GetFiles().OrderByDescending(x => x.Name).ToList())
         {
+            var fullPathComponents = GetPathComponents(fileInfo.FullName);
+            var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
+            var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
+            
             this.nextEntries.Push(new Entry
             {
-                Name = fileInfo.Name,
+                Name = relativePath,
+                FormattedName = relativePath,
                 RawPath = fileInfo.FullName,
-                PathComponents = fileInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
+                FullPathComponents = fullPathComponents,
+                RelativePathComponents = relativePathComponents,
                 Date = fileInfo.LastWriteTime,
                 Size = fileInfo.Length,
                 Type = EntryType.File

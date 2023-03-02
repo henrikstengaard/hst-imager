@@ -84,7 +84,7 @@ public class FsDirCommand : FsCommandBase
         using var media = readableMediaResult.Value;
         await using var stream = media.Stream;
 
-        var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
         {

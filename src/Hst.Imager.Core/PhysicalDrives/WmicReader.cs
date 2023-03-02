@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.PhysicalDrives
 {
+    using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
@@ -28,7 +29,7 @@
 
         public static IEnumerable<WmicDiskDriveToDiskPartition> ParseWmicDiskDriveToDiskPartitions(string csv)
         {
-            foreach (var line in csv.Split('\n'))
+            foreach (var line in csv.Split(new []{'\n', '\r'}, StringSplitOptions.RemoveEmptyEntries))
             {
                 var matches = deviceIdRegex.Matches(line);
                 if (matches.Count != 2)
@@ -46,7 +47,7 @@
         
         public static IEnumerable<WmicLogicalDiskToPartition> ParseWmicLogicalDiskToPartitions(string csv)
         {
-            foreach (var line in csv.Split('\n'))
+            foreach (var line in csv.Split(new []{'\n', '\r'}, StringSplitOptions.RemoveEmptyEntries))
             {
                 var matches = deviceIdRegex.Matches(line);
                 if (matches.Count != 2)

@@ -47,7 +47,7 @@ public class RdbFsImportCommand : CommandBase
             return new Result(new Error("DOS type must be 4 characters"));
         }
 
-        OnInformationMessage($"Importing file systems from '{path}' to Rigid Disk Block at '{fileSystemPath}'");
+        OnInformationMessage($"Importing file systems to Rigid Disk Block at '{path}' from file system path '{fileSystemPath}'");
         
         OnDebugMessage($"Opening '{path}' as writable");
 

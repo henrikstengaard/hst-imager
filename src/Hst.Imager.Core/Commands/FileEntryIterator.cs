@@ -23,7 +23,7 @@ public class FileEntryIterator : IEntryIterator
 
     public string RootPath { get; }
 
-    public Entry Current => currentEntry;    
+    public Entry Current => currentEntry;
 
     public Task<bool> Next()
     {
@@ -60,8 +60,9 @@ public class FileEntryIterator : IEntryIterator
         this.nextEntries.Push(new Entry
         {
             Name = fileInfo.Name,
+            FormattedName = fileInfo.Name,
             RawPath = fileInfo.FullName,
-            PathComponents = fileInfo.FullName.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries),
+            RelativePathComponents = GetPathComponents(fileInfo.FullName),
             Date = fileInfo.LastWriteTime,
             Size = fileInfo.Length,
             Type = EntryType.File
@@ -70,6 +71,8 @@ public class FileEntryIterator : IEntryIterator
     
     public string[] GetPathComponents(string path)
     {
-        return path.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
+        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
+
+    public bool UsesFileNameMatcher => false;
 }

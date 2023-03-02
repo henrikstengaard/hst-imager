@@ -1,0 +1,23 @@
+﻿# create blank 16gb image with compatible size (cf/sd/ssd friendly)
+blank 16gb.vhd 16000000000 --compatible
+
+# initialize rigid disk block
+rdb init 16gb.vhd
+
+# import fast file system from amiga os 3.2 install adf with dos type DOS7
+rdb fs import 16gb.vhd install3.2.adf --dos-type DOS7 --name FastFileSystem
+
+# add rdb partition of 500mb with device name "DH0" and set bootable
+rdb part add 16gb.vhd DH0 DOS7 500mb --bootable
+
+# add rdb partition of remaining space with device name "DH1"
+rdb part add 16gb.vhd DH1 DOS7 *
+
+# format rdb partition number 1 with volume name "Workbench"
+rdb part format 16gb.vhd 1 Workbench
+
+# format rdb partition number 2 with volume name "Work"
+rdb part format 16gb.vhd 2 Work
+
+# show info
+info 16gb.vhd

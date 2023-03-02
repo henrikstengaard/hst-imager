@@ -1,0 +1,29 @@
+﻿# create blank 4gb image with compatible size (cf/sd/ssd friendly)
+blank 4gb.vhd 4000000000 --compatible
+
+# initialize rigid disk block
+rdb init 4gb.vhd
+
+# import fast file system from amiga os 3.1 install adf with dos type DOS3
+rdb fs import 4gb.vhd amiga-os-310-install.adf --dos-type DOS3 --name FastFileSystem
+
+# add rdb partition of 500mb with device name "DH0" and set bootable
+rdb part add 4gb.vhd DH0 DOS3 100mb --bootable
+
+# add rdb partition of 1.8gb with device name "DH1"
+rdb part add 4gb.vhd DH1 DOS3 1.8gb
+
+# add rdb partition of remaining space with device name "DH2"
+rdb part add 4gb.vhd DH2 DOS3 *
+
+# format rdb partition number 1 with volume name "Workbench"
+rdb part format 4gb.vhd 1 Workbench
+
+# format rdb partition number 2 with volume name "Work"
+rdb part format 4gb.vhd 2 Work
+
+# format rdb partition number 3 with volume name "Work2"
+rdb part format 4gb.vhd 3 Work2
+
+# show info
+info 4gb.vhd

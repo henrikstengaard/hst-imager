@@ -18,19 +18,22 @@
       <None Update="pfs3aio">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="create_16gb_rdb_mbr_hybrid_vhd.txt">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="create_1gb_rdb_vhd.txt">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="export_dh0_1gb_import_4gb.txt">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
       <None Update="license.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="create_16gb_rdb_vhd.txt">
+      <None Update="Scripts\create_4gb_rdb_vhd_dos3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_16gb_vhd_rdb_pfs3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_1gb_vhd_rdb_pfs3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_16gb_vhd_rdb_pfs3_mbr_fat32_hybrid.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_16gb_vhd_rdb_dos7.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

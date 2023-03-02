@@ -25,7 +25,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         this.stream = stream;
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
-        this.currentPathComponents = pathComponents;
+        this.currentPathComponents = Array.Empty<string>();
         this.writeOperations = 0;
     }
     
@@ -52,7 +52,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         await fileSystemVolume.ChangeDirectory("/");
 
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
-        
+
         for (var i = 0; i < fullPathComponents.Length; i++)
         {
             var part = fullPathComponents[i];
@@ -139,7 +139,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             {
                 bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                 await entryStream.WriteAsync(buffer, 0, bytesRead);
-            } while (bytesRead == buffer.Length);
+            } while (bytesRead != 0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
         await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
@@ -157,6 +157,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         writeOperations++;
         await Flush();
     }
+
+    public IEnumerable<string> GetLogs() => new List<string>();
 
     private async Task Flush()
     {

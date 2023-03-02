@@ -98,22 +98,20 @@ public class LhaArchiveEntryIterator : IEntryIterator
         
         foreach (var lhaEntry in lhaEntries)
         {
-            var entryName = GetEntryName(lhaEntry.Name).Replace("\\", "/");
-            var entryPath = entryName;
+            var entryPath = GetEntryName(lhaEntry.Name).Replace("\\", "/");
 
             if (!string.IsNullOrEmpty(currentPath))
             {
-                if (entryName
+                if (entryPath
                         .IndexOf(string.Concat(currentPath, "/").Replace("\\", "/"),
                             StringComparison.OrdinalIgnoreCase) < 0)
                 {
                     continue;
                 }
-
-                entryName = entryName.Substring(currentPath.Length + 1);
             }
 
             var entryPathComponents = GetPathComponents(entryPath);
+            var entryRelativePathComponents = entryPathComponents.Skip(currentPathComponents.Length).ToArray();
 
             var isDir = (lhaEntry.UnixMode & Constants.UNIX_FILE_DIRECTORY) == Constants.UNIX_FILE_DIRECTORY;
             if (isDir)
@@ -127,21 +125,22 @@ public class LhaArchiveEntryIterator : IEntryIterator
                      componentIndex < (recursive ? entryPathComponents.Length : Math.Min(currentPathComponents.Length + 2, entryPathComponents.Length));
                      componentIndex++)
                 {
-                    var fullDir = string.Join("/",
-                        entryPathComponents.Skip(currentPathComponents.Length)
-                            .Take(componentIndex - currentPathComponents.Length));
-                    if (string.IsNullOrEmpty(fullDir) || dirs.Contains(fullDir))
+                    var dirRelativePathComponents = entryPathComponents.Skip(currentPathComponents.Length)
+                        .Take(componentIndex - currentPathComponents.Length).ToArray();
+                    var dirRelativePath = string.Join("/", dirRelativePathComponents);
+                    if (string.IsNullOrEmpty(dirRelativePath) || dirs.Contains(dirRelativePath))
                     {
                         continue;
                     }
 
-                    dirs.Add(fullDir);
+                    dirs.Add(dirRelativePath);
                     entries.Add(new Entry
                     {
-                        Name = fullDir,
-                        FormattedName = fullDir,
-                        RawPath = fullDir,
-                        PathComponents = GetPathComponents(fullDir),
+                        Name = dirRelativePath,
+                        FormattedName = dirRelativePath,
+                        RawPath = dirRelativePath,
+                        FullPathComponents = entryPathComponents,
+                        RelativePathComponents = dirRelativePathComponents,
                         Date = lhaEntry.UnixLastModifiedStamp,
                         Size = 0,
                         Type = Models.FileSystems.EntryType.Dir,
@@ -166,12 +165,15 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 properties.Add("Comment", comment);
             }
             
+            var entryRelativePath = string.Join("/", entryRelativePathComponents);
+            
             entries.Add(new Entry
             {
-                Name = entryName,
-                FormattedName = entryName,
+                Name = entryRelativePath,
+                FormattedName = entryRelativePath,
                 RawPath = entryPath,
-                PathComponents = entryPathComponents,
+                FullPathComponents = entryPathComponents,
+                RelativePathComponents = entryRelativePathComponents,
                 Date = lhaEntry.UnixLastModifiedStamp,
                 Size = lhaEntry.OriginalSize,
                 Type = Models.FileSystems.EntryType.File,
@@ -221,4 +223,6 @@ public class LhaArchiveEntryIterator : IEntryIterator
     {
         return path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
     }
+
+    public bool UsesFileNameMatcher => false;
 }

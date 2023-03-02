@@ -13,14 +13,14 @@ public class DirectoryEntryWriter : IEntryWriter
     private readonly string path;
     private readonly byte[] buffer;
     private readonly bool isWindowsOperatingSystem;
-    private readonly IList<string> entriesWithReservedNames;
+    private readonly IList<string> logs;
 
     public DirectoryEntryWriter(string path)
     {
         this.path = path;
         this.buffer = new byte[4096];
         this.isWindowsOperatingSystem = OperatingSystem.IsWindows();
-        this.entriesWithReservedNames = new List<string>();
+        this.logs = new List<string>();
     }
 
     public void Dispose()
@@ -68,10 +68,10 @@ public class DirectoryEntryWriter : IEntryWriter
         var fileName = Path.GetFileNameWithoutExtension(entryPath);
         if (isWindowsOperatingSystem && WindowsReservedNamesRegex.IsMatch(fileName))
         {
-            entriesWithReservedNames.Add(entryPath);
+            var newFileName = $".{fileName}{Path.GetExtension(entryPath)}";
+            entryPath = Path.Combine(dirPath, newFileName);
 
-            fileName = $".{fileName}{Path.GetExtension(entryPath)}";
-            entryPath = Path.Combine(dirPath, fileName);
+            logs.Add($"{entryPath} -> {newFileName}");
         }
 
         await using var fileStream = File.Open(entryPath, FileMode.Create, FileAccess.ReadWrite);
@@ -81,7 +81,9 @@ public class DirectoryEntryWriter : IEntryWriter
         {
             bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
             await fileStream.WriteAsync(buffer, 0, bytesRead);
-        } while (bytesRead == buffer.Length);
+        } while
+            (bytesRead !=
+             0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
 
         fileStream.Close();
         await fileStream.DisposeAsync();
@@ -92,5 +94,15 @@ public class DirectoryEntryWriter : IEntryWriter
             File.SetLastWriteTime(entryPath, entry.Date.Value);
             File.SetLastAccessTime(entryPath, entry.Date.Value);
         }
+    }
+
+    public IEnumerable<string> GetLogs()
+    {
+        return this.logs.Count == 0
+            ? new List<string>()
+            : new[]
+            {
+                string.Empty, "Following files were renamed to due conflicts with Windows OS reserved filenames:"
+            }.Concat(logs);
     }
 }

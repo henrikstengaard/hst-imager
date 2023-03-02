@@ -14,7 +14,8 @@ public class Entry
     /// <summary>
     /// Path to entry (dir and filename) split into components for os independency
     /// </summary>
-    public string[] PathComponents { get; set; }
+    public string[] RelativePathComponents { get; set; }
+    public string[] FullPathComponents { get; set; }
     public long Size { get; set; }
     public EntryType Type { get; set; }
     public DateTime? Date { get; set; }

@@ -13,6 +13,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 {
     private readonly Stream stream;
     private readonly string rootPath;
+    private string[] rootPathComponents;
+    private FileNameMatcher fileNameMatcher;
     private readonly IFileSystemVolume fileSystemVolume;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -24,6 +26,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     {
         this.stream = stream;
         this.rootPath = rootPath;
+        this.rootPathComponents = Array.Empty<string>();
+        this.fileNameMatcher = null;
         this.fileSystemVolume = fileSystemVolume;
         this.recursive = recursive;
         this.nextEntries = new Stack<Entry>();
@@ -49,7 +53,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     public void Dispose() => Dispose(true);
 
     public string RootPath => rootPath;
-    
+
     public Entry Current => currentEntry;
 
     public async Task<bool> Next()
@@ -58,7 +62,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         {
             isFirst = false;
             currentEntry = null;
-            await EnqueueDirectory(rootPath.Split('/', StringSplitOptions.RemoveEmptyEntries));
+            await ResolveRootPath(this.rootPath);
+            await EnqueueDirectory(this.rootPathComponents);
         }
 
         if (this.nextEntries.Count <= 0)
@@ -69,22 +74,56 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         currentEntry = this.nextEntries.Pop();
         if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
         {
-            await EnqueueDirectory(currentEntry.PathComponents);
+            await EnqueueDirectory(currentEntry.FullPathComponents);
         }
 
         return true;
     }
 
+    private async Task ResolveRootPath(string path)
+    {
+        var pathComponents = GetPathComponents(path);
+        
+        await fileSystemVolume.ChangeDirectory("/");
+
+        var dirComponents = 0;
+        foreach (var pathComponent in pathComponents)
+        {
+            var result = await fileSystemVolume.FindEntry(pathComponent);
+
+            if (!result.PartsNotFound.Any() && result.Entry.Type == EntryType.Dir)
+            {
+                dirComponents++;
+                await fileSystemVolume.ChangeDirectory(pathComponent);
+                continue;
+            }
+            
+            if (dirComponents == pathComponents.Length - 1)
+            {
+                this.fileNameMatcher = new FileNameMatcher(pathComponent);
+                break;
+            }
+            
+            if (result.PartsNotFound.Any())
+            {
+                throw new IOException(
+                    $"Path not found '{string.Join("/", pathComponents.Take(dirComponents).Concat(result.PartsNotFound))}'");
+            }
+        }
+
+        rootPathComponents = pathComponents.Take(dirComponents).ToArray();
+    }
+
     public async Task<Stream> OpenEntry(Entry entry)
     {
         await fileSystemVolume.ChangeDirectory("/");
-        
-        for (var i = 0; i < entry.PathComponents.Length - 1; i++)
+
+        for (var i = 0; i < entry.FullPathComponents.Length - 1; i++)
         {
-            await fileSystemVolume.ChangeDirectory(entry.PathComponents[i]);
+            await fileSystemVolume.ChangeDirectory(entry.FullPathComponents[i]);
         }
 
-        return await fileSystemVolume.OpenFile(entry.PathComponents[^1], FileMode.Read, true);
+        return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, true);
     }
 
     public string[] GetPathComponents(string path)
@@ -92,11 +131,12 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         return path.Split('/', StringSplitOptions.RemoveEmptyEntries);
     }
 
+    public bool UsesFileNameMatcher => this.fileNameMatcher != null;
+
     private async Task EnqueueDirectory(string[] currentPathComponents)
     {
-        // var currentPathComponents = 
-        
         await fileSystemVolume.ChangeDirectory("/");
+
         foreach (var name in currentPathComponents)
         {
             await fileSystemVolume.ChangeDirectory(name);
@@ -108,13 +148,11 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
         foreach (var entry in entries)
         {
-            var entryPathComponents = currentPathComponents.Concat(new[] { entry.Name }).ToArray();
-            var entryName = string.Join("/", entryPathComponents);
-            if (!string.IsNullOrEmpty(rootPath))
-            {
-                entryName = entryName.Substring(rootPath.Length + 1);
-            }
-            
+            var fullPathComponents = currentPathComponents.Concat(new[] { entry.Name }).ToArray();
+            var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
+
+            var entryName = string.Join("/", relativePathComponents);
+
             switch (entry.Type)
             {
                 case EntryType.DirLink:
@@ -123,32 +161,47 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                     {
                         Name = entry.Name,
                         FormattedName = entryName,
-                        RawPath = string.Join("/", entryPathComponents),
-                        PathComponents = entryPathComponents,
+                        RawPath = string.Join("/", fullPathComponents),
+                        RelativePathComponents = relativePathComponents,
+                        FullPathComponents = fullPathComponents,
                         Date = entry.Date,
                         Size = 0,
                         Type = Models.FileSystems.EntryType.Dir,
                         Properties = new Dictionary<string, string>
                         {
-                            {"Comment", entry.Comment }
+                            { "Comment", entry.Comment }
                         },
                         Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
                     });
                     break;
                 case EntryType.FileLink:
                 case EntryType.File:
+                    // skip file entry, if name filter is set and entry name doesn't match
+                    // if (!string.IsNullOrWhiteSpace(this.nameFilter) &&
+                    //     (entry.Name.Length != this.nameFilter.Length ||
+                    //     entry.Name.IndexOf(this.nameFilter, StringComparison.OrdinalIgnoreCase) != 0))
+                    // {
+                    //     continue;
+                    // }
+                    if (this.fileNameMatcher != null &&
+                        !this.fileNameMatcher.IsMatch(entry.Name))
+                    {
+                        continue;
+                    }
+                    
                     files.Add(new Entry
                     {
                         Name = entry.Name,
                         FormattedName = entryName,
-                        RawPath = string.Join("/", entryPathComponents),
-                        PathComponents = entryPathComponents,
+                        RawPath = string.Join("/", fullPathComponents),
+                        RelativePathComponents = relativePathComponents,
+                        FullPathComponents = fullPathComponents,
                         Date = entry.Date,
                         Size = entry.Size,
                         Type = Models.FileSystems.EntryType.File,
                         Properties = new Dictionary<string, string>
                         {
-                            {"Comment", entry.Comment }
+                            { "Comment", entry.Comment }
                         },
                         Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
                     });

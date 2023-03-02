@@ -299,13 +299,23 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(media.Error);
         }
 
-        var parts = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var parts = mediaResult.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
+        if (parts.Length == 0)
+        {
+            return new Result<IEntryIterator>(new Error($"No partition table in path"));
+        }
+        
         if (!parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
         {
             return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"));
         }
 
+        if (parts.Length == 1)
+        {
+            return new Result<IEntryIterator>(new Error($"No device name in path"));
+        }
+        
         if (blockSize < 1024 * 512)
         {
             blockSize = 1024 * 512;
@@ -371,22 +381,32 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(media.Error);
         }
 
-        var parts = mediaResult.Value.FileSystemPath.Split('\\', '/', StringSplitOptions.RemoveEmptyEntries);
+        var parts = mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
-        if (parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
+        if (parts.Length == 0)
         {
-            var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
-            if (fileSystemVolumeResult.IsFaulted)
-            {
-                return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
-            }
-
-            // skip 2 first parts, partition table and device/drive name
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream, parts.Skip(2).ToArray(),
-                fileSystemVolumeResult.Value));
+            return new Result<IEntryWriter>(new Error($"No partition table in path"));
         }
 
-        return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
+        switch (parts[0].ToLowerInvariant())
+        {
+            case "rdb":
+                if (parts.Length == 1)
+                {
+                    return new Result<IEntryWriter>(new Error($"No device name in path"));
+                }
+                var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
+                if (fileSystemVolumeResult.IsFaulted)
+                {
+                    return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
+                }
+
+                // skip 2 first parts, partition table and device/drive name
+                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream, parts.Skip(2).ToArray(),
+                    fileSystemVolumeResult.Value));
+            default:
+                return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
+        }
     }
 
     protected Result<MediaResult> ResolveMedia(string path)

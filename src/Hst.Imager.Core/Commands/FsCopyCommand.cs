@@ -50,8 +50,6 @@ public class FsCopyCommand : FsCommandBase
             return new Result(destEntryWriterResult.Error);
         }
 
-        var srcRootPath = srcEntryIteratorResult.Value.RootPath;
-
         // iterate through source entries and write in destination
         var filesCount = 0;
         var dirsCount = 0;
@@ -67,20 +65,16 @@ public class FsCopyCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
-                    string entryPath;
-                    string[] entryPathComponents;
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive)
+                            if (!recursive || srcEntryIterator.UsesFileNameMatcher)
                             {
                                 continue;
                             }
 
                             dirsCount++;
-                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
-                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
-                            await destEntryWriter.CreateDirectory(entry, entryPathComponents);
+                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents);
                             break;
                         case EntryType.File:
                         {
@@ -93,13 +87,16 @@ public class FsCopyCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            entryPath = TrimRootPath(srcRootPath, entry.RawPath);
-                            entryPathComponents = srcEntryIterator.GetPathComponents(entryPath);
-                            await destEntryWriter.WriteEntry(entry, entryPathComponents, stream);
+                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream);
                             break;
                         }
                     }
                 }
+            }
+
+            foreach (var log in destEntryWriter.GetLogs())
+            {
+                OnInformationMessage(log);                
             }
         }
 
@@ -146,15 +143,6 @@ public class FsCopyCommand : FsCommandBase
         }
 
         return new Result<IEntryIterator>(new Error($"Unsupported path '{path}'"));
-    }
-
-    private static string TrimRootPath(string rootPath, string entryPath)
-    {
-        var trimmedEntryPath = rootPath.Length > 0 ? entryPath.Substring(rootPath.Length) : entryPath;
-
-        return trimmedEntryPath.StartsWith("\\") || trimmedEntryPath.StartsWith("/")
-            ? trimmedEntryPath.Substring(1)
-            : trimmedEntryPath;
     }
 
     private static string RemoveDiacritics(string text)

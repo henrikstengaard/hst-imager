@@ -52,9 +52,6 @@ public class FsExtractCommand : FsCommandBase
             return new Result(destEntryWriterResult.Error);
         }
 
-        var srcRootPath = srcEntryIteratorResult.Value.RootPath;
-        var srcPathComponents = srcRootPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-
         // iterate through source entries and write in destination
         var filesCount = 0;
         var dirsCount = 0;
@@ -70,19 +67,16 @@ public class FsExtractCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
-                    var entryPathComponents = srcPathComponents
-                        .Concat(srcEntryIterator.GetPathComponents(entry.RawPath)).ToArray();
-
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive)
+                            if (!recursive || srcEntryIterator.UsesFileNameMatcher)
                             {
                                 continue;
                             }
 
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entryPathComponents);
+                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents);
                             break;
                         case EntryType.File:
                         {
@@ -95,18 +89,23 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entryPathComponents, stream);
+                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream);
                             break;
                         }
                     }
                 }
+            }
+
+            foreach (var log in destEntryWriter.GetLogs())
+            {
+                OnInformationMessage(log);                
             }
         }
 
         stopwatch.Stop();
 
         OnInformationMessage(
-            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}, {totalBytes.FormatBytes()} copied in {stopwatch.Elapsed.FormatElapsed()}");
+            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}, {totalBytes.FormatBytes()} extracted in {stopwatch.Elapsed.FormatElapsed()}");
 
         return new Result();
     }
