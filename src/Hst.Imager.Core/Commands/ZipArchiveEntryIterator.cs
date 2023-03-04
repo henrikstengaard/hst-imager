@@ -8,11 +8,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Entry = Models.FileSystems.Entry;
+using EntryType = Models.FileSystems.EntryType;
 
 public class ZipArchiveEntryIterator : IEntryIterator
 {
     private readonly Stream stream;
     private readonly string rootPath;
+    private string[] rootPathComponents;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly ZipArchive zipArchive;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -25,9 +28,11 @@ public class ZipArchiveEntryIterator : IEntryIterator
     {
         this.stream = stream;
         this.rootPath = rootPath;
+        this.rootPathComponents = GetPathComponents(rootPath);
+        this.pathComponentMatcher = null;
         this.zipArchive = zipArchive;
         this.recursive = recursive;
-        
+
         this.nextEntries = new Stack<Entry>();
         this.currentEntry = null;
         this.isFirst = true;
@@ -50,7 +55,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
     }
 
     public void Dispose() => Dispose(true);
-    
+
     public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
@@ -61,7 +66,8 @@ public class ZipArchiveEntryIterator : IEntryIterator
         {
             isFirst = false;
             currentEntry = null;
-            EnqueueEntries(rootPath);
+            ResolvePathComponentMatcher();
+            EnqueueEntries();
         }
 
         if (this.nextEntries.Count <= 0)
@@ -73,7 +79,25 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
         return Task.FromResult(true);
     }
-    
+
+    private void ResolvePathComponentMatcher()
+    {
+        var pathComponents = GetPathComponents(rootPath);
+
+        if (pathComponents.Length == 0)
+        {
+            this.rootPathComponents = pathComponents;
+            this.pathComponentMatcher = new PathComponentMatcher(pathComponents);
+            return;
+        }
+
+        var hasPattern = pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
+        this.rootPathComponents =
+            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
+        this.pathComponentMatcher =
+            new PathComponentMatcher(rootPathComponents, hasPattern ? pathComponents[^1] : null, recursive);
+    }
+
     public Task<Stream> OpenEntry(Entry entry)
     {
         if (!zipEntryIndex.ContainsKey(entry.RawPath))
@@ -86,40 +110,32 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
     public string[] GetPathComponents(string path)
     {
-        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        return path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
     }
 
     public bool UsesFileNameMatcher => false;
 
-    private void EnqueueEntries(string currentPath)
+    private void EnqueueEntries()
     {
         var dirs = new HashSet<string>();
-        var currentPathComponents = currentPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
-        
+        var currentPathComponents = new List<string>(this.rootPathComponents).ToArray();
+
         var zipEntries = this.zipArchive.Entries.OrderBy(x => x.FullName).ToList();
 
         var entries = new List<Entry>();
-        
+
         for (var i = zipEntries.Count - 1; i >= 0; i--)
         {
             var zipEntry = zipEntries[i];
 
             var entryPath = GetEntryName(zipEntry.FullName);
 
-            if (!string.IsNullOrEmpty(currentPath))
-            {
-                if (entryPath.Replace("/", "\\")
-                        .IndexOf(string.Concat(currentPath, "\\").Replace("/", "\\"), StringComparison.OrdinalIgnoreCase) < 0)
-                {
-                    continue;
-                }
-            }
-
-            var entryFullPathComponents = entryPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+            var entryFullPathComponents = entryPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
             var entryRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length).ToArray();
-            
+
             var isDir = zipEntry.FullName.EndsWith("\\") || zipEntry.FullName.EndsWith("/");
 
+            // add directory entry, if entry is a path (ends with directory separator)
             if (isDir)
             {
                 var dirFullPath = string.Join("/", entryFullPathComponents);
@@ -127,7 +143,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
                 {
                     dirs.Add(dirFullPath);
                     var dirRelativePath = string.Join("/", entryRelativePathComponents);
-                    entries.Add(new Entry
+                    var dirEntry = new Entry
                     {
                         Name = dirRelativePath,
                         FormattedName = dirRelativePath,
@@ -136,29 +152,43 @@ public class ZipArchiveEntryIterator : IEntryIterator
                         RelativePathComponents = entryRelativePathComponents,
                         Date = zipEntry.LastWriteTime.LocalDateTime,
                         Size = zipEntry.Length,
-                        Type = Models.FileSystems.EntryType.Dir,
+                        Type = EntryType.Dir,
                         Attributes =
                             EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0)),
                         Properties = new Dictionary<string, string>()
-                    });
+                    };
+
+                    if (this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
+                    {
+                        entries.Add(dirEntry);
+                    }
                 }
-                
+
                 continue;
             }
 
             zipEntryIndex.Add(entryPath, zipEntry);
-            
-            if (entryFullPathComponents.Length > currentPathComponents.Length + 1)
+
+            // if entry path components is equal or larger then root path components + 2,
+            // then add dirs for entry
+            if (entryFullPathComponents.Length >= currentPathComponents.Length + 2)
             {
-                for (var componentIndex = currentPathComponents.Length;
-                     componentIndex < (recursive ? entryFullPathComponents.Length : Math.Min(currentPathComponents.Length + 2, entryFullPathComponents.Length));
-                     componentIndex++)
+                var maxComponents = recursive ? entryFullPathComponents.Length - currentPathComponents.Length - 1 : 1;
+                for (var component = 1; component <= maxComponents; component++)
                 {
-                    var dirFullPathComponents = entryFullPathComponents.Take(componentIndex).ToArray();
+                    var dirFullPathComponents = entryFullPathComponents.Take(component).ToArray();
                     var dirRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length)
-                        .Take(componentIndex - currentPathComponents.Length).ToArray();
+                        .Take(component).ToArray();
+                    
+                    // skip, if relative dir path compoents to directory is zero
+                    if (dirRelativePathComponents.Length == 0)
+                    {
+                        continue;
+                    }
                     
                     var dirFullPath = string.Join("/", dirFullPathComponents);
+                    
+                    // skip, if full dir path is empty or already added
                     if (string.IsNullOrEmpty(dirFullPath) || dirs.Contains(dirFullPath))
                     {
                         continue;
@@ -167,7 +197,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
                     dirs.Add(dirFullPath);
                     var dirRelativePath = string.Join("/", dirRelativePathComponents);
                     
-                    entries.Add(new Entry
+                    var dirEntry = new Entry
                     {
                         Name = dirRelativePath,
                         FormattedName = dirRelativePath,
@@ -176,11 +206,16 @@ public class ZipArchiveEntryIterator : IEntryIterator
                         RelativePathComponents = GetPathComponents(dirRelativePath),
                         Date = zipEntry.LastWriteTime.LocalDateTime,
                         Size = 0,
-                        Type = Models.FileSystems.EntryType.Dir,
+                        Type = EntryType.Dir,
                         Attributes =
                             EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0)),
                         Properties = new Dictionary<string, string>()
-                    });
+                    };
+                    
+                    if (this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
+                    {
+                        entries.Add(dirEntry);
+                    }
                 }
 
                 if (!recursive)
@@ -188,22 +223,29 @@ public class ZipArchiveEntryIterator : IEntryIterator
                     continue;
                 }
             }
-            
-            var entryRelativePath = string.Join("/", entryRelativePathComponents);
-            
-            entries.Add(new Entry
+
+            var fileRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length - (entryFullPathComponents.Length == currentPathComponents.Length ? 1 : 0)).ToArray();
+            var entryRelativePath = string.Join("/", fileRelativePathComponents);
+
+            var fileEntry = new Entry
             {
                 Name = entryRelativePath,
                 FormattedName = entryRelativePath,
                 RawPath = entryPath,
-                RelativePathComponents = entryRelativePathComponents,
+                FullPathComponents = entryFullPathComponents,
+                RelativePathComponents = fileRelativePathComponents,
                 Date = zipEntry.LastWriteTime.LocalDateTime,
                 Size = zipEntry.Length,
-                Type = Models.FileSystems.EntryType.File,
+                Type = EntryType.File,
                 Attributes =
                     EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0)),
                 Properties = new Dictionary<string, string>()
-            });
+            };
+
+            if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))
+            {
+                entries.Add(fileEntry);
+            }
         }
         
         foreach (var entry in entries.OrderByDescending(x => x.Name))
@@ -211,11 +253,11 @@ public class ZipArchiveEntryIterator : IEntryIterator
             nextEntries.Push(entry);
         }
     }
-    
+
     private string GetEntryName(string name)
     {
         var entryName = name.Replace("/", "\\");
 
-        return entryName.EndsWith("\\") ? entryName[..^1]: entryName;
-    }    
+        return entryName.EndsWith("\\") ? entryName[..^1] : entryName;
+    }
 }

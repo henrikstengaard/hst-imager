@@ -3,12 +3,12 @@
 using System;
 using System.Text.RegularExpressions;
 
-public class FileNameMatcher
+public class PatternMatcher
 {
     private readonly string pattern;
     private readonly Regex regex;
 
-    public FileNameMatcher(string pattern)
+    public PatternMatcher(string pattern)
     {
         this.pattern = pattern;
         this.regex = pattern.IndexOf("*", StringComparison.Ordinal) >= 0 ? CreateRegex(pattern) : null;

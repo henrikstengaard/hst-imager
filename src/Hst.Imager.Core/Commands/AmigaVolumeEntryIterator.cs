@@ -14,7 +14,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     private readonly Stream stream;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private FileNameMatcher fileNameMatcher;
+    private PatternMatcher fileNameMatcher;
     private readonly IFileSystemVolume fileSystemVolume;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -100,7 +100,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
             
             if (dirComponents == pathComponents.Length - 1)
             {
-                this.fileNameMatcher = new FileNameMatcher(pathComponent);
+                this.fileNameMatcher = new PatternMatcher(pathComponent);
                 break;
             }
             
