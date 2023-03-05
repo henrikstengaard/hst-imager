@@ -32,11 +32,28 @@ public class ZipArchiveEntryIterator : IEntryIterator
         this.pathComponentMatcher = null;
         this.zipArchive = zipArchive;
         this.recursive = recursive;
-
         this.nextEntries = new Stack<Entry>();
         this.currentEntry = null;
         this.isFirst = true;
         this.zipEntryIndex = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void ResolvePathComponentMatcher()
+    {
+        var pathComponents = GetPathComponents(rootPath);
+
+        if (pathComponents.Length == 0)
+        {
+            this.rootPathComponents = pathComponents;
+            this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
+            return;
+        }
+
+        var hasPattern = pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
+        this.rootPathComponents =
+            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
+        this.pathComponentMatcher =
+            new PathComponentMatcher(rootPathComponents, hasPattern ? pathComponents[^1] : null, recursive);
     }
 
     private void Dispose(bool disposing)
@@ -80,24 +97,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
         return Task.FromResult(true);
     }
 
-    private void ResolvePathComponentMatcher()
-    {
-        var pathComponents = GetPathComponents(rootPath);
-
-        if (pathComponents.Length == 0)
-        {
-            this.rootPathComponents = pathComponents;
-            this.pathComponentMatcher = new PathComponentMatcher(pathComponents);
-            return;
-        }
-
-        var hasPattern = pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
-        this.rootPathComponents =
-            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher =
-            new PathComponentMatcher(rootPathComponents, hasPattern ? pathComponents[^1] : null, recursive);
-    }
-
     public Task<Stream> OpenEntry(Entry entry)
     {
         if (!zipEntryIndex.ContainsKey(entry.RawPath))
@@ -113,13 +112,10 @@ public class ZipArchiveEntryIterator : IEntryIterator
         return path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesFileNameMatcher => false;
-
     private void EnqueueEntries()
     {
         var dirs = new HashSet<string>();
         var currentPathComponents = new List<string>(this.rootPathComponents).ToArray();
-
         var zipEntries = this.zipArchive.Entries.OrderBy(x => x.FullName).ToList();
 
         var entries = new List<Entry>();
@@ -166,9 +162,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
                 continue;
             }
-
-            zipEntryIndex.Add(entryPath, zipEntry);
-
+            
             // if entry path components is equal or larger then root path components + 2,
             // then add dirs for entry
             if (entryFullPathComponents.Length >= currentPathComponents.Length + 2)
@@ -224,13 +218,15 @@ public class ZipArchiveEntryIterator : IEntryIterator
                 }
             }
 
+            zipEntryIndex.Add(entryPath, zipEntry);
+            
             var fileRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length - (entryFullPathComponents.Length == currentPathComponents.Length ? 1 : 0)).ToArray();
-            var entryRelativePath = string.Join("/", fileRelativePathComponents);
+            var fileRelativePath = string.Join("/", fileRelativePathComponents);
 
             var fileEntry = new Entry
             {
-                Name = entryRelativePath,
-                FormattedName = entryRelativePath,
+                Name = fileRelativePath,
+                FormattedName = fileRelativePath,
                 RawPath = entryPath,
                 FullPathComponents = entryFullPathComponents,
                 RelativePathComponents = fileRelativePathComponents,
@@ -260,4 +256,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
         return entryName.EndsWith("\\") ? entryName[..^1] : entryName;
     }
+    
+    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
 }

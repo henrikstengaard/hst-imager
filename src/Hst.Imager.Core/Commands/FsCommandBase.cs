@@ -209,9 +209,15 @@ public abstract class FsCommandBase : CommandBase
 
     protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
     {
-        return Task.FromResult(!Directory.Exists(path)
+        var fileName = Path.GetFileName(path);
+        var hasPattern = fileName.IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
+        
+        var rootPath = hasPattern ? Path.GetDirectoryName(path) : path;
+        var pattern = hasPattern ? fileName : null;
+        
+        return Task.FromResult(!Directory.Exists(rootPath)
             ? null
-            : new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive)));
+            : new Result<IEntryIterator>(new DirectoryEntryIterator(rootPath, pattern, recursive)));
     }
 
     protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)

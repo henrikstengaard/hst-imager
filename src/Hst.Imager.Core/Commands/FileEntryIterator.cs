@@ -62,7 +62,7 @@ public class FileEntryIterator : IEntryIterator
             Name = fileInfo.Name,
             FormattedName = fileInfo.Name,
             RawPath = fileInfo.FullName,
-            RelativePathComponents = GetPathComponents(fileInfo.FullName),
+            RelativePathComponents = new[]{fileInfo.Name},
             Date = fileInfo.LastWriteTime,
             Size = fileInfo.Length,
             Type = EntryType.File
@@ -74,5 +74,5 @@ public class FileEntryIterator : IEntryIterator
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesFileNameMatcher => false;
+    public bool UsesPattern => false;
 }

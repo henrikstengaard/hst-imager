@@ -5,15 +5,19 @@ using System;
 public class PathComponentMatcher
 {
     private readonly string[] rootPathComponents;
+    private readonly string pattern;
     private readonly bool recursive;
     private readonly PatternMatcher patternMatcher;
 
     public PathComponentMatcher(string[] rootPathComponents, string pattern = null, bool recursive = false)
     {
         this.rootPathComponents = rootPathComponents;
+        this.pattern = pattern;
         this.recursive = recursive;
         this.patternMatcher = pattern is null or "*" ? null : new PatternMatcher(pattern);
     }
+
+    public bool UsesPattern => !string.IsNullOrEmpty(this.pattern);
 
     public bool IsMatch(string[] pathComponents)
     {

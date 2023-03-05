@@ -12,5 +12,5 @@ public interface IEntryIterator : IDisposable
     Task<bool> Next();
     Task<Stream> OpenEntry(Entry entry);
     string[] GetPathComponents(string path);
-    bool UsesFileNameMatcher { get; }
+    bool UsesPattern { get; }
 }

@@ -14,7 +14,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     private readonly Stream stream;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PatternMatcher fileNameMatcher;
+    private PatternMatcher patternMatcher;
     private readonly IFileSystemVolume fileSystemVolume;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -27,7 +27,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         this.stream = stream;
         this.rootPath = rootPath;
         this.rootPathComponents = Array.Empty<string>();
-        this.fileNameMatcher = null;
+        this.patternMatcher = null;
         this.fileSystemVolume = fileSystemVolume;
         this.recursive = recursive;
         this.nextEntries = new Stack<Entry>();
@@ -100,7 +100,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
             
             if (dirComponents == pathComponents.Length - 1)
             {
-                this.fileNameMatcher = new PatternMatcher(pathComponent);
+                this.patternMatcher = new PatternMatcher(pathComponent);
                 break;
             }
             
@@ -131,7 +131,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         return path.Split('/', StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesFileNameMatcher => this.fileNameMatcher != null;
+    public bool UsesPattern => this.patternMatcher != null;
 
     private async Task EnqueueDirectory(string[] currentPathComponents)
     {
@@ -176,15 +176,9 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                     break;
                 case EntryType.FileLink:
                 case EntryType.File:
-                    // skip file entry, if name filter is set and entry name doesn't match
-                    // if (!string.IsNullOrWhiteSpace(this.nameFilter) &&
-                    //     (entry.Name.Length != this.nameFilter.Length ||
-                    //     entry.Name.IndexOf(this.nameFilter, StringComparison.OrdinalIgnoreCase) != 0))
-                    // {
-                    //     continue;
-                    // }
-                    if (this.fileNameMatcher != null &&
-                        !this.fileNameMatcher.IsMatch(entry.Name))
+                    // skip file entry, if pattern matcher is set and entry name doesn't match
+                    if (this.patternMatcher != null &&
+                        !this.patternMatcher.IsMatch(entry.Name))
                     {
                         continue;
                     }

@@ -12,15 +12,17 @@ public class DirectoryEntryIterator : IEntryIterator
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
     private readonly string[] rootPathComponents;
+    private readonly PathComponentMatcher pathComponentMatcher;
     private readonly bool recursive;
     private Entry currentEntry;
     private bool isFirst;
 
-    public DirectoryEntryIterator(string path, bool recursive)
+    public DirectoryEntryIterator(string path, string pattern, bool recursive)
     {
         this.nextEntries = new Stack<Entry>();
         this.rootPath = Path.GetFullPath(path);
         this.rootPathComponents = GetPathComponents(this.rootPath);
+        this.pathComponentMatcher = new PathComponentMatcher(rootPathComponents, pattern, recursive: recursive);
         this.recursive = recursive;
         this.isFirst = true;
     }
@@ -42,11 +44,29 @@ public class DirectoryEntryIterator : IEntryIterator
         {
             return Task.FromResult(false);
         }
-
-        currentEntry = this.nextEntries.Pop();
-        if (this.recursive && currentEntry.Type == EntryType.Dir)
+        
+        if (this.pathComponentMatcher.UsesPattern)
         {
-            EnqueueDirectory(currentEntry.RawPath);
+            do
+            {
+                if (this.nextEntries.Count <= 0)
+                {
+                    return Task.FromResult(false);
+                }
+                currentEntry = this.nextEntries.Pop();
+                if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+                {
+                    EnqueueDirectory(currentEntry.RawPath);
+                }
+            } while (currentEntry.Type == Models.FileSystems.EntryType.Dir);
+        }
+        else
+        {
+            currentEntry = this.nextEntries.Pop();
+            if (this.recursive && currentEntry.Type == EntryType.Dir)
+            {
+                EnqueueDirectory(currentEntry.RawPath);
+            }
         }
 
         return Task.FromResult(true);
@@ -62,7 +82,7 @@ public class DirectoryEntryIterator : IEntryIterator
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesFileNameMatcher => false;
+    public bool UsesPattern => false;
 
     private void EnqueueDirectory(string currentPath)
     {
@@ -74,7 +94,7 @@ public class DirectoryEntryIterator : IEntryIterator
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
             
-            this.nextEntries.Push(new Entry
+            var dirEntry = new Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
@@ -84,7 +104,12 @@ public class DirectoryEntryIterator : IEntryIterator
                 Date = dirInfo.LastWriteTime,
                 Size = 0,
                 Type = EntryType.Dir
-            });
+            };
+            
+            if (recursive || this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
+            {
+                this.nextEntries.Push(dirEntry);
+            }
         }
         
         foreach (var fileInfo in currentDir.GetFiles().OrderByDescending(x => x.Name).ToList())
@@ -93,7 +118,7 @@ public class DirectoryEntryIterator : IEntryIterator
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
             
-            this.nextEntries.Push(new Entry
+            var fileEntry = new Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
@@ -103,7 +128,12 @@ public class DirectoryEntryIterator : IEntryIterator
                 Date = fileInfo.LastWriteTime,
                 Size = fileInfo.Length,
                 Type = EntryType.File
-            });
+            };
+            
+            if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))
+            {
+                this.nextEntries.Push(fileEntry);
+            }
         }
     }
 

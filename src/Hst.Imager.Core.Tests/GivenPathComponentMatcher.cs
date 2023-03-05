@@ -42,6 +42,19 @@ public class GivenPathComponentMatcher
     }
     
     [Fact]
+    public void WhenMatchingNoPathComponentsPatternAndRecursiveThenEqualOrMorePathComponentsMatch()
+    {
+        var matcher = new PathComponentMatcher(Array.Empty<string>(), "*.png", true);
+        
+        Assert.True(matcher.IsMatch(new[] { "file1.png" }));
+        Assert.False(matcher.IsMatch(new[] { "file2.gif" }));
+        Assert.True(matcher.IsMatch(new[] { "dir1", "file3.png" }));
+        Assert.False(matcher.IsMatch(new[] { "dir1", "dir2" }));
+        Assert.True(matcher.IsMatch(new[] { "dir1", "dir2", "dir3", "file4.png" }));
+        Assert.False(matcher.IsMatch(new[] { "dir1", "dir3" }));
+    }
+    
+    [Fact]
     public void WhenMatchingOnePathComponentAndPatternThenEqualOrMorePathComponentsMatch()
     {
         var matcher = new PathComponentMatcher(new []{ "dir1" }, "*");

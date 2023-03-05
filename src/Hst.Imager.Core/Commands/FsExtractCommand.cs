@@ -70,7 +70,7 @@ public class FsExtractCommand : FsCommandBase
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive || srcEntryIterator.UsesFileNameMatcher)
+                            if (!recursive || srcEntryIterator.UsesPattern)
                             {
                                 continue;
                             }
