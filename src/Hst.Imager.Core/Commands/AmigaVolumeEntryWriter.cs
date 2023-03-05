@@ -158,7 +158,15 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         await Flush();
     }
 
-    public IEnumerable<string> GetLogs() => new List<string>();
+    public IEnumerable<string> GetDebugLogs()
+    {
+        return fileSystemVolume.GetStatus().ToList();
+    }
+
+    public IEnumerable<string> GetLogs()
+    {
+        return new List<string>();
+    }
 
     private async Task Flush()
     {

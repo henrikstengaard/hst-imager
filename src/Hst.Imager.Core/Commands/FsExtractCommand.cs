@@ -96,6 +96,11 @@ public class FsExtractCommand : FsCommandBase
                 }
             }
 
+            foreach (var log in destEntryWriter.GetDebugLogs())
+            {
+                OnDebugMessage(log);                
+            }
+            
             foreach (var log in destEntryWriter.GetLogs())
             {
                 OnInformationMessage(log);                

@@ -26,7 +26,13 @@ public interface IEntryWriter : IDisposable
     Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream);
 
     /// <summary>
-    /// Get logs for creating directories and writing entries
+    /// Get debug logs from entry writer
+    /// </summary>
+    /// <returns></returns>
+    IEnumerable<string> GetDebugLogs();
+    
+    /// <summary>
+    /// Get logs from entry writer
     /// </summary>
     /// <returns></returns>
     IEnumerable<string> GetLogs();

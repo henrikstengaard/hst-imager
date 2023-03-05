@@ -96,6 +96,11 @@ public class DirectoryEntryWriter : IEntryWriter
         }
     }
 
+    public IEnumerable<string> GetDebugLogs()
+    {
+        return new List<string>();
+    }
+
     public IEnumerable<string> GetLogs()
     {
         return this.logs.Count == 0
