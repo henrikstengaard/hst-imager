@@ -12,8 +12,8 @@
     using Services;
 
     [ApiController]
-    [Route("api/verify")]
-    public class VerifyController : ControllerBase
+    [Route("api/compare")]
+    public class CompareController : ControllerBase
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
@@ -21,7 +21,7 @@
         private readonly WorkerService workerService;
         private readonly AppState appState;
 
-        public VerifyController(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
+        public CompareController(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
             IBackgroundTaskQueue backgroundTaskQueue, WorkerService workerService, AppState appState)
         {
             this.loggerFactory = loggerFactory;
@@ -32,33 +32,36 @@
         }
 
         [HttpPost]
-        public async Task<IActionResult> Post(VerifyRequest request)
+        public async Task<IActionResult> Post(CompareRequest request)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
 
-            if (request.SourceType == VerifyRequest.SourceTypeEnum.ImageFile)
+            if (request.SourceType == CompareRequest.SourceTypeEnum.ImageFile)
             {
-                var task = new ImageFileVerifyBackgroundTask
+                var task = new ImageFileCompareBackgroundTask
                 {
                     Title = request.Title,
                     SourcePath = request.SourcePath,
                     DestinationPath = request.DestinationPath
                 };
                 var handler =
-                    new ImageFileVerifyBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
+                    new ImageFileCompareBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
                 await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
 
                 return Ok();
             }
 
-            await workerService.EnqueueAsync(new PhysicalDriveVerifyBackgroundTask
+            await workerService.EnqueueAsync(new[]
             {
-                Title = request.Title,
-                SourcePath = request.SourcePath,
-                DestinationPath = request.DestinationPath
+                new CompareBackgroundTask
+                {
+                    Title = request.Title,
+                    SourcePath = request.SourcePath,
+                    DestinationPath = request.DestinationPath
+                }
             });
 
             return Ok();

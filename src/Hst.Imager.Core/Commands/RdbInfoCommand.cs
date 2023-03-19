@@ -23,7 +23,7 @@
             this.path = path;
         }
 
-        public event EventHandler<RdbInfoReadEventArgs> RdbInfoRead;
+        public event EventHandler<InfoReadEventArgs> RdbInfoRead;
         
         public override async Task<Result> Execute(CancellationToken token)
         {
@@ -38,29 +38,27 @@
             }
 
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
 
             OnDebugMessage($"Reading Rigid Disk Block from path '{path}'");
             
-            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
 
-            if (rigidDiskBlock == null)
-            {
-                return new Result(new Error("Rigid Disk Block not found"));
-            }
-
-            OnRdbInfoRead(new RdbInfo
+            OnRdbInfoRead(new MediaInfo
             {
                 Path = path,
-                RigidDiskBlock = rigidDiskBlock
+                Name = media.Model,
+                IsPhysicalDrive = media.IsPhysicalDrive,
+                Type = media.Type,
+                DiskSize = diskInfo.Size,
+                DiskInfo = diskInfo
             });
             
             return new Result();
         }
         
-        protected virtual void OnRdbInfoRead(RdbInfo rdbInfo)
+        protected virtual void OnRdbInfoRead(MediaInfo mediaInfo)
         {
-            RdbInfoRead?.Invoke(this, new RdbInfoReadEventArgs(rdbInfo));
+            RdbInfoRead?.Invoke(this, new InfoReadEventArgs(mediaInfo));
         }        
     }
 }

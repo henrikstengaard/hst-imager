@@ -8,8 +8,8 @@
     using System.Linq;
     using System.Text.Json;
     using System.Threading.Tasks;
-    using Extensions;
     using Helpers;
+    using Hst.Core;
     using Hst.Imager.Core.Helpers;
     using Hst.Imager.Core.Models;
     using Hubs;
@@ -67,7 +67,7 @@
             }
         }
 
-        public async Task<bool> Start()
+        public async Task<Result<bool>> Start()
         {
             var settings = await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName) ?? new Settings();
             
@@ -80,8 +80,7 @@
             
             if (!File.Exists(workerPath))
             {
-                logger.LogError($"Failed to start worker '{workerPath}'. Path not found!");
-                return false;
+                return new Result<bool>(new Error($"Failed to start worker '{workerPath}'. Path not found!"));
             }
 
             var currentProcessId = Process.GetCurrentProcess().Id;
@@ -99,35 +98,31 @@
 
             if (!workerProcess.HasExited || workerProcess.ExitCode == 0)
             {
-                return true;
+                return new Result<bool>(true);
             }
             
-            var message =
-                $"Failed to start worker '{workerPath}'. Process exited with error code {workerProcess.ExitCode}";
-            await errorHubContext.SendError(message);
-            logger.LogError($"Failed to start worker '{workerCommand}', error code {workerProcess.ExitCode}");
-            
-            return true;
+            return new Result<bool>(new Error(
+                $"Failed to start worker '{workerPath}'. Process exited with error code {workerProcess.ExitCode}"));
         }
 
-        public async Task EnqueueAsync<T>(T backgroundTask)
+        public Task EnqueueAsync<T>(IEnumerable<T> backgroundTasks)
         {
-            if (backgroundTask == null)
+            if (backgroundTasks == null)
             {
-                throw new ArgumentNullException(nameof(backgroundTask));
+                throw new ArgumentNullException(nameof(backgroundTasks));
             }
 
-            logger.LogDebug($"Enqueue background task type '{backgroundTask.GetType().Name}'");
-            this.queue.Add(new Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask
+            foreach (var backgroundTask in backgroundTasks)
             {
-                Type = backgroundTask.GetType().Name,
-                Payload = JsonSerializer.Serialize(backgroundTask)
-            });
-            
-            if (!IsRunning())
-            {
-                await Start();
+                logger.LogDebug($"Enqueue background task type '{backgroundTask.GetType().Name}'");
+                this.queue.Add(new Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask
+                {
+                    Type = backgroundTask.GetType().Name,
+                    Payload = JsonSerializer.Serialize(backgroundTask)
+                });
             }
+
+            return Task.CompletedTask;
         }
 
         public Task<IEnumerable<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask>> DequeueAsync()

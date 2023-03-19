@@ -1,4 +1,4 @@
-import React from "react";
+import React, {Fragment} from "react";
 import TableContainer from "@mui/material/TableContainer";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
@@ -11,38 +11,50 @@ import {formatBytes} from "../utils/Format";
 
 export default function DiskOverview(props) {
     const {
-        media
+        partitionTableType,
+        parts
     } = props
-
-    const parts = []
     
-    if (media.rigidDiskBlock) {
-        parts.push({
-            name: media.rigidDiskBlock.diskProduct,
-            type: 'amiga',
-            size: media.rigidDiskBlock.diskSize,
-            percentSize: Math.round((100 / media.diskSize) * media.rigidDiskBlock.diskSize)
-        })
-    }
-
-    const partSize = media.rigidDiskBlock ? media.diskSize - media.rigidDiskBlock.diskSize : media.diskSize
-    parts.push({
-        name: media.rigidDiskBlock ? 'Unused' : 'Disk',
-        type: media.rigidDiskBlock ? 'unused' : 'disk',
-        size: partSize,
-        percentSize: Math.round((100 / media.diskSize) * partSize)
-    })
-
     const partColor = (part) => {
-        switch (part.type) {
+        switch (part.partType) {
             case "amiga":
                 return '#008000'
             case "disk":
                 return '#800080'
-            case "unused":
+            case "PartitionTable":
+                return '#6060ff'
+            case "Partition":
+                return '#50ff50'
+            case "Unallocated":
                 return '#808080'
             default:
                 return '#ffff00'
+        }
+    }
+
+    const formatPartitionTableType = (partitionTableType) => {
+        switch (partitionTableType) {
+            case 'GuidPartitionTable':
+                return 'Guid Partition Table'
+            case 'MasterBootRecord':
+                return 'Master Boot Record'
+            case 'RigidDiskBlock':
+                return 'Rigid Disk Block'
+            default:
+                return ''
+        }
+    }
+    
+    const formatPartType = (partType) => {
+        switch (partType) {
+            case 'PartitionTable':
+                return 'Partition Table'
+            case 'Partition':
+                return 'Partition'
+            case 'Unallocated':
+                return 'Unallocated'
+            default:
+                return ''
         }
     }
 
@@ -56,10 +68,10 @@ export default function DiskOverview(props) {
                 <tr style={{
                     height: '100%'
                 }}>
-                    {parts.map((part, index) => {
+                    {parts.map((part, partIndex) => {
                         return (
                             <td
-                                key={index}
+                                key={partIndex}
                                 width={`${part.percentSize}%`}
                                 style={{height: '100%'}}
                             >
@@ -89,9 +101,9 @@ export default function DiskOverview(props) {
     }
 
     const renderList = (parts) => {
-        return parts.map((part, index) => {
+        return parts.map((part, partIndex) => {
             return (
-                <TableRow key={index}>
+                <TableRow key={partIndex}>
                     <TableCell>
                         <Stack direction="row">
                             <div style={{
@@ -102,12 +114,37 @@ export default function DiskOverview(props) {
                                 marginRight: '5px'
                             }}>
                             </div>
-                            {part.name}
+                            {part.fileSystem}
                         </Stack>
+                    </TableCell>
+                    <TableCell>
+                        {formatPartitionTableType(part.partitionTableType)}
+                    </TableCell>
+                    <TableCell>
+                        {formatPartType(part.partType)}
+                    </TableCell>
+                    <TableCell align="right">
+                        {part.partitionNumber || ''}
                     </TableCell>
                     <TableCell align="right">
                         {formatBytes(part.size)}
                     </TableCell>
+                    <TableCell align="right">
+                        {part.startOffset}
+                    </TableCell>
+                    <TableCell align="right">
+                        {part.endOffset}
+                    </TableCell>
+                    {partitionTableType && (
+                        <Fragment>
+                            <TableCell align="right">
+                                {partitionTableType === 'RigidDiskBlock' ? part.startCylinder : part.startOffset}
+                            </TableCell>
+                            <TableCell align="right">
+                                {partitionTableType === 'RigidDiskBlock' ? part.endCylinder : part.endOffset}
+                            </TableCell>
+                        </Fragment>
+                    )}
                 </TableRow>
             )
         })
@@ -121,11 +158,36 @@ export default function DiskOverview(props) {
                     <TableHead>
                         <TableRow>
                             <TableCell>
-                                Name
+                                File system
+                            </TableCell>
+                            <TableCell>
+                                Partition table
+                            </TableCell>
+                            <TableCell>
+                                Type
+                            </TableCell>
+                            <TableCell align="right">
+                                Number
                             </TableCell>
                             <TableCell align="right">
                                 Size
                             </TableCell>
+                            <TableCell align="right">
+                                Start Offset
+                            </TableCell>
+                            <TableCell align="right">
+                                End Offset
+                            </TableCell>
+                            {partitionTableType && (
+                                <Fragment>
+                                    <TableCell align="right">
+                                        {partitionTableType === 'RigidDiskBlock' ? 'Start Cylinder' : 'Start Sector'}
+                                    </TableCell>
+                                    <TableCell align="right">
+                                        {partitionTableType === 'RigidDiskBlock' ? 'End Cylinder' : 'End Sector'}
+                                    </TableCell>
+                                </Fragment>
+                            )}
                         </TableRow>
                     </TableHead>
                     <TableBody>

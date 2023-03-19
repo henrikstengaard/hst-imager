@@ -1,6 +1,5 @@
 ﻿namespace Hst.Imager.ConsoleApp.Presenters
 {
-    using System;
     using System.Linq;
     using System.Text;
     using Core.Commands;
@@ -8,16 +7,18 @@
 
     public static class MasterBootRecordPresenter
     {
-        public static string Present(MbrInfo mbrInfo)
+        public static string Present(MediaInfo mediaInfo)
         {
-            if (mbrInfo == null)
+            if (mediaInfo == null || mediaInfo.DiskInfo == null || mediaInfo.DiskInfo.MbrPartitionTablePart == null)
             {
                 return "No Master Boot Record present";
             }
+
+            var mbrPartitionTablePart = mediaInfo.DiskInfo.MbrPartitionTablePart;
             
             var outputBuilder = new StringBuilder();
             
-            outputBuilder.AppendLine($"Master Boot Record info read from '{mbrInfo.Path}':");
+            outputBuilder.AppendLine($"Master Boot Record info read from '{mediaInfo.Path}':");
             outputBuilder.AppendLine();
             outputBuilder.AppendLine("Master Boot Record:");
             var masterBootRecordTable = new Table
@@ -25,16 +26,14 @@
                 Columns = new[]
                 {
                     new Column { Name = "Size", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Sectors", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Block Size", Alignment = ColumnAlignment.Right }
+                    new Column { Name = "Sectors", Alignment = ColumnAlignment.Right }
                 },
                 Rows = new []{ new Row
                     {
                         Columns = new[]
                         {
-                            mbrInfo.DiskSize.FormatBytes(),
-                            mbrInfo.Sectors.ToString(),
-                            mbrInfo.BlockSize.ToString()
+                            mbrPartitionTablePart.Size.FormatBytes(),
+                            mbrPartitionTablePart.Sectors.ToString()
                         }
                     }}
                     .ToList()
@@ -45,26 +44,27 @@
             outputBuilder.AppendLine();
             outputBuilder.AppendLine("Partitions:");
             
-            var partitionNumber = 0;
             var partitionTable = new Table
             {
                 Columns = new[]
                 {
-                    new Column { Name = "#" },
+                    new Column { Name = "File System" },
                     new Column { Name = "Type" },
+                    new Column { Name = "#" },
                     new Column { Name = "Size", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "First Sector", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Last Sector", Alignment = ColumnAlignment.Right }
+                    new Column { Name = "Start Sec", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "End Sec", Alignment = ColumnAlignment.Right }
                 },
-                Rows = mbrInfo.Partitions.Select(x => new Row
+                Rows = mbrPartitionTablePart.Parts.Select(x => new Row
                     {
                         Columns = new[]
                         {
-                            (++partitionNumber).ToString(),
-                            x.Type,
-                            x.PartitionSize.FormatBytes(),
-                            x.FirstSector.ToString(),
-                            x.LastSector.ToString()
+                            x.FileSystem,
+                            x.PartType.ToString(),
+                            x.PartitionNumber.HasValue ? x.PartitionNumber.ToString() : string.Empty,
+                            x.Size.FormatBytes(),
+                            x.StartSector.ToString(),
+                            x.EndSector.ToString()
                         }
                     })
                     .ToList()
@@ -73,6 +73,9 @@
             outputBuilder.AppendLine();
             outputBuilder.Append(TablePresenter.Present(partitionTable));
 
+            outputBuilder.AppendLine();
+            outputBuilder.Append(InfoPresenter.PresentInfo(mbrPartitionTablePart));
+            
             return outputBuilder.ToString();
         }
     }

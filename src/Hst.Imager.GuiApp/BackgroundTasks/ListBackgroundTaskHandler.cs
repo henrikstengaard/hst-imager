@@ -3,8 +3,8 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
@@ -33,9 +33,10 @@
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
+            var physicalDrives = (await physicalDriveManager.GetPhysicalDrives()).ToList();
 
             var commandHelper = new CommandHelper(appState.IsAdministrator);
+            var logger = loggerFactory.CreateLogger<InfoCommand>();
             var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
 
             listCommand.ListRead += async (_, args) =>
@@ -44,9 +45,16 @@
             };
 
             var result = await listCommand.Execute(context.Token);
+            if (result == null)
+            {
+                logger.LogError("List command returned null");
+                return;
+            }
             if (result.IsFaulted)
             {
-                await errorHubConnection.UpdateError(result.Error.Message, context.Token);
+                var message = result.Error?.Message ?? "List command returned error without message error";
+                logger.LogError(message);
+                await errorHubConnection.UpdateError(message, context.Token);
             }
         }
     }

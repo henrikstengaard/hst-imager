@@ -12,10 +12,60 @@
             return new MediaInfoViewModel
             {
                 Path = mediaInfo.Path,
-                Model = mediaInfo.Model,
+                Name = mediaInfo.Name,
                 DiskSize = mediaInfo.DiskSize,
                 IsPhysicalDrive = mediaInfo.IsPhysicalDrive,
-                DiskInfo = mediaInfo.DiskInfo
+                DiskInfo = mediaInfo.DiskInfo?.ToViewModel()
+            };
+        }
+
+        public static PartitionTablePartViewModel ToViewModel(this PartitionTablePart partitionTablePart)
+        {
+            return new PartitionTablePartViewModel
+            {
+                Path = partitionTablePart.Path,
+                PartitionTableType = partitionTablePart.PartitionTableType,
+                Size = partitionTablePart.Size,
+                Sectors = partitionTablePart.Sectors,
+                Cylinders = partitionTablePart.Cylinders,
+                Parts = partitionTablePart.Parts.Select(x => x.ToViewModel()).ToList()
+            };
+        }
+
+        public static PartViewModel ToViewModel(this PartInfo partInfo)
+        {
+            return new PartViewModel
+            {
+                FileSystem = partInfo.FileSystem,
+                PartitionNumber = partInfo.PartitionNumber,
+                PartitionTableType = partInfo.PartitionTableType,
+                PartType = partInfo.PartType,
+                Size = partInfo.Size,
+                StartOffset = partInfo.StartOffset,
+                EndOffset = partInfo.EndOffset,
+                StartSector = partInfo.StartSector,
+                EndSector = partInfo.EndSector,
+                StartCylinder = partInfo.StartCylinder,
+                EndCylinder = partInfo.EndCylinder,
+                PercentSize = partInfo.PercentSize
+            };
+        }
+
+        public static DiskInfoViewModel ToViewModel(this DiskInfo diskInfo)
+        {
+            return new DiskInfoViewModel
+            {
+                Name = diskInfo.Name,
+                Size = diskInfo.Size,
+                PartitionTables = diskInfo.PartitionTables,
+                StartOffset = diskInfo.StartOffset,
+                EndOffset = diskInfo.EndOffset,
+                Path = diskInfo.Path,
+                RigidDiskBlock = diskInfo.RigidDiskBlock?.ToViewModel(),
+                DiskParts = diskInfo.DiskParts.Select(x => x.ToViewModel()).ToList(),
+                GptPartitionTablePart = diskInfo.GptPartitionTablePart?.ToViewModel(),
+                MbrPartitionTablePart = diskInfo.MbrPartitionTablePart?.ToViewModel(),
+                RdbPartitionTablePart = diskInfo.RdbPartitionTablePart?.ToViewModel()
             };
         }
 

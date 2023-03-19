@@ -16,7 +16,7 @@
         {
             this.workerService = workerService;
         }
-        
+
         [HttpPost]
         public async Task<IActionResult> Post(WriteRequest request)
         {
@@ -32,8 +32,8 @@
                 DestinationPath = request.DestinationPath
             };
 
-            await workerService.EnqueueAsync(writeBackgroundTask);
-            
+            await workerService.EnqueueAsync(new[] { writeBackgroundTask });
+
             return Ok();
         }
     }

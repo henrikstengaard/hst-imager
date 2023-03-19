@@ -22,20 +22,22 @@ export default function BrowseSaveDialog(props) {
     const appState = React.useContext(AppStateContext)
     const [ connection, setConnection ] = React.useState(null);
 
+    // setup signalr connection and listeners
     React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
         const newConnection = new HubConnectionBuilder()
             .withUrl('/hubs/show-dialog-result')
             .withAutomaticReconnect()
             .build();
-
-        setConnection(newConnection);
-    }, []);
-
-    React.useEffect(() => {
-        if (connection && connection.state !== "Connected") {
-            connection.start()
-                .then(result => {
-                    connection.on('ShowDialogResult', showDialogResult => {
+        
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on('ShowDialogResult', showDialogResult => {
                         if (get(showDialogResult, 'isSuccess') !== true || get(showDialogResult, 'id') !== id) {
                             return
                         }
@@ -43,14 +45,27 @@ export default function BrowseSaveDialog(props) {
                         if (isNil(onChange)) {
                             return
                         }
-                        
+
                         onChange(showDialogResult.paths[0])
                     });
                 })
-                .catch(e => console.log('Connection failed: ', e));
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
         }
-    }, [connection, id, onChange]);
 
+        setConnection(newConnection)
+        
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection, id, onChange])
+    
     const handleBrowseClick = async () => {
         if (!appState || !appState.isElectronActive)
         {

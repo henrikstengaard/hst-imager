@@ -1,4 +1,4 @@
-import {get, isNil, set} from 'lodash'
+import {get, isNil} from 'lodash'
 import React from 'react'
 import Box from '@mui/material/Box'
 import Grid from '@mui/material/Grid'
@@ -13,36 +13,110 @@ import RedirectButton from "../components/RedirectButton";
 import MediaSelectField from "../components/MediaSelectField";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {Api} from "../utils/Api";
-import {formatBytes} from "../utils/Format";
-
-const initialState = {
-    confirmOpen: false,
-    sourceMedia: null,
-    destinationPath: null
-}
+import {HubConnectionBuilder} from "@microsoft/signalr";
+import Typography from "@mui/material/Typography";
 
 export default function Read() {
-    const [state, setState] = React.useState({...initialState})
+    const [confirmOpen, setConfirmOpen] = React.useState(false);
+    const [sourceMedia, setSourceMedia] = React.useState(null)
+    const [medias, setMedias] = React.useState(null)
+    const [destinationPath, setDestinationPath] = React.useState(null)
+    const [connection, setConnection] = React.useState(null);
 
-    const api = new Api()
+    const api = React.useMemo(() => new Api(), []);
+
+    const getPath = ({medias, path}) => {
+        if (medias === null || medias.length === 0) {
+            return null
+        }
+
+        if (path === null || path === undefined) {
+            return medias[0].path
+        }
+
+        const media = medias.find(x => x.path === path)
+        return media === null ? medias[0].path : media.path
+    }
+
+    const handleGetMedias = React.useCallback(async () => {
+        async function getMedias() {
+            await api.list()
+        }
+        await getMedias()
+    }, [api])
+
+    const getInfo = async (path) => {
+        const response = await fetch('api/info', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sourceType: 'PhysicalDisk',
+                path
+            })
+        });
+        if (!response.ok) {
+            console.error('Failed to get info')
+        }
+    }
     
-    const {
-        confirmOpen,
-        sourceMedia,
-        destinationPath
-    } = state
+    // get medias
+    React.useEffect(async () => {
+        if (medias !== null) {
+            return
+        }
+        await handleGetMedias()
+    }, [medias, handleGetMedias])
 
-    const sourceDisk = isNil(sourceMedia) ? '' : `${sourceMedia.model} (${formatBytes(sourceMedia.diskSize)})`
+    // setup signalr connection and listeners
+    React.useEffect(() => {
+        if (connection) {
+            return
+        }
 
-    const handleChange = ({name, value}) => {
-        set(state, name, value)
-        setState({...state})
-    }
+        const newConnection = new HubConnectionBuilder()
+            .withUrl('/hubs/result')
+            .withAutomaticReconnect()
+            .build();
+        
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on("Info", (media) => {
+                        setSourceMedia(media)
+                    });
 
-    const handleCancel = () => {
-        setState({...initialState})
-    }
+                    newConnection.on('List', async (medias) => {
+                        const newPath = getPath({medias: medias, path: get(sourceMedia, 'path')})
+                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
 
+                        setMedias(medias || [])
+                        if (newMedia) {
+                            setSourceMedia(newMedia)
+                            await getInfo(newMedia.path)
+                        }
+                    })
+                })
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
+        }
+
+        setConnection(newConnection)
+        
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection, getPath, setMedias, setSourceMedia, sourceMedia])
+    
     const handleRead = async () => {
         const response = await fetch('api/read', {
             method: 'POST',
@@ -51,7 +125,7 @@ export default function Read() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Reading disk '${sourceDisk}' to file '${destinationPath}'`,
+                title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}'`,
                 sourcePath: sourceMedia.path,
                 destinationPath
             })
@@ -62,10 +136,7 @@ export default function Read() {
     }
 
     const handleConfirm = async (confirmed) => {
-        setState({
-            ...state,
-            confirmOpen: false
-        })
+        setConfirmOpen(false)
         if (!confirmed) {
             return
         }
@@ -74,6 +145,14 @@ export default function Read() {
 
     const handleUpdate = async () => {
         await api.list()
+    }
+
+    const handleCancel = () => {
+        setConfirmOpen(false)
+        setSourceMedia(null)
+        setMedias(null)
+        setDestinationPath(null)
+        setConnection(null)
     }
     
     const readDisabled = isNil(sourceMedia) || isNil(destinationPath)
@@ -84,7 +163,7 @@ export default function Read() {
                 id="confirm-read"
                 open={confirmOpen}
                 title="Read"
-                description={`Do you want to read disk '${sourceDisk}' to file '${destinationPath}'?`}
+                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}'?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -100,11 +179,9 @@ export default function Read() {
                             </div>
                         }
                         id="source-disk"
+                        medias={medias || []}
                         path={get(sourceMedia, 'path') || ''}
-                        onChange={(media) => handleChange({
-                            name: 'sourceMedia',
-                            value: media
-                        })}
+                        onChange={(media) => setSourceMedia(media)}
                     />
                 </Grid>
             </Grid>
@@ -122,17 +199,16 @@ export default function Read() {
                             <BrowseSaveDialog
                                 id="read-destination-path"
                                 title="Select destination image"
-                                onChange={(path) => handleChange({
-                                    name: 'destinationPath',
-                                    value: path
-                                })}
+                                onChange={(path) => setDestinationPath(path)}
                             />
                         }
-                        onChange={(event) => handleChange({
-                            name: 'destinationPath',
-                            value: get(event, 'target.value'
-                            )
-                        })}
+                        onChange={(event) => setDestinationPath(get(event, 'target.value'))}
+                        onKeyDown={async (event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+                            setConfirmOpen(true)
+                        }}
                     />
                 </Grid>
             </Grid>
@@ -156,10 +232,7 @@ export default function Read() {
                             <Button
                                 disabled={readDisabled}
                                 icon="upload"
-                                onClick={async () => handleChange({
-                                    name: 'confirmOpen',
-                                    value: true
-                                })}
+                                onClick={async () => setConfirmOpen(true)}
                             >
                                 Start read
                             </Button>
@@ -167,9 +240,15 @@ export default function Read() {
                     </Box>
                 </Grid>
             </Grid>
-            {sourceMedia && (
+            {get(sourceMedia, 'diskInfo') && (
                 <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
                     <Grid item xs={12}>
+                        <Typography variant="h3">
+                            Source disk
+                        </Typography>
+                        <Typography>
+                            Disk information read from source disk.
+                        </Typography>
                         <Media media={sourceMedia}/>
                     </Grid>
                 </Grid>

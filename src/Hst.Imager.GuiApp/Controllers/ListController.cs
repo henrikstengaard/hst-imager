@@ -19,9 +19,9 @@
         [HttpPost]
         public async Task<IActionResult> Post()
         {
-            await workerService.EnqueueAsync(new ListBackgroundTask());
-            
-            return Ok();            
+            await workerService.EnqueueAsync(new[] { new ListBackgroundTask() });
+
+            return Ok();
         }
     }
 }

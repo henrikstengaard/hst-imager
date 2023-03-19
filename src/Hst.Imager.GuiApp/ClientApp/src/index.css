@@ -12,13 +12,14 @@ html {
 }
 
 body {
-    font-family: 'topazplus_a600a1200a4000Rg', 'Segoe UI', sans-serif;
+    /*font-family: 'topazplus_a600a1200a4000Rg', 'Segoe UI', sans-serif;*/
+    font-family: 'Segoe UI', sans-serif;
     background-color: white;
-    background-image: url('./assets/background.svg');
-    background-repeat: repeat-y;
-    background-attachment: initial;
-    background-position: 125% 45%;
-    background-size: 75%;
+    /*background-image: url('./assets/background.svg');*/
+    /*background-repeat: repeat-y;*/
+    /*background-attachment: initial;*/
+    /*background-position: 125% 45%;*/
+    /*background-size: 75%;*/
     color: black;
     height: 100%;
     margin: 0;

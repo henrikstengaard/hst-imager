@@ -8,9 +8,9 @@
         [Fact]
         public void WhenCreateWindowsRunasProcessStartInfoThenArgumentsWillElevateCommand()
         {
-            var command = "hstwb-imager";
+            var command = "hst-imager";
             var arguments = string.Empty;
-            var workingDirectory = @"c:\program files\hstwb-installer";
+            var workingDirectory = @"c:\program files\hst-imager";
             var processStartInfo =
                 ElevateHelper.CreateWindowsRunasProcessStartInfo(command, arguments, workingDirectory);
 
@@ -23,7 +23,7 @@
         [Fact]
         public void WhenCreateLinuxPkExecProcessStartInfoThenArgumentsWillElevateCommand()
         {
-            var command = "hstwb-imager";
+            var command = "hst-imager";
             var arguments = "--worker";
             var workingDirectory =
                 "/home/hst";
@@ -41,8 +41,8 @@
         [Fact]
         public void WhenCreateMacOsOsascriptProcessStartInfoThenArgumentsWillElevateCommand()
         {
-            var prompt = "HstWB Imager";
-            var command = "hstwb-imager";
+            var prompt = "Hst Imager";
+            var command = "hst-imager";
             var arguments = "--worker";
             var workingDirectory =
                 "/home/hst";
@@ -60,8 +60,8 @@
         [Fact]
         public void WhenCreateMacOsOsascriptProcessStartInfoWithoutWorkingDirectoryThenArgumentsWillElevateCommand()
         {
-            var prompt = "HstWB Imager";
-            var command = "/home/hst/hstwb-imager";
+            var prompt = "Hst Imager";
+            var command = "/home/hst/hst-imager";
             var arguments = "--worker";
             var workingDirectory = string.Empty;
             var processStartInfo =
@@ -78,8 +78,8 @@
         [Fact]
         public void WhenCreateMacOsOsascriptSudoProcessStartInfoWithoutWorkingDirectoryThenArgumentsWillElevateCommand()
         {
-            var prompt = "HstWB Imager";
-            var command = "/home/hst/hstwb-imager";
+            var prompt = "Hst Imager";
+            var command = "/home/hst/hst-imager";
             var arguments = "--worker";
             var workingDirectory = string.Empty;
             var processStartInfo =

@@ -30,10 +30,10 @@ export default function MediaDetails(props) {
     }
     
     const disk = {
-        label: `Disk: ${media.model}, ${formatBytes(media.diskSize)}`,
+        label: `Disk: ${media.name}, ${formatBytes(media.diskSize)}`,
         fields: [{
-            label: 'Model',
-            value: media.model
+            label: 'Name',
+            value: media.name
         }, {
             label: 'Path',
             value: media.path
@@ -43,56 +43,56 @@ export default function MediaDetails(props) {
         }]
     }
 
-    const rigidDiskBlock = media.rigidDiskBlock ? {
-        label: `Rigid disk block: ${media.rigidDiskBlock.diskProduct}, ${formatBytes(media.rigidDiskBlock.diskSize)}`,
+    const rigidDiskBlock = media.diskInfo.rigidDiskBlock ? {
+        label: `Rigid Disk Block: ${media.diskInfo.rigidDiskBlock.diskProduct}, ${formatBytes(media.diskInfo.rigidDiskBlock.diskSize)}`,
         fields: [{
             label: 'Manufacturers Name',
-            value: media.rigidDiskBlock.diskVendor
+            value: media.diskInfo.rigidDiskBlock.diskVendor
         }, {
             label: 'Drive Name',
-            value: media.rigidDiskBlock.diskProduct
+            value: media.diskInfo.rigidDiskBlock.diskProduct
         }, {
             label: 'Drive Revision',
-            value: media.rigidDiskBlock.diskRevision
+            value: media.diskInfo.rigidDiskBlock.diskRevision
         }, {
             label: 'Size',
-            value: `${formatBytes(media.rigidDiskBlock.diskSize)} (${media.rigidDiskBlock.diskSize} bytes)`
+            value: `${formatBytes(media.diskInfo.rigidDiskBlock.diskSize)} (${media.diskInfo.rigidDiskBlock.diskSize} bytes)`
         }, {
             label: 'Cylinders',
-            value: media.rigidDiskBlock.cylinders
+            value: media.diskInfo.rigidDiskBlock.cylinders
         }, {
             label: 'Heads',
-            value: media.rigidDiskBlock.heads
+            value: media.diskInfo.rigidDiskBlock.heads
         }, {
             label: 'Blocks per Track',
-            value: media.rigidDiskBlock.sectors
+            value: media.diskInfo.rigidDiskBlock.sectors
         }, {
             label: 'Blocks per Cylinder',
-            value: media.rigidDiskBlock.cylBlocks
+            value: media.diskInfo.rigidDiskBlock.cylBlocks
         }, {
             label: 'Block size',
-            value: media.rigidDiskBlock.blockSize
+            value: media.diskInfo.rigidDiskBlock.blockSize
         }, {
             label: 'Park head cylinder',
-            value: media.rigidDiskBlock.parkingZone
+            value: media.diskInfo.rigidDiskBlock.parkingZone
         }, {
             label: 'Start cylinder of partitionable disk area',
-            value: media.rigidDiskBlock.loCylinder
+            value: media.diskInfo.rigidDiskBlock.loCylinder
         }, {
             label: 'End cylinder of partitionable disk area',
-            value: media.rigidDiskBlock.hiCylinder
+            value: media.diskInfo.rigidDiskBlock.hiCylinder
         }, {
             label: 'Start block reserved for RDB',
-            value: media.rigidDiskBlock.rdbBlockLo
+            value: media.diskInfo.rigidDiskBlock.rdbBlockLo
         }, {
             label: 'End block reserved for RDB',
-            value: media.rigidDiskBlock.rdbBlockHi
+            value: media.diskInfo.rigidDiskBlock.rdbBlockHi
         }]
     } : null
     
-    const fileSystems = (get(media, 'rigidDiskBlock.fileSystemHeaderBlocks') || []).map((fileSystem, index) => {
+    const fileSystems = (get(media, 'diskInfo.rigidDiskBlock.fileSystemHeaderBlocks') || []).map((fileSystem, index) => {
         return {
-            label: `File system ${(index + 1)}: ${fileSystem.dosTypeFormatted}`,
+            label: `Rigid Disk Block, File system ${(index + 1)}: ${fileSystem.dosTypeFormatted}`,
             fields: [{
                 label: 'DOS Type',
                 value: `${fileSystem.dosTypeHex} (${fileSystem.dosTypeFormatted})`
@@ -109,9 +109,9 @@ export default function MediaDetails(props) {
         }
     })
 
-    const partitions = (get(media, 'rigidDiskBlock.partitionBlocks') || []).map((partition, index) => {
+    const partitions = (get(media, 'diskInfo.rigidDiskBlock.partitionBlocks') || []).map((partition, index) => {
         return {
-            label: `Partition ${(index + 1)}: ${partition.driveName}, ${formatBytes(partition.partitionSize)}`,
+            label: `Rigid Disk Block, Partition ${(index + 1)}: ${partition.driveName}, ${formatBytes(partition.partitionSize)}`,
             fields: [{
                 label: 'Device Name',
                 value: partition.driveName

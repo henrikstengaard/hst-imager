@@ -60,7 +60,7 @@
 
                 var verifyBytes = Convert.ToInt32(offset + bufferSize > size ? size - offset : bufferSize);
                 
-                var srcReadFailed = false;
+                bool srcReadFailed;
                 var srcRetry = 0;
                 do
                 {
@@ -68,6 +68,7 @@
                     {
                         source.Seek(offset, SeekOrigin.Begin);
                         srcBytesRead = await source.ReadAsync(srcBuffer, 0, verifyBytes, token);
+                        srcReadFailed = false;
                     }
                     catch (Exception e)
                     {
@@ -83,7 +84,7 @@
                     srcRetry++;
                 } while (srcReadFailed && srcRetry <= retries);
 
-                var destReadFailed = false;
+                bool destReadFailed;
                 var destBytesRead = 0;
                 var destRetry = retries;
                 do
@@ -92,6 +93,7 @@
                     {
                         destination.Seek(offset, SeekOrigin.Begin);
                         destBytesRead = await destination.ReadAsync(destBuffer, 0, verifyBytes, token);
+                        destReadFailed = false;
                     }
                     catch (Exception e)
                     {
@@ -111,15 +113,16 @@
                 {
                     verifyBytes = (int)size;
                 }
-
+                
                 if (srcBytesRead != destBytesRead)
                 {
-                    verifyBytes = Math.Min(srcBytesRead, destBytesRead);
+                    var minBytesRead = Math.Min(srcBytesRead, destBytesRead);
+                    verifyBytes = Math.Min(minBytesRead, verifyBytes);
                 }
 
                 if (verifyBytes < bufferSize && offset + verifyBytes != size)
                 {
-                    return new Result(new SizeNotEqualError(offset, size));
+                    return new Result(new SizeNotEqualError(offset, offset + verifyBytes, size));
                 }
 
                 for (var i = 0; i < verifyBytes; i++)

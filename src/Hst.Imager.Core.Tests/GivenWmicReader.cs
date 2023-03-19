@@ -12,7 +12,7 @@
         [Fact]
         public async Task WhenParseCsvOutputFromWmicThenWmicDiskDrivesAreReturned()
         {
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(@"TestData\wmic-DiskDrive.csv")).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-DiskDrive.csv"))).ToList();
 
             Assert.NotNull(wmicDiskDrives);
             Assert.NotEmpty(wmicDiskDrives);
@@ -36,7 +36,7 @@
         [Fact]
         public async Task WhenParseCsvOutputFromWmicWithoutSizeThenWmicDiskDrivesAreReturned()
         {
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(@"TestData\wmic-diskdrive-list-0-size.csv")).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-diskdrive-list-0-size.csv"))).ToList();
 
             Assert.NotNull(wmicDiskDrives);
             Assert.Single(wmicDiskDrives);
@@ -44,13 +44,63 @@
             var wmicDiskDrive1 = wmicDiskDrives[0];
             Assert.Null(wmicDiskDrive1.Size);
         }
+
+        [Fact]
+        public async Task WhenParseCsvOutputFromWmicWith3DiskDrivesWmicDiskDrivesAreReturned()
+        {
+            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic_diskdrive_list_error.csv"))).ToList();
+
+            Assert.NotNull(wmicDiskDrives);
+            Assert.NotEmpty(wmicDiskDrives);
+            Assert.Equal(3, wmicDiskDrives.Count);
+
+/*
+    InterfaceType: "SCSI"
+    MediaType: "Fixed hard disk media"
+    Model: "Samsung SSD 970 EVO 2TB"
+    Name: "\\\\.\\PHYSICALDRIVE0"
+    Size: 2000396321280
+    
+    InterfaceType: "SCSI"
+    MediaType: "Fixed hard disk media"
+    Model: "WDC PC SN720 SDAPNTW-512G"
+    Name: "\\\\.\\PHYSICALDRIVE1"
+    Size: 512105932800    
+    
+    InterfaceType: "USB"
+    MediaType: ""
+    Model: "Generic STORAGE DEVICE USB Device"
+    Name: "\\\\.\\PHYSICALDRIVE2"
+    Size: null    
+ */
+            var wmicDiskDrive1 = wmicDiskDrives[0];
+            Assert.Equal("Fixed hard disk media", wmicDiskDrive1.MediaType);
+            Assert.Equal("Samsung SSD 970 EVO 2TB", wmicDiskDrive1.Model);
+            Assert.Equal("\\\\.\\PHYSICALDRIVE0", wmicDiskDrive1.Name);
+            Assert.Equal(2000396321280, wmicDiskDrive1.Size);
+            Assert.Equal("SCSI", wmicDiskDrive1.InterfaceType);
+            
+            var wmicDiskDrive2 = wmicDiskDrives[1];
+            Assert.Equal("Fixed hard disk media", wmicDiskDrive2.MediaType);
+            Assert.Equal("WDC PC SN720 SDAPNTW-512G", wmicDiskDrive2.Model);
+            Assert.Equal("\\\\.\\PHYSICALDRIVE1", wmicDiskDrive2.Name);
+            Assert.Equal(512105932800, wmicDiskDrive2.Size);
+            Assert.Equal("SCSI", wmicDiskDrive2.InterfaceType);
+            
+            var wmicDiskDrive3 = wmicDiskDrives[2];
+            Assert.Equal("", wmicDiskDrive3.MediaType);
+            Assert.Equal("Generic STORAGE DEVICE USB Device", wmicDiskDrive3.Model);
+            Assert.Equal("\\\\.\\PHYSICALDRIVE2", wmicDiskDrive3.Name);
+            Assert.Null(wmicDiskDrive3.Size);
+            Assert.Equal("USB", wmicDiskDrive3.InterfaceType);
+        }
         
         [Fact]
         public async Task WhenParseCsvOutputFromWmicDiskDriveToDiskPartitionThenWmicDiskDriveToDiskPartitionsAreReturned()
         {
             var wmicDiskDriveToDiskPartitions = WmicReader
                 .ParseWmicDiskDriveToDiskPartitions(
-                    await File.ReadAllTextAsync(@"TestData\wmic-Win32_DiskDriveToDiskPartition.csv")).ToList();
+                    await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-Win32_DiskDriveToDiskPartition.csv"))).ToList();
 
             Assert.NotEmpty(wmicDiskDriveToDiskPartitions);
             Assert.Equal(4, wmicDiskDriveToDiskPartitions.Count);
@@ -77,7 +127,7 @@
         {
             var wmicLogicalDiskToPartitions = WmicReader
                 .ParseWmicLogicalDiskToPartitions(
-                    await File.ReadAllTextAsync(@"TestData\wmic-Win32_LogicalDiskToPartition.csv")).ToList();
+                    await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-Win32_LogicalDiskToPartition.csv"))).ToList();
 
             Assert.NotEmpty(wmicLogicalDiskToPartitions);
             Assert.Equal(2, wmicLogicalDiskToPartitions.Count);

@@ -5,12 +5,10 @@
     public class InfoReadEventArgs : EventArgs
     {
         public MediaInfo MediaInfo;
-        public DiskInfo DiskInfo;
 
-        public InfoReadEventArgs(MediaInfo mediaInfo, DiskInfo diskInfo)
+        public InfoReadEventArgs(MediaInfo mediaInfo)
         {
             this.MediaInfo = mediaInfo;
-            DiskInfo = diskInfo;
         }
     }
 }

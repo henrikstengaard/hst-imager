@@ -82,7 +82,7 @@ public class FsDirCommand : FsCommandBase
         }
 
         using var media = readableMediaResult.Value;
-        await using var stream = media.Stream;
+        var stream = media.Stream;
 
         var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
@@ -132,6 +132,7 @@ public class FsDirCommand : FsCommandBase
             entries.Add(new Entry
             {
                 Name = "RDB",
+                FormattedName = "RDB", 
                 Type = EntryType.Dir,
                 Size = 0
             });
@@ -163,6 +164,7 @@ public class FsDirCommand : FsCommandBase
             Entries = rigidDiskBlock.PartitionBlocks.Select(x => new Entry
             {
                 Name = x.DriveName,
+                FormattedName = x.DriveName,
                 Type = EntryType.Dir,
                 Size = 0
             }).ToList()

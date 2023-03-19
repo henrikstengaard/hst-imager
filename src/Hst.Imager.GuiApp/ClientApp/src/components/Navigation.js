@@ -90,9 +90,9 @@ export default function Navigation() {
             path: '/convert'
         },
         {
-            text: 'Verify',
+            text: 'Compare',
             icon: 'check',
-            path: '/verify'
+            path: '/compare'
         },
         {
             text: 'Blank',
@@ -104,11 +104,11 @@ export default function Navigation() {
             icon: 'magic',
             path: '/optimize'
         },
-        {
-            text: 'Partition',
-            icon: 'hdd',
-            path: '/partition'
-        },
+        // {
+        //     text: 'Partition',
+        //     icon: 'hdd',
+        //     path: '/partition'
+        // },
         {
             text: 'Settings',
             icon: 'cog',

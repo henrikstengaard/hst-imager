@@ -7,6 +7,7 @@
         public bool HasError { get; set; }
         public string ErrorMessage { get; set; }
         public double PercentComplete { get; set; }
+        public long? BytesPerSecond { get; set; }
         public long? BytesTotal { get; set; }
         public long? BytesProcessed { get; set; }
         public long? BytesRemaining { get; set; }

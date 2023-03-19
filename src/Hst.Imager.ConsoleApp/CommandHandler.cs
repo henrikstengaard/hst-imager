@@ -49,7 +49,6 @@
 
             var physicalDriveManager =
                 new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>()).Create();
-
             return (await physicalDriveManager.GetPhysicalDrives()).ToList();
         }
 
@@ -172,7 +171,7 @@
                 path);
             command.DiskInfoRead += (_, args) =>
             {
-                Log.Logger.Information(InfoPresenter.PresentInfo(args.DiskInfo));
+                Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo));
             };
             await Execute(command);
         }
@@ -263,7 +262,7 @@
                 await GetPhysicalDrives(), path);
             command.MbrInfoRead += (_, args) =>
             {
-                Log.Logger.Information(MasterBootRecordPresenter.Present(args.MbrInfo));
+                Log.Logger.Information(MasterBootRecordPresenter.Present(args.MediaInfo));
             };
             await Execute(command);
         }
@@ -298,7 +297,7 @@
                 await GetPhysicalDrives(), path);
             command.RdbInfoRead += (_, args) =>
             {
-                Log.Logger.Information(RigidDiskBlockPresenter.Present(args.RdbInfo));
+                Log.Logger.Information(RigidDiskBlockPresenter.Present(args.MediaInfo));
             };
             await Execute(command);
         }

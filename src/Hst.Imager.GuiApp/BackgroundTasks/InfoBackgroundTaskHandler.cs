@@ -2,14 +2,14 @@
 {
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class PhysicalDriveInfoBackgroundTaskHandler : IBackgroundTaskHandler
+    public class InfoBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection resultHubConnection;
@@ -17,7 +17,7 @@
         private readonly IPhysicalDriveManager physicalDriveManager;
         private readonly AppState appState;
 
-        public PhysicalDriveInfoBackgroundTaskHandler(ILoggerFactory loggerFactory, HubConnection resultHubConnection,
+        public InfoBackgroundTaskHandler(ILoggerFactory loggerFactory, HubConnection resultHubConnection,
             HubConnection errorHubConnection,
             IPhysicalDriveManager physicalDriveManager, AppState appState)
         {
@@ -30,7 +30,7 @@
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            if (context.BackgroundTask is not PhysicalDriveInfoBackgroundTask infoBackgroundTask)
+            if (context.BackgroundTask is not InfoBackgroundTask infoBackgroundTask)
             {
                 return;
             }
@@ -47,9 +47,17 @@
             };
 
             var result = await infoCommand.Execute(context.Token);
+            if (result == null)
+            {
+                logger.LogError("Info command returned null");
+                return;
+            }
+            
             if (result.IsFaulted)
             {
-                await errorHubConnection.UpdateError(result.Error.Message, context.Token);
+                var message = result.Error?.Message ?? "Info command returned error without message error";
+                logger.LogError(message);
+                await errorHubConnection.UpdateError(message, context.Token);
             }
         }
     }

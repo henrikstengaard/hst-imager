@@ -181,7 +181,13 @@ hst.imager optimize 16gb.img -rdb
 
 ## File system commands
 
-### List files and subdirectories in a directory
+Hst Imager supports basic file system commands to list, copy and extract files and directories with following containers:
+- Physical drives: Physical drives attached via USB.
+- Image files: IMG or VHD image files.
+- Archives: LHA and ZIP archives.
+- CD images: ISO 9660 cd images.
+
+### List files and subdirectories in a file system
 
 Example of displaying usage for listing of files and subdirectories in a directory:
 ```
@@ -191,6 +197,11 @@ hst.imager fs dir
 Example of listing of files and directories in ADF file test.adf:
 ```
 hst.imager fs dir test.adf
+```
+
+Example of listing of files and directories in ADF file test.adf subdirectory c:
+```
+hst.imager fs dir test.adf\c
 ```
 
 Example of listing of files and directories in 16GB img image file Rigid Disk Block partition DH0:
@@ -435,9 +446,14 @@ Example of importing file systems from a 16GB vhd image file to Rigid Disk Block
 hst.imager rdb fs import 4gb.vhd 16gb.vhd
 ```
 
-Example of importing FastFileSystem from Amiga OS 3.1 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
+Example of importing FastFileSystem with DOS-type DOS3 from Amiga OS 3.1 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
 ```
-hst.imager rdb fs import 4gb.vhd amiga-os-310-install.adf DOS3 FastFileSystem
+hst.imager rdb fs import 4gb.vhd amiga-os-310-install.adf --dos-type DOS3 --name FastFileSystem
+```
+
+Example of importing FastFileSystem with DOS-type DOS7 from Amiga OS 3.2 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs import 4gb.vhd install3.2.adf --dos-type DOS7 --name FastFileSystem
 ```
 
 ### Update file system in Rigid Disk Block

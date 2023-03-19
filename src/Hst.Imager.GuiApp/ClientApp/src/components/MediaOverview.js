@@ -1,6 +1,5 @@
 import {formatBytes} from "../utils/Format";
 import React from "react";
-import RigidDiskBlockOverview from "./RigidDiskBlockOverview";
 import TableContainer from "@mui/material/TableContainer";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -9,7 +8,7 @@ import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import Typography from "@mui/material/Typography";
-import {set} from "lodash";
+import {get, set} from "lodash";
 import {styled} from "@mui/material/styles";
 import AccordionSummary from "@mui/material/AccordionSummary";
 import DiskOverview from "./DiskOverview";
@@ -21,6 +20,8 @@ const StyledAccordionSummary = styled(AccordionSummary)(({theme}) => ({
 
 const initialState = {
     diskExpanded: true,
+    gptExpanded: true,
+    mbrExpanded: true,
     rdbExpanded: true
 }
 
@@ -38,8 +39,15 @@ export default function MediaOverview(props) {
     
     const {
         diskExpanded,
+        gptExpanded,
+        mbrExpanded,
         rdbExpanded
     } = state
+
+    const diskParts = get(media, 'diskInfo.diskParts')
+    const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart')
+    const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart')
+    const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart')
     
     return (
         <TableContainer component={Paper}>
@@ -52,7 +60,7 @@ export default function MediaOverview(props) {
                                 onClick={() => handleChange({ name: 'diskExpanded', value: !diskExpanded})}
                             >
                                 <Typography>
-                                    {`Disk: ${media.model}, ${formatBytes(media.diskSize)}`}
+                                    {`Disk: ${media.name}, ${formatBytes(media.diskSize)}`}
                                 </Typography>
                             </StyledAccordionSummary>
                         </TableCell>
@@ -60,12 +68,60 @@ export default function MediaOverview(props) {
                     {diskExpanded && (
                         <TableRow>
                             <TableCell>
-                                <DiskOverview media={media} />
+                                <DiskOverview parts={diskParts} />
                             </TableCell>
                         </TableRow>
                     )}
+
+                    {gptPartitionTablePart && (
+                        <React.Fragment>
+                            <TableRow>
+                                <TableCell>
+                                    <StyledAccordionSummary
+                                        expandIcon={<FontAwesomeIcon icon={gptExpanded ? 'chevron-up' : 'chevron-down'}/>}
+                                        onClick={() => handleChange({ name: 'gptExpanded', value: !gptExpanded})}
+                                    >
+                                        <Typography>
+                                            {`Guid Partition Table: ${formatBytes(gptPartitionTablePart.size)}`}
+                                        </Typography>
+                                    </StyledAccordionSummary>
+                                </TableCell>
+                            </TableRow>
+                            {gptExpanded && (
+                                <TableRow>
+                                    <TableCell>
+                                        <DiskOverview partitionTableType={gptPartitionTablePart.partitionTableType} parts={gptPartitionTablePart.parts} />
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </React.Fragment>
+                    )}
                     
-                    {media.rigidDiskBlock && (
+                    {mbrPartitionTablePart && (
+                        <React.Fragment>
+                            <TableRow>
+                                <TableCell>
+                                    <StyledAccordionSummary
+                                        expandIcon={<FontAwesomeIcon icon={mbrExpanded ? 'chevron-up' : 'chevron-down'}/>}
+                                        onClick={() => handleChange({ name: 'mbrExpanded', value: !mbrExpanded})}
+                                    >
+                                        <Typography>
+                                            {`Master Boot Record: ${formatBytes(mbrPartitionTablePart.size)}`}
+                                        </Typography>
+                                    </StyledAccordionSummary>
+                                </TableCell>
+                            </TableRow>
+                            {mbrExpanded && (
+                                <TableRow>
+                                    <TableCell>
+                                        <DiskOverview partitionTableType={mbrPartitionTablePart.partitionTableType} parts={mbrPartitionTablePart.parts} />
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </React.Fragment>                        
+                    )}
+
+                    {rdbPartitionTablePart && (
                         <React.Fragment>
                             <TableRow>
                                 <TableCell>
@@ -74,7 +130,7 @@ export default function MediaOverview(props) {
                                         onClick={() => handleChange({ name: 'rdbExpanded', value: !rdbExpanded})}
                                     >
                                         <Typography>
-                                            {`Rigid disk block: ${media.rigidDiskBlock.diskProduct}, ${formatBytes(media.rigidDiskBlock.diskSize)}`}
+                                            {`Rigid Disk Block: ${formatBytes(rdbPartitionTablePart.size)}`}
                                         </Typography>
                                     </StyledAccordionSummary>
                                 </TableCell>
@@ -82,11 +138,11 @@ export default function MediaOverview(props) {
                             {rdbExpanded && (
                                 <TableRow>
                                     <TableCell>
-                                        <RigidDiskBlockOverview rigidDiskBlock={media.rigidDiskBlock} />
+                                        <DiskOverview partitionTableType={rdbPartitionTablePart.partitionTableType} parts={rdbPartitionTablePart.parts} />
                                     </TableCell>
                                 </TableRow>
                             )}
-                        </React.Fragment>                        
+                        </React.Fragment>
                     )}
                 </TableBody>
             </Table>

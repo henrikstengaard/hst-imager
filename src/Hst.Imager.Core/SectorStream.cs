@@ -4,20 +4,25 @@
     using System.IO;
 
     /// <summary>
-    /// Sector stream that ensures offsets and sizes are dividable by sector size 512
+    /// Sector stream that ensures buffers are read and written in sector sizes
     /// </summary>
     public class SectorStream : Stream
     {
         private readonly Stream stream;
-        private readonly bool readFill;
-        private readonly bool writeFill;
         private const int SectorSize = 512;
 
-        public SectorStream(Stream baseStream, bool readFill, bool writeFill)
+        public SectorStream(Stream baseStream)
         {
             this.stream = baseStream;
-            this.readFill = readFill;
-            this.writeFill = writeFill;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                this.stream.Close(); // close calls dispose
+            }
+            base.Dispose(disposing);
         }
 
         public override void Flush()
@@ -25,33 +30,40 @@
             stream.Flush();
         }
 
-        private static void ThrowIfValueIsNotASector(long value)
+        private static void ThrowIfNotDividableBySectorSize(string paramName, long value)
         {
             if (value % SectorSize == 0)
             {
                 return;
             }
 
-            throw new IOException($"Sector stream only supports offset and size dividable by {SectorSize}");
+            throw new ArgumentOutOfRangeException(paramName, 
+                $"Sector stream only supports values dividable by {SectorSize} and value is {value}");
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (readFill & count % SectorSize != 0)
+            if (offset != 0)
             {
-                var filledBuffer = new byte[count - (count % SectorSize) + SectorSize];
-                var bytesRead = stream.Read(filledBuffer, offset, filledBuffer.Length);
-                var length = Math.Min(bytesRead, count);
-                Array.Copy(filledBuffer, 0, buffer, 0, length);
-                return length;
+                throw new ArgumentOutOfRangeException(nameof(offset), "Sector stream only supports offset 0");
             }
-            ThrowIfValueIsNotASector(count);
-            return stream.Read(buffer, offset, count);
+
+            if (count % SectorSize == 0)
+            {
+                return stream.Read(buffer, offset, count);
+            }
+            
+            Console.WriteLine($"read count {count}");
+            var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
+            var sectorBytesRead = stream.Read(sectorBuffer, offset, sectorBuffer.Length);
+            var bytesRead = Math.Min(count, sectorBytesRead);
+            Array.Copy(sectorBuffer, 0, buffer, 0, bytesRead);
+            return bytesRead;
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            ThrowIfValueIsNotASector(offset);
+            ThrowIfNotDividableBySectorSize(nameof(offset), offset);
             return stream.Seek(offset, origin);
         }
 
@@ -62,14 +74,21 @@
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (writeFill & count % SectorSize != 0)
+            if (offset != 0)
             {
-                var filledBuffer = new byte[count - (count % SectorSize) + SectorSize];
-                stream.Write(filledBuffer, offset, filledBuffer.Length);
+                throw new ArgumentOutOfRangeException(nameof(offset), "Sector stream only supports offset 0");
+            }
+
+            if (count % SectorSize == 0)
+            {
+                stream.Write(buffer, 0, count);
                 return;
             }
-            ThrowIfValueIsNotASector(count);
-            stream.Write(buffer, offset, count);
+            
+            Console.WriteLine($"write count {count} -> {SectorSize}");
+            var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
+            Array.Copy(buffer, 0, sectorBuffer, 0, count);
+            stream.Write(sectorBuffer, 0, sectorBuffer.Length);
         }
 
         public override bool CanRead => stream.CanRead;
@@ -79,8 +98,8 @@
 
         public override long Position
         {
-            get => stream. Position;
-            set => stream. Position = value;
+            get => stream.Position;
+            set => stream.Position = value;
         }
     }
 }

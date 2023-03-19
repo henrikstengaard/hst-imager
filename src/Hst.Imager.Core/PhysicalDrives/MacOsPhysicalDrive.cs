@@ -8,8 +8,8 @@
     {
         public readonly IEnumerable<string> PartitionDevices;
 
-        public MacOsPhysicalDrive(string path, string type, string model, long size, IEnumerable<string> partitionDevices) : base(
-            path, type, model, size)
+        public MacOsPhysicalDrive(string path, string type, string name, long size, IEnumerable<string> partitionDevices) : base(
+            path, type, name, size)
         {
             this.PartitionDevices = partitionDevices;
         }

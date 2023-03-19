@@ -36,6 +36,23 @@ export default function Convert() {
         setState({...initialState})
     }
 
+    const getInfo = async (path) => {
+        const response = await fetch('api/info', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sourceType: 'ImageFile',
+                path
+            })
+        });
+        if (!response.ok) {
+            console.error('Failed to get info')
+        }
+    }
+    
     const handleConvert = async () => {
         const response = await fetch('api/convert', {
             method: 'POST',
@@ -105,6 +122,12 @@ export default function Convert() {
                             value: get(event, 'target.value'
                             )
                         })}
+                        onKeyDown={async (event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+                            await getInfo(sourcePath)
+                        }}
                     />
                 </Grid>
             </Grid>
@@ -133,6 +156,15 @@ export default function Convert() {
                             value: get(event, 'target.value'
                             )
                         })}
+                        onKeyDown={async (event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+                            handleChange({
+                                name: 'confirmOpen',
+                                value: true
+                            })
+                        }}
                     />
                 </Grid>
             </Grid>

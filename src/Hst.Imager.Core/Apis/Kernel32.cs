@@ -74,6 +74,21 @@
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
             public byte[] Data;
         }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        internal class DISK_EXTENT
+        {
+            public UInt32 DiskNumber;
+            public Int64  StartingOffset;
+            public Int64  ExtentLength;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal class VOLUME_DISK_EXTENTS
+        {
+            public UInt32      NumberOfDiskExtents;
+            public DISK_EXTENT Extents;
+        }        
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern DWORD DeviceIoControl(
@@ -125,7 +140,7 @@
                 throw new Win32Exception(Marshal.GetLastWin32Error());
             }
 
-            var diskGeometryEx = (DiskGeometryEx)Marshal.PtrToStructure(lpOutBuffer, typeof(DiskGeometryEx));
+            var diskGeometryEx = (DiskGeometryEx)Marshal.PtrToStructure(lpOutBuffer, typeof(DiskGeometryEx))!;
             Marshal.FreeHGlobal(lpOutBuffer);
 
             return diskGeometryEx;
@@ -180,5 +195,66 @@
             } while (FindNextVolume(volumeHandle, sbVolumeName, (uint)Max));            
         }
         
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        public static extern uint GetLogicalDriveStrings(uint bufferLength, [Out] char[] buffer);
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_PROPERTY_QUERY
+        {
+            public uint PropertyId;
+            public uint QueryType;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 1)]
+            public byte[] AdditionalParameters;
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_DESCRIPTOR_HEADER
+        {
+            public uint Version;
+            public uint Size;
+        }
+        
+        public enum STORAGE_BUS_TYPE
+        {
+            BusTypeUnknown = 0x00,
+            BusTypeScsi = 0x1,
+            BusTypeAtapi = 0x2,
+            BusTypeAta = 0x3,
+            BusType1394 = 0x4,
+            BusTypeSsa = 0x5,
+            BusTypeFibre = 0x6,
+            BusTypeUsb = 0x7,
+            BusTypeRAID = 0x8,
+            BusTypeiScsi = 0x9,
+            BusTypeSas = 0xA,
+            BusTypeSata = 0xB,
+            BusTypeSd = 0xC,
+            BusTypeMmc = 0xD,
+            BusTypeVirtual = 0xE,
+            BusTypeFileBackedVirtual = 0xF,
+            BusTypeMax = 0x10,
+            BusTypeMaxReserved = 0x7F
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_DEVICE_DESCRIPTOR
+        {
+            public uint Version;
+            public uint Size;
+            public byte DeviceType;
+            public byte DeviceTypeModifier;
+            [MarshalAs(UnmanagedType.U1)]
+            public bool RemovableMedia;
+            [MarshalAs(UnmanagedType.U1)]
+            public bool CommandQueueing;
+            public uint VendorIdOffset;
+            public uint ProductIdOffset;
+            public uint ProductRevisionOffset;
+            public uint SerialNumberOffset;
+            public STORAGE_BUS_TYPE BusType;
+            public uint RawPropertiesLength;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 0x16)]
+            public byte[] RawDeviceProperties;
+        }        
     }
 }

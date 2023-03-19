@@ -17,7 +17,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             this.logger = logger;
         }
 
-        public async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives()
+        public async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
         {
             if (!OperatingSystem.IsLinux())
             {
@@ -33,14 +33,22 @@ namespace Hst.Imager.Core.PhysicalDrives
                 return Enumerable.Empty<IPhysicalDrive>();
             }
 
-            var diskBlockDevices =
-                lsBlk.BlockDevices.Where(x =>
+            var blockDevices = all
+                ? lsBlk.BlockDevices
+                : lsBlk.BlockDevices.Where(x =>
                     !string.IsNullOrWhiteSpace(x.Type) &&
                     x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase) &&
                     x.Removable).ToList();
 
-            return diskBlockDevices.Select(x =>
-                new GenericPhysicalDrive(x.Path, x.Type, string.Concat(x.Vendor, " ", x.Model), x.Size ?? 0));
+            var physicalDrives = lsBlk.BlockDevices.Select(x =>
+                new GenericPhysicalDrive(x.Path, x.Type ?? string.Empty, string.Concat(x.Vendor, " ", x.Model), x.Size ?? 0)).ToList();
+
+            foreach (var physicalDrive in physicalDrives)
+            {
+                logger.LogDebug($"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
+            }
+            
+            return physicalDrives;
         }
 
         private async Task<string> GetLsBlkJson()

@@ -42,6 +42,10 @@ namespace Hst.Imager.GuiApp
             {
                 o.EnableDetailedErrors = ApplicationDataHelper.HasDebugEnabled(Constants.AppName);
                 o.MaximumReceiveMessageSize = 1024 * 1024;
+            }).AddJsonProtocol(options =>
+            {
+                options.PayloadSerializerOptions.Converters
+                    .Add(new JsonStringEnumConverter());
             });
 
             services.AddControllersWithViews().AddJsonOptions(options =>

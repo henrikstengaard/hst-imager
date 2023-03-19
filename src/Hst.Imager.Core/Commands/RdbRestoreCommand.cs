@@ -71,7 +71,7 @@ public class RdbRestoreCommand : CommandBase
         }
 
         using var media = mediaResult.Value;
-        await using var stream = media.Stream;
+        var stream = media.Stream;
 
         OnDebugMessage($"Writing Rigid Disk Block backup to '{diskPath}'");
         

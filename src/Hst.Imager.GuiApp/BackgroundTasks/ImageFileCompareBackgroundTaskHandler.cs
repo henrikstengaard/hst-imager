@@ -13,13 +13,13 @@
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class ImageFileVerifyBackgroundTaskHandler : IBackgroundTaskHandler
+    public class ImageFileCompareBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly AppState appState;
 
-        public ImageFileVerifyBackgroundTaskHandler(
+        public ImageFileCompareBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
             IHubContext<ProgressHub> progressHubContext, AppState appState)
         {
@@ -30,7 +30,7 @@
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            if (context.BackgroundTask is not ImageFileVerifyBackgroundTask verifyBackgroundTask)
+            if (context.BackgroundTask is not ImageFileCompareBackgroundTask compareBackgroundTask)
             {
                 return;
             }
@@ -40,15 +40,16 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var verifyCommand =
                     new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper,
-                        Enumerable.Empty<IPhysicalDrive>(), verifyBackgroundTask.SourcePath,
-                        verifyBackgroundTask.DestinationPath, new Size(), 0, false);
+                        Enumerable.Empty<IPhysicalDrive>(), compareBackgroundTask.SourcePath,
+                        compareBackgroundTask.DestinationPath, new Size(), 0, false);
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubContext.SendProgress(new Progress
                     {
-                        Title = verifyBackgroundTask.Title,
+                        Title = compareBackgroundTask.Title,
                         IsComplete = false,
                         PercentComplete = args.PercentComplete,
+                        BytesPerSecond = args.BytesPerSecond,
                         BytesProcessed = args.BytesProcessed,
                         BytesRemaining = args.BytesRemaining,
                         BytesTotal = args.BytesTotal,
@@ -68,7 +69,7 @@
 
                 await progressHubContext.SendProgress(new Progress
                 {
-                    Title = verifyBackgroundTask.Title,
+                    Title = compareBackgroundTask.Title,
                     IsComplete = true,
                     HasError = result.IsFaulted,
                     ErrorMessage = result.IsFaulted ? result.Error.Message : null,
@@ -79,7 +80,7 @@
             {
                 await progressHubContext.SendProgress(new Progress
                 {
-                    Title = verifyBackgroundTask.Title,
+                    Title = compareBackgroundTask.Title,
                     IsComplete = true,
                     HasError = true,
                     ErrorMessage = e.Message,

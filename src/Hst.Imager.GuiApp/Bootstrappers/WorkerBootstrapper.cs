@@ -207,13 +207,11 @@
 
             foreach (var process in processes)
             {
-                logger.LogDebug($"Process id = '{process.Id}', name = '{process.ProcessName}'");
-                
                 try
                 {
                     if (process.Id == currentProcessId ||
                         process.Id == processId ||
-                        process.ProcessName.IndexOf("HstWbInstaller.Imager.GuiApp",
+                        process.ProcessName.IndexOf(workerFileName,
                             StringComparison.OrdinalIgnoreCase) < 0 ||
                         process.MainModule == null ||
                         process.MainModule.FileName == null ||

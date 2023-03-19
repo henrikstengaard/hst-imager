@@ -3,7 +3,7 @@
     using System;
     using System.Text.Json;
     using System.Threading.Tasks;
-    using Hst.Imager.Core;
+    using Core;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
@@ -89,16 +89,16 @@
             //Console.WriteLine(task == null ? "task is null" : task.GetType().FullName);
             switch (backgroundTask.Type)
             {
-                case nameof(PhysicalDriveInfoBackgroundTask):
-                    return JsonSerializer.Deserialize<PhysicalDriveInfoBackgroundTask>(backgroundTask.Payload);
+                case nameof(InfoBackgroundTask):
+                    return JsonSerializer.Deserialize<InfoBackgroundTask>(backgroundTask.Payload);
                 case nameof(ListBackgroundTask):
                     return JsonSerializer.Deserialize<ListBackgroundTask>(backgroundTask.Payload);
                 case nameof(ReadBackgroundTask):
                     return JsonSerializer.Deserialize<ReadBackgroundTask>(backgroundTask.Payload);
                 case nameof(WriteBackgroundTask):
                     return JsonSerializer.Deserialize<WriteBackgroundTask>(backgroundTask.Payload);
-                case nameof(PhysicalDriveVerifyBackgroundTask):
-                    return JsonSerializer.Deserialize<PhysicalDriveVerifyBackgroundTask>(backgroundTask.Payload);
+                case nameof(CompareBackgroundTask):
+                    return JsonSerializer.Deserialize<CompareBackgroundTask>(backgroundTask.Payload);
                 case nameof(ConvertBackgroundTask):
                     return JsonSerializer.Deserialize<ConvertBackgroundTask>(backgroundTask.Payload);
                 case nameof(BlankBackgroundTask):
@@ -117,13 +117,13 @@
             {
                 ListBackgroundTask => new ListBackgroundTaskHandler(loggerFactory, resultHubConnection,
                     errorHubConnection, physicalDriveManager, appState),
-                PhysicalDriveInfoBackgroundTask => new PhysicalDriveInfoBackgroundTaskHandler(loggerFactory,
+                InfoBackgroundTask => new InfoBackgroundTaskHandler(loggerFactory,
                     resultHubConnection, errorHubConnection, physicalDriveManager, appState),
                 ReadBackgroundTask => new ReadBackgroundTaskHandler(loggerFactory, progressHubConnection,
                     physicalDriveManager, appState),
                 WriteBackgroundTask => new WriteBackgroundTaskHandler(loggerFactory, progressHubConnection,
                     physicalDriveManager, appState),
-                PhysicalDriveVerifyBackgroundTask => new PhysicalDriveVerifyBackgroundTaskHandler(loggerFactory,
+                CompareBackgroundTask => new CompareBackgroundTaskHandler(loggerFactory,
                     progressHubConnection, physicalDriveManager, appState),
                 _ => null
             };

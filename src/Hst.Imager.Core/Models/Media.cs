@@ -21,10 +21,10 @@
 
         public readonly Stream Stream;
 
-        public Media(string path, string model, long size, MediaType type, bool isPhysicalDrive, Stream stream)
+        public Media(string path, string name, long size, MediaType type, bool isPhysicalDrive, Stream stream)
         {
             Path = path;
-            Model = model;
+            Model = name;
             Size = size;
             Type = type;
             IsPhysicalDrive = isPhysicalDrive; 

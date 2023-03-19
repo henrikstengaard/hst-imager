@@ -52,7 +52,7 @@
             }
 
             using var sourceMedia = sourceMediaResult.Value;
-            await using var sourceStream = sourceMedia.Stream;
+            var sourceStream = sourceMedia.Stream;
 
             var sourceSize = sourceMedia.Size;
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
@@ -72,7 +72,7 @@
             }
 
             using var destinationMedia = destinationMediaResult.Value;
-            await using var destinationStream = destinationMedia.Stream;
+            var destinationStream = destinationMedia.Stream;
 
             var isVhd = commandHelper.IsVhd(destinationPath);
             if (!isVhd)

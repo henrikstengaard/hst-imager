@@ -42,21 +42,25 @@
                 return BadRequest(ModelState);
             }
 
-            if (request.SourceType == InfoRequest.SourceTypeEnum.ImageFile)
+            if (!this.workerService.IsRunning() && request.SourceType == InfoRequest.SourceTypeEnum.ImageFile)
             {
                 var task = new ImageFileInfoBackgroundTask
                 {
                     Path = request.Path
                 };
-                var handler = new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext, appState);
+                var handler =
+                    new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext, appState);
                 await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
 
                 return Ok();
             }
 
-            await workerService.EnqueueAsync(new PhysicalDriveInfoBackgroundTask
+            await workerService.EnqueueAsync(new[]
             {
-                Path = request.Path
+                new InfoBackgroundTask
+                {
+                    Path = request.Path
+                }
             });
 
             return Ok();

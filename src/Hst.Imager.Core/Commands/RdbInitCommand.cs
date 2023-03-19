@@ -75,7 +75,7 @@
             }
 
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
 
             OnDebugMessage("Initializing Rigid Disk Block");
 

@@ -65,7 +65,7 @@
 
                 var readBytes = Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
 
-                var srcReadFailed = false;
+                bool srcReadFailed;
                 var srcRetry = 0;
                 do
                 {
@@ -73,6 +73,7 @@
                     {
                         source.Seek(sourceOffset + bytesProcessed, SeekOrigin.Begin);
                         bytesRead = await source.ReadAsync(this.buffer, 0, readBytes, token);
+                        srcReadFailed = false;
                     }
                     catch (Exception e)
                     {
@@ -101,18 +102,13 @@
                         }
                     };
 
-                if (dataSectors.Count == 0)
-                {
-                    continue;
-                }
-                
                 foreach (var dataSector in dataSectors)
                 {
                     var sectorSize = bytesProcessed + dataSector.Start + dataSector.Size > size
                         ? (int)(size - bytesProcessed + dataSector.Start)
                         : dataSector.Size;
                             
-                    var destWriteFailed = false;
+                    bool destWriteFailed;
                     var destRetry = 0;
                     do
                     {
@@ -120,7 +116,8 @@
                         {
                             destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
                             await destination.WriteAsync(this.buffer, dataSector.Start, sectorSize, token);
-
+                            destWriteFailed = false;
+                                
                             if (verify && !await Verify(this.buffer, destination,
                                     destinationOffset + dataSector.Start, sectorSize, token))
                             {

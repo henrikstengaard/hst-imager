@@ -42,7 +42,7 @@
             {
                 var columnLength = columnLengths[i];
                 var alignment = i >= columns.Count ? ColumnAlignment.Left : columnAlignments[i];
-                var column = i >= columns.Count ? string.Empty : columns[i];
+                var column = i >= columns.Count ? string.Empty : columns[i] ?? string.Empty;
                 rowParts.Add(alignment == ColumnAlignment.Left
                     ? column.PadRight(columnLength)
                     : column.PadLeft(columnLength));
@@ -61,6 +61,11 @@
             var i = 0;
             foreach (var column in columns)
             {
+                if (column == null)
+                {
+                    continue;
+                }
+                
                 if (i >= columnLengths.Count)
                 {
                     columnLengths.Add(0);
@@ -96,6 +101,6 @@
 
     public class Row
     {
-        public IEnumerable<string> Columns { get; set; }
+        public string[] Columns { get; set; }
     }
 }

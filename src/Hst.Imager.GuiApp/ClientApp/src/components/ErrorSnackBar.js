@@ -15,19 +15,20 @@ export default function ErrorSnackBar() {
     const [connection, setConnection] = React.useState(null);
 
     React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
         const newConnection = new HubConnectionBuilder()
             .withUrl('/hubs/error')
             .withAutomaticReconnect()
             .build();
 
-        setConnection(newConnection);
-    }, []);
-
-    React.useEffect(() => {
-        if (connection && connection.state !== "Connected") {
-            connection.start()
-                .then(result => {
-                    connection.on('UpdateError', error => {
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on('UpdateError', error => {
                         setState({
                             ...state,
                             open: true,
@@ -35,9 +36,22 @@ export default function ErrorSnackBar() {
                         })
                     });
                 })
-                .catch(e => console.log('Connection failed: ', e));
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
         }
-    }, [connection, setState, state]);
+
+        setConnection(newConnection)
+
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection, setState, state])
     
     const handleClose = (event, reason) => {
         if (reason === 'clickaway') {
@@ -51,16 +65,14 @@ export default function ErrorSnackBar() {
     };
     
     const action = (
-        <React.Fragment>
-            <IconButton
-                size="small"
-                aria-label="close"
-                color="inherit"
-                onClick={() => handleClose()}
-            >
-                <FontAwesomeIcon icon="times" />
-            </IconButton>
-        </React.Fragment>
+        <IconButton
+            size="small"
+            aria-label="close"
+            color="inherit"
+            onClick={() => handleClose()}
+        >
+            <FontAwesomeIcon icon="times" />
+        </IconButton>
     );
     
     const {
@@ -81,7 +93,7 @@ export default function ErrorSnackBar() {
         >
             <Alert onClose={() => handleClose()} severity="error" sx={{ width: '100%' }}>
                 {errorMessage}
-            </Alert>            
+            </Alert>          
         </Snackbar>
     )
 }

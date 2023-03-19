@@ -36,6 +36,9 @@
       <None Update="scripts\create_16gb_vhd_rdb_dos7.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="scripts\create_4gb_vhd_rdb_dos3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

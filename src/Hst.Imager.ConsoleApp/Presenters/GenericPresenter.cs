@@ -1,4 +1,4 @@
-﻿namespace HstWbInstaller.Imager.ConsoleApp.Presenters
+﻿namespace Hst.Imager.ConsoleApp.Presenters
 {
     using System;
     using Hst.Imager.Core;

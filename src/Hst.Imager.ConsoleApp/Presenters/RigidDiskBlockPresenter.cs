@@ -9,18 +9,18 @@
 
     public static class RigidDiskBlockPresenter
     {
-        public static string Present(RdbInfo rdbInfo)
+        public static string Present(MediaInfo mediaInfo)
         {
-            if (rdbInfo?.RigidDiskBlock == null)
+            if (mediaInfo == null || mediaInfo.DiskInfo == null || mediaInfo.DiskInfo.RigidDiskBlock == null)
             {
                 return "No Rigid Disk Block present";
             }
 
-            var rigidDiskBlock = rdbInfo.RigidDiskBlock; 
+            var rigidDiskBlock = mediaInfo.DiskInfo.RigidDiskBlock; 
             
             var outputBuilder = new StringBuilder();
             
-            outputBuilder.AppendLine($"Info read from '{rdbInfo.Path}':");
+            outputBuilder.AppendLine($"Rigid Disk Block info read from '{mediaInfo.Path}':");
             outputBuilder.AppendLine();
             outputBuilder.AppendLine("Rigid Disk Block:");
             var rigidDiskBlockTable = new Table
@@ -143,6 +143,12 @@
             outputBuilder.AppendLine();
             outputBuilder.Append(TablePresenter.Present(partitionTable));
 
+            if (mediaInfo.DiskInfo.RdbPartitionTablePart != null)
+            {
+                outputBuilder.AppendLine();
+                outputBuilder.Append(InfoPresenter.PresentInfo(mediaInfo.DiskInfo.RdbPartitionTablePart));
+            }
+            
             return outputBuilder.ToString();
         }
     }

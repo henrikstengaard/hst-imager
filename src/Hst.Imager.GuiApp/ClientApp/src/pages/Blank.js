@@ -34,7 +34,7 @@ const unitOptions = [{
     value: 'kb',
     size: Math.pow(10, 3)
 },{
-    title: 'bytes',
+    title: 'Bytes',
     value: 'bytes',
     size: 0
 }]

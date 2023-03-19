@@ -62,7 +62,7 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
 
             // read disk info
             var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
@@ -77,7 +77,7 @@
             // get rdb partition table
             var rdbPartitionTable =
                 diskInfo.PartitionTables.FirstOrDefault(x =>
-                    x.Type == PartitionTableInfo.PartitionTableType.RigidDiskBlock);
+                    x.Type == PartitionTableType.RigidDiskBlock);
 
             // reduce available size, if rdb is present and set start offset after rdb
             if (rdbPartitionTable != null)

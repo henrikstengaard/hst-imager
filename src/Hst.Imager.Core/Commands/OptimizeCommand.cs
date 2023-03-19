@@ -45,7 +45,7 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
             var currentSize = stream.Length;
 
             OnInformationMessage($"Size '{currentSize}'");

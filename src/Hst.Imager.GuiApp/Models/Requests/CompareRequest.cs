@@ -2,7 +2,7 @@
 {
     using System.ComponentModel.DataAnnotations;
 
-    public class VerifyRequest
+    public class CompareRequest
     {
         public enum SourceTypeEnum
         {

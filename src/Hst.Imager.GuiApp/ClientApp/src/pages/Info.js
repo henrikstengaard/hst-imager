@@ -20,60 +20,47 @@ import {HubConnectionBuilder} from "@microsoft/signalr";
 import {Api} from "../utils/Api";
 
 const initialState = {
-    medias: null,
-    mediaInfo: null,
+    loading: true,
     sourceType: 'ImageFile'
 }
 
 export default function Info() {
+    const [loadMedias, setLoadMedias] = React.useState(false);
+    const [initialized, setInitialized] = React.useState(false);
+    const [media, setMedia] = React.useState(null)
+    const [medias, setMedias] = React.useState([])
+    const [path, setPath] = React.useState(null)
     const [state, setState] = React.useState({ ...initialState })
     const [connection, setConnection] = React.useState(null);
-    const [path, setPath] = React.useState(null)
 
-    const api = new Api()
-    
-    React.useEffect(() => {
-        const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
-            .withAutomaticReconnect()
-            .build();
-
-        setConnection(newConnection);
-    }, []);
-
-    React.useEffect(() => {
-        if (connection && connection.state !== "Connected") {
-            connection.start()
-                .then(result => {
-                    connection.on('Info', mediaInfo => {
-                        setPath(mediaInfo.path)
-                        setState({
-                            ...state,
-                            mediaInfo
-                        })
-                    });
-                })
-                .catch(e => console.log('Connection failed: ', e));
-        }
-    }, [connection, setState, state]);
-    
     const {
-        mediaInfo,
+        loading,
         sourceType
     } = state
 
-    const getInfoDisabled = isNil(path)
+    const api = React.useMemo(() => new Api(), []);
 
-    const handleChange = ({name, value}) => {
-        if (name === 'sourceType') {
-            setPath(null)
-            state.mediaInfo = null
+    const handleGetMedias = React.useCallback(() => {
+        async function getMedias() {
+            await api.list()
         }
-        set(state, name, value)
-        setState({...state})
+        getMedias()
+    }, [api])
+    
+    const getPath = ({medias, path}) => {
+        if (medias === null || medias.length === 0) {
+            return null
+        }
+
+        if (path === null || path === undefined) {
+            return medias[0].path
+        }
+
+        const media = medias.find(x => x.path === path)
+        return media === null ? medias[0].path : media.path
     }
 
-    const getMediaInfo = async (path) => {
+    const getInfo = async (path) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -88,16 +75,95 @@ export default function Info() {
         if (!response.ok) {
             console.error('Failed to get info')
         }
+    }
 
-        setPath(path)
-        setState({
-            ...state,
-            mediaInfo: null
-        })
+    // initialize
+    React.useEffect(() => {
+        if (!loadMedias || initialized) {
+            return
+        }
+        setInitialized(true)
+        handleGetMedias()
+    }, [initialized, setInitialized, handleGetMedias])
+
+    function createHubConnection() {
+        const connection = new HubConnectionBuilder()
+            .withUrl('/hubs/result')
+            .withAutomaticReconnect()
+            .build();
+        setConnection(connection);
+    }
+
+    React.useEffect(() => {
+        createHubConnection()
+    }, [])
+
+    React.useEffect(() => {
+        if (!connection || connection.state !== 'Disconnected') {
+            return 
+        }
+        
+        try {
+            connection
+                .start()
+                .then(() => {
+                    connection.on("Info", (media) => {
+                        setMedia(media)
+                    });
+
+                    connection.on('List', async (medias) => {
+                        const newPath = getPath({medias: medias, path: path})
+                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
+
+                        setMedias(medias)
+                        if (newMedia && state.sourceType === 'PhysicalDisk') {
+                            setPath(newPath)
+                            await getInfo(newPath)
+                        }
+                    })
+                })
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
+        }
+        
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection])
+    
+    const getInfoDisabled = isNil(path)
+
+    const handleChange = async ({name, value}) => {
+        if (name === 'sourceType') {
+            if (value === 'PhysicalDisk' && (medias === null || medias.length === 0)) {
+                await handleGetMedias()
+            }
+            const newPath = value === 'PhysicalDisk' && medias.length > 0 ? medias[0].path : null
+            const newMedia = value === 'PhysicalDisk' && newPath !== null ? medias.find(x => x.path === newPath) : null
+            setPath(newPath)
+            setMedia(newMedia)
+            if (newMedia) {
+                await getInfo(newPath)
+            }
+        }
+        set(state, name, value)
+        setState({...state})
     }
     
     const handleCancel = () => {
+        setLoadMedias(false)
+        setInitialized(false)
+        setMedia(null)
+        setMedias([])
+        setPath(null)
         setState({ ...initialState })
+        setConnection(null)
     }
     
     const handleUpdate = async () => {
@@ -119,9 +185,9 @@ export default function Info() {
                             aria-labelledby="source-type-label"
                             name="source-type"
                             value={sourceType || ''}
-                            onChange={(event) => handleChange({
+                            onChange={async (event) => await handleChange({
                                 name: 'sourceType',
-                                value: event.target.value
+                                value: get(event, 'target.value')
                             })}
                         >
                             <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
@@ -145,28 +211,41 @@ export default function Info() {
                                 <BrowseOpenDialog
                                     id="browse-image-path"
                                     title="Select image file"
-                                    onChange={async (path) => await getMediaInfo(path)}
+                                    onChange={async (path) => {
+                                        setPath(path)
+                                        await getInfo(path)
+                                    }}
                                 />
                             }
-                            onChange={(event) => setPath(get(event, 'target.value'))}
+                            onChange={(event) => {
+                                setPath(get(event, 'target.value'))
+                                if (media) {
+                                    setMedia(null)
+                                }
+                            }}
                             onKeyDown={async (event) => {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getMediaInfo(path)
+                                await getInfo(path)
                             }}
                         />
                     )}
                     {sourceType === 'PhysicalDisk' && (
                         <MediaSelectField
+                            id="media-path"
                             label={
                                 <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
                                     <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Physical disk
                                 </div>
                             }
-                            id="media-path"
-                            path={path || ''}
-                            onChange={async (media) => await getMediaInfo(media.path)}
+                            loading={loading}
+                            medias={medias || []}
+                            path={sourceType === 'PhysicalDisk' ? path || '' : null}
+                            onChange={async (media) => {
+                                setPath(media.path)
+                                await getInfo(media.path)
+                            }}
                         />
                     )}
                     </Grid>
@@ -191,7 +270,7 @@ export default function Info() {
                             <Button
                                 disabled={getInfoDisabled}
                                 icon="info"
-                                onClick={async () => await getMediaInfo(path)}
+                                onClick={async () => await getInfo(path)}
                             >
                                 Get info
                             </Button>
@@ -199,10 +278,10 @@ export default function Info() {
                     </Box>
                 </Grid>
             </Grid>
-            {mediaInfo && (
+            {media && media.diskInfo && (
                 <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
                     <Grid item xs={12}>
-                        <Media media={mediaInfo}/>
+                        <Media media={media}/>
                     </Grid>
                 </Grid>
             )}

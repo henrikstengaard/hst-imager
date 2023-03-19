@@ -27,11 +27,11 @@
             this.compatibleSize = compatibleSize;
         }
         
-        public override async Task<Result> Execute(CancellationToken token)
+        public override Task<Result> Execute(CancellationToken token)
         {
             if (size.Unit != Unit.Bytes)
             {
-                return new Result(new Error("Size must be in bytes"));
+                return Task.FromResult(new Result(new Error("Size must be in bytes")));
             }
 
             OnInformationMessage($"Creating blank image at '{path}'");
@@ -51,18 +51,18 @@
             var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false, true);
             if (mediaResult.IsFaulted)
             {
-                return new Result(mediaResult.Error);
+                return Task.FromResult(new Result(mediaResult.Error));
             }
 
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
 
             if (!commandHelper.IsVhd(path))
             {
                 stream.SetLength(mediaSize);
             }
 
-            return new Result();
+            return Task.FromResult(new Result());
         }
     }
 }

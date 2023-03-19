@@ -10,7 +10,7 @@
     public class PhysicalDrive
     {
         #region Constants
-        private const uint MAX_NUMBER_OF_DRIVES = 64;
+        public const uint MAX_NUMBER_OF_DRIVES = 64;
 
         /// <summary>
         /// Retrieves extended information about the physical disk's geometry: type, number of cylinders, tracks per
@@ -28,6 +28,11 @@
         /// </summary>
         private const uint IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x002D1080;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        private const uint IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS = 0x00560000;
+        
         /// <summary>
         /// The data area passed to a system call is too small.
         /// </summary>

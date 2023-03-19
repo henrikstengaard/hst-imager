@@ -32,7 +32,7 @@
                 DestinationPath = request.DestinationPath
             };
 
-            await workerService.EnqueueAsync(readBackgroundTask);
+            await workerService.EnqueueAsync(new[] { readBackgroundTask });
 
             return Ok();
         }

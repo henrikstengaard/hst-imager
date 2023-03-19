@@ -95,7 +95,7 @@
                 return new Result(new Error($"Physical drives doesn't support non RDB"));
             }
 
-            await using var stream = media.Stream;
+            var stream = media.Stream;
 
             List<PartitionBlock> partitionBlocks;
             if (!nonRdb)
@@ -124,6 +124,7 @@
                     stream.SetLength(partitionSize);
                 }
 
+                // non rdb adds a dummy dh0 partition to represent the partition
                 partitionBlocks = new List<PartitionBlock>
                 {
                     new PartitionBlock

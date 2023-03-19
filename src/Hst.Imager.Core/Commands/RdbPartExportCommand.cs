@@ -49,7 +49,7 @@
             }
 
             using var sourceMedia = sourceMediaResult.Value;
-            await using var sourceStream = sourceMedia.Stream;
+            var sourceStream = sourceMedia.Stream;
 
             OnDebugMessage("Reading source Rigid Disk Block");
 
@@ -83,14 +83,14 @@
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
             var destinationMediaResult =
-                commandHelper.GetWritableMedia(physicalDrives, destinationPath, allowPhysicalDrive: false);
+                commandHelper.GetWritableMedia(physicalDrives, destinationPath, allowPhysicalDrive: false, create: true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);
             }
 
             using var destinationMedia = destinationMediaResult.Value;
-            await using var destinationStream = destinationMedia.Stream;
+            var destinationStream = destinationMedia.Stream;
             const int destinationOffset = 0;
 
             OnDebugMessage($"Exporting partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");

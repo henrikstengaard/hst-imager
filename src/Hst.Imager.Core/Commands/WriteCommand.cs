@@ -57,7 +57,7 @@
                 return new Result(sourceMediaResult.Error);
             }
             using var sourceMedia = sourceMediaResult.Value;
-            await using var sourceStream = sourceMedia.Stream;
+            var sourceStream = sourceMedia.Stream;
 
             var sourceSize = sourceMedia.Size;
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
@@ -75,7 +75,7 @@
                 return new Result(destinationMediaResult.Error);
             }
             using var destinationMedia = destinationMediaResult.Value;
-            await using var destinationStream = destinationMedia.Stream;
+            var destinationStream = destinationMedia.Stream;
 
             var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>

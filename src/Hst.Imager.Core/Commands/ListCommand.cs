@@ -28,18 +28,20 @@
             {
                 OnDebugMessage($"Physical drive size '{physicalDrive.Size}'");
                 OnDebugMessage($"Opening physical drive '{physicalDrive.Path}'");
-            
-                await using var sourceStream = physicalDrive.Open();
-                
-                var streamSize = sourceStream.Length;
-                var diskSize = streamSize is > 0 ? streamSize : physicalDrive.Size;
-                
+
+                long diskSize;
+                await using (var sourceStream = physicalDrive.Open())
+                {
+                    var streamSize = sourceStream.Length;
+                    diskSize = streamSize is > 0 ? streamSize : physicalDrive.Size;
+                }
+
                 OnDebugMessage($"Disk size '{diskSize}'");
                 
                 mediaInfos.Add(new MediaInfo
                 {
                     Path = physicalDrive.Path,
-                    Model = physicalDrive.Model,
+                    Name = physicalDrive.Name,
                     IsPhysicalDrive = true,
                     Type = Media.MediaType.Raw,
                     DiskSize = diskSize

@@ -1,15 +1,26 @@
 import moment from "moment"
 
 export const formatBytes = (bytes, decimals = 1) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return '0 B';
 
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
 
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    let unit = Math.floor(Math.log(bytes) / Math.log(k));
+    let formattedSize = parseFloat((bytes / Math.pow(k, unit)).toFixed(dm))
+    if (formattedSize >= 1000 && unit < units.length - 1) {
+        formattedSize = (formattedSize / 1000).toFixed(dm)
+        unit++
+    }
+    
+    return `${formattedSize} ${units[unit]}`;
+}
 
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+function pad(num, size) {
+    num = num.toString();
+    while (num.length < size) num = "0" + num;
+    return num;
 }
 
 export const formatMilliseconds = (milliseconds) => {
@@ -18,14 +29,35 @@ export const formatMilliseconds = (milliseconds) => {
     const parts = []
     const days = duration.days()
     if (days > 0) {
-        parts.push(`${days} day${days > 1 ? 's' : ''}`)
+        parts.push(`${pad(days, 2)}d`)
     }
     
+    const hours = duration.hours()
+    parts.push(`${pad(hours, 2)}h`)
+    
+    const minutes = duration.minutes()
+    parts.push(`${pad(minutes, 2)}m`)
+
+    const seconds = duration.seconds()
+    parts.push(`${pad(seconds, 2)}s`)
+    
+    return parts.join(':')
+}
+
+export const formatMillisecondsReadable = (milliseconds) => {
+    const duration = moment.duration(milliseconds)
+
+    const parts = []
+    const days = duration.days()
+    if (days > 0) {
+        parts.push(`${days} day${days > 1 ? 's' : ''}`)
+    }
+
     const hours = duration.hours()
     if (hours > 0) {
         parts.push(`${hours} hour${hours > 1 ? 's' : ''}`)
     }
-    
+
     const minutes = duration.minutes()
     if (minutes < 1) {
         const seconds = duration.seconds()
@@ -34,6 +66,6 @@ export const formatMilliseconds = (milliseconds) => {
     else {
         parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`)
     }
-    
+
     return parts.join(', ')
 }

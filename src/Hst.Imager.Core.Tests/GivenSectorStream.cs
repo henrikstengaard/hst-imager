@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Tests
 {
+    using System;
     using System.IO;
     using System.Linq;
     using Core;
@@ -22,9 +23,9 @@
         [InlineData(512)]
         [InlineData(1024)]
         [InlineData(1024 * 1024)]
-        public void WhenReadValidCountThenBufferIsRead(int count)
+        public void WhenReadCountThenBufferIsRead(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes), false, false);
+            var sectorStream = new SectorStream(new MemoryStream(bytes));
 
             var buffer = new byte[count];
             var bytesRead = sectorStream.Read(buffer, 0, count);
@@ -32,24 +33,22 @@
             Assert.Equal(count, bytesRead);
         }
         
-        [Theory]
-        [InlineData(500)]
-        [InlineData(940)]
-        public void WhenReadInvalidCountThenExceptionIsThrown(int count)
+        [Fact]
+        public void WhenReadOffsetNotZeroThenExceptionIsThrown()
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes), false, false);
+            var sectorStream = new SectorStream(new MemoryStream(bytes));
 
-            var buffer = new byte[count];
+            var buffer = new byte[512];
 
-            Assert.Throws<IOException>(() => sectorStream.Read(buffer, 0, count));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sectorStream.Read(buffer, 1, buffer.Length));
         }
         
         [Theory]
         [InlineData(500)]
         [InlineData(940)]
-        public void WhenReadInvalidCountWithReadFillTrueThenBufferIsRead(int count)
+        public void WhenReadCountNotDividableBySectorSizeTrueThenBufferIsRead(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes), true, false);
+            var sectorStream = new SectorStream(new MemoryStream(bytes));
 
             var buffer = new byte[count];
             var bytesRead = sectorStream.Read(buffer, 0, count);
@@ -62,9 +61,9 @@
         [InlineData(512)]
         [InlineData(1024)]
         [InlineData(1024 * 1024)]
-        public void WhenWriteValidCountThenBufferIsWritten(int count)
+        public void WhenWriteCountThenBufferIsWritten(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream(), false, false);
+            var sectorStream = new SectorStream(new MemoryStream());
 
             var buffer = new byte[count];
             sectorStream.Write(buffer, 0, count);
@@ -73,23 +72,11 @@
         }
 
         [Theory]
-        [InlineData(500)]
-        [InlineData(940)]
-        public void WhenWriteInvalidCountThenExceptionIsThrown(int count)
-        {
-            var sectorStream = new SectorStream(new MemoryStream(), false, false);
-
-            var buffer = new byte[count];
-
-            Assert.Throws<IOException>(() => sectorStream.Write(buffer, 0, count));
-        }
-
-        [Theory]
         [InlineData(500, 512)]
         [InlineData(940, 1024)]
-        public void WhenWriteInvalidCountWithWriteFillTrueThenBufferIsWritten(int count, int expected)
+        public void WhenWriteCountNotDividableBySectorSizeThenBufferIsWritten(int count, int expected)
         {
-            var sectorStream = new SectorStream(new MemoryStream(), false, true);
+            var sectorStream = new SectorStream(new MemoryStream());
 
             var buffer = new byte[count];
             sectorStream.Write(buffer, 0, count);
@@ -101,9 +88,9 @@
         [InlineData(512)]
         [InlineData(1024)]
         [InlineData(1024 * 1024)]
-        public void WhenSeekValidOffsetThenOffsetMatches(int offset)
+        public void WhenSeekOffsetThenOffsetMatches(int offset)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes), false, false);
+            var sectorStream = new SectorStream(new MemoryStream(bytes));
 
             var actualOffset = sectorStream.Seek(offset, SeekOrigin.Begin);
             
@@ -113,11 +100,36 @@
         [Theory]
         [InlineData(500)]
         [InlineData(940)]
-        public void WhenSeekInvalidOffsetThenExceptionIsThrown(int offset)
+        public void WhenSeekNotDividableBySectorSizeThenExceptionIsThrown(int offset)
         {
-            var sectorStream = new SectorStream(new MemoryStream(), false, false);
+            var sectorStream = new SectorStream(new MemoryStream());
 
-            Assert.Throws<IOException>(() => sectorStream.Seek(offset, SeekOrigin.Begin));
+            Assert.Throws<ArgumentOutOfRangeException>(() => sectorStream.Seek(offset, SeekOrigin.Begin));
+        }
+        
+        [Fact]
+        public void WhenWriteLessThanSectorSizeThenSectorIsZeroFilled()
+        {
+            var sectorStream = new SectorStream(new MemoryStream(bytes));
+
+            // arrange - create 10 data bytes of 1'es
+            var dataBytes = new byte[10];
+            Array.Fill<byte>(dataBytes, 1);
+
+            // act - write data bytes at sector 0
+            sectorStream.Seek(0, SeekOrigin.Begin);
+            sectorStream.Write(dataBytes, 0, dataBytes.Length);
+
+            // arrange - create expected sector bytes containing data bytes and zero filled to sector size
+            var expectedSectorBytes = new byte[512];
+            Array.Fill<byte>(expectedSectorBytes, 1, 0, 10);
+            
+            // assert - read sector 0 matches expected sector bytes
+            var actualSectorBytes = new byte[512];
+            sectorStream.Seek(0, SeekOrigin.Begin);
+            var bytesRead = sectorStream.Read(actualSectorBytes, 0, actualSectorBytes.Length);
+            Assert.Equal(expectedSectorBytes.Length, bytesRead);
+            Assert.Equal(expectedSectorBytes, actualSectorBytes);
         }
     }
 }

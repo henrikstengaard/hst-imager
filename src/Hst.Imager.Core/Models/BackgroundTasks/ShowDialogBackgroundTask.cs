@@ -2,10 +2,12 @@
 {
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.Json.Serialization;
     using System.Threading;
 
     public class ShowDialogBackgroundTask : IBackgroundTask
     {
+        [JsonIgnore]
         public CancellationToken Token { get; set; }
         public string Id { get; set; }
         public string Title { get; set; }

@@ -1,7 +1,7 @@
 import React from 'react'
 import Title from "../components/Title";
 import Box from "@mui/material/Box";
-import {get, isNil, set} from "lodash";
+import {get, isNil} from "lodash";
 import Grid from "@mui/material/Grid";
 import MediaSelectField from "../components/MediaSelectField";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
@@ -12,34 +12,111 @@ import Button from "../components/Button";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
 import {Api} from "../utils/Api";
-
-const initialState = {
-    confirmOpen: false,
-    sourcePath: null,
-    destinationMedia: null
-}
+import {HubConnectionBuilder} from "@microsoft/signalr";
+import Media from "../components/Media";
+import Typography from "@mui/material/Typography";
 
 export default function Write() {
-    const [state, setState] = React.useState({...initialState})
-    // const [session, updateSession] = React.useReducer((x) => x + 1, 0)
+    const [confirmOpen, setConfirmOpen] = React.useState(false);
+    const [sourceMedia, setSourceMedia] = React.useState(null)
+    const [destinationMedia, setDestinationMedia] = React.useState(null)
+    const [medias, setMedias] = React.useState(null)
+    const [sourcePath, setSourcePath] = React.useState(null)
+    const [connection, setConnection] = React.useState(null);
 
-    const api = new Api()
+    const api = React.useMemo(() => new Api(), []);
 
-    const {
-        confirmOpen,
-        sourcePath,
-        destinationMedia
-    } = state
+    const getPath = ({medias, path}) => {
+        if (medias === null || medias.length === 0) {
+            return null
+        }
 
-    const handleChange = ({name, value}) => {
-        set(state, name, value)
-        setState({...state})
+        if (path === null || path === undefined) {
+            return medias[0].path
+        }
+
+        const media = medias.find(x => x.path === path)
+        return media === null ? medias[0].path : media.path
     }
 
-    const handleCancel = () => {
-        setState({...initialState})
+    const handleGetMedias = React.useCallback(async () => {
+        async function getMedias() {
+            await api.list()
+        }
+        await getMedias()
+    }, [api])
+
+    const getInfo = async (path) => {
+        const response = await fetch('api/info', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                sourceType: 'ImageFile',
+                path
+            })
+        });
+        if (!response.ok) {
+            console.error('Failed to get info')
+        }
     }
 
+    // get medias
+    React.useEffect(async () => {
+        if (medias !== null) {
+            return
+        }
+        await handleGetMedias()
+    }, [medias, handleGetMedias])
+
+    // setup signalr connection and listeners
+    React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
+        const newConnection = new HubConnectionBuilder()
+            .withUrl('/hubs/result')
+            .withAutomaticReconnect()
+            .build();
+
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on("Info", (media) => {
+                        setSourceMedia(media)
+                    });
+
+                    newConnection.on('List', async (medias) => {
+                        const newPath = getPath({medias: medias, path: get(destinationMedia, 'path')})
+                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
+
+                        setMedias(medias)
+                        if (newMedia) {
+                            setDestinationMedia(newMedia)
+                        }
+                    })
+                })
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
+        }
+
+        setConnection(newConnection)
+
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia])
+    
     const handleWrite = async () => {
         const response = await fetch('api/write', {
             method: 'POST',
@@ -48,7 +125,7 @@ export default function Write() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Write file '${sourcePath}' to disk '${get(destinationMedia, 'model') || ''}'`,
+                title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'`,
                 sourcePath,
                 destinationPath: destinationMedia.path,
             })
@@ -59,10 +136,7 @@ export default function Write() {
     }
 
     const handleConfirm = async (confirmed) => {
-        setState({
-            ...state,
-            confirmOpen: false
-        })
+        setConfirmOpen(false)
         if (!confirmed) {
             return
         }
@@ -71,6 +145,15 @@ export default function Write() {
 
     const handleUpdate = async () => {
         await api.list()
+    }
+
+    const handleCancel = () => {
+        setConfirmOpen(false)
+        setSourceMedia(null)
+        setDestinationMedia(null)
+        setMedias([])
+        setSourcePath(null)
+        setConnection(null)
     }
     
     const writeDisabled = isNil(sourcePath) || isNil(destinationMedia)
@@ -81,7 +164,7 @@ export default function Write() {
                 id="confirm-write"
                 open={confirmOpen}
                 title="Write"
-                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'model') || ''}'?`}
+                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -102,17 +185,19 @@ export default function Write() {
                             <BrowseOpenDialog
                                 id="browse-source-path"
                                 title="Select source image file"
-                                onChange={(path) => handleChange({
-                                    name: 'sourcePath',
-                                    value: path
-                                })}
+                                onChange={async (path) => {
+                                    setSourcePath(path)
+                                    await getInfo(path)
+                                }}
                             />
                         }
-                        onChange={(event) => handleChange({
-                            name: 'sourcePath',
-                            value: get(event, 'target.value'
-                            )
-                        })}
+                        onChange={(event) => setSourcePath(get(event, 'target.value'))}
+                        onKeyDown={async (event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+                            await getInfo(sourcePath)
+                        }}
                     />
                 </Grid>
             </Grid>
@@ -125,11 +210,9 @@ export default function Write() {
                             </div>
                         }
                         id="destination-media"
+                        medias={medias || []}
                         path={get(destinationMedia, 'path') || ''}
-                        onChange={(media) => handleChange({
-                            name: 'destinationMedia',
-                            value: media
-                        })}
+                        onChange={(media) => setDestinationMedia(media)}
                     />
                 </Grid>
             </Grid>
@@ -153,10 +236,7 @@ export default function Write() {
                             <Button
                                 disabled={writeDisabled}
                                 icon="download"
-                                onClick={async () => handleChange({
-                                    name: 'confirmOpen',
-                                    value: true
-                                })}
+                                onClick={async () => setConfirmOpen(true)}
                             >
                                 Start write
                             </Button>
@@ -164,6 +244,19 @@ export default function Write() {
                     </Box>
                 </Grid>
             </Grid>
+            {get(sourceMedia, 'diskInfo') && (
+                <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+                    <Grid item xs={12}>
+                        <Typography variant="h3">
+                            Source file
+                        </Typography>
+                        <Typography>
+                            Disk information read from source file.
+                        </Typography>                        
+                        <Media media={sourceMedia}/>
+                    </Grid>
+                </Grid>
+            )}
         </Box>
     )
 }

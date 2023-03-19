@@ -12,7 +12,7 @@ const rootElement = document.getElementById('root');
 const theme = createTheme({
     typography: {
         fontFamily: [
-            'topazplus_a600a1200a4000Rg',
+            // 'topazplus_a600a1200a4000Rg',
             'Segoe UI',            
             'sans-serif',
         ].join(','),

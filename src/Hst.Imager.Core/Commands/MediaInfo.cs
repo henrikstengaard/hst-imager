@@ -5,7 +5,7 @@
     public class MediaInfo
     {
         public string Path { get; set; }
-        public string Model { get; set; }
+        public string Name { get; set; }
         public bool IsPhysicalDrive;
         public Media.MediaType Type;        
         public long DiskSize { get; set; }

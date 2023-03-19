@@ -44,9 +44,9 @@
         
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnInformationMessage($"Compare '{sourcePath}' and '{destinationPath}'");
+            OnInformationMessage($"Compare source '{sourcePath}' and destination '{destinationPath}'");
             
-            OnDebugMessage($"Opening '{sourcePath}' as readable");
+            OnDebugMessage($"Opening source '{sourcePath}' as readable");
 
             var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, sourcePath);
@@ -55,17 +55,12 @@
                 return new Result(sourceMediaResult.Error);
             }
             using var sourceMedia = sourceMediaResult.Value;
-            await using var sourceStream = sourceMedia.Stream;
+            var sourceStream = sourceMedia.Stream;
 
             var sourceSize = sourceMedia.Size;
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
 
-            var verifySize = Convert
-                .ToInt64(size.Value == 0 ? sourceSize : size.Value)
-                .ResolveSize(size);
-            OnInformationMessage($"Size '{verifySize.FormatBytes()}' ({verifySize} bytes)");
-            
-            OnDebugMessage($"Opening '{destinationPath}' as readable");
+            OnDebugMessage($"Opening destination '{destinationPath}' as readable");
             
             var destinationMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, destinationPath);
             if (destinationMediaResult.IsFaulted)
@@ -73,8 +68,18 @@
                 return new Result(destinationMediaResult.Error);
             }
             using var destinationMedia = destinationMediaResult.Value;
-            await using var destinationStream = destinationMedia.Stream;
+            var destinationStream = destinationMedia.Stream;
+
+            var destinationSize = destinationMedia.Size;
+            OnDebugMessage($"Destination size '{destinationSize.FormatBytes()}' ({destinationSize} bytes)");
             
+            var minSize = Math.Min(sourceSize, destinationSize);
+            
+            var compareSize = Convert
+                .ToInt64(size.Value == 0 ? minSize : size.Value)
+                .ResolveSize(size);
+            OnInformationMessage($"Compare size '{compareSize.FormatBytes()}' ({compareSize} bytes)");
+
             var imageVerifier = new ImageVerifier(retries: retries, force: force);
             imageVerifier.DataProcessed += (_, e) =>
             {
@@ -86,15 +91,15 @@
             imageVerifier.SrcError += (_, args) => OnSrcError(args);
             imageVerifier.DestError += (_, args) => OnDestError(args);
 
-            var result = await imageVerifier.Verify(token, sourceStream, destinationStream, verifySize);
+            var result = await imageVerifier.Verify(token, sourceStream, destinationStream, compareSize);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
             }
 
-            if (statusBytesProcessed != verifySize)
+            if (statusBytesProcessed != compareSize)
             {
-                return new Result(new Error($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{verifySize.FormatBytes()}' ({verifySize} bytes)"));
+                return new Result(new Error($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{compareSize.FormatBytes()}' ({compareSize} bytes)"));
             }
 
             OnInformationMessage($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");

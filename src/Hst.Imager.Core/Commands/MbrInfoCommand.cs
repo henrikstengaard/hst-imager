@@ -25,7 +25,7 @@
             this.path = path;
         }
 
-        public event EventHandler<MbrInfoReadEventArgs> MbrInfoRead;
+        public event EventHandler<InfoReadEventArgs> MbrInfoRead;
         
         public override async Task<Result> Execute(CancellationToken token)
         {
@@ -40,29 +40,22 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
             
             using var disk = new Disk(stream, Ownership.None);
             
-            OnDebugMessage("Reading Master Boot Record");
+            OnDebugMessage($"Reading Master Boot Record from path '{path}'");
 
-            BiosPartitionTable biosPartitionTable;
-            try
-            {
-                biosPartitionTable = new BiosPartitionTable(disk);
-            }
-            catch (Exception)
-            {
-                return new Result(new Error("Master Boot Record not found"));
-            }
+            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
             
-            OnMbrInfoRead(new MbrInfo
+            OnMbrInfoRead(new MediaInfo
             {
                 Path = path,
-                DiskSize = disk.Capacity,
-                Sectors = disk.Geometry.TotalSectorsLong,
-                BlockSize = disk.BlockSize,
-                Partitions = biosPartitionTable.Partitions.Select(x => CreateMbrPartition(x, disk.BlockSize)).ToList()
+                Name = media.Model,
+                IsPhysicalDrive = media.IsPhysicalDrive,
+                Type = media.Type,
+                DiskSize = diskInfo.Size,
+                DiskInfo = diskInfo
             });
 
             await disk.Content.DisposeAsync();
@@ -71,21 +64,9 @@
             return new Result();
         }
 
-        private MbrPartition CreateMbrPartition(DiscUtils.Partitions.PartitionInfo partition, int blockSize)
+        private void OnMbrInfoRead(MediaInfo mediaInfo)
         {
-            var partitionSize = (partition.LastSector - partition.FirstSector) * blockSize;
-            return new MbrPartition
-            {
-                Type = partition.TypeAsString,
-                FirstSector = partition.FirstSector,
-                LastSector = partition.LastSector,
-                PartitionSize = partitionSize
-            };
-        }
-
-        private void OnMbrInfoRead(MbrInfo rdbInfo)
-        {
-            MbrInfoRead?.Invoke(this, new MbrInfoReadEventArgs(rdbInfo));
+            MbrInfoRead?.Invoke(this, new InfoReadEventArgs(mediaInfo));
         }        
     }
 }

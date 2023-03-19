@@ -14,7 +14,8 @@
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
 
-        public InfoCommand(ILogger<InfoCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string path)
+        public InfoCommand(ILogger<InfoCommand> logger, ICommandHelper commandHelper,
+            IEnumerable<IPhysicalDrive> physicalDrives, string path)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -23,37 +24,34 @@
         }
 
         public event EventHandler<InfoReadEventArgs> DiskInfoRead;
-        
+
         public override async Task<Result> Execute(CancellationToken token)
         {
-            OnInformationMessage($"Reading information from '{path}'");
-            
+            OnInformationMessage($"Reading disk information from '{path}'");
+
             OnDebugMessage($"Opening '{path}' as readable");
-            
+
             var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrives, path);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
             }
+
             using var media = sourceMediaResult.Value;
-            await using var stream = media.Stream;
 
             OnDebugMessage($"Physical drive size '{media.Size}'");
-                
-            var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
-            
-            var streamSize = stream.Length;
-            var diskSize = streamSize is > 0 ? streamSize : media.Size;
-            
-            OnDebugMessage($"Path '{path}', disk size '{diskSize}'");
-            
+
+            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+
+            OnDebugMessage($"Path '{path}', disk size '{diskInfo.Size}'");
+
             OnDiskInfoRead(new MediaInfo
             {
                 Path = path,
-                Model = media.Model,
+                Name = media.Model,
                 IsPhysicalDrive = media.IsPhysicalDrive,
                 Type = media.Type,
-                DiskSize = diskSize,
+                DiskSize = diskInfo.Size,
                 DiskInfo = diskInfo
             });
 
@@ -62,7 +60,7 @@
 
         private void OnDiskInfoRead(MediaInfo mediaInfo)
         {
-            DiskInfoRead?.Invoke(this, new InfoReadEventArgs(mediaInfo, mediaInfo.DiskInfo));
+            DiskInfoRead?.Invoke(this, new InfoReadEventArgs(mediaInfo));
         }
     }
 }

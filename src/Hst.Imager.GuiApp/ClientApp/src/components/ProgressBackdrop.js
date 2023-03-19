@@ -21,6 +21,7 @@ const initialState = {
     hasError: false,
     errorMessage: null,
     percentComplete: null,
+    bytesPerSecond: null,
     bytesProcessed: null,
     bytesRemaining: null,
     bytesTotal: null,
@@ -44,19 +45,20 @@ export default function ProgressBackdrop(props) {
     const [connection, setConnection] = React.useState(null);
 
     React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
         const newConnection = new HubConnectionBuilder()
             .withUrl('/hubs/progress')
             .withAutomaticReconnect()
-            .build();
+            .build()
 
-        setConnection(newConnection);
-    }, []);
-
-    React.useEffect(() => {
-        if (connection && connection.state !== "Connected") {
-            connection.start()
-                .then(result => {
-                    connection.on('UpdateProgress', progress => {
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on('UpdateProgress', progress => {
                         const isComplete = get(progress, 'isComplete') || false
                         const hasError = get(progress, 'hasError') || false
                         state.title = progress.title
@@ -65,6 +67,7 @@ export default function ProgressBackdrop(props) {
                         state.hasError = hasError
                         state.errorMessage = progress.errorMessage
                         state.percentComplete = progress.percentComplete
+                        state.bytesPerSecond = isComplete ? null : progress.bytesPerSecond
                         state.bytesProcessed = isComplete ? null : progress.bytesProcessed
                         state.bytesRemaining = isComplete ? null : progress.bytesRemaining
                         state.bytesTotal = isComplete ? null : progress.bytesTotal
@@ -75,7 +78,18 @@ export default function ProgressBackdrop(props) {
                     });
                 })
                 .catch(e => console.log('Connection failed: ', e));
+        } catch (error) {
+            console.error(error)
         }
+
+        setConnection(newConnection)
+
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
     }, [connection, setState, state]);
 
     const {
@@ -85,6 +99,7 @@ export default function ProgressBackdrop(props) {
         hasError,
         errorMessage,
         percentComplete,
+        bytesPerSecond,
         bytesProcessed,
         bytesRemaining,
         bytesTotal,
@@ -118,16 +133,18 @@ export default function ProgressBackdrop(props) {
         )
     }
 
-    const renderProgress = ({
-                                isComplete,
-                                percentComplete,
-                                bytesProcessed,
-                                bytesRemaining,
-                                bytesTotal,
-                                millisecondsElapsed,
-                                millisecondsRemaining,
-                                millisecondsTotal
-                            }) => {
+    const renderProgress = (
+    {
+        isComplete,
+        percentComplete,
+        bytesPerSecond,
+        bytesProcessed,
+        bytesRemaining,
+        bytesTotal,
+        millisecondsElapsed,
+        millisecondsRemaining,
+        millisecondsTotal
+    }) => {
         if (isComplete || hasError) {
             return (
                 <React.Fragment>
@@ -136,7 +153,7 @@ export default function ProgressBackdrop(props) {
                         display: 'flex',
                         justifyContent: 'center'
                     }}>
-                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom', color: 'rgb(51, 204, 51)'}}>
+                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom', color: hasError ? 'rgb(204, 51, 51)' : 'rgb(51, 204, 51)'}}>
                             <FontAwesomeIcon icon={hasError ? 'times' : 'check'} style={{marginRight: '5px'}}/> {hasError ? `Failed: ${errorMessage || ''}` : 'Completed successfully'}
                         </div>
                     </Box>
@@ -155,15 +172,10 @@ export default function ProgressBackdrop(props) {
                 </React.Fragment>
             )
         }
-
-
-        const percentageText = isNil(percentComplete) ? null : `${parseFloat(percentComplete).toFixed(1)} %`
-        const bytesText = !isNil(bytesProcessed) && !isNil(bytesTotal) && !isNil(bytesRemaining)
-            ? `${formatBytes(bytesProcessed)} of ${formatBytes(bytesTotal)} processed, ${formatBytes(bytesRemaining)} remaining`
-            : null
-        const timeText = !isNil(millisecondsElapsed) && !isNil(millisecondsTotal) && !isNil(millisecondsRemaining)
-            ? `${formatMilliseconds(millisecondsElapsed)} elapsed of ${formatMilliseconds(millisecondsTotal)}, ${formatMilliseconds(millisecondsRemaining)} remaining`
-            : null
+        
+        const percentageText = `${parseFloat(isNil(percentComplete) ? '0' : percentComplete).toFixed(1)} %`
+        const bytesText = `${formatBytes(isNil(bytesPerSecond) ? 0 : bytesPerSecond, 1)}/s, ${formatBytes(isNil(bytesProcessed) ? 0 : bytesProcessed, 1)} / ${formatBytes(isNil(bytesTotal) ? 0 : bytesTotal, 1)}`
+        const timeText = `${formatMilliseconds(isNil(millisecondsElapsed) ? 0 : millisecondsElapsed)} / ${formatMilliseconds(isNil(millisecondsTotal) ? 0 : millisecondsTotal)}`
 
         return (
             <React.Fragment>
@@ -176,11 +188,13 @@ export default function ProgressBackdrop(props) {
                     display: 'flex',
                     justifyContent: 'center'
                 }}>
-                    <Stack direction="column" spacing={1}>
-                        {renderText(percentageText)}
-                        {renderText(bytesText)}
-                        {renderText(timeText)}
-                    </Stack>
+                    {show && (
+                        <Stack direction="column" spacing={1}>
+                            {renderText(percentageText)}
+                            {renderText(bytesText)}
+                            {renderText(timeText)}
+                        </Stack>
+                    )}
                 </Box>
                 <Box sx={{
                     mt: 1,
@@ -218,6 +232,7 @@ export default function ProgressBackdrop(props) {
                             {renderProgress({
                                 isComplete,
                                 percentComplete,
+                                bytesPerSecond,
                                 bytesProcessed,
                                 bytesRemaining,
                                 bytesTotal,

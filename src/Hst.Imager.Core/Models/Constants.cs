@@ -2,7 +2,7 @@
 {
     public class Constants
     {
-        public const string AppName = "HstWB Imager";
+        public const string AppName = "Hst Imager";
         
         public class HubMethodNames
         {

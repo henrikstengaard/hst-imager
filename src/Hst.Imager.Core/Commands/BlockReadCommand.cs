@@ -69,7 +69,7 @@ public class BlockReadCommand : CommandBase
         }
 
         using var media = mediaResult.Value;
-        await using var stream = media.Stream;
+        var stream = media.Stream;
 
         if (!Directory.Exists(outputPath))
         {

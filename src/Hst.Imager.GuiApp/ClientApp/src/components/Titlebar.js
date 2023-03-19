@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
 import {ElectronIpc} from "../utils/ElectronIpc"
-import {HSTWB_INSTALLER_VERSION} from '../Constants'
+import {HST_IMAGER_VERSION} from '../Constants'
 
 export default function Titlebar() {
     const [maximized, setMaximized] = React.useState(false)
@@ -44,7 +44,7 @@ export default function Titlebar() {
                 <img src="icons/icon-192x192.png" height="20px" alt="Hst Installer app icon"
                      style={{paddingLeft: '2px', paddingRight: '2px'}}/>
                 <Typography variant="h1" component="div" sx={{flexGrow: 1}}>
-                    Hst Imager v{HSTWB_INSTALLER_VERSION}
+                    Hst Imager v{HST_IMAGER_VERSION}
                 </Typography>
                 <Box style={{WebkitAppRegion: 'no-drag'}}>
                     <IconButton

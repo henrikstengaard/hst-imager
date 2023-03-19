@@ -4,6 +4,21 @@
 
     public static class User
     {
-        public static readonly bool IsAdministrator = OperatingSystem.IsAdministrator();
+        private static bool? isAdministrator;
+
+        public static bool IsAdministrator
+        {
+            get
+            {
+                if (isAdministrator.HasValue)
+                {
+                    return isAdministrator.Value;
+                }
+                
+                isAdministrator = OperatingSystem.IsAdministrator();
+
+                return isAdministrator.Value;
+            }
+        }
     }
 }

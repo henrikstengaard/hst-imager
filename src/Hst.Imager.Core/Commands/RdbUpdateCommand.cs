@@ -47,7 +47,7 @@ public class RdbUpdateCommand : CommandBase
         }
 
         using var media = mediaResult.Value;
-        await using var stream = media.Stream;
+        var stream = media.Stream;
 
         OnDebugMessage("Reading Rigid Disk Block");
             

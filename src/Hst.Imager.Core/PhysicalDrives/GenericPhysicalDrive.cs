@@ -6,15 +6,15 @@ namespace Hst.Imager.Core.PhysicalDrives
     {
         public string Path { get; }
         public string Type { get; }
-        public string Model { get; }
+        public string Name { get; }
         public long Size { get; protected set; }
         public bool Writable { get; private set; }
 
-        public GenericPhysicalDrive(string path, string type, string model, long size, bool writable = false)
+        public GenericPhysicalDrive(string path, string type, string name, long size, bool writable = false)
         {
             Path = path;
             Type = type;
-            Model = model;
+            Name = name;
             Size = size;
             Writable = writable;
         }

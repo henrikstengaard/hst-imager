@@ -53,7 +53,7 @@
             }
 
             using var sourceMedia = sourceMediaResult.Value;
-            await using var sourceStream = sourceMedia.Stream;
+            var sourceStream = sourceMedia.Stream;
 
             OnDebugMessage("Reading source Rigid Disk Block");
 
@@ -87,7 +87,7 @@
             }
 
             using var destinationMedia = destinationMediaResult.Value;
-            await using var destinationStream = destinationMedia.Stream;
+            var destinationStream = destinationMedia.Stream;
 
             OnDebugMessage("Reading destination Rigid Disk Block");
 

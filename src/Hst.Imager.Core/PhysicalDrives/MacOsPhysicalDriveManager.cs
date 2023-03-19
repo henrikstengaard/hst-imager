@@ -19,14 +19,14 @@
             this.logger = logger;
         }
 
-        public async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives()
+        public async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
         {
             if (!OperatingSystem.IsMacOs())
             {
                 throw new NotSupportedException("MacOS physical drive manager is not running on macOS environment");
             }
             
-            var listOutput = await GetDiskUtilExternalDisks();
+            var listOutput = await GetDiskUtilExternalDisks(all);
 
             var disks = DiskUtilReader.ParseList(new MemoryStream(Encoding.UTF8.GetBytes(listOutput))).ToList();
 
@@ -47,12 +47,17 @@
                 physicalDrives.Add(new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName, info.Size, partitionDevices));
             }
             
+            foreach (var physicalDrive in physicalDrives)
+            {
+                logger.LogDebug($"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
+            }
+            
             return physicalDrives;
         }
 
-        private async Task<string> GetDiskUtilExternalDisks()
+        private async Task<string> GetDiskUtilExternalDisks(bool all)
         {
-            var output = await "diskutil".RunProcessAsync("list -plist external");
+            var output = await "diskutil".RunProcessAsync($"list -plist{(all ? "" : " external")}");
             logger.LogDebug(output);
             return output;
         }

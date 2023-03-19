@@ -40,8 +40,6 @@
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            Seek(position, SeekOrigin.Begin);
-            
             if (offset != 0)
             {
                 throw new ArgumentException("'Only offset 0 is allowed", nameof(offset));
@@ -60,8 +58,6 @@
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            Seek(position, SeekOrigin.Begin);
-            
             if (offset != 0)
             {
                 throw new ArgumentException("Only offset 0 is allowed", nameof(offset));

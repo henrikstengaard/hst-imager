@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
     using Apis;
@@ -18,13 +19,79 @@
             this.logger = logger;
         }
 
-        public async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives()
+        public Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
         {
             if (!OperatingSystem.IsWindows())
             {
                 throw new NotSupportedException("Windows physical drive manager is not running on Windows environment");
             }
 
+            return Task.FromResult(GetPhysicalDrivesUsingKernel32(all));
+        }
+
+        private IEnumerable<IPhysicalDrive> GetPhysicalDrivesUsingKernel32(bool all = false)
+        {
+            // iterate drive letters and get their relation to physical drives
+            var physicalDriveLettersIndex = new Dictionary<uint, List<string>>();
+            var drives = DriveInfo.GetDrives();
+            foreach (var drive in drives)
+            {
+                var driveName = drive.Name[..2];
+                var drivePath = $"\\\\.\\{driveName}";
+                using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
+                if (win32RawDisk.IsInvalid())
+                {
+                    continue;
+                }
+
+                var diskExtendsResult = win32RawDisk.DiskExtends();
+
+                if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
+                {
+                    physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
+                }
+
+                physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
+            }
+
+            // iterate physical drives, get media type from geometry, get name from storage property query and size 
+            var physicalDrives = new List<IPhysicalDrive>();
+            for (uint i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
+            {
+                var physicalDrivePath = $"\\\\.\\PhysicalDrive{i}";
+                using var win32RawDisk = new Win32RawDisk(physicalDrivePath, false, true);
+                if (win32RawDisk.IsInvalid())
+                {
+                    continue;
+                }
+
+                var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
+                var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
+                var name = string.Join(" ",
+                    new[] { storagePropertyQueryResult.VendorId, storagePropertyQueryResult.ProductId }.Where(x =>
+                        !string.IsNullOrWhiteSpace(x)));
+                var size = win32RawDisk.Size();
+
+                physicalDrives.Add(new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType, name,
+                    size,
+                    physicalDriveLettersIndex.ContainsKey(i) ? physicalDriveLettersIndex[i] : new List<string>()));
+            }
+
+            if (!all)
+            {
+                physicalDrives = physicalDrives.Where(x => x.Type != "FixedMedia").ToList();
+            }
+
+            foreach (var physicalDrive in physicalDrives)
+            {
+                logger.LogDebug($"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
+            }
+            
+            return physicalDrives;
+        }
+
+        private async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrivesUsingWmic(bool all = false)
+        {
             var wmicDiskDriveListCsv = await GetWmicDiskDriveListCsv();
             var wmicWin32DiskDriveToDiskPartitionsCsv = await GetWmicWin32DiskDriveToDiskPartitionPath();
             var wmicWin32LogicalDiskToPartitionsCsv = await GetWmicWin32LogicalDiskToPartitionPath();
@@ -35,12 +102,15 @@
             var wmicLogicalDiskToPartitions =
                 WmicReader.ParseWmicLogicalDiskToPartitions(wmicWin32LogicalDiskToPartitionsCsv).ToList();
 
-            var removableMedias = wmicDiskDrives.Where(x =>
-                    x.MediaType.Equals("Removable Media", StringComparison.OrdinalIgnoreCase) ||
-                    x.MediaType.Equals("External hard disk media", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            return removableMedias.Select(x =>
+            if (!all)
+            {
+                wmicDiskDrives = wmicDiskDrives.Where(x =>
+                        x.MediaType.Equals("Removable Media", StringComparison.OrdinalIgnoreCase) ||
+                        x.MediaType.Equals("External hard disk media", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+            
+            return wmicDiskDrives.Select(x =>
                 CreatePhysicalDrive(x, wmicDiskDriveToDiskPartitions, wmicLogicalDiskToPartitions));
         }
 
@@ -52,9 +122,12 @@
                 .Join(wmicLogicalDiskToPartitions, disk => disk.Dependent, logical => logical.Antecedent,
                     (_, logical) => logical.Dependent).ToList();
 
-            var win32RawDisk = new Win32RawDisk(wmicDiskDrive.Name);
-            var size = win32RawDisk.Size();
-            
+            long size;
+            using (var win32RawDisk = new Win32RawDisk(wmicDiskDrive.Name))
+            {
+                size = win32RawDisk.Size();
+            }
+
             return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.Model,
                 size, driveLetters);
         }

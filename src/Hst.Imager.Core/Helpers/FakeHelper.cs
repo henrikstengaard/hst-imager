@@ -14,7 +14,7 @@
             {
                 Path = Path,
                 DiskSize = 1024L * 1024 * 1000 * 16,
-                Model = "SanDisk 16GB",
+                Name = "SanDisk 16GB",
                 IsPhysicalDrive = true,
             };
         }
@@ -26,7 +26,7 @@
                 BlockSize = 512,
                 CylBlocks = 1008,
                 Cylinders = 7362,
-                DiskProduct = "HstWB 4GB",
+                DiskProduct = "HstImager 4GB",
                 DiskRevision = "0.4",
                 DiskSize = 3799498752L,
                 DiskVendor = "UAE",

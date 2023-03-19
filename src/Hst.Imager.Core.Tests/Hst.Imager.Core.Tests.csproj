@@ -49,6 +49,9 @@
       <None Update="TestData\wmic-diskdrive-list-0-size.csv">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\wmic_diskdrive_list_error.csv">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

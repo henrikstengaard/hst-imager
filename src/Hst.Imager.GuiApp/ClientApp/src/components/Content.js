@@ -6,7 +6,7 @@ import Read from "../pages/Read";
 import Write from "../pages/Write";
 import Info from "../pages/Info";
 import Convert from "../pages/Convert";
-import Verify from "../pages/Verify";
+import Compare from "../pages/Compare";
 import Blank from "../pages/Blank";
 import Optimize from "../pages/Optimize";
 import Partition from "../pages/Partition";
@@ -21,7 +21,7 @@ export default function Content() {
             <Route path='/write' component={Write}/>
             <Route path='/info' component={Info}/>
             <Route path='/convert' component={Convert}/>
-            <Route path='/verify' component={Verify}/>
+            <Route path='/compare' component={Compare}/>
             <Route path='/blank' component={Blank}/>
             <Route path='/optimize' component={Optimize}/>
             <Route path='/partition' component={Partition}/>

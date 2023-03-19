@@ -80,7 +80,7 @@
             }
 
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media.Stream;
 
             OnDebugMessage("Reading Rigid Disk Block");
 
@@ -186,9 +186,6 @@
             OnDebugMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
-            stream.Close();
-            media.Dispose();
-            
             return new Result();
         }
     }

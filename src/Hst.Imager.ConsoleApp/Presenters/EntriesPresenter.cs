@@ -90,7 +90,7 @@ public static class EntriesPresenter
             
             rows.Add(new Row
             {
-                Columns = columns
+                Columns = columns.ToArray()
             });
         }
 

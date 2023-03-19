@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
+    using Core.Models;
     using ElectronNET.API;
     using Hst.Imager.Core.Helpers;
     using Microsoft.AspNetCore.Mvc;
@@ -22,8 +23,8 @@
             {
                 Electron.App.Exit();
             }
-
-            await ApplicationDataHelper.AgreeLicense(GetType().Assembly, "HstWB Imager", request.LicenseAgreed);
+            
+            await ApplicationDataHelper.AgreeLicense(GetType().Assembly, Constants.AppName, request.LicenseAgreed);
             
             return Ok();
         }

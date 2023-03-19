@@ -40,7 +40,7 @@
             Assert.Equal("Path", mediaInfo.Path);
             Assert.Equal(Media.MediaType.Raw, mediaInfo.Type);
             Assert.True(mediaInfo.IsPhysicalDrive);
-            Assert.Equal("Model", mediaInfo.Model);
+            Assert.Equal("Model", mediaInfo.Name);
             Assert.Equal(8192, mediaInfo.DiskSize);
         }
         
@@ -72,7 +72,7 @@
             Assert.Equal(path, mediaInfo.Path);
             Assert.Equal(Media.MediaType.Raw, mediaInfo.Type);
             Assert.True(mediaInfo.IsPhysicalDrive);
-            Assert.Equal("Model", mediaInfo.Model);
+            Assert.Equal("Model", mediaInfo.Name);
             Assert.Equal(131072, mediaInfo.DiskSize);
         }
     }

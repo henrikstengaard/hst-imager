@@ -38,9 +38,9 @@ export default function Start() {
         url: '/convert',
         icon: 'exchange-alt'
     },{
-        title: 'Verify',
-        description: 'Verify image file and physical disk.',
-        url: '/verify',
+        title: 'Compare',
+        description: 'Compare image file and physical disk.',
+        url: '/compare',
         icon: 'check'
     },{
         title: 'Blank',
@@ -52,11 +52,11 @@ export default function Start() {
         description: 'Optimize image file.',
         url: '/optimize',
         icon: 'magic'
-    },{
-        title: 'Partition',
-        description: 'Edit partition table for physical disk or image file.',
-        url: '/partition',
-        icon: 'hdd'
+    // },{
+    //     title: 'Partition',
+    //     description: 'Edit partition table for physical disk or image file.',
+    //     url: '/partition',
+    //     icon: 'hdd'
     }]
     
     return (

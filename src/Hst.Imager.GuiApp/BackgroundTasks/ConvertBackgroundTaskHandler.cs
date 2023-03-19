@@ -46,6 +46,7 @@
                         Title = convertBackgroundTask.Title,
                         IsComplete = false,
                         PercentComplete = args.PercentComplete,
+                        BytesPerSecond = args.BytesPerSecond,
                         BytesProcessed = args.BytesProcessed,
                         BytesRemaining = args.BytesRemaining,
                         BytesTotal = args.BytesTotal,

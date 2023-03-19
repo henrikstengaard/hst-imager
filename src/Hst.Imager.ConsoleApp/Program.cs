@@ -68,7 +68,7 @@
                 var appState = AppState.Instance;
                 var app =
                     $"Hst Imager v{appState.Version.Major}.{appState.Version.Minor}.{appState.Version.Build} ({appState.BuildDate})";
-                var author = "Henrik Noerfjand Stengaard";
+                var author = "Henrik Nørfjand Stengaard";
 
                 Log.Logger.Information(app);
                 Log.Logger.Information(author);

@@ -5,6 +5,6 @@
 
     public interface IPhysicalDriveManager
     {
-        Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives();
+        Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false);
     }
 }

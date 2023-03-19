@@ -6,10 +6,9 @@
     {
         string Path { get; }
         string Type { get; }
-        string Model { get; }
+        string Name { get; }
         long Size { get; }
         bool Writable { get; }
-        //RigidDiskBlock RigidDiskBlock { get; set; }
 
         Stream Open();
         void SetWritable(bool writable);

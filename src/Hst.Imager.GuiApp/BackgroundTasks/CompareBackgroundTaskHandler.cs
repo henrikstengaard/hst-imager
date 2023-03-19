@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System;
+    using System.Linq;
     using System.Threading.Tasks;
     using Extensions;
     using Core;
@@ -11,14 +12,14 @@
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class PhysicalDriveVerifyBackgroundTaskHandler : IBackgroundTaskHandler
+    public class CompareBackgroundTaskHandler : IBackgroundTaskHandler
     {
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
         private readonly AppState appState;
 
-        public PhysicalDriveVerifyBackgroundTaskHandler(
+        public CompareBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
             HubConnection progressHubConnection, IPhysicalDriveManager physicalDriveManager, AppState appState)
         {
@@ -30,27 +31,28 @@
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            if (context.BackgroundTask is not PhysicalDriveVerifyBackgroundTask verifyBackgroundTask)
+            if (context.BackgroundTask is not CompareBackgroundTask compareBackgroundTask)
             {
                 return;
             }
 
             try
             {
-                var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives()).ToList();
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var verifyCommand =
                     new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper, physicalDrives,
-                        verifyBackgroundTask.SourcePath,
-                        verifyBackgroundTask.DestinationPath, new Size(), 0, false);
+                        compareBackgroundTask.SourcePath,
+                        compareBackgroundTask.DestinationPath, new Size(), 0, false);
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress
                     {
-                        Title = verifyBackgroundTask.Title,
+                        Title = compareBackgroundTask.Title,
                         IsComplete = false,
                         PercentComplete = args.PercentComplete,
+                        BytesPerSecond = args.BytesPerSecond,
                         BytesProcessed = args.BytesProcessed,
                         BytesRemaining = args.BytesRemaining,
                         BytesTotal = args.BytesTotal,
@@ -70,7 +72,7 @@
 
                 await progressHubConnection.UpdateProgress(new Progress
                 {
-                    Title = verifyBackgroundTask.Title,
+                    Title = compareBackgroundTask.Title,
                     IsComplete = true,
                     HasError = result.IsFaulted,
                     ErrorMessage = result.IsFaulted ? result.Error.Message : null,
@@ -81,7 +83,7 @@
             {
                 await progressHubConnection.UpdateProgress(new Progress
                 {
-                    Title = verifyBackgroundTask.Title,
+                    Title = compareBackgroundTask.Title,
                     IsComplete = true,
                     HasError = true,
                     ErrorMessage = e.Message,
