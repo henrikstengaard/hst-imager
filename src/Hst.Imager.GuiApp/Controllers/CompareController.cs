@@ -39,13 +39,15 @@
                 return BadRequest(ModelState);
             }
 
-            if (request.SourceType == CompareRequest.SourceTypeEnum.ImageFile)
+            if (!this.workerService.IsRunning() && request.SourceType == CompareRequest.SourceTypeEnum.ImageFile)
             {
                 var task = new ImageFileCompareBackgroundTask
                 {
                     Title = request.Title,
                     SourcePath = request.SourcePath,
-                    DestinationPath = request.DestinationPath
+                    DestinationPath = request.DestinationPath,
+                    Force = request.Force,
+                    Retries = request.Retries
                 };
                 var handler =
                     new ImageFileCompareBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
@@ -60,7 +62,9 @@
                 {
                     Title = request.Title,
                     SourcePath = request.SourcePath,
-                    DestinationPath = request.DestinationPath
+                    DestinationPath = request.DestinationPath,
+                    Force = request.Force,
+                    Retries = request.Retries
                 }
             });
 

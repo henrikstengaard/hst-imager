@@ -8,7 +8,16 @@
         public string Title { get; set; }
         public string SourcePath { get; set; }
         public string DestinationPath { get; set; }
+        public bool Force { get; set; }
+        public int Retries { get; set; }
+
         [JsonIgnore]
         public CancellationToken Token { get; set; }
+        
+        public ImageFileCompareBackgroundTask()
+        {
+            Force = false;
+            Retries = 5;
+        }
     }
 }

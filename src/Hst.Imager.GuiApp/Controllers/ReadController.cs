@@ -29,7 +29,10 @@
             {
                 Title = request.Title,
                 SourcePath = request.SourcePath,
-                DestinationPath = request.DestinationPath
+                DestinationPath = request.DestinationPath,
+                Verify = request.Verify,
+                Force = request.Force,
+                Retries = request.Retries
             };
 
             await workerService.EnqueueAsync(new[] { readBackgroundTask });

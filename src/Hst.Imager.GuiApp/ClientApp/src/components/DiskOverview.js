@@ -12,7 +12,8 @@ import {formatBytes} from "../utils/Format";
 export default function DiskOverview(props) {
     const {
         partitionTableType,
-        parts
+        parts,
+        showUnallocated
     } = props
     
     const partColor = (part) => {
@@ -59,6 +60,7 @@ export default function DiskOverview(props) {
     }
 
     const renderLayout = (parts) => {
+        const filteredParts = showUnallocated ? parts : parts.filter(x => x.partType !== 'Unallocated')
         return (
             <table style={{
                 width: '100%',
@@ -68,18 +70,18 @@ export default function DiskOverview(props) {
                 <tr style={{
                     height: '100%'
                 }}>
-                    {parts.map((part, partIndex) => {
+                    {filteredParts.map((part, partIndex) => {
                         return (
                             <td
                                 key={partIndex}
-                                width={`${part.percentSize}%`}
+                                width={`${(part.percentSize === 0 ? 1 : part.percentSize)}%`}
                                 style={{height: '100%'}}
                             >
                                 <div style={{
                                     border: `4px solid ${partColor(part)}`,
                                     backgroundColor: `${partColor(part)}20`,
                                     width: '100%',
-                                    minWidth: part.type === 'amiga' ? '100px' : null,
+                                    // minWidth: part.type === 'amiga' ? '100px' : null,
                                     height: '100%',
                                     minHeight: '60px',
                                     textAlign: 'center'
@@ -101,7 +103,8 @@ export default function DiskOverview(props) {
     }
 
     const renderList = (parts) => {
-        return parts.map((part, partIndex) => {
+        const filteredParts = showUnallocated ? parts : parts.filter(x => x.partType !== 'Unallocated')
+        return filteredParts.map((part, partIndex) => {
             return (
                 <TableRow key={partIndex}>
                     <TableCell>

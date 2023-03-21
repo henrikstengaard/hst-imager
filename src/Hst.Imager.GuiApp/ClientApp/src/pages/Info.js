@@ -157,6 +157,9 @@ export default function Info() {
     }
     
     const handleCancel = () => {
+        if (connection) {
+            connection.stop()
+        }
         setLoadMedias(false)
         setInitialized(false)
         setMedia(null)

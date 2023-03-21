@@ -33,10 +33,10 @@
             return outputBuilder.ToString();
         }
 
-        public static string PresentInfo(PartitionTablePart partitionTablePart, bool includeUnallocated = false)
+        public static string PresentInfo(PartitionTablePart partitionTablePart, bool showUnallocated)
         {
             var partsList =
-                (includeUnallocated
+                (showUnallocated
                     ? partitionTablePart.Parts
                     : partitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated)).ToList();
 
@@ -132,9 +132,9 @@
             return outputBuilder.ToString();
         }
 
-        public static string PresentInfo(DiskInfo diskInfo, bool includeUnallocated = false)
+        public static string PresentInfo(DiskInfo diskInfo, bool showUnallocated = false)
         {
-            var partsList = (includeUnallocated
+            var partsList = (showUnallocated
                     ? diskInfo.DiskParts
                     : diskInfo.DiskParts.Where(x => x.PartType != PartType.Unallocated))
                 .ToList();

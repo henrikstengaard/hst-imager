@@ -12,5 +12,16 @@
 
         [Required]
         public string DestinationPath { get; set; }
+        
+        public bool Verify { get; set; }
+        public bool Force { get; set; }
+        public int Retries { get; set; }
+
+        public ReadRequest()
+        {
+            Verify = false;
+            Force = false;
+            Retries = 5;
+        }
     }
 }

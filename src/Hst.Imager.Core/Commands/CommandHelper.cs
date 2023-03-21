@@ -9,7 +9,7 @@
     using DiscUtils.Partitions;
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
-    using Hst.Amiga.RigidDiskBlocks;
+    using Amiga.RigidDiskBlocks;
     using Hst.Core;
     using Models;
 
@@ -369,78 +369,13 @@
                     diskInfo.RdbPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
             }
 
+            // recalculate percent size against disk size for allocated parts
+            foreach (var allocatedPart in allocatedParts)
+            {
+                allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
+            }
+
             return CreateUnallocatedParts(diskInfo.Size, 0, 0, allocatedParts);
-            //
-            //
-            //
-            //
-            // var parts = new List<PartInfo>();
-            // foreach (var partitionTable in diskInfo.PartitionTables)
-            // {
-            //     if (partitionTable.Reserved != null)
-            //     {
-            //         parts.Add(new PartInfo
-            //         {
-            //             FileSystem = "Reserved",
-            //             PartitionTableType = partitionTable.Type,
-            //             PartType = PartType.PartitionTable,
-            //             Size = partitionTable.Reserved.Size,
-            //             StartOffset = partitionTable.Reserved.StartOffset,
-            //             EndOffset = partitionTable.Reserved.EndOffset,
-            //             PercentSize = Math.Round((100d / diskInfo.Size) * partitionTable.Reserved.Size)
-            //         });
-            //     }
-            //
-            //     parts.AddRange(partitionTable.Partitions.Select(partition => new PartInfo
-            //     {
-            //         FileSystem = partition.FileSystem,
-            //         PartitionTableType = partitionTable.Type,
-            //         PartType = PartType.Partition,
-            //         PartitionNumber = partition.PartitionNumber,
-            //         Size = partition.Size,
-            //         StartOffset = partition.StartOffset,
-            //         EndOffset = partition.EndOffset,
-            //         PercentSize = Math.Round((100d / diskInfo.Size) * partition.Size)
-            //     }));
-            // }
-            //
-            // var offset = 0L;
-            // foreach (var part in parts.OrderBy(x => x.StartOffset).ToList())
-            // {
-            //     if (part.StartOffset > offset)
-            //     {
-            //         var unallocatedSize = part.StartOffset - offset;
-            //         parts.Add(new PartInfo
-            //         {
-            //             FileSystem = "Unallocated",
-            //             PartitionTableType = PartitionTableType.None,
-            //             PartType = PartType.Unallocated,
-            //             Size = unallocatedSize,
-            //             StartOffset = offset,
-            //             EndOffset = part.StartOffset - 1,
-            //             PercentSize = Math.Round((100d / diskInfo.Size) * unallocatedSize)
-            //         });
-            //     }
-            //
-            //     offset = part.EndOffset + 1;
-            // }
-            //
-            // if (offset < diskInfo.EndOffset)
-            // {
-            //     var unallocatedSize = diskInfo.EndOffset - offset + 1;
-            //     parts.Add(new PartInfo
-            //     {
-            //         FileSystem = "Unallocated",
-            //         PartitionTableType = PartitionTableType.None,
-            //         PartType = PartType.Unallocated,
-            //         Size = unallocatedSize,
-            //         StartOffset = offset,
-            //         EndOffset = diskInfo.EndOffset,
-            //         PercentSize = Math.Round((100d / diskInfo.Size) * unallocatedSize)
-            //     });
-            // }
-            //
-            // return parts.OrderBy(x => x.StartOffset).ToList();
         }
 
         private static PartitionTablePart CreateGptParts(DiskInfo diskInfo)
@@ -467,7 +402,7 @@
                     EndSector = gptPartitionTable.Reserved.EndSector,
                     StartCylinder = gptPartitionTable.Reserved.StartCylinder,
                     EndCylinder = gptPartitionTable.Reserved.EndCylinder,
-                    PercentSize = Math.Round((100d / gptPartitionTable.Size) * gptPartitionTable.Reserved.Size)
+                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * gptPartitionTable.Reserved.Size)
                 }
             }.Concat(gptPartitionTable.Partitions.Select(x => new PartInfo
             {
@@ -481,7 +416,8 @@
                 StartSector = x.StartSector,
                 EndSector = x.EndSector,
                 StartCylinder = x.StartCylinder,
-                EndCylinder = x.EndCylinder
+                EndCylinder = x.EndCylinder,
+                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size)
             }));
 
             return new PartitionTablePart
@@ -519,7 +455,7 @@
                     EndSector = mbrPartitionTable.Reserved.EndSector,
                     StartCylinder = mbrPartitionTable.Reserved.StartCylinder,
                     EndCylinder = mbrPartitionTable.Reserved.EndCylinder,
-                    PercentSize = Math.Round((100d / mbrPartitionTable.Size) * mbrPartitionTable.Reserved.Size)
+                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * mbrPartitionTable.Reserved.Size)
                 }
             }.Concat(mbrPartitionTable.Partitions.Select(x => new PartInfo
             {
@@ -533,7 +469,8 @@
                 StartSector = x.StartSector,
                 EndSector = x.EndSector,
                 StartCylinder = x.StartCylinder,
-                EndCylinder = x.EndCylinder
+                EndCylinder = x.EndCylinder,
+                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size)
             }));
 
             return new PartitionTablePart
@@ -561,21 +498,22 @@
             var rdbStartCyl = 0;
             var rdbEndCyl = (Next(diskInfo.RigidDiskBlock.RdbBlockHi * diskInfo.RigidDiskBlock.BlockSize,
                 (int)cylinderSize) / cylinderSize) - 1;
+            var rdbSize = (diskInfo.RigidDiskBlock.RdbBlockHi - diskInfo.RigidDiskBlock.RdbBlockLo + 1) *
+                          diskInfo.RigidDiskBlock.BlockSize;
             
             parts.Add(new PartInfo
             {
                 FileSystem = "Reserved",
                 PartitionTableType = PartitionTableType.RigidDiskBlock,
                 PartType = PartType.PartitionTable,
-                Size = (diskInfo.RigidDiskBlock.RdbBlockHi - diskInfo.RigidDiskBlock.RdbBlockLo + 1) *
-                       diskInfo.RigidDiskBlock.BlockSize,
+                Size = rdbSize,
                 StartOffset = diskInfo.RigidDiskBlock.RdbBlockLo * diskInfo.RigidDiskBlock.BlockSize,
                 EndOffset = ((diskInfo.RigidDiskBlock.RdbBlockHi + 1) * diskInfo.RigidDiskBlock.BlockSize) - 1,
                 StartSector = diskInfo.RigidDiskBlock.RdbBlockLo,
                 EndSector = diskInfo.RigidDiskBlock.RdbBlockHi,
                 StartCylinder = rdbStartCyl,
                 EndCylinder = rdbEndCyl,
-                PercentSize = Math.Round((100d / diskInfo.RigidDiskBlock.Cylinders) * (rdbEndCyl + 1))
+                PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) * rdbSize)
             });
 
             var partitionNumber = 0;
@@ -596,7 +534,7 @@
                                 diskInfo.RigidDiskBlock.Sectors) - 1,
                     StartCylinder = partitionBlock.LowCyl,
                     EndCylinder = partitionBlock.HighCyl,
-                    PercentSize = Math.Round((100d / diskInfo.RigidDiskBlock.DiskSize) * partitionBlock.PartitionSize)
+                    PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) * partitionBlock.PartitionSize)
                 });
             }
 
@@ -643,7 +581,7 @@
                         EndSector = part.StartOffset == 0 ? 0 : part.StartSector - 1,
                         StartCylinder = part.StartCylinder == 0 ? 0 : cylinder,
                         EndCylinder = part.StartCylinder == 0 ? 0 : part.StartCylinder - 1,
-                        PercentSize = Math.Round((100d / diskSize) * unallocatedSize)
+                        PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
                     });
                 }
 
@@ -667,7 +605,7 @@
                     EndSector = sectors == 0 ? 0 : sectors - 1,
                     StartCylinder = cylinders == 0 ? 0 : cylinder,
                     EndCylinder = cylinders == 0 ? 0 : cylinders - 1,
-                    PercentSize = Math.Round((100d / diskSize) * unallocatedSize)
+                    PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
                 });
             }
 

@@ -7,7 +7,7 @@
 
     public static class MasterBootRecordPresenter
     {
-        public static string Present(MediaInfo mediaInfo)
+        public static string Present(MediaInfo mediaInfo, bool showUnallocated)
         {
             if (mediaInfo == null || mediaInfo.DiskInfo == null || mediaInfo.DiskInfo.MbrPartitionTablePart == null)
             {
@@ -74,7 +74,7 @@
             outputBuilder.Append(TablePresenter.Present(partitionTable));
 
             outputBuilder.AppendLine();
-            outputBuilder.Append(InfoPresenter.PresentInfo(mbrPartitionTablePart));
+            outputBuilder.Append(InfoPresenter.PresentInfo(mbrPartitionTablePart, showUnallocated));
             
             return outputBuilder.ToString();
         }

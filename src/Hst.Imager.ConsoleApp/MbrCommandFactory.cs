@@ -21,9 +21,15 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
+            var showUnallocatedOption = new Option<bool>(
+                new[] { "--unallocated", "-u" },
+                description: "Show unallocated.",
+                getDefaultValue: () => true);
+            
             var command = new Command("info", "Display info about Master Boot Record.");
-            command.SetHandler(CommandHandler.MbrInfo, pathArgument);
+            command.SetHandler(CommandHandler.MbrInfo, pathArgument, showUnallocatedOption);
             command.AddArgument(pathArgument);
+            command.AddOption(showUnallocatedOption);
 
             return command;
         }

@@ -20,6 +20,7 @@ import {Api} from "../utils/Api";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Typography from "@mui/material/Typography";
 import Media from "../components/Media";
+import CheckboxField from "../components/CheckboxField";
 
 export default function Verify() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -28,6 +29,8 @@ export default function Verify() {
     const [medias, setMedias] = React.useState(null)
     const [destinationPath, setDestinationPath] = React.useState(null)
     const [sourceType, setSourceType] = React.useState('ImageFile')
+    const [force, setForce] = React.useState(false)
+    const [retries, setRetries] = React.useState(5)
     const [connection, setConnection] = React.useState(null);
 
     const api = React.useMemo(() => new Api(), []);
@@ -155,7 +158,9 @@ export default function Verify() {
                 title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}'`,
                 sourceType,
                 sourcePath,
-                destinationPath 
+                destinationPath,
+                retries,
+                force
             })
         });
         if (!response.ok) {
@@ -172,12 +177,17 @@ export default function Verify() {
     }
 
     const handleCancel = () => {
+        if (connection) {
+            connection.stop()
+        }
         setConfirmOpen(false)
         setSourceMedia(null)
         setSourcePath(null)
         setMedias(null)
         setDestinationPath(null)
         setSourceType('ImageFile')
+        setForce(false)
+        setRetries(5)
         setConnection(null)
     }
     
@@ -296,6 +306,26 @@ export default function Verify() {
                             }
                             setConfirmOpen(true)
                         }}                    
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+                <Grid item xs={2} lg={2}>
+                    <TextField
+                        label="Read retries"
+                        id="retries"
+                        type="number"
+                        value={retries}
+                        inputProps={{min: 0, style: { textAlign: 'right' }}}
+                        onChange={(event) => setRetries(event.target.value)}
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="force"
+                        label="Force read and ignore errors"
+                        value={force}
+                        onChange={(checked) => setForce(checked)}
                     />
                 </Grid>
             </Grid>

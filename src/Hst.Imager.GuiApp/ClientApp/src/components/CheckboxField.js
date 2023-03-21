@@ -24,6 +24,7 @@ export default function CheckboxField(props) {
             control={<Checkbox
                 checked={value}
                 disabled={disabled}
+                disableRipple={true}
                 onChange={(event) => handleChange(event.target.checked)}
                 id={id}
                 name={name}

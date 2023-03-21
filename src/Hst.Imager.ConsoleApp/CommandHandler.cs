@@ -165,13 +165,13 @@
             }
         }
 
-        public static async Task Info(string path)
+        public static async Task Info(string path, bool showUnallocated)
         {
             var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 path);
             command.DiskInfoRead += (_, args) =>
             {
-                Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo));
+                Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo, showUnallocated));
             };
             await Execute(command);
         }
@@ -256,13 +256,13 @@
                 compatibleSize));
         }
 
-        public static async Task MbrInfo(string path)
+        public static async Task MbrInfo(string path, bool showUnallocated)
         {
             var command = new MbrInfoCommand(GetLogger<MbrInfoCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path);
             command.MbrInfoRead += (_, args) =>
             {
-                Log.Logger.Information(MasterBootRecordPresenter.Present(args.MediaInfo));
+                Log.Logger.Information(MasterBootRecordPresenter.Present(args.MediaInfo, showUnallocated));
             };
             await Execute(command);
         }
@@ -291,13 +291,13 @@
                 await GetPhysicalDrives(), path, partitionNumber, name));
         }
 
-        public static async Task RdbInfo(string path)
+        public static async Task RdbInfo(string path, bool showUnallocated)
         {
             var command = new RdbInfoCommand(GetLogger<RdbInfoCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path);
             command.RdbInfoRead += (_, args) =>
             {
-                Log.Logger.Information(RigidDiskBlockPresenter.Present(args.MediaInfo));
+                Log.Logger.Information(RigidDiskBlockPresenter.Present(args.MediaInfo, showUnallocated));
             };
             await Execute(command);
         }

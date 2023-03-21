@@ -29,17 +29,19 @@ export const formatMilliseconds = (milliseconds) => {
     const parts = []
     const days = duration.days()
     if (days > 0) {
-        parts.push(`${pad(days, 2)}d`)
+        parts.push(pad(days, 2))
     }
     
     const hours = duration.hours()
-    parts.push(`${pad(hours, 2)}h`)
+    if (hours > 0) {
+        parts.push(pad(hours, 2))
+    }
     
     const minutes = duration.minutes()
-    parts.push(`${pad(minutes, 2)}m`)
+    parts.push(pad(minutes, 2))
 
     const seconds = duration.seconds()
-    parts.push(`${pad(seconds, 2)}s`)
+    parts.push(pad(seconds, 2))
     
     return parts.join(':')
 }

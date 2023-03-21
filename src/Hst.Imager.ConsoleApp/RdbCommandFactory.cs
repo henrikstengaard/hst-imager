@@ -25,9 +25,15 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
+            var showUnallocatedOption = new Option<bool>(
+                new[] { "--unallocated", "-u" },
+                description: "Show unallocated.",
+                getDefaultValue: () => true);
+            
             var rdbInfoCommand = new Command("info", "Display info about Rigid Disk Block.");
-            rdbInfoCommand.SetHandler(CommandHandler.RdbInfo, pathArgument);
+            rdbInfoCommand.SetHandler(CommandHandler.RdbInfo, pathArgument, showUnallocatedOption);
             rdbInfoCommand.AddArgument(pathArgument);
+            rdbInfoCommand.AddOption(showUnallocatedOption);
 
             return rdbInfoCommand;
         }

@@ -9,7 +9,7 @@
 
     public static class RigidDiskBlockPresenter
     {
-        public static string Present(MediaInfo mediaInfo)
+        public static string Present(MediaInfo mediaInfo, bool showUnallocated)
         {
             if (mediaInfo == null || mediaInfo.DiskInfo == null || mediaInfo.DiskInfo.RigidDiskBlock == null)
             {
@@ -146,7 +146,7 @@
             if (mediaInfo.DiskInfo.RdbPartitionTablePart != null)
             {
                 outputBuilder.AppendLine();
-                outputBuilder.Append(InfoPresenter.PresentInfo(mediaInfo.DiskInfo.RdbPartitionTablePart));
+                outputBuilder.Append(InfoPresenter.PresentInfo(mediaInfo.DiskInfo.RdbPartitionTablePart, showUnallocated));
             }
             
             return outputBuilder.ToString();

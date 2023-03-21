@@ -65,9 +65,15 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
+            var showUnallocatedOption = new Option<bool>(
+                new[] { "--unallocated", "-u" },
+                description: "Show unallocated.",
+                getDefaultValue: () => true);
+            
             var command = new Command("info", "Display info about physical drive or image file.");
             command.AddArgument(pathArgument);
-            command.SetHandler(CommandHandler.Info, pathArgument);
+            command.AddOption(showUnallocatedOption);
+            command.SetHandler(CommandHandler.Info, pathArgument, showUnallocatedOption);
 
             return command;
         }

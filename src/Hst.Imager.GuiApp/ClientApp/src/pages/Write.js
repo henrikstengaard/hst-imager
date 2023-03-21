@@ -15,6 +15,7 @@ import {Api} from "../utils/Api";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Media from "../components/Media";
 import Typography from "@mui/material/Typography";
+import CheckboxField from "../components/CheckboxField";
 
 export default function Write() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
@@ -22,6 +23,9 @@ export default function Write() {
     const [destinationMedia, setDestinationMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
     const [sourcePath, setSourcePath] = React.useState(null)
+    const [verify, setVerify] = React.useState(false)
+    const [force, setForce] = React.useState(false)
+    const [retries, setRetries] = React.useState(5)
     const [connection, setConnection] = React.useState(null);
 
     const api = React.useMemo(() => new Api(), []);
@@ -128,6 +132,9 @@ export default function Write() {
                 title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'`,
                 sourcePath,
                 destinationPath: destinationMedia.path,
+                retries,
+                verify,
+                force
             })
         });
         if (!response.ok) {
@@ -148,11 +155,17 @@ export default function Write() {
     }
 
     const handleCancel = () => {
+        if (connection) {
+            connection.stop()
+        }
         setConfirmOpen(false)
         setSourceMedia(null)
         setDestinationMedia(null)
         setMedias([])
         setSourcePath(null)
+        setVerify(false)
+        setForce(false)
+        setRetries(5)
         setConnection(null)
     }
     
@@ -213,6 +226,34 @@ export default function Write() {
                         medias={medias || []}
                         path={get(destinationMedia, 'path') || ''}
                         onChange={(media) => setDestinationMedia(media)}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+                <Grid item xs={2} lg={2}>
+                    <TextField
+                        label="Write retries"
+                        id="retries"
+                        type="number"
+                        value={retries}
+                        inputProps={{min: 0, style: { textAlign: 'right' }}}
+                        onChange={(event) => setRetries(event.target.value)}
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="force"
+                        label="Force write and ignore errors"
+                        value={force}
+                        onChange={(checked) => setForce(checked)}
+                    />
+                </Grid>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="verify"
+                        label="Verify while writing"
+                        value={verify}
+                        onChange={(checked) => setVerify(checked)}
                     />
                 </Grid>
             </Grid>

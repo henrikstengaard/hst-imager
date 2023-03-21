@@ -41,7 +41,8 @@
                 var verifyCommand =
                     new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper,
                         Enumerable.Empty<IPhysicalDrive>(), compareBackgroundTask.SourcePath,
-                        compareBackgroundTask.DestinationPath, new Size(), 0, false);
+                        compareBackgroundTask.DestinationPath, new Size(), compareBackgroundTask.Retries,
+                        compareBackgroundTask.Force);
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubContext.SendProgress(new Progress
