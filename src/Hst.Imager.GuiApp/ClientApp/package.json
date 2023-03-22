@@ -1,6 +1,7 @@
 {
   "name": "hst.imager.guiapp",
   "version": "0.1.0",
+  "description": "Hst Imager is an imaging tool to read and write disk images to and from physical drives.",
   "private": true,
   "dependencies": {
     "@emotion/react": "^11.7.1",

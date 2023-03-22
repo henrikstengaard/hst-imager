@@ -58,7 +58,7 @@
         ]
       }],
       "synopsis": "Disk imaging tool",
-      "description": "Disk imaging tool to read and write disk images to and from physical drives",
+      "description": "Hst Imager is an imaging tool to read and write disk images to and from physical drives",
       "icon": "../../../hst.imager.icns"
     },
     "nsis": {
