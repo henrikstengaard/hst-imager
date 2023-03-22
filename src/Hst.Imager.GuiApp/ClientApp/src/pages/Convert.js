@@ -11,31 +11,61 @@ import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
-
-const initialState = {
-    confirmOpen: false,
-    sourcePath: null,
-    destinationPath: null
-}
+import Typography from "@mui/material/Typography";
+import Media from "../components/Media";
+import {HubConnectionBuilder} from "@microsoft/signalr";
 
 export default function Convert() {
-    const [state, setState] = React.useState({...initialState})
-
-    const {
-        confirmOpen,
-        sourcePath,
-        destinationPath
-    } = state
-
-    const handleChange = ({name, value}) => {
-        set(state, name, value)
-        setState({...state})
-    }
+    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [media, setMedia] = React.useState(null)
+    const [sourcePath, setSourcePath] = React.useState(null)
+    const [destinationPath, setDestinationPath] = React.useState(null)
+    const [connection, setConnection] = React.useState(null)
 
     const handleCancel = () => {
-        setState({...initialState})
+        setConfirmOpen(false)
+        setMedia(null)
+        setSourcePath(null)
+        setDestinationPath(null)
+        setConnection(null)
     }
 
+    // setup signalr connection and listeners
+    React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
+        const newConnection = new HubConnectionBuilder()
+            .withUrl('/hubs/result')
+            .withAutomaticReconnect()
+            .build();
+
+        try {
+            newConnection
+                .start()
+                .then(() => {
+                    newConnection.on("Info", (media) => {
+                        setMedia(media)
+                    });
+                })
+                .catch((err) => {
+                    console.error(`Error: ${err}`)
+                })
+        } catch (error) {
+            console.error(error)
+        }
+
+        setConnection(newConnection)
+
+        return () => {
+            if (!connection) {
+                return
+            }
+            connection.stop();
+        };
+    }, [connection, setMedia])
+    
     const getInfo = async (path) => {
         const response = await fetch('api/info', {
             method: 'POST',
@@ -72,10 +102,7 @@ export default function Convert() {
     }
     
     const handleConfirm = async (confirmed) => {
-        setState({
-            ...state,
-            confirmOpen: false
-        })
+        setConfirmOpen(false)
         if (!confirmed) {
             return
         }
@@ -97,7 +124,7 @@ export default function Convert() {
                 text="Convert"
                 description="Convert image file from one format to another."
             />
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="source-path"
@@ -111,17 +138,15 @@ export default function Convert() {
                             <BrowseOpenDialog
                                 id="browse-source-path"
                                 title="Select source image file"
-                                onChange={(path) => handleChange({
-                                    name: 'sourcePath',
-                                    value: path
-                                })}
+                                onChange={(path) => setSourcePath(path)}
                             />
                         }
-                        onChange={(event) => handleChange({
-                            name: 'sourcePath',
-                            value: get(event, 'target.value'
-                            )
-                        })}
+                        onChange={(event) => {
+                            setSourcePath(get(event, 'target.value'))
+                            if (media) {
+                                setMedia(null)
+                            }
+                        }}
                         onKeyDown={async (event) => {
                             if (event.key !== 'Enter') {
                                 return
@@ -131,7 +156,7 @@ export default function Convert() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="destination-path"
@@ -145,33 +170,23 @@ export default function Convert() {
                             <BrowseSaveDialog
                                 id="browse-destination-path"
                                 title="Select destination image file"
-                                onChange={(path) => handleChange({
-                                    name: 'destinationPath',
-                                    value: path
-                                })}
+                                onChange={(path) => setDestinationPath(path)}
                             />
                         }
-                        onChange={(event) => handleChange({
-                            name: 'destinationPath',
-                            value: get(event, 'target.value'
-                            )
-                        })}
+                        onChange={(event) => setDestinationPath(get(event, 'target.value'))}
                         onKeyDown={async (event) => {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            handleChange({
-                                name: 'confirmOpen',
-                                value: true
-                            })
+                            setConfirmOpen(true)
                         }}
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
-                        <Stack direction="row" spacing={2} sx={{mt: 2}}>
+                        <Stack direction="row" spacing={2} sx={{mt: 1}}>
                             <RedirectButton
                                 path="/"
                                 icon="ban"
@@ -182,10 +197,7 @@ export default function Convert() {
                             <Button
                                 disabled={convertDisabled}
                                 icon="exchange-alt"
-                                onClick={async () => handleChange({
-                                    name: 'confirmOpen',
-                                    value: true
-                                })}
+                                onClick={async () => setConfirmOpen(true)}
                             >
                                 Start convert
                             </Button>
@@ -193,6 +205,19 @@ export default function Convert() {
                     </Box>
                 </Grid>
             </Grid>
+            {media && media.diskInfo && (
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                    <Grid item xs={12}>
+                        <Typography variant="h3">
+                            Source file
+                        </Typography>
+                        <Typography>
+                            Disk information read from source file.
+                        </Typography>
+                        <Media media={media}/>
+                    </Grid>
+                </Grid>
+            )}
         </Box>
     )
 }

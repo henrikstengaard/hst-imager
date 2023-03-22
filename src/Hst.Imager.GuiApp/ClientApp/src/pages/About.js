@@ -32,29 +32,29 @@ export default function About() {
             <Title
                 text="About"
             />
-            <Typography sx={{ mt: 2 }}>
+            <Typography sx={{ mt: 1 }}>
                 Hst Imager v{HST_IMAGER_VERSION}.
             </Typography>
 
-            <Typography sx={{ mt: 2 }}>
+            <Typography sx={{ mt: 1 }}>
                 Hst Imager is an imaging tool to read and write disk images to and from physical drives.
                 This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
             </Typography>
 
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 1 }}>
                 Hst Imager has been tested extensively regarding it's raw disk access.
                 However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it!
             </Alert>
 
-            <Alert severity="warning" sx={{ mt: 2 }}>
+            <Alert severity="warning" sx={{ mt: 1 }}>
                 Hst Imager filters out fixed disks, so only removeable and USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise it might destroy your actual system disk.
             </Alert>
             
-            <Typography sx={{ mt: 2 }}>
+            <Typography sx={{ mt: 1 }}>
                 Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time. To support future development and appreciate your use of Hst Imager, please make a donation via <Link href="#" onClick={async (event) => openUrl(event, payPalDonateUrl)}>PayPal donate</Link>.
             </Typography>
             
-            <Typography sx={{ mt: 2 }}>
+            <Typography sx={{ mt: 1 }}>
                 Please report issues by creating a new issue at <Link href="#" onClick={async (event) => openUrl(event, gitHubIssuesUrl)}>Github issues</Link>.
             </Typography>
         </Box>

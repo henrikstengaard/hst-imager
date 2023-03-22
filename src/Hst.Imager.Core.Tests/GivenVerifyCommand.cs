@@ -187,7 +187,7 @@
         }
         
         [Fact]
-        public async Task WhenComparingSourceLargerThanDestinationThenResultIsSizeNotEqualError()
+        public async Task WhenComparingSourceLargerThanDestinationThenLargestComparableSizeOfDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
@@ -212,13 +212,16 @@
             var compareCommand =
                 new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
                     sourcePath, destinationPath, new Size(), 0, false);
+            var bytesProcessed = 0L;
+            compareCommand.DataProcessed += (sender, args) =>
+            {
+                bytesProcessed = args.BytesProcessed;
+            };
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
-            Assert.False(result.IsSuccess);
-
-            Assert.Equal(typeof(InvalidCompareSizeError), result.Error.GetType());
-            var invalidCompareSizeError = (InvalidCompareSizeError)result.Error;
-            Assert.Equal(sourceSize, invalidCompareSizeError.CompareSize);
-            Assert.Equal(destinationSize, invalidCompareSizeError.Size);
+            Assert.True(result.IsSuccess);
+            
+            // assert - bytes processed comparing is equal to destination size
+            Assert.Equal(destinationSize, bytesProcessed);
         }
     }
 }

@@ -46,6 +46,7 @@
                     Title = request.Title,
                     SourcePath = request.SourcePath,
                     DestinationPath = request.DestinationPath,
+                    Size = request.Size,
                     Force = request.Force,
                     Retries = request.Retries
                 };
@@ -63,6 +64,7 @@
                     Title = request.Title,
                     SourcePath = request.SourcePath,
                     DestinationPath = request.DestinationPath,
+                    Size = request.Size,
                     Force = request.Force,
                     Retries = request.Retries
                 }

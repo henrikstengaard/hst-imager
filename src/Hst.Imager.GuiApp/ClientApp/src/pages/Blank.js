@@ -36,7 +36,7 @@ const unitOptions = [{
 },{
     title: 'Bytes',
     value: 'bytes',
-    size: 0
+    size: 1
 }]
 
 export default function Blank() {
@@ -62,7 +62,6 @@ export default function Blank() {
                 title: `Creating ${size} ${unitOption.title} blank image '${path}'`,
                 path,
                 size: (size * unitOption.size),
-                unit,
                 compatibleSize
             })
         });
@@ -106,7 +105,7 @@ export default function Blank() {
                 text="Blank"
                 description="Create blank image file."
             />
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="image-path"
@@ -140,7 +139,7 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={8} lg={4}>
                     <TextField
                         label="Size"
@@ -173,7 +172,7 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <CheckboxField
                         id="compatible-size"
@@ -186,10 +185,10 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
-                        <Stack direction="row" spacing={2} sx={{mt: 2}}>
+                        <Stack direction="row" spacing={2} sx={{mt: 1}}>
                             <RedirectButton
                                 path="/"
                                 icon="ban"

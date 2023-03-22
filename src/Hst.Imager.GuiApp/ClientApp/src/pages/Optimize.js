@@ -13,6 +13,7 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import SelectField from "../components/SelectField";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Media from "../components/Media";
+import Typography from "@mui/material/Typography";
 
 const unitOptions = [{
     title: 'GB',
@@ -29,7 +30,7 @@ const unitOptions = [{
 },{
     title: 'Bytes',
     value: 'bytes',
-    size: 0
+    size: 1
 }]
 
 const formatPartitionTableType = (partitionTableType) => {
@@ -146,6 +147,7 @@ export default function Optimize() {
     }
     
     const handleOptimize = async () => {
+        const unitOption = unitOptions.find(x => x.value === unit)
         const response = await fetch('api/optimize', {
             method: 'POST',
             headers: {
@@ -155,7 +157,7 @@ export default function Optimize() {
             body: JSON.stringify({
                 title: `Optimizing image file '${path}'`,
                 path,
-                size
+                size: (size * unitOption.size),
             })
         });
         if (!response.ok) {
@@ -225,7 +227,12 @@ export default function Optimize() {
                                 }}
                             />
                         }
-                        onChange={(event) => setPath(get(event, 'target.value'))}
+                        onChange={(event) => {
+                            setPath(get(event, 'target.value'))
+                            if (media) {
+                                setMedia(null)
+                            }
+                        }}
                         onKeyDown={async (event) => {
                             if (event.key !== 'Enter') {
                                 return
@@ -238,7 +245,7 @@ export default function Optimize() {
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
-                        label="Prefill size"
+                        label="Prefill size to optimize"
                         id="prefill-size"
                         emptyLabel="None available"
                         value={prefillSize || ''}
@@ -309,6 +316,12 @@ export default function Optimize() {
             {media && media.diskInfo && (
                 <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
+                        <Typography variant="h3">
+                            Source file
+                        </Typography>
+                        <Typography>
+                            Disk information read from source file.
+                        </Typography>
                         <Media media={media}/>
                     </Grid>
                 </Grid>

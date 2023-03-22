@@ -43,8 +43,8 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var writeCommand =
                     new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives, writeBackgroundTask.SourcePath,
-                        writeBackgroundTask.DestinationPath, new Size(), writeBackgroundTask.Retries,
-                        writeBackgroundTask.Verify, writeBackgroundTask.Force);
+                        writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
+                        writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force);
                 writeCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

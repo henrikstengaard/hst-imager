@@ -16,19 +16,58 @@ import {Api} from "../utils/Api";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
+import SelectField from "../components/SelectField";
+
+const unitOptions = [{
+    title: 'GB',
+    value: 'gb',
+    size: Math.pow(10, 9)
+},{
+    title: 'MB',
+    value: 'mb',
+    size: Math.pow(10, 6)
+},{
+    title: 'KB',
+    value: 'kb',
+    size: Math.pow(10, 3)
+},{
+    title: 'Bytes',
+    value: 'bytes',
+    size: 1
+}]
+
+const formatPartitionTableType = (partitionTableType) => {
+    switch (partitionTableType) {
+        case 'GuidPartitionTable':
+            return 'Guid Partition Table'
+        case 'MasterBootRecord':
+            return 'Master Boot Record'
+        case 'RigidDiskBlock':
+            return 'Rigid Disk Block'
+        default:
+            return ''
+    }
+}
 
 export default function Read() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
+    const [size, setSize] = React.useState(0)
+    const [unit, setUnit] = React.useState('bytes')
     const [destinationPath, setDestinationPath] = React.useState(null)
     const [verify, setVerify] = React.useState(false)
     const [force, setForce] = React.useState(false)
     const [retries, setRetries] = React.useState(5)
+    const [prefillSize, setPrefillSize] = React.useState(null)
+    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
 
     const api = React.useMemo(() => new Api(), []);
 
+    const unitOption = unitOptions.find(x => x.value === unit)
+    const formattedSize = size === 0 ? 'entire disk size' : `size ${size} ${unitOption.title}`
+    
     const getPath = ({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
@@ -91,6 +130,41 @@ export default function Read() {
                 .then(() => {
                     newConnection.on("Info", (media) => {
                         setSourceMedia(media)
+
+                        // default set size and unit to largest comparable size
+                        setSize(0)
+                        setUnit('bytes')
+
+                        // no media, reset
+                        if (isNil(media)) {
+                            setPrefillSize(null)
+                            setPrefillSizeOptions([])
+                            return
+                        }
+
+                        // get and sort partition tables
+                        const partitionTables = get(media, 'diskInfo.partitionTables') || []
+
+                        // add select prefill option, if any partition tables are present                        
+                        const newPrefillSizeOptions = [{
+                            title: 'Select size to prefill',
+                            value: 'prefill'
+                        },{
+                            title: 'Entire disk',
+                            value: 0
+                        }]
+
+                        // add partition tables as prefill size options
+                        for (let i = 0; i < partitionTables.length; i++) {
+                            const partitionTableSize = get(partitionTables[i], 'size') || 0
+                            newPrefillSizeOptions.push({
+                                title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
+                                value: partitionTableSize
+                            })
+                        }
+
+                        setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
+                        setPrefillSizeOptions(newPrefillSizeOptions)
                     });
 
                     newConnection.on('List', async (medias) => {
@@ -119,7 +193,8 @@ export default function Read() {
             }
             connection.stop();
         };
-    }, [connection, getPath, setMedias, setSourceMedia, sourceMedia])
+    }, [connection, getPath, setMedias, setSourceMedia, sourceMedia, setPrefillSize, setPrefillSizeOptions,
+        setUnit, setSize])
     
     const handleRead = async () => {
         const response = await fetch('api/read', {
@@ -129,9 +204,10 @@ export default function Read() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}'`,
+                title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}' with ${formattedSize}`,
                 sourcePath: sourceMedia.path,
                 destinationPath,
+                size: (size * unitOption.size),
                 retries,
                 verify,
                 force
@@ -161,10 +237,14 @@ export default function Read() {
         setConfirmOpen(false)
         setSourceMedia(null)
         setMedias(null)
+        setSize(0)
+        setUnit('bytes')
         setDestinationPath(null)
         setVerify(false)
         setForce(false)
         setRetries(5)
+        setPrefillSize(null)
+        setPrefillSizeOptions([])
         setConnection(null)
     }
     
@@ -176,14 +256,14 @@ export default function Read() {
                 id="confirm-read"
                 open={confirmOpen}
                 title="Read"
-                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}'?`}
+                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}' with ${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Read"
                 description="Read physical disk to image file."
             />
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <MediaSelectField
                         label={
@@ -198,7 +278,7 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="destination-file"
@@ -225,7 +305,49 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12} lg={6}>
+                    <SelectField
+                        label="Prefill size to read"
+                        id="prefill-size"
+                        emptyLabel="None available"
+                        value={prefillSize || ''}
+                        options={prefillSizeOptions || []}
+                        onChange={(value) => {
+                            setSize(value)
+                            setUnit('bytes')
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+                <Grid item xs={8} lg={4}>
+                    <TextField
+                        label="Size"
+                        id="size"
+                        type="number"
+                        value={size}
+                        inputProps={{min: 0, style: { textAlign: 'right' }}}
+                        onChange={(event) => setSize(event.target.value)}
+                        onKeyDown={async (event) => {
+                            if (event.key !== 'Enter') {
+                                return
+                            }
+                            setConfirmOpen(true)
+                        }}
+                    />
+                </Grid>
+                <Grid item xs={4} lg={2}>
+                    <SelectField
+                        label="Unit"
+                        id="unit"
+                        value={unit || ''}
+                        options={unitOptions}
+                        onChange={(value) => setUnit(value)}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={2} lg={2}>
                     <TextField
                         label="Read retries"
@@ -253,10 +375,10 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
-                        <Stack direction="row" spacing={2} sx={{mt: 2}}>
+                        <Stack direction="row" spacing={2} sx={{mt: 1}}>
                             <RedirectButton
                                 path="/"
                                 icon="ban"
@@ -282,7 +404,7 @@ export default function Read() {
                 </Grid>
             </Grid>
             {get(sourceMedia, 'diskInfo') && (
-                <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
                             Source disk

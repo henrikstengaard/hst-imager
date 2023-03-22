@@ -76,10 +76,10 @@
             var destinationSize = destinationMedia.Size;
             OnDebugMessage($"Destination size '{destinationSize.FormatBytes()}' ({destinationSize} bytes)");
 
-            var compareSize = GetCompareSize(sourceSize);
+            var compareSize = GetCompareSize(sourceSize, destinationSize);
 
             // return error, if compare size is zero
-            if (compareSize == 0)
+            if (compareSize <= 0)
             {
                 return new Result(new Error($"Invalid compare size '{compareSize}'"));
             }
@@ -121,8 +121,14 @@
             return new Result();
         }
 
-        private long GetCompareSize(long sourceSize)
+        private long GetCompareSize(long sourceSize, long destinationSize)
         {
+            // return largest comparable size, if size is zero
+            if (size.Value == 0)
+            {
+                return Math.Min(sourceSize, destinationSize);
+            }
+            
             return size.Value != 0 ? sourceSize.ResolveSize(size) : sourceSize;
         }
 

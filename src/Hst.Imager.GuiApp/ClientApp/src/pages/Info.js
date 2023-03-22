@@ -18,6 +18,7 @@ import Button from "../components/Button";
 import MediaSelectField from "../components/MediaSelectField";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import {Api} from "../utils/Api";
+import Typography from "@mui/material/Typography";
 
 const initialState = {
     loading: true,
@@ -179,7 +180,7 @@ export default function Info() {
                 text="Info"
                 description="Display information about physical disk or image file."
             />
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <FormControl>
                         <FormLabel id="source-type-label">Source</FormLabel>
@@ -199,7 +200,7 @@ export default function Info() {
                     </FormControl>
                 </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     {sourceType === 'ImageFile' && (
                         <TextField
@@ -253,10 +254,10 @@ export default function Info() {
                     )}
                     </Grid>
             </Grid>
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
-                        <Stack direction="row" spacing={2} sx={{mt: 2}}>
+                        <Stack direction="row" spacing={2} sx={{mt: 1}}>
                             <RedirectButton
                                 path="/"
                                 icon="ban"
@@ -282,8 +283,14 @@ export default function Info() {
                 </Grid>
             </Grid>
             {media && media.diskInfo && (
-                <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
+                        <Typography variant="h3">
+                            Source {(sourceType === 'ImageFile' ? 'file' : 'disk')}
+                        </Typography>
+                        <Typography>
+                            Disk information read from source {(sourceType === 'ImageFile' ? 'file' : 'disk')}.
+                        </Typography>
                         <Media media={media}/>
                     </Grid>
                 </Grid>

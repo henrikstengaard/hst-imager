@@ -54,7 +54,7 @@ export default function Settings() {
             <Title
                 text="Settings"
             />
-            <Grid container spacing="2" direction="row" alignItems="center" sx={{mt: 2}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="macOS elevate method"

@@ -8,6 +8,7 @@
         public string Title { get; set; }
         public string SourcePath { get; set; }
         public string DestinationPath { get; set; }
+        public long Size { get; set; }
         public bool Force { get; set; }
         public int Retries { get; set; }
 

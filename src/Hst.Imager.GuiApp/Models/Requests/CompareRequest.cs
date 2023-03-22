@@ -22,6 +22,7 @@
         [Required]
         public string DestinationPath { get; set; }
         
+        public long Size { get; set; }
         public bool Force { get; set; }
         public int Retries { get; set; }
 

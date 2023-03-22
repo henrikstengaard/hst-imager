@@ -70,10 +70,7 @@
                 return new Result(new Error($"Invalid optimized size '{optimizedSize}'"));
             }
 
-            if (optimizedSize != diskInfo.Size)
-            {
-                stream.SetLength(optimizedSize);
-            }
+            stream.SetLength(optimizedSize);
 
             OnInformationMessage($"Optimized size '{optimizedSize}'");
             
