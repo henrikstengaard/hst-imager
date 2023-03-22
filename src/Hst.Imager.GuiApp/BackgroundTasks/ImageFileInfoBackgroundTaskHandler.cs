@@ -47,7 +47,12 @@
             var result = await infoCommand.Execute(context.Token);
             if (result.IsFaulted)
             {
-                await errorHubContext.SendError(result.Error.Message, context.Token);
+                // send null info result for views to reset/clear
+                await resultHubContext.SendInfoResult(null);
+                
+                var message = result.Error?.Message ?? "Info command returned error without message error";
+                logger.LogError(message);
+                await errorHubContext.SendError(message, context.Token);
             }
         }
     }

@@ -6,7 +6,6 @@
     using Hst.Core;
     using Core;
     using Extensions;
-    using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
     using Models;
 
@@ -16,16 +15,16 @@
         private readonly ICommandHelper commandHelper;
         private readonly string path;
         private readonly Size size;
-        private readonly bool rdb;
+        private readonly PartitionTable partitionTable;
 
         public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path, Size size,
-            bool rdb)
+            PartitionTable partitionTable)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.path = path;
             this.size = size;
-            this.rdb = rdb;
+            this.partitionTable = partitionTable;
         }
         
         public override async Task<Result> Execute(CancellationToken token)
@@ -46,39 +45,76 @@
             }
             using var media = mediaResult.Value;
             var stream = media.Stream;
-            var currentSize = stream.Length;
 
-            OnInformationMessage($"Size '{currentSize}'");
-
-            long optimizedSize = 0;            
-            if (rdb)
+            OnDebugMessage($"Media size '{media.Size}'");
+            
+            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            if (diskInfo == null)
             {
-                var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
-
-                if (rigidDiskBlock == null)
-                {
-                    return new Result(new Error("Rigid Disk Block not found"));
-                }
-                
-                optimizedSize = rigidDiskBlock.DiskSize;
-            }
-            else if (size.Value != 0)
-            {
-                optimizedSize = currentSize.ResolveSize(size).ToSectorSize();
+                return new Result(new Error("Failed to read disk info"));
             }
 
+            OnInformationMessage($"Size '{diskInfo.Size}'");
+            
+            var optimizedSizeResult = GetOptimizeSize(diskInfo);
+            if (optimizedSizeResult.IsFaulted)
+            {
+                return new Result(optimizedSizeResult.Error);
+            }
+
+            var optimizedSize = optimizedSizeResult.Value;
+            
             // return error, if optimized size is zero
-            if (optimizedSize == 0)
+            if (optimizedSize <= 0)
             {
                 return new Result(new Error($"Invalid optimized size '{optimizedSize}'"));
             }
 
-            // optimize
-            stream.SetLength(optimizedSize);
+            if (optimizedSize != diskInfo.Size)
+            {
+                stream.SetLength(optimizedSize);
+            }
 
             OnInformationMessage($"Optimized size '{optimizedSize}'");
             
             return new Result();
+        }
+
+        private Result<long> GetOptimizeSize(DiskInfo diskInfo)
+        {
+            if (size.Value != 0)
+            {
+                return new Result<long>(diskInfo.Size.ResolveSize(size));
+            }
+            
+            switch (partitionTable)
+            {
+                case PartitionTable.Gpt:
+                    var guidPartitionTable = diskInfo.PartitionTables
+                        .FirstOrDefault(x => x.Type == PartitionTableType.GuidPartitionTable);
+                
+                    return guidPartitionTable == null 
+                        ? new Result<long>(new Error("Guid Partition Table not found"))
+                        : new Result<long>(guidPartitionTable.Size);
+
+                case PartitionTable.Mbr:
+                    var mbrPartitionTable = diskInfo.PartitionTables
+                        .FirstOrDefault(x => x.Type == PartitionTableType.MasterBootRecord);
+                
+                    return mbrPartitionTable == null 
+                        ? new Result<long>(new Error("Master Boot Record not found"))
+                        : new Result<long>(mbrPartitionTable.Size);
+
+                case PartitionTable.Rdb:
+                    var rdbPartitionTable = diskInfo.PartitionTables
+                        .FirstOrDefault(x => x.Type == PartitionTableType.RigidDiskBlock);
+                
+                    return rdbPartitionTable == null
+                        ? new Result<long>(new Error("Rigid Disk Block not found"))
+                        : new Result<long>(rdbPartitionTable.Size);
+                default:
+                    return new Result<long>(0);
+            }
         }
     }
 }

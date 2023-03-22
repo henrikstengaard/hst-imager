@@ -47,14 +47,11 @@
             };
 
             var result = await infoCommand.Execute(context.Token);
-            if (result == null)
-            {
-                logger.LogError("Info command returned null");
-                return;
-            }
-            
             if (result.IsFaulted)
             {
+                // send null info result for views to reset/clear
+                await resultHubConnection.SendInfoResult(null);
+                
                 var message = result.Error?.Message ?? "Info command returned error without message error";
                 logger.LogError(message);
                 await errorHubConnection.UpdateError(message, context.Token);

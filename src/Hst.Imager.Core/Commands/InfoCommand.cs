@@ -39,7 +39,7 @@
 
             using var media = sourceMediaResult.Value;
 
-            OnDebugMessage($"Physical drive size '{media.Size}'");
+            OnDebugMessage($"Media size '{media.Size}'");
 
             var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
 

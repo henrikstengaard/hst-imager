@@ -129,42 +129,6 @@
         }
 
         [Fact]
-        public async Task WhenComparingSourceImgToDestinationImgWithDifferentSizesThenResultIsSizeNotEqualError()
-        {
-            // arrange
-            var sourcePath = $"{Guid.NewGuid()}.img";
-            var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper();
-            var cancellationTokenSource = new CancellationTokenSource();
-
-            // create source
-            var sourceBytes = fakeCommandHelper.CreateTestData();
-            fakeCommandHelper.ReadableMedias.Add(new Media(sourcePath, sourcePath, sourceBytes.Length,
-                Media.MediaType.Raw, false,
-                new MemoryStream(sourceBytes)));
-
-            // create destination
-            var destinationSize = sourceBytes.Length / 2;
-            var destinationBytesChunk = new byte[Convert.ToInt32(destinationSize)];
-            Array.Copy(sourceBytes, 0, destinationBytesChunk, 0, destinationBytesChunk.Length);
-            fakeCommandHelper.ReadableMedias.Add(new Media(destinationPath, destinationPath, destinationSize,
-                Media.MediaType.Raw, false,
-                new MemoryStream(destinationBytesChunk)));
-
-            // act - compare source img to destination img
-            var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false);
-            var result = await compareCommand.Execute(cancellationTokenSource.Token);
-            Assert.False(result.IsSuccess);
-
-            Assert.Equal(typeof(SizeNotEqualError), result.Error.GetType());
-            var sizeNotEqualError = (SizeNotEqualError)result.Error;
-            Assert.Equal(0, sizeNotEqualError.Offset);
-            Assert.Equal(sourceBytes.Length, sizeNotEqualError.Size);
-        }
-
-        [Fact]
         public async Task WhenComparingSourceSmallerThanDestinationThenDataIsIdentical()
         {
             // arrange
@@ -193,7 +157,7 @@
         }
 
         [Fact]
-        public async Task WhenCompareSourceIsLargerThanDestinationThenResultIsSizeNotEqualError()
+        public async Task WhenComparingSourceLargerThanDestinationAndCompareSizeIsDestinationSizeThenReadDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
@@ -201,14 +165,46 @@
             var fakeCommandHelper = new FakeCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             var testDataBytes = fakeCommandHelper.CreateTestData();
+            var sourceSize = testDataBytes.Length * 2;
+            var destinationSize = testDataBytes.Length;
 
             // create source
-            fakeCommandHelper.ReadableMedias.Add(new Media(sourcePath, sourcePath, testDataBytes.Length * 2,
+            fakeCommandHelper.ReadableMedias.Add(new Media(sourcePath, sourcePath, sourceSize,
                 Media.MediaType.Raw, false,
                 new MemoryStream(testDataBytes.Concat(testDataBytes).ToArray())));
 
             // create destination
-            fakeCommandHelper.ReadableMedias.Add(new Media(destinationPath, destinationPath, testDataBytes.Length,
+            fakeCommandHelper.ReadableMedias.Add(new Media(destinationPath, destinationPath, destinationSize,
+                Media.MediaType.Raw, false,
+                new MemoryStream(testDataBytes)));
+
+            // act - compare source img to destination img
+            var compareCommand =
+                new CompareCommand(new NullLogger<CompareCommand>(), fakeCommandHelper, new List<IPhysicalDrive>(),
+                    sourcePath, destinationPath, new Size(destinationSize, Unit.Bytes), 0, false);
+            var result = await compareCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+        }
+        
+        [Fact]
+        public async Task WhenComparingSourceLargerThanDestinationThenResultIsSizeNotEqualError()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = $"{Guid.NewGuid()}.img";
+            var fakeCommandHelper = new FakeCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+            var testDataBytes = fakeCommandHelper.CreateTestData();
+            var sourceSize = testDataBytes.Length * 2;
+            var destinationSize = testDataBytes.Length;
+
+            // create source
+            fakeCommandHelper.ReadableMedias.Add(new Media(sourcePath, sourcePath, sourceSize,
+                Media.MediaType.Raw, false,
+                new MemoryStream(testDataBytes.Concat(testDataBytes).ToArray())));
+
+            // create destination
+            fakeCommandHelper.ReadableMedias.Add(new Media(destinationPath, destinationPath, destinationSize,
                 Media.MediaType.Raw, false,
                 new MemoryStream(testDataBytes)));
 
@@ -219,10 +215,10 @@
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.False(result.IsSuccess);
 
-            Assert.Equal(typeof(SizeNotEqualError), result.Error.GetType());
-            var sizeNotEqualError = (SizeNotEqualError)result.Error;
-            Assert.Equal(0, sizeNotEqualError.Offset);
-            Assert.Equal(testDataBytes.Length * 2, sizeNotEqualError.Size);
+            Assert.Equal(typeof(InvalidCompareSizeError), result.Error.GetType());
+            var invalidCompareSizeError = (InvalidCompareSizeError)result.Error;
+            Assert.Equal(sourceSize, invalidCompareSizeError.CompareSize);
+            Assert.Equal(destinationSize, invalidCompareSizeError.Size);
         }
     }
 }

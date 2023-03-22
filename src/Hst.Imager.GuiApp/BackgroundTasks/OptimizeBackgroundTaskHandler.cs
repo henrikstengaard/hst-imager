@@ -4,7 +4,7 @@
     using System.Threading.Tasks;
     using Core.Models;
     using Extensions;
-    using Hst.Imager.Core.Commands;
+    using Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Hubs;
     using Microsoft.AspNetCore.SignalR;
@@ -39,13 +39,26 @@
                 {
                     Title = optimizeBackgroundTask.Title,
                     IsComplete = false,
-                    PercentComplete = 50,
+                    PercentComplete = 50
                 }, context.Token);
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
-                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, optimizeBackgroundTask.Path, new Size(0, Unit.Bytes), false);
+                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, 
+                    optimizeBackgroundTask.Path, new Size(optimizeBackgroundTask.Size, Unit.Bytes), PartitionTable.None);
 
                 var result = await optimizeCommand.Execute(context.Token);
+                if (result.IsFaulted)
+                {
+                    await progressHubContext.SendProgress(new Progress
+                    {
+                        Title = optimizeBackgroundTask.Title,
+                        IsComplete = true,
+                        HasError = true,
+                        ErrorMessage = result.Error.ToString(),
+                        PercentComplete = 100
+                    }, context.Token);
+                    return;
+                }
 
                 await Task.Delay(1000, context.Token);
 

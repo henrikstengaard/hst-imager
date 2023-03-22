@@ -26,7 +26,7 @@
 
             // optimize
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
-                new Models.Size(size, Unit.Bytes), false);
+                new Models.Size(size, Unit.Bytes), PartitionTable.None);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -48,7 +48,7 @@
 
             // optimize
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
-                new Models.Size(0, Unit.Bytes), false);
+                new Models.Size(0, Unit.Bytes), PartitionTable.None);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsFaulted);
         }
@@ -70,7 +70,7 @@
 
             // optimize
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
-                new Models.Size(rigidDiskBlockSize, Unit.Bytes), true);
+                new Models.Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

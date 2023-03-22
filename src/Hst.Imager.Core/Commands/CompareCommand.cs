@@ -26,8 +26,9 @@
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
-        
-        public CompareCommand(ILogger<CompareCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
+
+        public CompareCommand(ILogger<CompareCommand> logger, ICommandHelper commandHelper,
+            IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
             string destinationPath, Size size, int retries, bool force)
         {
             this.logger = logger;
@@ -41,11 +42,11 @@
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
-        
+
         public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Compare source '{sourcePath}' and destination '{destinationPath}'");
-            
+
             OnDebugMessage($"Opening source '{sourcePath}' as readable");
 
             var physicalDrivesList = physicalDrives.ToList();
@@ -54,6 +55,7 @@
             {
                 return new Result(sourceMediaResult.Error);
             }
+
             using var sourceMedia = sourceMediaResult.Value;
             var sourceStream = sourceMedia.Stream;
 
@@ -61,23 +63,33 @@
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
 
             OnDebugMessage($"Opening destination '{destinationPath}' as readable");
-            
+
             var destinationMediaResult = commandHelper.GetReadableMedia(physicalDrivesList, destinationPath);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);
             }
+
             using var destinationMedia = destinationMediaResult.Value;
             var destinationStream = destinationMedia.Stream;
 
             var destinationSize = destinationMedia.Size;
             OnDebugMessage($"Destination size '{destinationSize.FormatBytes()}' ({destinationSize} bytes)");
-            
-            var minSize = Math.Min(sourceSize, destinationSize);
-            
-            var compareSize = Convert
-                .ToInt64(size.Value == 0 ? minSize : size.Value)
-                .ResolveSize(size);
+
+            var compareSize = GetCompareSize(sourceSize);
+
+            // return error, if compare size is zero
+            if (compareSize == 0)
+            {
+                return new Result(new Error($"Invalid compare size '{compareSize}'"));
+            }
+
+            if (compareSize > destinationSize)
+            {
+                return new Result(new InvalidCompareSizeError(compareSize, destinationSize,
+                    $"Compare size {compareSize} is larger than size {destinationSize}"));
+            }
+
             OnInformationMessage($"Compare size '{compareSize.FormatBytes()}' ({compareSize} bytes)");
 
             var imageVerifier = new ImageVerifier(retries: retries, force: force);
@@ -99,12 +111,19 @@
 
             if (statusBytesProcessed != compareSize)
             {
-                return new Result(new Error($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{compareSize.FormatBytes()}' ({compareSize} bytes)"));
+                return new Result(new Error(
+                    $"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{compareSize.FormatBytes()}' ({compareSize} bytes)"));
             }
 
-            OnInformationMessage($"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
+            OnInformationMessage(
+                $"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
 
             return new Result();
+        }
+
+        private long GetCompareSize(long sourceSize)
+        {
+            return size.Value != 0 ? sourceSize.ResolveSize(size) : sourceSize;
         }
 
         private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
@@ -114,7 +133,7 @@
                 new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
         }
-        
+
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
 
         private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);

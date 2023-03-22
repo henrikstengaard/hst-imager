@@ -105,14 +105,15 @@
                 Directory.CreateDirectory(destDir);
             }
 
-            var model = Path.GetFileName(path);
+            var name = Path.GetFileName(path);
 
             if (create)
             {
                 if (!IsVhd(path))
                 {
-                    return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
-                        CreateWriteableStream(path)));
+                    var imgStream = CreateWriteableStream(path);
+                    return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
+                        imgStream));
                 }
 
                 if (size == null || size.Value == 0)
@@ -120,10 +121,10 @@
                     throw new ArgumentNullException(nameof(size), "Size is required for creating VHD image file");
                 }
 
-                var stream = CreateWriteableStream(path);
-                var newVhdDisk = Disk.InitializeDynamic(stream, Ownership.None, GetVhdSize(size.Value));
-                return new Result<Media>(new VhdMedia(path, model, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
-                    newVhdDisk, stream));
+                var vhdStream = CreateWriteableStream(path);
+                var newVhdDisk = Disk.InitializeDynamic(vhdStream, Ownership.None, GetVhdSize(size.Value));
+                return new Result<Media>(new VhdMedia(path, name, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
+                    newVhdDisk, vhdStream));
             }
 
             if (!File.Exists(path))
@@ -133,13 +134,14 @@
 
             if (!IsVhd(path))
             {
-                return new Result<Media>(new Media(path, model, 0, Media.MediaType.Raw, false,
-                    CreateWriteableStream(path)));
+                var imgStream = CreateWriteableStream(path);
+                return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
+                    imgStream));
             }
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, model, vhdDisk.Capacity, Media.MediaType.Vhd, false,
+            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false,
                 vhdDisk));
         }
 
@@ -327,26 +329,6 @@
             diskInfo.RdbPartitionTablePart = CreateRdbParts(diskInfo);
             diskInfo.DiskParts = CreateDiskParts(diskInfo);
 
-            // var allocatedParts = new List<PartInfo>();
-            // if (diskInfo.GptPartitionTablePart != null)
-            // {
-            //     allocatedParts.AddRange(
-            //         diskInfo.GptPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
-            // }
-            // if (diskInfo.MbrPartitionTablePart != null)
-            // {
-            //     allocatedParts.AddRange(
-            //         diskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
-            // }
-            // if (diskInfo.RdbPartitionTablePart != null)
-            // {
-            //     allocatedParts.AddRange(
-            //         diskInfo.RdbPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
-            // }
-            //
-            // // var allocatedParts = diskInfo.GptPartitionTablePart.Parts.Concat(diskInfo.MbrPartitionTablePart.Parts)
-            // //     .Concat(diskInfo.RdbPartitionTablePart.Parts).Where(x => x.PartType != PartType.Unallocated);
-            // diskInfo.DiskParts = CreateUnallocatedParts(disk.Capacity, 0, 0, allocatedParts);
             return diskInfo;
         }
 
@@ -358,11 +340,13 @@
                 allocatedParts.AddRange(
                     diskInfo.GptPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
             }
+
             if (diskInfo.MbrPartitionTablePart != null)
             {
                 allocatedParts.AddRange(
                     diskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
             }
+
             if (diskInfo.RdbPartitionTablePart != null)
             {
                 allocatedParts.AddRange(
@@ -500,7 +484,7 @@
                 (int)cylinderSize) / cylinderSize) - 1;
             var rdbSize = (diskInfo.RigidDiskBlock.RdbBlockHi - diskInfo.RigidDiskBlock.RdbBlockLo + 1) *
                           diskInfo.RigidDiskBlock.BlockSize;
-            
+
             parts.Add(new PartInfo
             {
                 FileSystem = "Reserved",
@@ -531,10 +515,11 @@
                     StartSector = (long)partitionBlock.LowCyl * diskInfo.RigidDiskBlock.Heads *
                                   diskInfo.RigidDiskBlock.Sectors,
                     EndSector = (((long)partitionBlock.HighCyl + 1) * diskInfo.RigidDiskBlock.Heads *
-                                diskInfo.RigidDiskBlock.Sectors) - 1,
+                                 diskInfo.RigidDiskBlock.Sectors) - 1,
                     StartCylinder = partitionBlock.LowCyl,
                     EndCylinder = partitionBlock.HighCyl,
-                    PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) * partitionBlock.PartitionSize)
+                    PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) *
+                                             partitionBlock.PartitionSize)
                 });
             }
 

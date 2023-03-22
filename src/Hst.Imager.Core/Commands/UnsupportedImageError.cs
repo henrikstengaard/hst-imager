@@ -6,7 +6,7 @@
     {
         public readonly string Path;
 
-        public UnsupportedImageError(string path)
+        public UnsupportedImageError(string path) : base($"Unsupported image '{path}'")
         {
             Path = path;
         }

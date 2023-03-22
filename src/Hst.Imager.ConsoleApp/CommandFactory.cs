@@ -3,6 +3,7 @@
     using System.CommandLine;
     using System.IO;
     using Core.Commands;
+    using Core.Models;
 
     public static class CommandFactory
     {
@@ -235,15 +236,16 @@
                 new[] { "--size", "-s" },
                 description: "Size to optimize to.");
 
-            var rdbOption = new Option<bool>(
-                new[] { "-rdb" },
-                description: "Optimize to size of Rigid Disk Block.");
+            var partitionTableOption = new Option<PartitionTable>(
+                new[] { "--partition-table", "-pt" },
+                description: "Optimize to size of partition table.",
+                getDefaultValue: () => PartitionTable.None);
             
             var convertCommand = new Command("optimize", "Optimize image file size.");
             convertCommand.AddArgument(pathArgument);
             convertCommand.AddOption(sizeOption);
-            convertCommand.AddOption(rdbOption);
-            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption, rdbOption);
+            convertCommand.AddOption(partitionTableOption);
+            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption, partitionTableOption);
 
             return convertCommand;
         }

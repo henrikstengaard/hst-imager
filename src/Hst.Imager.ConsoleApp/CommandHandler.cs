@@ -197,9 +197,9 @@
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Optimize(string path, string size, bool rdb)
+        public static async Task Optimize(string path, string size, PartitionTable partitionTable)
         {
-            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size), rdb);
+            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size), partitionTable);
             await Execute(command);
         }
 

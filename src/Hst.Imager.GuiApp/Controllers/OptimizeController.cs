@@ -40,7 +40,8 @@
             var task = new OptimizeBackgroundTask
             {
                 Title = request.Title,
-                Path = request.Path
+                Path = request.Path,
+                Size = request.Size
             };
             var handler = new OptimizeBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
             await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
