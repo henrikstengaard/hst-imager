@@ -41,11 +41,11 @@ export default function Info() {
 
     const api = React.useMemo(() => new Api(), []);
 
-    const handleGetMedias = React.useCallback(() => {
+    const handleGetMedias = React.useCallback(async () => {
         async function getMedias() {
             await api.list()
         }
-        getMedias()
+        await getMedias()
     }, [api])
     
     const getPath = ({medias, path}) => {
@@ -61,7 +61,7 @@ export default function Info() {
         return media === null ? medias[0].path : media.path
     }
 
-    const getInfo = async (path) => {
+    const getInfo = React.useCallback(async (path) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -76,7 +76,7 @@ export default function Info() {
         if (!response.ok) {
             console.error('Failed to get info')
         }
-    }
+    }, [sourceType])
 
     // initialize
     React.useEffect(() => {
@@ -85,7 +85,7 @@ export default function Info() {
         }
         setInitialized(true)
         handleGetMedias()
-    }, [initialized, setInitialized, handleGetMedias])
+    }, [handleGetMedias, initialized, loadMedias, setInitialized])
 
     function createHubConnection() {
         const connection = new HubConnectionBuilder()
@@ -117,7 +117,7 @@ export default function Info() {
                         const newMedia = newPath ? medias.find(x => x.path === newPath) : null
 
                         setMedias(medias)
-                        if (newMedia && state.sourceType === 'PhysicalDisk') {
+                        if (newMedia && sourceType === 'PhysicalDisk') {
                             setPath(newPath)
                             await getInfo(newPath)
                         }
@@ -136,7 +136,7 @@ export default function Info() {
             }
             connection.stop();
         };
-    }, [connection])
+    }, [connection, getInfo, path, setMedia, setMedias, setPath, sourceType])
     
     const getInfoDisabled = isNil(path)
 

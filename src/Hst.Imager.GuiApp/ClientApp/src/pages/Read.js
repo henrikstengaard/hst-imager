@@ -68,7 +68,7 @@ export default function Read() {
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = size === 0 ? 'entire disk size' : `size ${size} ${unitOption.title}`
     
-    const getPath = ({medias, path}) => {
+    const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
@@ -79,7 +79,7 @@ export default function Read() {
 
         const media = medias.find(x => x.path === path)
         return media === null ? medias[0].path : media.path
-    }
+    }, [])
 
     const handleGetMedias = React.useCallback(async () => {
         async function getMedias() {
@@ -106,11 +106,11 @@ export default function Read() {
     }
     
     // get medias
-    React.useEffect(async () => {
+    React.useEffect(() => {
         if (medias !== null) {
             return
         }
-        await handleGetMedias()
+        handleGetMedias()
     }, [medias, handleGetMedias])
 
     // setup signalr connection and listeners

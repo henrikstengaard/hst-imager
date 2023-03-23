@@ -10,7 +10,7 @@ import Radio from "@mui/material/Radio";
 import TextField from "../components/TextField";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
-import {get, isNil, set} from "lodash";
+import {get, isNil} from "lodash";
 import MediaSelectField from "../components/MediaSelectField";
 import Stack from "@mui/material/Stack";
 import RedirectButton from "../components/RedirectButton";
@@ -74,7 +74,7 @@ export default function Verify() {
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = size === 0 ? 'largest comparable size' : `size ${size} ${unitOption.title}`
     
-    const getPath = ({medias, path}) => {
+    const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
@@ -85,7 +85,7 @@ export default function Verify() {
 
         const media = medias.find(x => x.path === path)
         return media === null ? medias[0].path : media.path
-    }
+    }, [])
 
     const handleGetMedias = React.useCallback(async () => {
         async function getMedias() {
@@ -94,7 +94,7 @@ export default function Verify() {
         await getMedias()
     }, [api])
 
-    const getInfo = async (path) => {
+    const getInfo = React.useCallback(async (path) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -109,7 +109,7 @@ export default function Verify() {
         if (!response.ok) {
             console.error('Failed to get info')
         }
-    }
+    }, [sourceType])
 
     React.useEffect(() => {
         if (connection) {
@@ -197,10 +197,6 @@ export default function Verify() {
     const handleSourceTypeChange = async (value) => {
         setSourceType(value)
         switch (value) {
-            case 'ImageFile':
-                setSourcePath(null)
-                setSourceMedia(null)
-                break
             case 'PhysicalDisk':
                 if (medias === null) {
                     setSourcePath(null)
@@ -218,6 +214,10 @@ export default function Verify() {
                     await getInfo(newPath)
                 }
 
+                break
+            default:
+                setSourcePath(null)
+                setSourceMedia(null)
                 break
         }
     }
