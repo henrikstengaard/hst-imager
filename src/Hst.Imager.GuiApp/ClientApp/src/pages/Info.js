@@ -87,32 +87,26 @@ export default function Info() {
         handleGetMedias()
     }, [handleGetMedias, initialized, loadMedias, setInitialized])
 
-    function createHubConnection() {
-        const connection = new HubConnectionBuilder()
+    // setup signalr connection and listeners
+    React.useEffect(() => {
+        if (connection) {
+            return
+        }
+
+        const newConnection = new HubConnectionBuilder()
             .withUrl('/hubs/result')
             .withAutomaticReconnect()
             .build();
-        setConnection(connection);
-    }
-
-    React.useEffect(() => {
-        createHubConnection()
-    }, [])
-
-    React.useEffect(() => {
-        if (!connection || connection.state !== 'Disconnected') {
-            return 
-        }
         
         try {
-            connection
+            newConnection
                 .start()
                 .then(() => {
-                    connection.on("Info", (media) => {
+                    newConnection.on("Info", (media) => {
                         setMedia(media)
                     });
 
-                    connection.on('List', async (medias) => {
+                    newConnection.on('List', async (medias) => {
                         const newPath = getPath({medias: medias, path: path})
                         const newMedia = newPath ? medias.find(x => x.path === newPath) : null
 
@@ -129,6 +123,8 @@ export default function Info() {
         } catch (error) {
             console.error(error)
         }
+
+        setConnection(newConnection)
         
         return () => {
             if (!connection) {

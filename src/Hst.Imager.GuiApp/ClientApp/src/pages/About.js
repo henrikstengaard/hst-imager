@@ -9,6 +9,7 @@ import Typography from "@mui/material/Typography";
 import {HST_IMAGER_VERSION} from '../Constants'
 
 const payPalDonateUrl = 'https://www.paypal.com/donate/?business=7DZM5VEGWWNP8&no_recurring=0&item_name=Thanks+for+your+incredible+effort+creating+HstWB+Installer+and+Hst+Imager+in+your+spare+time.+I+want+to+support+future+development.&currency_code=EUR'
+const gitHubReleasesUrl = 'https://github.com/henrikstengaard/hst-imager/releases'
 const gitHubIssuesUrl = 'https://github.com/henrikstengaard/hst-imager/issues'
 
 export default function About() {
@@ -53,9 +54,13 @@ export default function About() {
             <Typography sx={{ mt: 1 }}>
                 Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time. To support future development and appreciate your use of Hst Imager, please make a donation via <Link href="#" onClick={async (event) => openUrl(event, payPalDonateUrl)}>PayPal donate</Link>.
             </Typography>
+
+            <Typography sx={{ mt: 1 }}>
+                Latest version of Hst Imager can be downloaded from <Link href="#" onClick={async (event) => openUrl(event, gitHubReleasesUrl)}>Hst Imager Github releases</Link>.
+            </Typography>
             
             <Typography sx={{ mt: 1 }}>
-                Please report issues by creating a new issue at <Link href="#" onClick={async (event) => openUrl(event, gitHubIssuesUrl)}>Github issues</Link>.
+                Please report issues by creating a new issue at <Link href="#" onClick={async (event) => openUrl(event, gitHubIssuesUrl)}>Hst Imager Github issues</Link>.
             </Typography>
         </Box>
     )
