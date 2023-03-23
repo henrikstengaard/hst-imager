@@ -18,11 +18,13 @@
         }
         
         public MacOsElevateMethodEnum MacOsElevateMethod { get; set; }
+        public bool DebugMode { get; set; }
         //public ThemeEnum Theme { get; set; }
 
         public Settings()
         {
             MacOsElevateMethod = MacOsElevateMethodEnum.OsascriptSudo;
+            DebugMode = false;
         }
     }
 }

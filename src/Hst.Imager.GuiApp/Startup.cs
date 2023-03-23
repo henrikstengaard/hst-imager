@@ -67,6 +67,7 @@ namespace Hst.Imager.GuiApp
             services.AddSingleton(new AppState
             {
                 AppPath = AppContext.BaseDirectory,
+                LogsPath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Constants.AppName), "logs"),
                 ExecutingFile = WorkerHelper.GetExecutingFile(),
                 IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(Constants.AppName),
                 IsAdministrator = OperatingSystem.IsAdministrator(),
@@ -164,7 +165,8 @@ namespace Hst.Imager.GuiApp
             browserWindow.OnMaximize += () => Electron.IpcMain.Send(browserWindow, "window-maximized");
             browserWindow.OnUnmaximize += () => Electron.IpcMain.Send(browserWindow, "window-unmaximized");
 
-            if (ApplicationDataHelper.HasDebugEnabled(Constants.AppName))
+            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName))?.DebugMode ?? false;
+            if (ApplicationDataHelper.HasDebugEnabled(Constants.AppName) || debugMode)
             {
                 browserWindow.WebContents.OpenDevTools();
             }

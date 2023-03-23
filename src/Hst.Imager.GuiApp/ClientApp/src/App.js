@@ -28,7 +28,8 @@ import {
     faBan,
     faInfo,
     faArrowLeft,
-    faTimes
+    faTimes,
+    faChartLine
 } from '@fortawesome/free-solid-svg-icons'
 import Box from '@mui/material/Box'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -59,7 +60,8 @@ library.add(
     faBan,
     faInfo,
     faArrowLeft,
-    faTimes)
+    faTimes,
+    faChartLine)
 
 export default function App() {
     return (

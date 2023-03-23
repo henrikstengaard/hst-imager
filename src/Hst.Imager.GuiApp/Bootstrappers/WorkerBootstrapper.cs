@@ -22,9 +22,8 @@
 
     public static class WorkerBootstrapper
     {
-        public static async Task Start(string baseUrl, int processId)
+        public static async Task Start(string baseUrl, int processId, bool hasDebugEnabled)
         {
-            var hasDebugEnabled = ApplicationDataHelper.HasDebugEnabled(Constants.AppName);
 #if RELEASE
             SetupReleaseLogging(hasDebugEnabled);
 #else

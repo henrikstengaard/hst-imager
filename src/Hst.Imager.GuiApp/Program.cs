@@ -10,6 +10,7 @@ namespace Hst.Imager.GuiApp
     using Hst.Imager.Core.Models;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.Extensions.Hosting;
+    using Models;
     using Serilog;
     using Serilog.Events;
     using OperatingSystem = Hst.Core.OperatingSystem;
@@ -43,14 +44,16 @@ namespace Hst.Imager.GuiApp
                 }
             }
 
+            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName))?.DebugMode ?? false;
+            var hasDebugEnabled = ApplicationDataHelper.HasDebugEnabled(Constants.AppName) || debugMode;
+            
             if (worker &&
                 !string.IsNullOrWhiteSpace(baseUrl))
             {
-                await WorkerBootstrapper.Start(baseUrl, processId);
+                await WorkerBootstrapper.Start(baseUrl, processId, hasDebugEnabled);
                 return;
             }
 
-            var hasDebugEnabled = ApplicationDataHelper.HasDebugEnabled(Constants.AppName);
 #if RELEASE
             SetupReleaseLogging(hasDebugEnabled);
 #else

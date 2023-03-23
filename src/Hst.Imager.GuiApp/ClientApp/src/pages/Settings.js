@@ -5,15 +5,36 @@ import Grid from "@mui/material/Grid"
 import SelectField from "../components/SelectField"
 import {AppStateContext} from "../components/AppStateContext"
 import {AppStateDispatchContext} from "../components/AppStateContext"
+import CheckboxField from "../components/CheckboxField";
+import {ElectronIpc} from "../utils/ElectronIpc";
+import Button from "../components/Button";
 
 export default function Settings() {
+    const electronIpc = new ElectronIpc()
     const appState = React.useContext(AppStateContext)
     const appStateDispatch = React.useContext(AppStateDispatchContext)
 
     const isMacOs = get(appState, 'isMacOs') || false
+    const logsPath = get(appState, 'logsPath')
     const settings = get(appState, 'settings') || {}
+
+    const openUrl = async (event, url) => {
+        event.preventDefault()
+        if (!url) {
+            console.error('Url is null')
+            return
+        }
+        if (!appState || !appState.isElectronActive)
+        {
+            console.error('Open url is only available with Electron')
+            return
+        }
+        await electronIpc.openExternal({
+            url
+        })
+    }
     
-    const saveSettings = async ({ name, value} = {}) => {
+    const saveSettings = async ({ name, value } = {}) => {
         set(settings, name, value)
         
         const response = await fetch('api/settings', {
@@ -46,7 +67,8 @@ export default function Settings() {
     }]
     
     const {
-        macOsElevateMethod = 'OsascriptSudo'
+        macOsElevateMethod = 'OsascriptSudo',
+        debugMode
     } = settings
     
     return (
@@ -64,6 +86,26 @@ export default function Settings() {
                         options={macOsElevateMethodOptions}
                         onChange={async (value) => await saveSettings({ name: 'macOsElevateMethod', value })}
                     />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12} lg={6}>
+                    <CheckboxField
+                        id="debug-mode"
+                        label="Debug mode (applied after restart of app)"
+                        value={debugMode}
+                        onChange={async (checked) => await saveSettings({ name: 'debugMode', value: checked })}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12} lg={6}>
+                    <Button
+                        icon="chart-line"
+                        onClick={async (event) => openUrl(event, logsPath)}
+                    >
+                        View logs
+                    </Button>
                 </Grid>
             </Grid>
         </React.Fragment>
