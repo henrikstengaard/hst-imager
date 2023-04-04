@@ -9,20 +9,31 @@
     public class SectorStream : Stream
     {
         private readonly Stream stream;
+        private readonly bool leaveOpen;
         private const int SectorSize = 512;
 
-        public SectorStream(Stream baseStream)
+        public SectorStream(Stream baseStream, bool leaveOpen = false)
         {
             this.stream = baseStream;
+            this.leaveOpen = leaveOpen;
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            try
             {
-                this.stream.Close(); // close calls dispose
+                if (disposing)
+                {
+                    // if (!leaveOpen)
+                    // {
+                    //     this.stream.Dispose();
+                    // }
+                }
             }
-            base.Dispose(disposing);
+            finally
+            {
+                base.Dispose(disposing);
+            }
         }
 
         public override void Flush()
@@ -76,7 +87,7 @@
         {
             if (offset != 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(offset), "Sector stream only supports offset 0");
+                throw new ArgumentOutOfRangeException(nameof(offset), $"Sector stream offset {offset} not supported, only offset 0");
             }
 
             if (count % SectorSize == 0)

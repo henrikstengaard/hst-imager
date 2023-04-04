@@ -6,23 +6,25 @@
     public class VhdMedia : Media
     {
         private readonly VirtualDisk disk;
-        private readonly Stream stream;
 
         public VhdMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive, VirtualDisk disk, Stream stream = null) 
-            : base(path, name, size, type, isPhysicalDrive, disk.Content)
+            : base(path, name, size, type, isPhysicalDrive, stream)
         {
             this.disk = disk;
-            this.stream = stream;
         }
 
         protected override void Dispose(bool disposing)
         {
-            base.Dispose(disposing);
-            if (disposing)
+            try
             {
-                disk.Dispose();
-                stream?.Close();
-                stream?.Dispose();
+                if (disposing)
+                {
+                    disk.Dispose();
+                }
+            }
+            finally
+            {
+                base.Dispose(disposing);
             }
         }
     }

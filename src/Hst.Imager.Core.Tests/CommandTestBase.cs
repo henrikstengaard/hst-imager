@@ -2,12 +2,15 @@
 {
     using System.Linq;
     using System.Threading.Tasks;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Commands;
     using Xunit;
 
     public abstract class CommandTestBase
     {
+        public readonly int ImageSize = 512 * 512;
+        public const int RigidDiskBlockSize = 16 * 1024;
+        
         protected async Task<byte[]> ReadMediaBytes(ICommandHelper commandHelper, string path, long size)
         {
             var mediaResult = commandHelper.GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), path, false);

@@ -43,11 +43,11 @@
             {
                 return new Result(mediaResult.Error);
             }
+
             using var media = mediaResult.Value;
-            var stream = media.Stream;
 
             OnDebugMessage($"Media size '{media.Size}'");
-            
+        
             var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
             if (diskInfo == null)
             {
@@ -55,7 +55,7 @@
             }
 
             OnInformationMessage($"Size '{diskInfo.Size}'");
-            
+
             var optimizedSizeResult = GetOptimizeSize(diskInfo);
             if (optimizedSizeResult.IsFaulted)
             {
@@ -70,7 +70,7 @@
                 return new Result(new Error($"Invalid optimized size '{optimizedSize}'"));
             }
 
-            stream.SetLength(optimizedSize);
+            mediaResult.Value.Stream.SetLength(optimizedSize);
 
             OnInformationMessage($"Optimized size '{optimizedSize}'");
             

@@ -6,23 +6,24 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Models;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
 public class AmigaVolumeEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer;
-    private readonly Stream stream;
+    private readonly Media media;
     private readonly string[] pathComponents;
     private readonly IFileSystemVolume fileSystemVolume;
     private string[] currentPathComponents;
     private bool disposed;
     private int writeOperations;
 
-    public AmigaVolumeEntryWriter(Stream stream, string[] pathComponents, IFileSystemVolume fileSystemVolume)
+    public AmigaVolumeEntryWriter(Media media, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
         this.buffer = new byte[4096];
-        this.stream = stream;
+        this.media = media;
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
         this.currentPathComponents = Array.Empty<string>();
@@ -39,7 +40,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         if (disposing)
         {
             fileSystemVolume.Flush().GetAwaiter().GetResult();
-            stream.Dispose();
+            media.Stream.Flush();
+            media.Dispose();
         }
 
         disposed = true;

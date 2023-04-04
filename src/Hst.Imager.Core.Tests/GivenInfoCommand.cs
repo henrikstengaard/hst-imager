@@ -5,8 +5,8 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Commands;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 
@@ -17,11 +17,13 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { path });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(path, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // read info from path
-            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), fakeCommandHelper, Enumerable.Empty<IPhysicalDrive>(), path);
+            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper, 
+                Enumerable.Empty<IPhysicalDrive>(), path);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) =>
             {
@@ -40,19 +42,23 @@
         public async Task WhenReadInfoFromSourceImgWithRigidDiskBlockThenDiskInfoIsReturned()
         {
             // arrange
-            var path = Path.Combine("TestData", "rigid-disk-block.img");
-            var fakeCommandHelper = new FakeCommandHelper(new[] { path });
+            var path = $"{Guid.NewGuid()}.img";
+            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
+
+            var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // read info from path
-            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), fakeCommandHelper, Enumerable.Empty<IPhysicalDrive>(), path);
+            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
+                Enumerable.Empty<IPhysicalDrive>(), path);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) =>
             {
                 mediaInfo = args.MediaInfo;
             };
-            await infoCommand.Execute(cancellationTokenSource.Token);
-            
+            var result = await infoCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
             // assert - media info is not null
             Assert.NotNull(mediaInfo);
             Assert.NotNull(mediaInfo.DiskInfo);

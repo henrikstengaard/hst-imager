@@ -40,9 +40,6 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            var stream = media.Stream;
-            
-            using var disk = new Disk(stream, Ownership.None);
             
             OnDebugMessage($"Reading Master Boot Record from path '{path}'");
 
@@ -57,9 +54,6 @@
                 DiskSize = diskInfo.Size,
                 DiskInfo = diskInfo
             });
-
-            await disk.Content.DisposeAsync();
-            disk.Dispose();
 
             return new Result();
         }

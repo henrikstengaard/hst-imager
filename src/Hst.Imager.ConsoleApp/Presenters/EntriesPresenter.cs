@@ -29,7 +29,8 @@ public static class EntriesPresenter
     {
         return JsonSerializer.Serialize(entriesInfo, new JsonSerializerOptions
         {
-            WriteIndented = true
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
     }
     

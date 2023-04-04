@@ -107,7 +107,10 @@
                     var sectorSize = bytesProcessed + dataSector.Start + dataSector.Size > size
                         ? (int)(size - bytesProcessed + dataSector.Start)
                         : dataSector.Size;
-                            
+
+                    var sectorData = new byte[sectorSize];
+                    Array.Copy(this.buffer,  dataSector.Start, sectorData, 0, sectorSize);
+                    
                     bool destWriteFailed;
                     var destRetry = 0;
                     do
@@ -115,7 +118,7 @@
                         try
                         {
                             destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
-                            await destination.WriteAsync(this.buffer, dataSector.Start, sectorSize, token);
+                            await destination.WriteAsync(sectorData, 0, sectorData.Length, token);
                             destWriteFailed = false;
                                 
                             if (verify && !await Verify(this.buffer, destination,

@@ -48,7 +48,7 @@ export default function Info() {
         await getMedias()
     }, [api])
     
-    const getPath = ({medias, path}) => {
+    const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
@@ -59,7 +59,7 @@ export default function Info() {
 
         const media = medias.find(x => x.path === path)
         return media === null ? medias[0].path : media.path
-    }
+    }, [])
 
     const getInfo = React.useCallback(async (path) => {
         const response = await fetch('api/info', {
@@ -110,8 +110,8 @@ export default function Info() {
                         const newPath = getPath({medias: medias, path: path})
                         const newMedia = newPath ? medias.find(x => x.path === newPath) : null
 
-                        setMedias(medias)
-                        if (newMedia && sourceType === 'PhysicalDisk') {
+                        setMedias(medias || [])
+                        if (newMedia) {
                             setPath(newPath)
                             await getInfo(newPath)
                         }
@@ -132,7 +132,7 @@ export default function Info() {
             }
             connection.stop();
         };
-    }, [connection, getInfo, path, setMedia, setMedias, setPath, sourceType])
+    }, [connection, getInfo, getPath, path, setMedia, setMedias, setPath, sourceType])
     
     const getInfoDisabled = isNil(path)
 

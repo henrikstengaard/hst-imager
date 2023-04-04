@@ -1,13 +1,14 @@
 ﻿namespace Hst.Imager.Core.Tests
 {
+    using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Hst.Imager.Core.Commands;
-    using Hst.Imager.Core.Models;
-    using Hst.Imager.Core.PhysicalDrives;
+    using Commands;
+    using Models;
+    using PhysicalDrives;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 
@@ -18,9 +19,9 @@
         {
             var physicalDrives = new[]
             {
-                new FakePhysicalDrive("Path", "Type", "Model", 8192)
+                new TestPhysicalDrive("Path", "Type", "Model", 8192)
             };
-            var fakeCommandHelper = new FakeCommandHelper();
+            var fakeCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             
             var listCommand = new ListCommand(new NullLogger<ListCommand>(), fakeCommandHelper, physicalDrives);
@@ -47,15 +48,17 @@
         [Fact]
         public async Task WhenListPhysicalDrivesWithRigidDiskBlockThenListReadIsTriggered()
         {
-            var path = Path.Combine("TestData", "rigid-disk-block.img");
+            var path = $"{Guid.NewGuid()}.img";
+            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
+            
             var physicalDrives = new[]
             {
-                new FakePhysicalDrive(path, "Type", "Model", await File.ReadAllBytesAsync(path))
+                new TestPhysicalDrive(path, "Type", "Model", await File.ReadAllBytesAsync(path))
             };
-            var fakeCommandHelper = new FakeCommandHelper(new[] { path });
+            var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             
-            var listCommand = new ListCommand(new NullLogger<ListCommand>(), fakeCommandHelper, physicalDrives);
+            var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives);
             IEnumerable<MediaInfo> mediaInfos = null;
             listCommand.ListRead += (sender, args) =>
             {

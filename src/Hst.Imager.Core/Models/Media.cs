@@ -19,7 +19,7 @@
         public bool IsPhysicalDrive;
         public MediaType Type;
 
-        public readonly Stream Stream;
+        public Stream Stream { get; private set; }
 
         public Media(string path, string name, long size, MediaType type, bool isPhysicalDrive, Stream stream)
         {
@@ -40,7 +40,9 @@
 
             if (disposing)
             {
+                Stream?.Close();
                 Stream?.Dispose();
+                Stream = null;
             }
 
             disposed = true;

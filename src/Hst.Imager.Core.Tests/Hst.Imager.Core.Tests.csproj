@@ -52,6 +52,9 @@
       <None Update="TestData\wmic_diskdrive_list_error.csv">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\Pfs3\pfs3aio">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>

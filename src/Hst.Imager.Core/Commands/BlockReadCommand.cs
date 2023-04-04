@@ -99,19 +99,20 @@ public class BlockReadCommand : CommandBase
             
             foreach (var sector in sectors)
             {
-                if (start.HasValue && sector.Start < start.Value)
+                var sectorStart = offset + sector.Start;
+                if (start.HasValue && sectorStart < start.Value)
                 {
                     continue;
                 }
                 
-                if (end.HasValue && sector.Start >= end.Value)
+                if (end.HasValue && sectorStart >= end.Value)
                 {
                     break;
                 }
 
-                OnDebugMessage($"Writing block offset {sector.Start}");
+                OnDebugMessage($"Writing block offset {sectorStart}");
 
-                var sectorPath = Path.Combine(outputPath, $"{sector.Start}.bin");
+                var sectorPath = Path.Combine(outputPath, $"{sectorStart}.bin");
                 var sectorBytes = new byte[blockSize];
                 Array.Copy(buffer, sector.Start, sectorBytes, 0, sector.Size);
                 await File.WriteAllBytesAsync(sectorPath, sectorBytes, cancellationTokenSource.Token);

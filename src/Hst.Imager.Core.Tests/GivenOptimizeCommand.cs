@@ -17,21 +17,19 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
+            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
             var size = 8192;
-            var fakeCommandHelper = new FakeCommandHelper();
-            // var bytes = fakeCommandHelper.CreateTestData();
-            fakeCommandHelper.WriteableMedias.Add(new Media(path, path, size, Media.MediaType.Raw, false,
-                new MemoryStream(new byte[16384])));
+            var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
                 new Models.Size(size, Unit.Bytes), PartitionTable.None);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert media contains optimized rigid disk block size
-            var optimizedBytes = fakeCommandHelper.GetMedia(path).GetBytes();
+            var optimizedBytes = await testCommandHelper.ReadMediaData(path);
             Assert.Equal(size, optimizedBytes.Length);
         }
         
@@ -40,14 +38,12 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper();
-            var bytes = fakeCommandHelper.CreateTestData();
-            fakeCommandHelper.WriteableMedias.Add(new Media(path, path, bytes.Length, Media.MediaType.Raw, false,
-                new MemoryStream(bytes)));
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(path, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
                 new Models.Size(0, Unit.Bytes), PartitionTable.None);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsFaulted);
@@ -58,24 +54,22 @@
         {
             // arrange
             var path = $"{Guid.NewGuid()}.img";
+            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
             var rigidDiskBlockSize = 8192;
-            var fakeCommandHelper = new FakeCommandHelper(rigidDiskBlock: new RigidDiskBlock
+            var testCommandHelper = new TestCommandHelper(rigidDiskBlock: new RigidDiskBlock
             {
                 DiskSize = rigidDiskBlockSize
             });
-            // var bytes = fakeCommandHelper.CreateTestData();
-            fakeCommandHelper.WriteableMedias.Add(new Media(path, path, rigidDiskBlockSize, Media.MediaType.Raw, false,
-                new MemoryStream(new byte[16384])));
             var cancellationTokenSource = new CancellationTokenSource();
 
             // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), fakeCommandHelper, path,
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
                 new Models.Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert media contains optimized rigid disk block size
-            var optimizedBytes = fakeCommandHelper.GetMedia(path).GetBytes();
+            var optimizedBytes = await testCommandHelper.ReadMediaData(path);
             Assert.Equal(rigidDiskBlockSize, optimizedBytes.Length);
         }
     }

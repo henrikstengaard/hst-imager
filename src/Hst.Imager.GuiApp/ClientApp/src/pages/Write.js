@@ -172,7 +172,7 @@ export default function Write() {
                         const newPath = getPath({medias: medias, path: get(destinationMedia, 'path')})
                         const newMedia = newPath ? medias.find(x => x.path === newPath) : null
 
-                        setMedias(medias)
+                        setMedias(medias || [])
                         if (newMedia) {
                             setDestinationMedia(newMedia)
                         }

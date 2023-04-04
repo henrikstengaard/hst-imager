@@ -2,6 +2,7 @@
 {
     using System;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Core;
@@ -19,11 +20,13 @@
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMedia(destinationPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - convert source img to destination img
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
                 destinationPath, new Size(), false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             convertCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
@@ -37,8 +40,8 @@
             Assert.NotEqual(0, dataProcessedEventArgs.BytesTotal);
 
             // assert data is identical
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
-            var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
+            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
+            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -49,19 +52,20 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMedia(destinationPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - convert source img to destination img
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
                 destinationPath, new Size(size, Unit.Bytes), false);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert data is identical within defined size
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes(size);
-            Assert.Equal(size, sourceBytes.Length);
-            var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
+            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data.Take(size).ToArray();
+            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -71,20 +75,21 @@
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
                 destinationPath, new Size(), false);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
+            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, destinationPath, sourceBytes.Length);
+            var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);
             var destinationPathSize = new FileInfo(destinationPath).Length;
 
             // assert length is not the same (vhd file format different than img) and bytes are the same
@@ -102,21 +107,21 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), fakeCommandHelper, sourcePath,
+            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
                 destinationPath, new Size(size, Unit.Bytes), false);
             var result = await convertCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes(size);
-            Assert.Equal(size, sourceBytes.Length);
+            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data.Take(size).ToArray();
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, destinationPath, sourceBytes.Length);
+            var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);
             var destinationPathSize = new FileInfo(destinationPath).Length;
 
             // assert length is not the same (vhd file format different than img) and bytes are the same

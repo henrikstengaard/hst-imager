@@ -14,6 +14,7 @@ using Compression.Lha;
 using DiscUtils.Iso9660;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using FileMode = System.IO.FileMode;
@@ -376,7 +377,10 @@ public abstract class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
             }
 
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfStream,
+            var adfMedia = new Media(mediaResult.Value.MediaPath, Path.GetFileName(mediaResult.Value.MediaPath),
+                adfStream.Length, Media.MediaType.Raw, false, adfStream);
+
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfMedia,
                 mediaResult.Value.FileSystemPath.Split('/'), fileSystemVolumeResult.Value));
         }
 
@@ -408,7 +412,7 @@ public abstract class FsCommandBase : CommandBase
                 }
 
                 // skip 2 first parts, partition table and device/drive name
-                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value.Stream, parts.Skip(2).ToArray(),
+                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, parts.Skip(2).ToArray(),
                     fileSystemVolumeResult.Value));
             default:
                 return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));

@@ -20,7 +20,8 @@ namespace Hst.Imager.Core.Tests
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination img
@@ -38,8 +39,8 @@ namespace Hst.Imager.Core.Tests
             Assert.NotEqual(0, dataProcessedEventArgs.BytesTotal);
 
             // assert data is identical
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
-            var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
+            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -50,7 +51,8 @@ namespace Hst.Imager.Core.Tests
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination img
@@ -60,19 +62,80 @@ namespace Hst.Imager.Core.Tests
             Assert.True(result.IsSuccess);
 
             // assert data is identical
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes(size);
+            var sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(size).ToArray();
             Assert.Equal(size, sourceBytes.Length);
-            var destinationBytes = fakeCommandHelper.GetMedia(destinationPath).GetBytes();
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
+        [Fact]
+        public async Task WhenReadSourceToImgDestination2TimesThenReadDataIsIdentical2()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = $"{Guid.NewGuid()}.img";
+            var size = 16 * 512;
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, size);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - read command
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
+
+            // act - read source img to destination img 1st time
+            var result = await readCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+            
+            // act - read source img to destination img 2nd time
+            result = await readCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+            
+            // assert data is identical
+            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
+            Assert.Equal(size, sourceBytes.Length);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            Assert.Equal(sourceBytes, destinationBytes);
+        }
+
+        [Fact]
+        public async Task WhenReadSourceToVhdDestination2TimesThenReadDataIsIdentical2()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = $"{Guid.NewGuid()}.vhd";
+            var size = 16 * 512;
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, size);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - read command
+            var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
+
+            // act - read source img to destination img 1st time
+            var result = await readCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+            
+            // act - read source img to destination img 2nd time
+            result = await readCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+            
+            // assert data is identical
+            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
+            Assert.Equal(size, sourceBytes.Length);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            Assert.Equal(sourceBytes, destinationBytes);
+        }
+        
         [Fact]
         public async Task WhenReadSourceToVhdDestinationThenReadDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath });
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // assert: destination path vhd doesn't exist
@@ -85,11 +148,11 @@ namespace Hst.Imager.Core.Tests
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes();
+            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
 
             // get destination bytes from vhd
             var destinationBytes =
-                await ReadMediaBytes(fakeCommandHelper, destinationPath, FakeCommandHelper.ImageSize);
+                await ReadMediaBytes(fakeCommandHelper, destinationPath, ImageSize);
             var destinationPathSize = new FileInfo(destinationPath).Length;
 
             // assert length is not the same (vhd file format different than img) and bytes are the same
@@ -107,7 +170,8 @@ namespace Hst.Imager.Core.Tests
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
-            var fakeCommandHelper = new FakeCommandHelper(new[] { sourcePath }, new[] { destinationPath });
+            var fakeCommandHelper = new TestCommandHelper();
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
@@ -117,11 +181,11 @@ namespace Hst.Imager.Core.Tests
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = fakeCommandHelper.GetMedia(sourcePath).GetBytes(size);
+            var sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(size).ToArray();
             Assert.Equal(size, sourceBytes.Length);
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, destinationPath, sourceBytes.Length);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
             var destinationPathSize = new FileInfo(destinationPath).Length;
 
             // assert length is not the same (vhd file format different than img) and bytes are the same

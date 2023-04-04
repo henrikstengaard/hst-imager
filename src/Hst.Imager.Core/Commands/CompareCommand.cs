@@ -81,7 +81,7 @@
             // return error, if compare size is zero
             if (compareSize <= 0)
             {
-                return new Result(new Error($"Invalid compare size '{compareSize}'"));
+                return new Result(new Error($"Invalid compare size '{compareSize}' for source or destination"));
             }
 
             if (compareSize > destinationSize)

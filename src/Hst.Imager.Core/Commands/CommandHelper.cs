@@ -60,13 +60,14 @@
             var name = Path.GetFileName(path);
             if (!IsVhd(path))
             {
-                return new Result<Media>(new Media(path, name, new FileInfo(path).Length, Media.MediaType.Raw, false,
-                    File.Open(path, FileMode.Open, FileAccess.Read)));
+                var imgStream = File.Open(path, FileMode.Open, FileAccess.Read);
+                return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
+                    imgStream));
             }
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk));
+            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk, new SectorStream(vhdDisk.Content)));
         }
 
         public virtual Stream CreateWriteableStream(string path)
@@ -121,10 +122,8 @@
                     throw new ArgumentNullException(nameof(size), "Size is required for creating VHD image file");
                 }
 
-                var vhdStream = CreateWriteableStream(path);
-                var newVhdDisk = Disk.InitializeDynamic(vhdStream, Ownership.None, GetVhdSize(size.Value));
-                return new Result<Media>(new VhdMedia(path, name, newVhdDisk.Capacity, Media.MediaType.Vhd, false,
-                    newVhdDisk, vhdStream));
+                using var vhdStream = CreateWriteableStream(path);
+                using var newVhdDisk = Disk.InitializeDynamic(vhdStream, Ownership.None, GetVhdSize(size.Value));
             }
 
             if (!File.Exists(path))
@@ -142,7 +141,7 @@
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
             vhdDisk.Content.Position = 0;
             return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false,
-                vhdDisk));
+                vhdDisk, new SectorStream(vhdDisk.Content)));
         }
 
         public virtual long GetVhdSize(long size)
@@ -165,8 +164,8 @@
         {
             var partitionTables = new List<PartitionTableInfo>();
 
-            using var disk = new DiscUtils.Raw.Disk(stream, Ownership.None);
-
+            var disk = new DiscUtils.Raw.Disk(stream, Ownership.None);
+            
             try
             {
                 var biosPartitionTable = new BiosPartitionTable(disk);

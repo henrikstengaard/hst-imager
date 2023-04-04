@@ -18,17 +18,18 @@
             // arrange
             var path = $"{Guid.NewGuid()}.img";
             var size = new Size(512 * 512, Unit.Bytes);
-            var fakeCommandHelper = new FakeCommandHelper(writeableMediaPaths: new[] { path });
+            var testCommandHelper = new TestCommandHelper();
+            testCommandHelper.AddTestMedia(path);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - create blank
-            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size, false);
+            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), testCommandHelper, path, size, false);
             var result = await blankCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert data is zero filled
             var sourceBytes = new byte[Convert.ToInt64(size.Value)];
-            var destinationBytes = fakeCommandHelper.GetMedia(path).GetBytes();
+            var destinationBytes = testCommandHelper.GetTestMedia(path).Data;
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -38,16 +39,16 @@
             // arrange
             var path = $"{Guid.NewGuid()}.vhd";
             var size = new Size(512 * 512, Unit.Bytes);
-            var fakeCommandHelper = new FakeCommandHelper();
+            var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - create blank
-            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), fakeCommandHelper, path, size, false);
+            var blankCommand = new BlankCommand(new NullLogger<BlankCommand>(), testCommandHelper, path, size, false);
             var result = await blankCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(fakeCommandHelper, path, Convert.ToInt64(size.Value));
+            var destinationBytes = await ReadMediaBytes(testCommandHelper, path, Convert.ToInt64(size.Value));
             var destinationPathSize = new FileInfo(path).Length;
 
             // assert vhd is less than size

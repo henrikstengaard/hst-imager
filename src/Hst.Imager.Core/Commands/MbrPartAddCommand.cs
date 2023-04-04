@@ -61,14 +61,19 @@
             {
                 return new Result(mediaResult.Error);
             }
-            using var media = mediaResult.Value;
-            var stream = media.Stream;
 
-            // read disk info
-            var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
-            
+            using var media = mediaResult.Value;
+
+            OnDebugMessage($"Media size '{media.Size}'");
+        
+            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            if (diskInfo == null)
+            {
+                return new Result(new Error("Failed to read disk info"));
+            }
+
             // open stream as disk
-            using var disk = new Disk(stream, Ownership.None);
+            using var disk = new Disk(media.Stream, Ownership.None);
             
             // available size and default start offset
             var availableSize = disk.Geometry.Capacity;
