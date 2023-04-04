@@ -67,7 +67,7 @@
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk, new SectorStream(vhdDisk.Content)));
+            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk, new SectorStream(vhdDisk.Content, true)));
         }
 
         public virtual Stream CreateWriteableStream(string path)
@@ -141,7 +141,7 @@
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
             vhdDisk.Content.Position = 0;
             return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false,
-                vhdDisk, new SectorStream(vhdDisk.Content)));
+                vhdDisk, new SectorStream(vhdDisk.Content, true)));
         }
 
         public virtual long GetVhdSize(long size)

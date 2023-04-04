@@ -24,10 +24,10 @@
             {
                 if (disposing)
                 {
-                    // if (!leaveOpen)
-                    // {
-                    //     this.stream.Dispose();
-                    // }
+                    if (!leaveOpen)
+                    {
+                        this.stream.Dispose();
+                    }
                 }
             }
             finally
