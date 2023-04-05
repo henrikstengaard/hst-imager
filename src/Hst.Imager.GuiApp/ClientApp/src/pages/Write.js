@@ -60,6 +60,7 @@ export default function Write() {
     const [verify, setVerify] = React.useState(false)
     const [force, setForce] = React.useState(false)
     const [retries, setRetries] = React.useState(5)
+    const [writeAll, setWriteAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
@@ -67,7 +68,7 @@ export default function Write() {
     const api = React.useMemo(() => new Api(), []);
 
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? 'entire disk size' : `size ${size} ${unitOption.title}`
+    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
     
     const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -82,7 +83,7 @@ export default function Write() {
         return media === null ? medias[0].path : media.path
     }, [])
 
-    const handleGetMedias = React.useCallback(async () => {
+    const getMedias = React.useCallback(async () => {
         async function getMedias() {
             await api.list()
         }
@@ -105,15 +106,7 @@ export default function Write() {
             console.error('Failed to get info')
         }
     }
-
-    // get medias
-    React.useEffect(() => {
-        if (medias !== null) {
-            return
-        }
-        handleGetMedias()
-    }, [medias, handleGetMedias])
-
+    
     // setup signalr connection and listeners
     React.useEffect(() => {
         if (connection) {
@@ -133,6 +126,7 @@ export default function Write() {
                         setSourceMedia(media)
                         
                         // default set size and unit to largest comparable size
+                        setWriteAll(true)
                         setSize(0)
                         setUnit('bytes')
 
@@ -151,8 +145,8 @@ export default function Write() {
                             title: 'Select size to prefill',
                             value: 'prefill'
                         },{
-                            title: 'Entire disk',
-                            value: 0
+                            title: `Disk (${media.diskSize} bytes)`,
+                            value: media.diskSize
                         }]
 
                         // add partition tables as prefill size options
@@ -177,6 +171,8 @@ export default function Write() {
                             setDestinationMedia(newMedia)
                         }
                     })
+
+                    getMedias()                    
                 })
                 .catch((err) => {
                     console.error(`Error: ${err}`)
@@ -193,8 +189,8 @@ export default function Write() {
             }
             connection.stop();
         };
-    }, [connection, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia, setPrefillSize,
-        setPrefillSizeOptions, setUnit, setSize])
+    }, [connection, setConnection, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia, 
+        setPrefillSize, setPrefillSizeOptions, setUnit, setSize])
     
     const handleWrite = async () => {
         const response = await fetch('api/write', {
@@ -204,7 +200,7 @@ export default function Write() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}' with ${formattedSize}`,
+                title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}`,
                 sourcePath,
                 destinationPath: destinationMedia.path,
                 size: (size * unitOption.size),
@@ -253,7 +249,7 @@ export default function Write() {
                 id="confirm-write"
                 open={confirmOpen}
                 title="Write"
-                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}' with ${formattedSize}?`}
+                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -311,11 +307,26 @@ export default function Write() {
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="write-all"
+                        label="Write entire file"
+                        value={writeAll}
+                        onChange={(checked) => {
+                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
+                            setUnit('bytes')
+                            setWriteAll(checked)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="Prefill size to write"
                         id="prefill-size"
                         emptyLabel="None available"
+                        disabled={writeAll}
                         value={prefillSize || ''}
                         options={prefillSizeOptions || []}
                         onChange={(value) => {
@@ -330,8 +341,9 @@ export default function Write() {
                     <TextField
                         label="Size"
                         id="size"
-                        type="number"
-                        value={size}
+                        type={writeAll ? "text" : "number"}
+                        disabled={writeAll}
+                        value={writeAll ? '' : size}
                         inputProps={{min: 0, style: { textAlign: 'right' }}}
                         onChange={(event) => setSize(event.target.value)}
                         onKeyDown={async (event) => {
@@ -346,6 +358,7 @@ export default function Write() {
                     <SelectField
                         label="Unit"
                         id="unit"
+                        disabled={writeAll}
                         value={unit || ''}
                         options={unitOptions}
                         onChange={(value) => setUnit(value)}

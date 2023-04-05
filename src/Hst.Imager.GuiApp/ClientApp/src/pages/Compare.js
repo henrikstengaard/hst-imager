@@ -65,6 +65,7 @@ export default function Verify() {
     const [sourceType, setSourceType] = React.useState('ImageFile')
     const [force, setForce] = React.useState(false)
     const [retries, setRetries] = React.useState(5)
+    const [compareAll, setCompareAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
@@ -72,7 +73,7 @@ export default function Verify() {
     const api = React.useMemo(() => new Api(), []);
 
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? 'largest comparable size' : `size ${size} ${unitOption.title}`
+    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
     
     const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -87,7 +88,7 @@ export default function Verify() {
         return media === null ? medias[0].path : media.path
     }, [])
 
-    const handleGetMedias = React.useCallback(async () => {
+    const getMedias = React.useCallback(async () => {
         async function getMedias() {
             await api.list()
         }
@@ -129,6 +130,7 @@ export default function Verify() {
                         setSourceMedia(media)
 
                         // default set size and unit to largest comparable size
+                        setCompareAll(true)
                         setSize(0)
                         setUnit('bytes')
 
@@ -147,8 +149,8 @@ export default function Verify() {
                             title: 'Select size to prefill',
                             value: 'prefill'
                         },{
-                            title: `Largest comparable size`,
-                            value: 0
+                            title: `Disk (${media.diskSize} bytes)`,
+                            value: media.diskSize
                         }]
 
                         // add partition tables as prefill size options
@@ -201,7 +203,7 @@ export default function Verify() {
                 if (medias === null) {
                     setSourcePath(null)
                     setSourceMedia(null)
-                    await handleGetMedias()
+                    await getMedias()
                     return
                 }
 
@@ -230,7 +232,7 @@ export default function Verify() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}' with ${formattedSize}`,
+                title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}'${formattedSize}`,
                 sourceType,
                 sourcePath,
                 destinationPath,
@@ -283,7 +285,7 @@ export default function Verify() {
                 id="confirm-compare"
                 open={confirmOpen}
                 title="Compare"
-                description={`Do you want to compare '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and '${destinationPath}' with ${formattedSize}?`}
+                description={`Do you want to compare '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and '${destinationPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -389,11 +391,26 @@ export default function Verify() {
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="compare-all"
+                        label="Largest comparable size"
+                        value={compareAll}
+                        onChange={(checked) => {
+                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
+                            setUnit('bytes')
+                            setCompareAll(checked)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="Prefill size to compare"
                         id="prefill-size"
                         emptyLabel="None available"
+                        disabled={compareAll}
                         value={prefillSize || ''}
                         options={prefillSizeOptions || []}
                         onChange={(value) => {
@@ -408,8 +425,9 @@ export default function Verify() {
                     <TextField
                         label="Size"
                         id="size"
-                        type="number"
-                        value={size}
+                        type={compareAll ? "text" : "number"}
+                        disabled={compareAll}
+                        value={compareAll ? '' : size}
                         inputProps={{min: 0, style: { textAlign: 'right' }}}
                         onChange={(event) => setSize(event.target.value)}
                         onKeyDown={async (event) => {
@@ -424,6 +442,7 @@ export default function Verify() {
                     <SelectField
                         label="Unit"
                         id="unit"
+                        disabled={compareAll}
                         value={unit || ''}
                         options={unitOptions}
                         onChange={(value) => setUnit(value)}

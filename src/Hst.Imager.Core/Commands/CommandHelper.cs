@@ -70,8 +70,18 @@
             return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk, new SectorStream(vhdDisk.Content, true)));
         }
 
-        public virtual Stream CreateWriteableStream(string path)
+        public Stream CreateWriteableStream(string path, bool create)
         {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+            
+            if (create && File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
 
@@ -112,7 +122,7 @@
             {
                 if (!IsVhd(path))
                 {
-                    var imgStream = CreateWriteableStream(path);
+                    var imgStream = CreateWriteableStream(path, true);
                     return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
                         imgStream));
                 }
@@ -122,7 +132,7 @@
                     throw new ArgumentNullException(nameof(size), "Size is required for creating VHD image file");
                 }
 
-                using var vhdStream = CreateWriteableStream(path);
+                using var vhdStream = CreateWriteableStream(path, true);
                 using var newVhdDisk = Disk.InitializeDynamic(vhdStream, Ownership.None, GetVhdSize(size.Value));
             }
 
@@ -133,7 +143,7 @@
 
             if (!IsVhd(path))
             {
-                var imgStream = CreateWriteableStream(path);
+                var imgStream = CreateWriteableStream(path, false);
                 return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
                     imgStream));
             }

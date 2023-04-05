@@ -74,57 +74,77 @@ namespace Hst.Imager.Core.Tests
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
-            var size = 16 * 512;
+            var firstReadSize = 16 * 512;
+            var secondReadSize = firstReadSize * 2;
             var fakeCommandHelper = new TestCommandHelper();
-            fakeCommandHelper.AddTestMedia(sourcePath, size);
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - read command
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(firstReadSize, Unit.Bytes), 0, false, false, 0);
 
             // act - read source img to destination img 1st time
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
+
+            // assert - data is identical
+            var sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(firstReadSize).ToArray();
+            Assert.Equal(firstReadSize, sourceBytes.Length);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            Assert.Equal(sourceBytes, destinationBytes);
+            
+            readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(secondReadSize, Unit.Bytes), 0, false, false, 0);
             
             // act - read source img to destination img 2nd time
             result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
             
-            // assert data is identical
-            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
-            Assert.Equal(size, sourceBytes.Length);
-            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            // assert - data is identical
+            sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(secondReadSize).ToArray();
+            Assert.Equal(secondReadSize, sourceBytes.Length);
+            destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
         [Fact]
-        public async Task WhenReadSourceToVhdDestination2TimesThenReadDataIsIdentical2()
+        public async Task WhenReadSourceToVhdDestination2TimesThenReadDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
-            var size = 16 * 512;
+            var firstReadSize = 16 * 512;
+            var secondReadSize = firstReadSize * 2;
             var fakeCommandHelper = new TestCommandHelper();
-            fakeCommandHelper.AddTestMedia(sourcePath, size);
+            fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - read command
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(firstReadSize, Unit.Bytes), 0, false, false, 0);
 
             // act - read source img to destination img 1st time
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
+
+            // assert - data is identical
+            var sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(firstReadSize).ToArray();
+            Assert.Equal(firstReadSize, sourceBytes.Length);
+            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            Assert.Equal(sourceBytes, destinationBytes);
+            
+            readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(secondReadSize, Unit.Bytes), 0, false, false, 0);
             
             // act - read source img to destination img 2nd time
             result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
             
-            // assert data is identical
-            var sourceBytes = await fakeCommandHelper.ReadMediaData(sourcePath);
-            Assert.Equal(size, sourceBytes.Length);
-            var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
+            // assert - data is identical
+            sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(secondReadSize).ToArray();
+            Assert.Equal(secondReadSize, sourceBytes.Length);
+            destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
             Assert.Equal(sourceBytes, destinationBytes);
         }
         

@@ -59,6 +59,7 @@ export default function Read() {
     const [verify, setVerify] = React.useState(false)
     const [force, setForce] = React.useState(false)
     const [retries, setRetries] = React.useState(5)
+    const [readAll, setReadAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
@@ -66,7 +67,7 @@ export default function Read() {
     const api = React.useMemo(() => new Api(), []);
 
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? 'entire disk size' : `size ${size} ${unitOption.title}`
+    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
     
     const getPath = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -81,7 +82,7 @@ export default function Read() {
         return media === null ? medias[0].path : media.path
     }, [])
 
-    const handleGetMedias = React.useCallback(async () => {
+    const getMedias = React.useCallback(async () => {
         async function getMedias() {
             await api.list()
         }
@@ -105,14 +106,6 @@ export default function Read() {
         }
     }
     
-    // get medias
-    React.useEffect(() => {
-        if (medias !== null) {
-            return
-        }
-        handleGetMedias()
-    }, [medias, handleGetMedias])
-
     // setup signalr connection and listeners
     React.useEffect(() => {
         if (connection) {
@@ -132,6 +125,7 @@ export default function Read() {
                         setSourceMedia(media)
 
                         // default set size and unit to largest comparable size
+                        setReadAll(true)
                         setSize(0)
                         setUnit('bytes')
 
@@ -150,8 +144,8 @@ export default function Read() {
                             title: 'Select size to prefill',
                             value: 'prefill'
                         },{
-                            title: 'Entire disk',
-                            value: 0
+                            title: `Disk (${media.diskSize} bytes)`,
+                            value: media.diskSize
                         }]
 
                         // add partition tables as prefill size options
@@ -177,6 +171,8 @@ export default function Read() {
                             await getInfo(newMedia.path)
                         }
                     })
+
+                    getMedias()
                 })
                 .catch((err) => {
                     console.error(`Error: ${err}`)
@@ -193,8 +189,8 @@ export default function Read() {
             }
             connection.stop();
         };
-    }, [connection, getPath, setMedias, setSourceMedia, sourceMedia, setPrefillSize, setPrefillSizeOptions,
-        setUnit, setSize])
+    }, [connection, setConnection, getMedias, getPath, setMedias, setSourceMedia, sourceMedia, setPrefillSize,
+        setPrefillSizeOptions, setUnit, setSize])
     
     const handleRead = async () => {
         const response = await fetch('api/read', {
@@ -204,7 +200,7 @@ export default function Read() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}' with ${formattedSize}`,
+                title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}'${formattedSize}`,
                 sourcePath: sourceMedia.path,
                 destinationPath,
                 size: (size * unitOption.size),
@@ -256,7 +252,7 @@ export default function Read() {
                 id="confirm-read"
                 open={confirmOpen}
                 title="Read"
-                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}' with ${formattedSize}?`}
+                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -306,11 +302,26 @@ export default function Read() {
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="read-all"
+                        label="Read entire disk"
+                        value={readAll}
+                        onChange={(checked) => {
+                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
+                            setUnit('bytes')
+                            setReadAll(checked)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="Prefill size to read"
                         id="prefill-size"
                         emptyLabel="None available"
+                        disabled={readAll}
                         value={prefillSize || ''}
                         options={prefillSizeOptions || []}
                         onChange={(value) => {
@@ -325,8 +336,9 @@ export default function Read() {
                     <TextField
                         label="Size"
                         id="size"
-                        type="number"
-                        value={size}
+                        type={readAll ? "text" : "number"}
+                        disabled={readAll}
+                        value={readAll ? '' : size}
                         inputProps={{min: 0, style: { textAlign: 'right' }}}
                         onChange={(event) => setSize(event.target.value)}
                         onKeyDown={async (event) => {
@@ -341,6 +353,7 @@ export default function Read() {
                     <SelectField
                         label="Unit"
                         id="unit"
+                        disabled={readAll}
                         value={unit || ''}
                         options={unitOptions}
                         onChange={(value) => setUnit(value)}

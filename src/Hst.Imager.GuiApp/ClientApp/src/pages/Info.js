@@ -41,7 +41,7 @@ export default function Info() {
 
     const api = React.useMemo(() => new Api(), []);
 
-    const handleGetMedias = React.useCallback(async () => {
+    const getMedias = React.useCallback(async () => {
         async function getMedias() {
             await api.list()
         }
@@ -84,8 +84,8 @@ export default function Info() {
             return
         }
         setInitialized(true)
-        handleGetMedias()
-    }, [handleGetMedias, initialized, loadMedias, setInitialized])
+        getMedias()
+    }, [getMedias, initialized, loadMedias, setInitialized])
 
     // setup signalr connection and listeners
     React.useEffect(() => {
@@ -139,7 +139,7 @@ export default function Info() {
     const handleChange = async ({name, value}) => {
         if (name === 'sourceType') {
             if (value === 'PhysicalDisk' && (medias === null || medias.length === 0)) {
-                await handleGetMedias()
+                await getMedias()
             }
             const newPath = value === 'PhysicalDisk' && medias.length > 0 ? medias[0].path : null
             const newMedia = value === 'PhysicalDisk' && newPath !== null ? medias.find(x => x.path === newPath) : null
