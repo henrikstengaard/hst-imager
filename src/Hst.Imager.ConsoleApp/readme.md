@@ -1,6 +1,56 @@
 ﻿# Hst Imager Console
 
-See [Hst Imager](https://github.com/henrikstengaard/hst-imager#hst-imager) for description and features. 
+[<img src="../../assets/hst-imager-console.png" width="75%" alt="Hst Imager Console" />](../../assets/hst-imager-console.png)
+
+See [Hst Imager](../..#hst-imager) main page for introduction and description.
+
+## Features
+
+Hst Imager console comes with following features:
+- List physical drives.
+- Read information from physical drive or image file.
+- Read physical drive to image file.
+- Write image file to physical drive.
+- Convert image file between .img/.hdf and .vhd.
+- Create blank .img/.hdf and .vhd image file.
+- Optimize image file size.
+- File system:
+  - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
+  - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
+  - List files and subdirectories in a file system.
+  - Copy files from source to destination file system.
+  - Extract files from source to destination file system.
+- Amiga Disk File:
+  - Create ADF disk image file.
+- Master Boot Record:
+  - Read Master Boot Record information.
+  - Initialize Master Boot Record.
+  - Add partition to Master Boot Record.
+  - Delete partition from Master Boot Record.
+  - Format partition in Master Boot Record.
+- Rigid Disk Block;
+  - Read Rigid Disk Block information.
+  - Initialize Rigid Disk Block.
+  - Add file system to Rigid Disk Block.
+  - Delete file system from Rigid Disk Block.
+  - Export file system from Rigid Disk Block to file.
+  - Import file systems from Rigid Disk Block or ADF file.
+  - Update file system in Rigid Disk Block.
+  - Add partition to Rigid Disk Block.
+  - Copy partition from one Rigid Disk Block to another.
+  - Delete partition from Rigid Disk Block.
+  - Export partition from Rigid Disk Block to hard file.
+  - Format partition in Rigid Disk Block.
+  - Import partition from hard file to Rigid Disk Block.
+  - Kill and restore partition in Rigid Disk Block.
+  - Update partition in Rigid Disk Block.
+
+## Supported operating systems
+
+Hst Imager supports following operating systems:
+- Windows
+- macOS
+- Linux
 
 ## Installation
 
@@ -185,11 +235,12 @@ Hst Imager supports basic file system commands to list, copy and extract files a
 - Physical drives: Physical drives attached via USB.
 - Image files: IMG or VHD image files.
 - Archives: LHA and ZIP archives.
+- ADF images: Amiga Disk File images.
 - CD images: ISO 9660 cd images.
 
 ### List files and subdirectories in a file system
 
-Example of displaying usage for listing of files and subdirectories in a directory:
+Example of displaying usage for listing of files and subdirectories in a file system:
 ```
 hst.imager fs dir
 ```
@@ -209,9 +260,9 @@ Example of listing of files and directories in 16GB img image file Rigid Disk Bl
 hst.imager fs dir 16gb.img\rdb\dh0\s
 ```
 
-### Copy files or subdirectories from source to destination
+### Copy files and subdirectories from source to destination file system
 
-Example of displaying usage for copying files or subdirectories from source to destination:
+Example of displaying usage for copying files and subdirectories from source to destination file system:
 ```
 hst.imager fs copy
 ```
@@ -229,6 +280,28 @@ hst.imager fs copy 16gb.img\rdb\dh0 dh0 --recursive
 Example of copying files and subdirectories recursively from directory DH0 to 16GB img image file Rigid Disk Block partition DH0:
 ```
 hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive
+```
+
+### Extract files and subdirectories from source to destination file system
+
+Example of displaying usage for extracting files and subdirectories from source to destination file system:
+```
+hst.imager fs extract
+```
+
+Example of extracting files and subdirectories recursively from zip archive myfiles.zip file to test.adf disk image:
+```
+hst.imager fs extract myfiles.zip test.adf
+```
+
+Example of extracting files and subdirectories recursively from lha archive whdload.lha file to 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs extract whdload.lha 16gb.img\rdb\dh0
+```
+
+Example of extracting files and subdirectories recursively from Amiga OS 3.2 iso file to 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs extract amigaos3.2.iso 16gb.img\rdb\dh0
 ```
 
 ## ADF commands

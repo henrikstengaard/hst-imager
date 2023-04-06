@@ -1,6 +1,26 @@
 ﻿# Hst Imager Gui
 
-See [Hst Imager](https://github.com/henrikstengaard/hst-imager#hst-imager) for description and features.
+[<img src="../../assets/hst-imager-gui.png" width="75%" alt="Hst Imager Gui" />](../../assets/hst-imager-gui.png)
+
+See [Hst Imager](../..#hst-imager) main page for introduction and description.
+
+## Features
+
+Hst Imager gui comes with following features:
+- List physical drives.
+- Read information from physical drive or image file.
+- Read physical drive to image file.
+- Write image file to physical drive.
+- Convert image file between .img/.hdf and .vhd.
+- Create blank .img/.hdf and .vhd image file.
+- Optimize image file size.
+
+## Supported operating systems
+
+Hst Imager supports following operating systems:
+- Windows
+- macOS
+- Linux
 
 ## Installation
 

@@ -189,7 +189,7 @@ export default function Write() {
             }
             connection.stop();
         };
-    }, [connection, setConnection, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia, 
+    }, [connection, setConnection, getMedias, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia, 
         setPrefillSize, setPrefillSizeOptions, setUnit, setSize])
     
     const handleWrite = async () => {

@@ -394,7 +394,7 @@ export default function Verify() {
                 <Grid item xs={12}>
                     <CheckboxField
                         id="compare-all"
-                        label="Largest comparable size"
+                        label="Largest comparable size (smallest of source or destination)"
                         value={compareAll}
                         onChange={(checked) => {
                             setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)

@@ -1,6 +1,6 @@
 {
-  "short_name": "HstWbInstaller.Imager.GuiApp",
-  "name": "HstWbInstaller.Imager.GuiApp",
+  "short_name": "Hst.Imager.GuiApp",
+  "name": "Hst.Imager.GuiApp",
   "icons": [
     {
       "src": "favicon.ico",

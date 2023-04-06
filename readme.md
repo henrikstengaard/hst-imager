@@ -1,15 +1,41 @@
 ﻿# Hst Imager
 
+<img src="assets/hst-imager-icon.png" width="120" alt="Hst Imager icon" />
+
 Hst Imager is an imaging tool to read and write disk images to and from physical drives. 
 
 This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
 
 > **Warning**
-> Hst Imager is currently in beta, but very functional. It's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
+> Hst Imager uses raw disk access to read and write data.
+> This has been tested extensively and is very functional.
+> However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
+> **YOU HAVE BEEN WARNED NOW!**
 
 > **Warning**
-> Hst Imager supports raw disk access and filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise it might destroy your actual system disk.
+> Hst Imager filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
 > Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
+
+## Versions and supported operating systems
+
+Hst Imager comes as a gui and a console version.
+
+Hst Imager supports following operating systems:
+- Windows
+- macOS
+- Linux
+
+### Gui
+
+[<img src="assets/hst-imager-gui.png" width="50%" alt="Hst Imager Gui" />](src/Hst.Imager.GuiApp#hst-imager-gui)
+
+See [Hst Imager Gui](src/Hst.Imager.GuiApp#hst-imager-gui) page for installation and usage of Hst Imager Gui.
+
+### Console
+
+[<img src="assets/hst-imager-console.png" width="50%" alt="Hst Imager Console" />](src/Hst.Imager.ConsoleApp#hst-imager-console)
+
+See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for installation and usage of Hst Imager Console.
 
 ## Features
 
@@ -21,6 +47,16 @@ Hst Imager comes with following features:
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
+
+Hst Imager Console version comes with following additional features:
+- File system:
+  - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
+  - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
+  - List files and subdirectories in a file system.
+  - Copy files from source to destination file system.
+  - Extract files from source to destination file system.
+- Amiga Disk File:
+  - Create ADF disk image file.
 - Master Boot Record:
   - Read Master Boot Record information.
   - Initialize Master Boot Record.
@@ -46,19 +82,6 @@ Hst Imager comes with following features:
 
 **Read and write to and from physical drives requires administrative rights on Windows, macOS and Linux.**
 
-## Supported operating systems
-
-Hst Imager supports following operating systems:
-- Windows 
-- macOS
-- Linux
-
-## Installation and usage
-
-For installation and usage of Hst Imager see following pages:
-- [Hst Imager Console](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.ConsoleApp#hst-imager-console).
-- [Hst Imager Gui](https://github.com/henrikstengaard/hst-imager/tree/main/src/Hst.Imager.GuiApp#hst-imager-gui).
-
 ## Img file format
 
 Img file format is a raw dump of hard disks, SSD, CF- and MicroSD-cards and consists of a sector-by-sector binary copy of the source.
@@ -73,7 +96,7 @@ Fixed sized vhd file pre-allocates the requested size when created same way as .
 
 Dynamic sized vhd file only allocates storage to store actual data. Unused or zero filled parts of vhd file are not allocated resulting in smaller image files compared to img image files.
 
-Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager will only require free disk space on the specified destination path matching disk space used on source physical drive. Zero filled (unused) sectors are skipped, when creating a vhd image.
+Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager will only require free disk space on the specified destination path matching disk space used on source physical drive. Zero filled (unused) sectors are skipped, when creating a vhd image resulting in a much smaller image file.
 
 ## Amiga support
 
