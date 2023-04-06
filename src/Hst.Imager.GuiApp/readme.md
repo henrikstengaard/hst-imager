@@ -2,8 +2,6 @@
 
 [<img src="../../assets/hst-imager-gui.png" width="75%" alt="Hst Imager Gui" />](../../assets/hst-imager-gui.png)
 
-See [Hst Imager](../..#hst-imager) main page for introduction and description.
-
 ## Features
 
 Hst Imager gui comes with following features:

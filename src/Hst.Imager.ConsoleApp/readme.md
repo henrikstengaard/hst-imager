@@ -2,8 +2,6 @@
 
 [<img src="../../assets/hst-imager-console.png" width="75%" alt="Hst Imager Console" />](../../assets/hst-imager-console.png)
 
-See [Hst Imager](../..#hst-imager) main page for introduction and description.
-
 ## Features
 
 Hst Imager console comes with following features:
