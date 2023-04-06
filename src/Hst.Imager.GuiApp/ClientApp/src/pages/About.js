@@ -44,11 +44,13 @@ export default function About() {
 
             <Alert severity="warning" sx={{ mt: 1 }}>
                 Hst Imager has been tested extensively regarding it's raw disk access.
-                However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it!
+                However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
+                <span style={{fontWeight: 'bold'}}> YOU HAVE BEEN WARNED NOW!</span>
             </Alert>
 
             <Alert severity="warning" sx={{ mt: 1 }}>
-                Hst Imager filters out fixed disks, so only removeable and USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise it might destroy your actual system disk.
+                Hst Imager filters out fixed disks, so only removeable and USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
+                Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
             </Alert>
             
             <Typography sx={{ mt: 1 }}>

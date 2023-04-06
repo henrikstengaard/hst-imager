@@ -7,8 +7,7 @@ Hst Imager is an imaging tool to read and write disk images to and from physical
 This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
 
 > **Warning**
-> Hst Imager uses raw disk access to read and write data.
-> This has been tested extensively and is very functional.
+> Hst Imager has been tested extensively regarding it's raw disk access.
 > However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
 > **YOU HAVE BEEN WARNED NOW!**
 
