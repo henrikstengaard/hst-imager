@@ -15,14 +15,16 @@ This tool can be used to create new blank images or create images of physical dr
 > Hst Imager filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
 > Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
 
-## Versions and supported operating systems
-
-Hst Imager comes as a gui and a console version.
+## Supported operating systems
 
 Hst Imager supports following operating systems:
 - Windows
 - macOS
 - Linux
+
+## Versions
+
+Hst Imager comes as a gui and a console version.
 
 ### Gui
 
