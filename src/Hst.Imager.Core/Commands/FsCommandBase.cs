@@ -323,20 +323,21 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No device name in path"));
         }
         
-        if (blockSize < 1024 * 512)
-        {
-            blockSize = 1024 * 512;
-        }
+        // if (blockSize < 1024 * 512)
+        // {
+        //     blockSize = 1024 * 512;
+        // }
 
-        var blocksLimit = cacheSize / blockSize;
-
-        if (blocksLimit < 10)
-        {
-            blocksLimit = 10;
-        }
+        // var blocksLimit = cacheSize / blockSize;
+        //
+        // if (blocksLimit < 10)
+        // {
+        //     blocksLimit = 10;
+        // }
         
         // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
         var stream = media.Value.Stream;
+        //var stream = new CachedBlockStream(media.Value.Stream);
 
         var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
@@ -349,7 +350,7 @@ public abstract class FsCommandBase : CommandBase
             fileSystemVolumeResult.Value, recursive));
     }
 
-    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath)
+    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool useCache)
     {
         // resolve media path
         var mediaResult = ResolveMedia(destPath);
@@ -381,7 +382,8 @@ public abstract class FsCommandBase : CommandBase
                 adfStream.Length, Media.MediaType.Raw, false, adfStream);
 
             return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfMedia,
-                mediaResult.Value.FileSystemPath.Split('/'), fileSystemVolumeResult.Value));
+                mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
+                fileSystemVolumeResult.Value));
         }
 
         // disk
@@ -405,7 +407,9 @@ public abstract class FsCommandBase : CommandBase
                 {
                     return new Result<IEntryWriter>(new Error($"No device name in path"));
                 }
-                var fileSystemVolumeResult = await MountRdbFileSystemVolume(media.Value.Stream, parts[1]);
+
+                var stream = useCache ? new CachedBlockStream(media.Value.Stream) : media.Value.Stream;
+                var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
                 if (fileSystemVolumeResult.IsFaulted)
                 {
                     return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
@@ -534,6 +538,7 @@ public abstract class FsCommandBase : CommandBase
     protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Stream stream,
         PartitionBlock partitionBlock)
     {
+        // var cached = new CachedBlockStream(stream, 512);
         switch (partitionBlock.DosTypeFormatted)
         {
             case "DOS\\0":

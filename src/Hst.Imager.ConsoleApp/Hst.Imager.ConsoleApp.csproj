@@ -51,6 +51,18 @@
       <None Update="examples\whdload-to-hdf.sh">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="examples\install-amiga-os-3.1.ps1">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="examples\install-amiga-os-3.1.cmd">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="examples\install-amiga-os-3.1.py">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="examples\install-amiga-os-3.1.sh">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

@@ -96,6 +96,11 @@ public class DirectoryEntryWriter : IEntryWriter
         }
     }
 
+    public Task Flush()
+    {
+        return Task.CompletedTask;
+    }
+
     public IEnumerable<string> GetDebugLogs()
     {
         return new List<string>();

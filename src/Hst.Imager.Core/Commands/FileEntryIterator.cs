@@ -75,4 +75,9 @@ public class FileEntryIterator : IEntryIterator
     }
 
     public bool UsesPattern => false;
+    
+    public Task Flush()
+    {
+        return Task.CompletedTask;
+    }
 }

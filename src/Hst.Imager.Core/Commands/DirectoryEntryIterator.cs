@@ -83,6 +83,11 @@ public class DirectoryEntryIterator : IEntryIterator
     }
 
     public bool UsesPattern => false;
+    
+    public Task Flush()
+    {
+        return Task.CompletedTask;
+    }
 
     private void EnqueueDirectory(string currentPath)
     {

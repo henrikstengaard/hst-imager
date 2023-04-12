@@ -2,8 +2,6 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -44,13 +42,14 @@ public class FsCopyCommand : FsCommandBase
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath);
+        var destEntryWriterResult = await GetEntryWriter(destPath, false);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
         }
 
         // iterate through source entries and write in destination
+        var count = 0;
         var filesCount = 0;
         var dirsCount = 0;
         var totalBytes = 0L;
@@ -91,9 +90,24 @@ public class FsCopyCommand : FsCommandBase
                             break;
                         }
                     }
+                    
+                    count++;
+
+                    if (count <= 200)
+                    {
+                        continue;
+                    }
+                    
+                    count = 0;
+                    await srcEntryIterator.Flush();
+                    await destEntryWriter.Flush();
                 }
+                
+                await srcEntryIterator.Flush();
             }
 
+            await destEntryWriter.Flush();
+            
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
                 OnDebugMessage(log);                
@@ -148,25 +162,5 @@ public class FsCopyCommand : FsCommandBase
         }
 
         return new Result<IEntryIterator>(new Error($"Unsupported path '{path}'"));
-    }
-
-    private static string RemoveDiacritics(string text)
-    {
-        var normalizedString = text.Normalize(NormalizationForm.FormD);
-        var stringBuilder = new StringBuilder(capacity: normalizedString.Length);
-
-        for (int i = 0; i < normalizedString.Length; i++)
-        {
-            char c = normalizedString[i];
-            var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
-            if (unicodeCategory != UnicodeCategory.NonSpacingMark)
-            {
-                stringBuilder.Append(c);
-            }
-        }
-
-        return stringBuilder
-            .ToString()
-            .Normalize(NormalizationForm.FormC);
     }
 }

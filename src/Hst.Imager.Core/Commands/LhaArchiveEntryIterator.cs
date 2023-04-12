@@ -259,4 +259,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
     }
 
     public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+
+    public Task Flush()
+    {
+        return Task.CompletedTask;
+    }
 }

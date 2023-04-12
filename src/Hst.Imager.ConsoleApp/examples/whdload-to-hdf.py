@@ -1,8 +1,8 @@
 ﻿# WHDLoad to HDF
 # --------------
 #
-# Author: Henrik Noerfjand Stengaard
-# Date:   2023-04-04
+# Author: Henrik Nørfjand Stengaard
+# Date:   2023-04-12
 #
 # A python script to convert a WHDLoad .lha file to an amiga harddisk file using Hst Imager console.
 

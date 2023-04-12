@@ -128,10 +128,15 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
     public string[] GetPathComponents(string path)
     {
-        return path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
     public bool UsesPattern => this.patternMatcher != null;
+    
+    public async Task Flush()
+    {
+        await this.fileSystemVolume.Flush();
+    }
 
     private async Task EnqueueDirectory(string[] currentPathComponents)
     {

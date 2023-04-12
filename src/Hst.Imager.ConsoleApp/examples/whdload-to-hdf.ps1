@@ -1,8 +1,8 @@
 # WHDLoad to HDF
 # --------------
 #
-# Author: Henrik Noerfjand Stengaard
-# Date:   2023-04-04
+# Author: Henrik Nørfjand Stengaard
+# Date:   2023-04-12
 #
 # A powershell script to convert a WHDLoad .lha file to an amiga harddisk file using Hst Imager console.
 
@@ -86,7 +86,7 @@ function SelectAmigaOsAdfFile($title, $path)
 # paths
 $currentPath = (Get-Location).Path
 $scriptPath = Split-Path -Parent $PSCommandPath
-$hstImagerPath = Join-Path $currentPath -ChildPath 'hst.imager'
+$hstImagerPath = Join-Path $currentPath -ChildPath 'hst.imager.exe'
 
 # use hst imager development app, if present
 $hstImagerDevPath = Join-Path $currentPath -ChildPath 'Hst.Imager.ConsoleApp.exe'
@@ -198,7 +198,7 @@ foreach ($whdloadLhaEntry in $whdloadLhaEntries)
 # add 10mb extra for amiga os, kickstart and whdload files
 $diskSize += 10 * 1024 * 1024
 
-# show use pfs3 question dialog 
+# show use pfs3 question dialog
 $usePfs3 = QuestionDialog 'Use PFS3 file system' "Do you want to use PFS3 file system?`r`n`r`nIf No then DOS3 file system is used and will be imported`r`nfrom Amiga OS install disk."
 
 # get image path based on selected whdload lha

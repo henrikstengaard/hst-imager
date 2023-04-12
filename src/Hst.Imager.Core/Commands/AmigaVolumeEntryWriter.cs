@@ -18,7 +18,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     private readonly IFileSystemVolume fileSystemVolume;
     private string[] currentPathComponents;
     private bool disposed;
-    private int writeOperations;
 
     public AmigaVolumeEntryWriter(Media media, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
@@ -27,7 +26,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
         this.currentPathComponents = Array.Empty<string>();
-        this.writeOperations = 0;
     }
     
     private void Dispose(bool disposing)
@@ -85,12 +83,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             }
 
             await fileSystemVolume.ChangeDirectory(part);
-            writeOperations++;
         }
 
         currentPathComponents = fullPathComponents;
-        
-        await Flush();
     }
 
     public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
@@ -155,9 +150,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         {
             await fileSystemVolume.SetDate(fileName, entry.Date.Value);
         }
-
-        writeOperations++;
-        await Flush();
     }
 
     public IEnumerable<string> GetDebugLogs()
@@ -170,14 +162,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         return new List<string>();
     }
 
-    private async Task Flush()
+    public async Task Flush()
     {
-        if (this.writeOperations <= 100)
-        {
-            return;
-        }
-
-        this.writeOperations = 0;
         await this.fileSystemVolume.Flush();
     }
 

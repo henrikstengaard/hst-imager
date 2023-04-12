@@ -1,10 +1,8 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -46,13 +44,14 @@ public class FsExtractCommand : FsCommandBase
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath);
+        var destEntryWriterResult = await GetEntryWriter(destPath, false);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
         }
 
         // iterate through source entries and write in destination
+        var count = 0;
         var filesCount = 0;
         var dirsCount = 0;
         var totalBytes = 0L;
@@ -93,9 +92,24 @@ public class FsExtractCommand : FsCommandBase
                             break;
                         }
                     }
+                    
+                    count++;
+
+                    if (count <= 200)
+                    {
+                        continue;
+                    }
+                    
+                    count = 0;
+                    await srcEntryIterator.Flush();
+                    await destEntryWriter.Flush();
                 }
+                
+                await srcEntryIterator.Flush();
             }
 
+            await destEntryWriter.Flush();
+            
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
                 OnDebugMessage(log);                

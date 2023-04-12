@@ -24,7 +24,13 @@ public interface IEntryWriter : IDisposable
     /// <param name="stream">Stream to write entry to</param>
     /// <returns></returns>
     Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream);
-
+    
+    /// <summary>
+    /// Flush changes to stream
+    /// </summary>
+    /// <returns></returns>
+    Task Flush();
+    
     /// <summary>
     /// Get debug logs from entry writer
     /// </summary>
