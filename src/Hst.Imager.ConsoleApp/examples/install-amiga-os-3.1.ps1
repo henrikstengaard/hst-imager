@@ -2,7 +2,7 @@
 # --------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-04-12
+# Date:   2023-04-21
 #
 # A powershell script to install Amiga OS 3.1 adf files to an amiga harddisk file using Hst Imager console and Hst Amiga console.
 

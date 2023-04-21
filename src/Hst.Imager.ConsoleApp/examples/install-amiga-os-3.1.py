@@ -2,7 +2,7 @@
 # --------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-04-12
+# Date:   2023-04-21
 #
 # A python script to install Amiga OS 3.1 adf files to an amiga harddisk file using Hst Imager console and Hst Amiga console.
 
@@ -54,6 +54,11 @@ hst_imager_path = os.path.join(current_path, 'hst.imager')
 hst_amiga_dev = os.path.join(current_path, 'hst.amiga.exe')
 if os.path.isfile(hst_amiga_dev):
     hst_amiga_path = hst_amiga_dev
+
+# use hst imager exe app, if present
+hst_imager_dev = os.path.join(current_path, 'hst.imager.exe')
+if os.path.isfile(hst_imager_dev):
+    hst_imager_path = hst_imager_dev
 
 # use hst imager development app, if present
 hst_imager_dev = os.path.join(current_path, 'Hst.Imager.ConsoleApp.exe')
