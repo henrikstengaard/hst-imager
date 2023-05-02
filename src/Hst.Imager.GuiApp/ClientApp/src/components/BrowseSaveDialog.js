@@ -10,11 +10,11 @@ export default function BrowseSaveDialog(props) {
         id,
         title = 'Save file',
         fileFilters = [{
-            name: 'Image file',
-            extensions: ['img', 'hdf']
+            name: 'Image files',
+            extensions: ['img', 'hdf', 'vhd']
         }, {
-            name: 'Virtual hard disk',
-            extensions: ['vhd']
+            name: 'All files',
+            extensions: ['*']
         }],
         onChange
     } = props

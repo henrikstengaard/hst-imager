@@ -14,17 +14,21 @@
     public class GivenWriteCommand : CommandTestBase
     {
         [Fact]
-        public async Task WhenWriteSourceToImgDestinationThenReadDataIsIdentical()
+        public async Task WhenWriteImgToPhysicalDriveThenWrittenDataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
-            var destinationPath = $"{Guid.NewGuid()}.img";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
             var testCommandHelper = new TestCommandHelper();
+            
+            // arrange - create source img media
             testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            testCommandHelper.AddTestMedia(destinationPath);
-            var cancellationTokenSource = new CancellationTokenSource();
 
-            // act - write source img to destination img
+            // arrange - create destination physical drive
+            testCommandHelper.AddTestMedia(destinationPath);
+
+            // act - write img media to physical drive
+            var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
                     sourcePath, destinationPath, new Size(), 0, false, false);
@@ -46,26 +50,36 @@
         }
 
         [Fact]
-        public async Task WhenWriteSourceToVhdDestinationThenReadDataIsIdentical()
+        public async Task WhenWriteVhdToPhysicalDriveThenWrittenDataIsIdentical()
         {
             // arrange
-            var sourcePath = $"{Guid.NewGuid()}.img";
-            var destinationPath = $"{Guid.NewGuid()}.vhd";
+            var sourcePath = $"{Guid.NewGuid()}.vhd";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            var cancellationTokenSource = new CancellationTokenSource();
+            var data = testCommandHelper.CreateTestData(ImageSize);
+            
+            try
+            {
+                // arrange - create source vhd media
+                await testCommandHelper.WriteMediaData(sourcePath, data);
+                
+                // arrange - create destination physical drive
+                testCommandHelper.AddTestMedia(destinationPath);
 
-            // arrange destination vhd has copy of source img data
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
-
-            // act - write source img to destination vhd
-            var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(sourceBytes.Length, Unit.Bytes), 0, false, false);
-            var result = await writeCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(result.IsSuccess);
-
-            // delete destination path vhd
-            File.Delete(destinationPath);
+                // act - write vhd media to physical drive
+                var cancellationTokenSource = new CancellationTokenSource();
+                var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper,
+                    new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(data.Length, Unit.Bytes), 0, false, false);
+                var result = await writeCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+            }
+            finally
+            {
+                if (File.Exists(sourcePath))
+                {
+                    File.Delete(sourcePath);
+                }
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
@@ -45,7 +46,6 @@
                 }
 
                 var diskExtendsResult = win32RawDisk.DiskExtends();
-
                 if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
                 {
                     physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
@@ -59,22 +59,41 @@
             for (uint i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
             {
                 var physicalDrivePath = $"\\\\.\\PhysicalDrive{i}";
-                using var win32RawDisk = new Win32RawDisk(physicalDrivePath, false, true);
-                if (win32RawDisk.IsInvalid())
+                
+                try
                 {
-                    continue;
+                    using var win32RawDisk = new Win32RawDisk(physicalDrivePath, false, true);
+                    if (win32RawDisk.IsInvalid())
+                    {
+                        continue;
+                    }
+
+                    var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
+                    var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
+                    var name = string.Join(" ",
+                        new[] { storagePropertyQueryResult.VendorId, storagePropertyQueryResult.ProductId }.Where(x =>
+                            !string.IsNullOrWhiteSpace(x)));
+                    var size = win32RawDisk.Size();
+
+                    var driveLetters =
+                        physicalDriveLettersIndex.TryGetValue(i, out var value) ? value : new List<string>();
+                    physicalDrives.Add(new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType, name,
+                        size, driveLetters));
                 }
+                catch (Win32Exception e)
+                {
+                    // ignore physical drive, if win32 not ready error occurs
+                    if (e.NativeErrorCode == 21)
+                    {
+                        continue;
+                    }
 
-                var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
-                var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
-                var name = string.Join(" ",
-                    new[] { storagePropertyQueryResult.VendorId, storagePropertyQueryResult.ProductId }.Where(x =>
-                        !string.IsNullOrWhiteSpace(x)));
-                var size = win32RawDisk.Size();
-
-                physicalDrives.Add(new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType, name,
-                    size,
-                    physicalDriveLettersIndex.ContainsKey(i) ? physicalDriveLettersIndex[i] : new List<string>()));
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    throw new IOException($"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications reading or writing the physical drive and retry!", e);
+                }
             }
 
             if (!all)

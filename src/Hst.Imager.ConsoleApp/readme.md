@@ -59,16 +59,16 @@ Hst Imager is now ready to use.
 
 ## Usage
 
-Hst Imager console app is invoked from the command line using the `hst.imager` command.
+Hst Imager console application is invoked from the command line using the `hst.imager` command.
 
-Invoking `hst.imager` command without any arguments, which will display available commands and options.
+Invoking `hst.imager` command without any arguments, will display available commands and options.
 
 Example of displaying usage:
 ```
 hst.imager
 ```
 
-The command line options for the Hst Imager console app are listed in the following sections.
+The command line options for the Hst Imager console application are listed in the following sections.
 
 ## Administrator privileges
 

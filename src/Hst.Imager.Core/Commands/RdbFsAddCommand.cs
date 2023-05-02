@@ -47,7 +47,7 @@
 
             OnDebugMessage($"Opening '{path}' as writable");
 
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
+            var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);
@@ -66,17 +66,9 @@
             }
 
             OnDebugMessage($"Opening path '{fileSystemPath}' for reading file system");
+
+            await using var fileSystemStream = File.OpenRead(fileSystemPath);
             
-            var fileSystemMediaResult =
-                commandHelper.GetReadableMedia(physicalDrives, fileSystemPath, allowPhysicalDrive: false);
-            if (fileSystemMediaResult.IsFaulted)
-            {
-                return new Result(fileSystemMediaResult.Error);
-            }
-
-            using var fileSystemMedia = fileSystemMediaResult.Value;
-            await using var fileSystemStream = fileSystemMedia.Stream;
-
             OnDebugMessage("Read file system from file");
 
             var maxFileSystemSize = 512 * 1024;

@@ -15,62 +15,74 @@
         [Fact]
         public async Task WhenOptimizeImgWithSizeSetThenSizeIsChanged()
         {
-            // arrange
-            var path = $"{Guid.NewGuid()}.img";
-            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
+            // arrange - path, size and test command helper
+            var imgPath = $"{Guid.NewGuid()}.img";
             var size = 8192;
             var testCommandHelper = new TestCommandHelper();
-            var cancellationTokenSource = new CancellationTokenSource();
 
-            // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+            
+            // arrange - optimize command
+            var cancellationTokenSource = new CancellationTokenSource();
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
                 new Models.Size(size, Unit.Bytes), PartitionTable.None);
+
+            // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert media contains optimized rigid disk block size
-            var optimizedBytes = await testCommandHelper.ReadMediaData(path);
+            var optimizedBytes = await testCommandHelper.ReadMediaData(imgPath);
             Assert.Equal(size, optimizedBytes.Length);
         }
         
         [Fact]
         public async Task WhenOptimizeImgWithoutSizeSetThenResultIsFaulted()
         {
-            // arrange
-            var path = $"{Guid.NewGuid()}.img";
+            // arrange - path and test command helper
+            var imgPath = $"{Guid.NewGuid()}.img";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(path, ImageSize);
-            var cancellationTokenSource = new CancellationTokenSource();
 
-            // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+
+            // arrange - optimize command
+            var cancellationTokenSource = new CancellationTokenSource();
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
                 new Models.Size(0, Unit.Bytes), PartitionTable.None);
+
+            // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
+            
+            // assert - optimize failed (size error)
             Assert.True(result.IsFaulted);
         }
 
         [Fact]
         public async Task WhenOptimizeImgWithRdbTrueSetThenSizeIsChangedToRdbSize()
         {
-            // arrange
-            var path = $"{Guid.NewGuid()}.img";
-            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
+            // arrange - path, size and test command helper
+            var imgPath = $"{Guid.NewGuid()}.img";
             var rigidDiskBlockSize = 8192;
-            var testCommandHelper = new TestCommandHelper(rigidDiskBlock: new RigidDiskBlock
-            {
-                DiskSize = rigidDiskBlockSize
-            });
-            var cancellationTokenSource = new CancellationTokenSource();
+            var testCommandHelper = new TestCommandHelper();
+            
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath, data: await File.ReadAllBytesAsync(
+                Path.Combine("TestData", "rigid-disk-block.img")));
 
-            // optimize
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, path,
+            // arrange - optimize command
+            var cancellationTokenSource = new CancellationTokenSource();
+            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
                 new Models.Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
+
+            // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert media contains optimized rigid disk block size
-            var optimizedBytes = await testCommandHelper.ReadMediaData(path);
-            Assert.Equal(rigidDiskBlockSize, optimizedBytes.Length);
+            var optimizedBytes = testCommandHelper.GetTestMedia(imgPath);
+            Assert.Equal(rigidDiskBlockSize, optimizedBytes.Data.Length);
         }
     }
 }

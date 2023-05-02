@@ -40,7 +40,7 @@ public class RdbUpdateCommand : CommandBase
         
         OnDebugMessage($"Opening '{path}' as writable");
 
-        var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
+        var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);

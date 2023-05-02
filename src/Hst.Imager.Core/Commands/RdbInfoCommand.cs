@@ -31,7 +31,7 @@
 
             OnDebugMessage($"Opening '{path}' as readable");
 
-            var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path, allowPhysicalDrive: true);
+            var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);

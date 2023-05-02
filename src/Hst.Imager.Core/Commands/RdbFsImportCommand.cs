@@ -51,7 +51,7 @@ public class RdbFsImportCommand : CommandBase
         
         OnDebugMessage($"Opening '{path}' as writable");
 
-        var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path, allowPhysicalDrive: true);
+        var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);
@@ -72,7 +72,7 @@ public class RdbFsImportCommand : CommandBase
         OnDebugMessage($"Opening path '{fileSystemPath}' for reading file system");
 
         var fileSystemMediaResult =
-            commandHelper.GetReadableMedia(physicalDrives, fileSystemPath, allowPhysicalDrive: true);
+            commandHelper.GetReadableMedia(physicalDrives, fileSystemPath);
         if (fileSystemMediaResult.IsFaulted)
         {
             return new Result(fileSystemMediaResult.Error);

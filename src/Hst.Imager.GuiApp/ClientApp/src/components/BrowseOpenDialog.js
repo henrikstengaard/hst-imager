@@ -10,11 +10,11 @@ export default function BrowseOpenDialog(props) {
         id,
         title = 'Open file',
         fileFilters = [{
-            name: 'Image file',
-            extensions: ['img', 'hdf']
+            name: 'Image files',
+            extensions: ['img', 'hdf', 'vhd']
         }, {
-            name: 'Virtual hard disk',
-            extensions: ['vhd']
+            name: 'All files',
+            extensions: ['*']
         }],
         onChange
     } = props

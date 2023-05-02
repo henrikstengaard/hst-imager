@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.Core.Apis
 {
     using System;
+    using System.ComponentModel;
     using System.Globalization;
     using System.IO;
     using System.Runtime.InteropServices;
@@ -52,9 +53,7 @@
                 return;
             }
 
-            var error = Marshal.GetLastWin32Error();
-
-            throw new IOException($"Handle for path '{path}' is invalid, win32 error code {error}");
+            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Handle for path '{path}' is invalid");
         }
 
         public bool LockDevice()
@@ -101,7 +100,7 @@
                     ref bytesReturned,
                     IntPtr.Zero))
             {
-                throw new IOException("IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS failed");
+                throw new IOException($"IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for path '{path}' failed");
             }
 
             // The call succeeded, so marshal the data back to a
@@ -133,7 +132,7 @@
                     ref bytesReturned,
                     IntPtr.Zero))
             {
-                throw new IOException("IOCTL_DISK_GET_DRIVE_GEOMETRY_EX failed");
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY_EX for path '{path}'");
             }
             
             // convert out buffer pointer to structure

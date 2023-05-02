@@ -1,8 +1,10 @@
 ﻿namespace Hst.Imager.Core.PhysicalDrives
 {
     using System.Collections.Generic;
+    using System.ComponentModel;
     using System.IO;
     using System.Linq;
+    using System.Runtime.InteropServices;
     using Apis;
 
     public class WindowsPhysicalDrive : GenericPhysicalDrive
@@ -28,7 +30,7 @@
                 if (!win32RawDisk.LockDevice())
                 {
                     win32RawDisk.Dispose();
-                    throw new IOException($"Failed to lock device '{driveLetter}'");
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to lock device '{driveLetter}'");
                 }
 
                 if (!win32RawDisk.DismountDevice())

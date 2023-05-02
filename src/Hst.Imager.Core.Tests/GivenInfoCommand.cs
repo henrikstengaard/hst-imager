@@ -13,22 +13,26 @@
     public class GivenInfoCommand : CommandTestBase
     {
         [Fact]
-        public async Task WhenReadInfoFromSourceImgThenDiskInfoIsReturned()
+        public async Task WhenReadInfoFromImgThenDiskInfoIsReturned()
         {
             // arrange
-            var path = $"{Guid.NewGuid()}.img";
+            var imgPath = $"{Guid.NewGuid()}.img";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(path, ImageSize);
-            var cancellationTokenSource = new CancellationTokenSource();
 
-            // read info from path
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+
+            // arrange - info command
+            var cancellationTokenSource = new CancellationTokenSource();
             var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper, 
-                Enumerable.Empty<IPhysicalDrive>(), path);
+                Enumerable.Empty<IPhysicalDrive>(), imgPath);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) =>
             {
                 mediaInfo = args.MediaInfo;
             };
+
+            // act - read info
             var result = await infoCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -39,23 +43,28 @@
         }
         
         [Fact]
-        public async Task WhenReadInfoFromSourceImgWithRigidDiskBlockThenDiskInfoIsReturned()
+        public async Task WhenReadInfoFromImgWithRigidDiskBlockThenDiskInfoIsReturned()
         {
             // arrange
-            var path = $"{Guid.NewGuid()}.img";
-            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
-
+            var imgPath = $"{Guid.NewGuid()}.img";
             var testCommandHelper = new TestCommandHelper();
-            var cancellationTokenSource = new CancellationTokenSource();
 
-            // read info from path
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath);
+            await testCommandHelper.WriteMediaData(imgPath,
+                await File.ReadAllBytesAsync(Path.Combine("TestData", "rigid-disk-block.img")));
+            
+            // arrange - info command
+            var cancellationTokenSource = new CancellationTokenSource();
             var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                Enumerable.Empty<IPhysicalDrive>(), path);
+                Enumerable.Empty<IPhysicalDrive>(), imgPath);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) =>
             {
                 mediaInfo = args.MediaInfo;
             };
+
+            // act - read info
             var result = await infoCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 

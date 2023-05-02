@@ -9,9 +9,12 @@
 
     public interface ICommandHelper
     {
-        Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool allowPhysicalDrive = true);
+        Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false);
+        Result<Media> GetReadableFileMedia(string path);
+        Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false);
+        Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path);
         Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, long? size = null,
-            bool allowPhysicalDrive = true, bool create = false);
+            bool create = false);
         long GetVhdSize(long size);
         bool IsVhd(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);

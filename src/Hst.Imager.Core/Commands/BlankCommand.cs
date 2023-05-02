@@ -1,7 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
     using System;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
@@ -48,7 +47,7 @@
             
             OnDebugMessage($"Opening '{path}' as writable");
             
-            var mediaResult = commandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path, mediaSize, false, true);
+            var mediaResult = commandHelper.GetWritableFileMedia(path, mediaSize, true);
             if (mediaResult.IsFaulted)
             {
                 return Task.FromResult(new Result(mediaResult.Error));

@@ -40,11 +40,7 @@ public class TestMediaStream : Stream
 
     public override void SetLength(long value)
     {
-        if (this.stream.Length < value)
-        {
-            var data = new byte[value - this.stream.Length];
-            this.stream.Write(data, 0, data.Length);
-        }
+        this.stream.SetLength(value);
     }
 
     public override void Write(byte[] buffer, int offset, int count)
