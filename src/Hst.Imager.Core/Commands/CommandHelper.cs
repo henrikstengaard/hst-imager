@@ -12,6 +12,7 @@
     using Amiga.RigidDiskBlocks;
     using Hst.Core;
     using Models;
+    using OperatingSystem = Hst.Core.OperatingSystem;
 
     public class CommandHelper : ICommandHelper
     {
@@ -46,14 +47,19 @@
 
         public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false)
         {
-            if (!isAdministrator && (Regexs.PhysicalDrivePathRegex.IsMatch(path) ||
-                                     Regexs.DevicePathRegex.IsMatch(path)))
+            if (!isAdministrator)
             {
                 return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
 
+            var physicalDrivePath = GetPhysicalDrivePath(path);
+            if (string.IsNullOrEmpty(physicalDrivePath))
+            {
+                return new Result<Media>(new Error($"Invalid physical drive path '{path}'"));
+            }
+
             var physicalDrive =
-                physicalDrives.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+                physicalDrives.FirstOrDefault(x => x.Path.Equals(physicalDrivePath, StringComparison.OrdinalIgnoreCase));
 
             if (physicalDrive == null)
             {
@@ -61,8 +67,29 @@
             }
 
             physicalDrive.SetWritable(writeable);
-            return new Result<Media>(new Media(path, physicalDrive.Name, physicalDrive.Size, Media.MediaType.Raw,
+            return new Result<Media>(new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size, Media.MediaType.Raw,
                 true, physicalDrive.Open()));
+        }
+
+        private static string GetPhysicalDrivePath(string path)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var diskPathMatch = Regexs.DiskPathRegex.Match(path);
+                if (diskPathMatch.Success)
+                {
+                    return $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[1].Value}";
+                }
+                
+                return Regexs.PhysicalDrivePathRegex.IsMatch(path) ? path : null;
+            }
+
+            if (OperatingSystem.IsMacOs() || OperatingSystem.IsLinux())
+            {
+                return Regexs.DevicePathRegex.IsMatch(path) ? path : null;
+            }
+
+            return null;
         }
 
         public virtual Result<Media> GetReadableFileMedia(string path)

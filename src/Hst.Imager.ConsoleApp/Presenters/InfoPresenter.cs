@@ -23,7 +23,7 @@
                 },
                 Rows = mediaInfos.Select(x => new Row
                 {
-                    Columns = new[] { x.Path, x.Name, x.DiskSize.FormatBytes() }
+                    Columns = new[] { Formatters.FormatDiskPath(x.Path), x.Name, x.DiskSize.FormatBytes() }
                 })
             };
 
@@ -122,7 +122,7 @@
 
             var outputBuilder = new StringBuilder();
             outputBuilder.AppendLine("Partition table overview:");
-            outputBuilder.AppendLine($"- Path: '{partitionTablePart.Path}'");
+            outputBuilder.AppendLine($"- Path: '{Formatters.FormatDiskPath(partitionTablePart.Path)}'");
             outputBuilder.AppendLine(
                 $"- Size: {partitionTablePart.Size.FormatBytes()} ({partitionTablePart.Size} bytes)");
             outputBuilder.AppendLine($"- Partition table: '{partitionTablePart.PartitionTableType}'");
@@ -202,7 +202,7 @@
             var outputBuilder = new StringBuilder();
             outputBuilder.AppendLine($"Disk information read from '{diskInfo.Path}':");
             outputBuilder.AppendLine("Disk overview:");
-            outputBuilder.AppendLine($"- Path: '{diskInfo.Path}'");
+            outputBuilder.AppendLine($"- Path: '{Formatters.FormatDiskPath(diskInfo.Path)}'");
             outputBuilder.AppendLine(
                 $"- Size: {diskInfo.Size.FormatBytes()} ({diskInfo.Size} bytes)");
             outputBuilder.AppendLine(

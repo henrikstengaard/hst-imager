@@ -2,6 +2,19 @@
 
 [<img src="../../assets/hst-imager-gui.png" width="75%" alt="Hst Imager Gui" />](../../assets/hst-imager-gui.png)
 
+Gui version of Hst Imager to read and write disk images to and from physical drives.
+
+This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
+
+> **Warning**
+> Hst Imager has been tested extensively regarding it's raw disk access.
+> However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
+> **YOU HAVE BEEN WARNED NOW!**
+
+> **Warning**
+> Hst Imager filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
+> Raw disk access requires administrator privileges and a popup will be shown for Hst Imager requesting administrator privileges when needed.
+
 ## Features
 
 Hst Imager gui comes with following features:
@@ -19,6 +32,12 @@ Hst Imager supports following operating systems:
 - Windows
 - macOS
 - Linux
+
+## Administrator privileges
+
+Hst Imager starts without administrator privileges allowing it to be used for image files.
+
+When using a command that requires access to physical drives, Hst Imager will shown a popup for "Hst.Imager.GuiApp.exe" requesting administrator privileges to access physical drives.
 
 ## Installation
 

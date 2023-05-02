@@ -2,6 +2,20 @@
 
 [<img src="../../assets/hst-imager-console.png" width="75%" alt="Hst Imager Console" />](../../assets/hst-imager-console.png)
 
+Console version of Hst Imager to read and write disk images to and from physical drives.
+
+This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
+
+> **Warning**
+> Hst Imager has been tested extensively regarding it's raw disk access.
+> However it's highly recommended to make a backup of your physical drive or image file, so your working with a copy in case Hst Imager might corrupt it.
+> **YOU HAVE BEEN WARNED NOW!**
+
+> **Warning**
+> Hst Imager filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
+> Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
+
+
 ## Features
 
 Hst Imager console comes with following features:
@@ -78,6 +92,12 @@ Commands accessing physical drives requires administrator privileges:
 
 Hst Imager will only allow access to removable or USB attached physical drives.
 
+## Source and destination paths 
+
+Source and destination paths in Hst Imager console commands supports physical drive and image file paths.
+
+Only a few imaging commands can only be used image file paths. 
+
 ## Imaging commands
 
 ### List physical drives
@@ -93,12 +113,12 @@ hst.imager list
 
 Displays information about a physical drive or image file by reading Master Boot Record and Rigid Disk Block and displays a table with partition tables present. Physical drives requires administrator privileges.
 
-Example of display information about a Windows physical drive:
+Example of display information about a Windows physical drive disk 2:
 ```
-hst.imager info \\.\PHYSICALDRIVE2
+hst.imager info disk2
 ```
 
-Example of display information about a Linux physical drive:
+Example of display information about a Linux physical drive /dev/sdb:
 ```
 hst.imager info /dev/sdb
 ```
@@ -114,15 +134,15 @@ Reads physical drive to an image file. Requires administrator privileges.
 
 Example of displaying usage for reading a physical drive to an image file:
 ```
-hst.imager read \\.\PHYSICALDRIVE2 4gb.vhd
+hst.imager read disk2 4gb.vhd
 ```
 
 Example of reading Windows physical drive to 4gb.vhd image file:
 ```
-hst.imager read \\.\PHYSICALDRIVE2 4gb.vhd
+hst.imager read disk2 4gb.vhd
 ```
 
-Example of reading Linux physical drive to 4gb.vhd image file:
+Example of reading Linux physical drive /dev/sdb to 4gb.vhd image file:
 ```
 hst.imager read /dev/sdb 4gb.vhd
 ```
@@ -136,12 +156,12 @@ Example of displaying usage for writing an image file to a physical drive:
 hst.imager write
 ```
 
-Example of writing 4GB vhd image file to Windows physical drive:
+Example of writing 4GB vhd image file to Windows physical drive disk 2:
 ```
-hst.imager write 4gb.vhd \\.\PHYSICALDRIVE2
+hst.imager write 4gb.vhd disk2
 ```
 
-Example of writing 4GB vhd image file to Linux physical drive:
+Example of writing 4GB vhd image file to Linux physical drive /dev/sdb:
 ```
 hst.imager write 4gb.vhd /dev/sdb
 ```
@@ -155,12 +175,12 @@ Example of displaying usage for writing an image file to a physical drive:
 hst.imager compare
 ```
 
-Example of comparing 4GB vhd image file and Windows physical drive:
+Example of comparing 4GB vhd image file and Windows physical drive disk 2:
 ```
-hst.imager compare 4gb.vhd \\.\PHYSICALDRIVE2
+hst.imager compare 4gb.vhd disk2
 ```
 
-Example of comparing 4GB vhd image file and Linux physical drive:
+Example of comparing 4GB vhd image file and Linux physical drive /dev/sdb:
 ```
 hst.imager compare 4gb.vhd /dev/sdb
 ```
@@ -507,9 +527,9 @@ Example of displaying usage for importing file systems to Rigid Disk Block:
 hst.imager rdb fs import
 ```
 
-Example of importing file systems from a Windows physical drive to Rigid Disk Block on a 4GB vhd image file:
+Example of importing file systems from a Windows physical drive disk 2 to Rigid Disk Block on a 4GB vhd image file:
 ```
-hst.imager rdb fs import 4gb.vhd \\.\PHYSICALDRIVE2
+hst.imager rdb fs import 4gb.vhd disk2
 ```
 
 Example of importing file systems from a 16GB vhd image file to Rigid Disk Block on a 4GB vhd image file:

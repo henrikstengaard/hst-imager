@@ -34,11 +34,13 @@
         {
             // iterate drive letters and get their relation to physical drives
             var physicalDriveLettersIndex = new Dictionary<uint, List<string>>();
-            var drives = DriveInfo.GetDrives();
+            var drives = DriveInfo.GetDrives().ToList();
             foreach (var drive in drives)
             {
                 var driveName = drive.Name[..2];
                 var drivePath = $"\\\\.\\{driveName}";
+                logger.LogDebug($"Opening win32 raw disk access to drive letter '{driveName}'");
+                
                 using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
                 if (win32RawDisk.IsInvalid())
                 {
@@ -46,6 +48,8 @@
                 }
 
                 var diskExtendsResult = win32RawDisk.DiskExtends();
+                logger.LogDebug($"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
+                
                 if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
                 {
                     physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
@@ -68,6 +72,8 @@
                         continue;
                     }
 
+                    logger.LogDebug($"Opening win32 raw disk access to physical drive '{physicalDrivePath}'");
+                    
                     var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
                     var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
                     var name = string.Join(" ",
@@ -82,9 +88,10 @@
                 }
                 catch (Win32Exception e)
                 {
-                    // ignore physical drive, if win32 not ready error occurs
+                    // skip physical drive, if win32 not ready error occurs
                     if (e.NativeErrorCode == 21)
                     {
+                        logger.LogDebug($"Skip win32 raw disk access to physical drive '{physicalDrivePath}' returning not ready error");
                         continue;
                     }
 
@@ -92,7 +99,7 @@
                 }
                 catch (Exception e)
                 {
-                    throw new IOException($"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications reading or writing the physical drive and retry!", e);
+                    throw new IOException($"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications accessing the physical drive '{physicalDrivePath}' and retry!", e);
                 }
             }
 
