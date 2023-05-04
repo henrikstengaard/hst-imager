@@ -11,7 +11,10 @@ export default function BrowseSaveDialog(props) {
         title = 'Save file',
         fileFilters = [{
             name: 'Image files',
-            extensions: ['img', 'hdf', 'vhd']
+            extensions: ['img', 'hdf']
+        }, {
+            name: 'Virtual hard disk',
+            extensions: ['vhd']
         }, {
             name: 'All files',
             extensions: ['*']
