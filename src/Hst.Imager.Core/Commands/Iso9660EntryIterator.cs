@@ -21,11 +21,12 @@ public class Iso9660EntryIterator : IEntryIterator
     private bool isFirst;
     private Entry currentEntry;
     private bool disposed;
+    private const string PathSeparator = "/";
 
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
-        this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath.Replace("/", "\\");
+        this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath.Replace("\\", PathSeparator);
         this.rootPathComponents = GetPathComponents(this.rootPath);
         this.pathComponentMatcher = null;
         this.cdReader = cdReader;
@@ -81,7 +82,7 @@ public class Iso9660EntryIterator : IEntryIterator
             isFirst = false;
             currentEntry = null;
             ResolvePathComponentMatcher();
-            await EnqueueDirectory(string.Join("\\", this.rootPathComponents));
+            await EnqueueDirectory(string.Join(PathSeparator, this.rootPathComponents));
         }
 
         if (this.nextEntries.Count <= 0)
@@ -134,7 +135,7 @@ public class Iso9660EntryIterator : IEntryIterator
             
             var fullPathComponents = GetPathComponents(entryName);
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
-            var relativePath = string.Join("/", relativePathComponents);
+            var relativePath = string.Join(PathSeparator, relativePathComponents);
             
             var dirEntry = new Iso9660Entry
             {
@@ -158,17 +159,17 @@ public class Iso9660EntryIterator : IEntryIterator
         foreach (var fileName in cdReader.GetFiles(currentPath).OrderByDescending(x => x).ToList())
         {
             var formattedFilename = Iso9660ExtensionRegex.Replace(fileName, string.Empty);
-            var entryName = FormatPath(Path.Combine(currentPath, GetFileName(formattedFilename)));
+            var entryName = FormatPath(GetFileName(formattedFilename));
             
             var fullPathComponents = GetPathComponents(entryName);
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
-            var relativePath = string.Join("/", relativePathComponents);
+            var relativePath = string.Join(PathSeparator, relativePathComponents);
             
             var fileEntry = new Iso9660Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
-                RawPath = relativePath,
+                RawPath = fileName,
                 FullPathComponents = fullPathComponents,
                 RelativePathComponents = relativePathComponents,
                 IsoPath = fileName,
@@ -191,7 +192,7 @@ public class Iso9660EntryIterator : IEntryIterator
 
     private string FormatPath(string path)
     {
-        return path.StartsWith("\\") ? path.Substring(1) : path;
+        return path.StartsWith("\\") || path.StartsWith("/") ? path.Substring(1) : path;
     }
     
     private string GetFileName(string path)
