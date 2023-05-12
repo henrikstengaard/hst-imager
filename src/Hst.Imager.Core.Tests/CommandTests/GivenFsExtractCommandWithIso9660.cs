@@ -188,6 +188,44 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         }
     }
 
+    [Fact]
+    public async Task WhenExtractingAFileFromIsoSubdirectoryToLocalDirectoryThenFileIsExtracted()
+    {
+        var srcPath = $"{Guid.NewGuid()}.iso";
+        var destPath = $"{Guid.NewGuid()}-extract";
+
+        try
+        {
+            CreateIso9660WithDirectoriesAndFiles(srcPath);
+
+            var fakeCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "dir1", "file3.txt"), destPath, true, true);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+
+            // assert - 1 file was extracted
+            Assert.Single(files);
+
+            // assert - file3.txt file was extracted
+            var file3TxtPath = Path.Combine(destPath, "file3.txt");
+            Assert.Equal(file3TxtPath, files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+    
     private void CreateIso9660WithDirectoriesAndFiles(string path)
     {
         var builder = new DiscUtils.Iso9660.CDBuilder

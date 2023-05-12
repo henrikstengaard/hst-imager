@@ -36,7 +36,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
         this.isFirst = true;
         this.lhaEntryIndex = new Dictionary<string, LzHeader>(StringComparer.OrdinalIgnoreCase);
     }
-    
+
     private void ResolvePathComponentMatcher()
     {
         var pathComponents = GetPathComponents(rootPath);
@@ -116,14 +116,15 @@ public class LhaArchiveEntryIterator : IEntryIterator
         var lhaEntries = (await lhaArchive.Entries()).ToList();
 
         var entries = new List<Entry>();
-        
+
         foreach (var lhaEntry in lhaEntries)
         {
             var entryPath = GetEntryName(lhaEntry.Name).Replace("\\", "/");
 
             var entryFullPathComponents = GetPathComponents(entryPath);
             var entryRelativePathComponents = this.rootPathComponents.SequenceEqual(entryFullPathComponents)
-                ? entryFullPathComponents : entryFullPathComponents.Skip(currentPathComponents.Length).ToArray();
+                ? new[] { entryFullPathComponents[^1] }
+                : entryFullPathComponents.Skip(currentPathComponents.Length).ToArray();
 
             var isDir = (lhaEntry.UnixMode & Constants.UNIX_FILE_DIRECTORY) == Constants.UNIX_FILE_DIRECTORY;
             if (isDir)
@@ -141,15 +142,15 @@ public class LhaArchiveEntryIterator : IEntryIterator
                     var dirFullPathComponents = entryFullPathComponents.Take(component).ToArray();
                     var dirRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length)
                         .Take(component).ToArray();
-                    
+
                     // skip, if relative dir path compoents to directory is zero
                     if (dirRelativePathComponents.Length == 0)
                     {
                         continue;
                     }
-                    
+
                     var dirFullPath = string.Join("/", dirFullPathComponents);
-                    
+
                     // skip, if full dir path is empty or already added
                     if (string.IsNullOrEmpty(dirFullPath) || dirs.Contains(dirFullPath))
                     {
@@ -158,7 +159,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
                     dirs.Add(dirFullPath);
                     var dirRelativePath = string.Join("/", dirRelativePathComponents);
-                    
+
                     var dirEntry = new Entry
                     {
                         Name = dirRelativePath,
@@ -173,7 +174,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
                             EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0)),
                         Properties = new Dictionary<string, string>()
                     };
-                    
+
                     if (this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
                     {
                         entries.Add(dirEntry);
@@ -185,7 +186,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
                     continue;
                 }
             }
-            
+
             lhaEntryIndex.Add(entryPath, lhaEntry);
 
             var properties = new Dictionary<string, string>();
@@ -194,9 +195,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
             {
                 properties.Add("Comment", comment);
             }
-            
+
             var entryRelativePath = string.Join("/", entryRelativePathComponents);
-            
+
             var fileEntry = new Entry
             {
                 Name = entryRelativePath,
@@ -211,13 +212,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
                     EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute)),
                 Properties = properties
             };
-            
+
             if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))
             {
                 entries.Add(fileEntry);
             }
         }
-        
+
         foreach (var entry in entries.OrderByDescending(x => x.Name))
         {
             nextEntries.Push(entry);

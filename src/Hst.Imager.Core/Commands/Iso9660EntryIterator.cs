@@ -177,7 +177,7 @@ public class Iso9660EntryIterator : IEntryIterator
             
             var entryFullPathComponents = GetPathComponents(entryName);
             var entryRelativePathComponents = this.rootPathComponents.SequenceEqual(entryFullPathComponents)
-                ? entryFullPathComponents
+                ? new[] { entryFullPathComponents[^1] }
                 : entryFullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var entryRelativePath = string.Join(PathSeparator, entryRelativePathComponents);
             

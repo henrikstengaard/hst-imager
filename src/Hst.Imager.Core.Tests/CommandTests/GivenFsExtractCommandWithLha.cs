@@ -181,5 +181,40 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         {
             DeletePaths(destPath);
         }
-    }    
+    }
+    
+    [Fact]
+    public async Task WhenExtractingAFileFromLhaSubdirectoryToLocalDirectoryThenFileIsExtracted()
+    {
+        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var destPath = $"{Guid.NewGuid()}-extract";
+
+        try
+        {
+            var fakeCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "test1", "test2", "test2.txt"), destPath, true, true);
+        
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            Assert.Single(files);
+        
+            var test2TxtPath = Path.Combine(destPath, "test2.txt");
+            Assert.Equal(test2TxtPath, files.FirstOrDefault(x => x.Equals(test2TxtPath, StringComparison.OrdinalIgnoreCase)));
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
 }
