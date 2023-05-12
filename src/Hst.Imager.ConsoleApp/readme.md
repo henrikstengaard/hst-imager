@@ -249,12 +249,30 @@ hst.imager optimize 16gb.img -rdb
 
 ## File system commands
 
-Hst Imager supports basic file system commands to list, copy and extract files and directories with following containers:
+File system commands support following types as source path:
 - Physical drives: Physical drives attached via USB.
 - Image files: IMG or VHD image files.
 - Archives: LHA and ZIP archives.
 - ADF images: Amiga Disk File images.
 - CD images: ISO 9660 cd images.
+
+Source path can further more point to following paths within it self, e.g.:
+- c:\users\me\documents\games: Local directory 'users\me\documents\games' in drive C:.
+- disk2\rdb\dh0\c: Physical drive, Rigid Disk Block's DH0 partition and file system directory 'c'.
+- disk2\rdb\dh0\c\AddBuffers: Physical drive disk2, Rigid Disk Block's DH0 partition and file 'AddBuffers' in directory 'c'.
+- disk2\rdb\dh0\*.info: Physical drive disk2, Rigid Disk Block's DH0 partition and files matching '*.info'.
+- test.lha\games: LHA archive, subdirectory 'games'.
+- test.lha\games\*.info: LHA archive, subdirectory 'games' and files matching '*.info'.
+
+File system commands support following types as destination path:
+- Physical drives: Physical drives attached via USB.
+- Image files: IMG or VHD image files.
+
+Destination path can only point to a directory, e.g.:
+- c:\users\me\documents\games: Local directory 'users\me\documents\games' in drive C:.
+- disk2\rdb\dh0\c: Physical drive, Rigid Disk Block's DH0 partition and file system directory 'c'.
+
+If destination path directory specified doesn't exist, it will be created.
 
 ### List files and subdirectories in a file system
 

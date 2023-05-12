@@ -122,7 +122,8 @@ public class LhaArchiveEntryIterator : IEntryIterator
             var entryPath = GetEntryName(lhaEntry.Name).Replace("\\", "/");
 
             var entryFullPathComponents = GetPathComponents(entryPath);
-            var entryRelativePathComponents = entryFullPathComponents.Skip(currentPathComponents.Length).ToArray();
+            var entryRelativePathComponents = this.rootPathComponents.SequenceEqual(entryFullPathComponents)
+                ? entryFullPathComponents : entryFullPathComponents.Skip(currentPathComponents.Length).ToArray();
 
             var isDir = (lhaEntry.UnixMode & Constants.UNIX_FILE_DIRECTORY) == Constants.UNIX_FILE_DIRECTORY;
             if (isDir)
