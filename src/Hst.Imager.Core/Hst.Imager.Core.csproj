@@ -5,7 +5,7 @@
       <PackageReference Include="DiscUtils.Containers" Version="0.16.15" />
       <PackageReference Include="DiscUtils.FileSystems" Version="0.16.15" />
       <PackageReference Include="DiscUtils.Vhd" Version="0.16.15" />
-      <PackageReference Include="Hst.Amiga" Version="0.3.152" />
+      <PackageReference Include="Hst.Amiga" Version="0.3.157" />
       <PackageReference Include="hst.compression" Version="0.4.48" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
       <PackageReference Include="plist-cil" Version="2.2.0" />
