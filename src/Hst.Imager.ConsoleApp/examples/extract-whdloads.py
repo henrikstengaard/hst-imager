@@ -2,11 +2,15 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-04-21
+# Date:   2023-05-14
 #
 # A python script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
 # Hst Imager console.
+#
+# Requirements:
+# - WHDload .lha and .zip files.
+# - AmigaOS 3.1.4+ install adf for DOS7, if creating new image with DOS7 dostype.
 
 """Extract WHDLoads"""
 
@@ -15,93 +19,50 @@ import re
 import subprocess
 import codecs
 import unicodedata
-
-# run command
-def run_command(commands):
-    """Run command"""
-
-    # process to run commands
-    process = subprocess.run(commands)
-
-    # return, if return code is not 0
-    if process.returncode:
-        print(stderr)
-        exit(1)
+import shared
 
 # paths
 current_path = os.getcwd()
 script_path = os.path.dirname(__file__)
-hst_imager_path = os.path.join(current_path, 'hst.imager')
-
-# use hst imager exe app, if present
-hst_imager_dev = os.path.join(current_path, 'hst.imager.exe')
-if os.path.isfile(hst_imager_dev):
-    hst_imager_path = hst_imager_dev
-
-# use hst imager development app, if present
-hst_imager_dev = os.path.join(current_path, 'Hst.Imager.ConsoleApp.exe')
-if os.path.isfile(hst_imager_dev):
-    hst_imager_path = hst_imager_dev
-
-# error, if hst imager is not found
-if not os.path.isfile(hst_imager_path):
-    print('Error: Hst Imager file \'{0}\' not found'.format(hst_imager_path))
-    exit(1)
+hst_imager_path = shared.get_hst_imager_path(script_path)
 
 # enter whdloads directory to extract
-whdloads_path = input('Enter WHDLoads directory to extract: ')
+whdloads_path = os.path.abspath(input('Enter WHDLoads directory to extract: '))
 
-# error, if hst imager is not found
+# error, if whdloads path is not found
 if not os.path.isdir(whdloads_path):
     print('Error: WHDLoads directory \'{0}\' doesn\'t exist'.format(whdloads_path))
     exit(1)
 
-
-# show create image confirm input 
-create_image = re.search(r'^(|y|yes)$', input("Do you want to create a new image file? (enter = yes):"), re.I)
+# confirm create image confirm 
+create_image = shared.confirm("Do you want to create a new image file? (enter = yes):")
 
 image_path = None
 if (create_image):
     # set image path
     image_path = os.path.join(current_path, 'whdloads.vhd')
-    print('Creating image file \'{0}\''.format(image_path))
-    
-    # create blank image of calculated disk size
-    run_command([hst_imager_path, 'blank', image_path, '16gb'])
-    
-    # initialize rigid disk block for entire disk
-    run_command([hst_imager_path, 'rdb', 'init', image_path])
-    
-    # add rdb file system pfs3aio with dos type PDS3
-    run_command([hst_imager_path, 'rdb', 'fs', 'add', image_path, 'pfs3aio', 'PDS3'])
-    
-    # add rdb partition of 500mb disk space with device name "DH0" and set bootable
-    run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'PDS3', '500mb', '--bootable'])
-    
-    # add rdb partition of remaining disk space with device name "DH1"
-    run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH1', 'PDS3', '*'])
-    
-    # format rdb partition number 1 with volume name "Workbench"
-    run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '1', 'Workbench'])
-    
-    # format rdb partition number 2 with volume name "Work"
-    run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '2', 'Work'])
+
+    # create 16gb image file
+    shared.create_image(hst_imager_path, image_path, '16gb')
 else:
     # enter whdloads directory to extract
-    image_path = input('Enter image path to extract WHDLoads to: ')
+    image_path = os.path.abspath(input('Enter image path to extract WHDLoads to: '))
     
     # error, if image path is not found
     if not os.path.isfile(image_path):
         print('Error: Image path \'{0}\' doesn\'t exist'.format(image_path))
         exit(1)
 
-# show install minimal whdload input 
-if (re.search(r'^(|y|yes)$', input("Do you want to install minimal WHDLoad? (enter = yes):"), re.I)):
-    # run install minimal whdload script
-    run_command(['python', os.path.join(script_path, 'install-minimal-whdload.py'), '--image-path --no-amiga-os', image_path])
+# confirm install minimal whdload 
+if (create_image and shared.confirm("Do you want to install minimal WHDLoad? (enter = yes):")):
+    # install kickstart 1.3 rom
+    shared.install_kickstart13_rom(hst_imager_path, image_path)
+
+    # install minimal whdload input 
+    shared.install_minimal_whdload(hst_imager_path, image_path)
 
 # enter target directory whdloads are extracted to
-target_dir = input('Target directory WHDLoads are extracted to (enter = DH1\WHDLoads): ')
+target_dir = input('Target directory WHDLoads are extracted to (enter = DH1/WHDLoads): ')
 
 # set default target directory, if not set or empty
 if target_dir is None or target_dir == '':
@@ -124,6 +85,6 @@ for root, directories, filenames in os.walk(whdloads_path):
 
         # extract whdload lha to image file
         
-        run_command([hst_imager_path, 'fs', 'extract', whdload_file, os.path.join(*[image_path, 'rdb'] + target_dir.split('/') + [index_dir]), '--quiet'])
+        shared.run_command([hst_imager_path, 'fs', 'extract', whdload_file, os.path.join(*[image_path, 'rdb'] + target_dir.split('/') + [index_dir]), '--quiet'])
 
 print('Done')

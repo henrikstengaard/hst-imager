@@ -2,9 +2,10 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-04-21
+# Date:   2023-05-14
 #
-# A python script to convert a WHDLoad .lha file to an amiga harddisk file using Hst Imager console.
+# A python script to convert a WHDLoad .lha file to an amiga harddisk file 
+# using Hst Imager console.
 
 """WHDLoad to HDF"""
 
@@ -14,75 +15,25 @@ import subprocess
 import json
 import codecs
 import unicodedata
+import shared
 
-# write text lines for amiga
-def write_text_lines_for_amiga(path, lines):
-    """Write Text Lines for Amiga"""
-    with codecs.open(path, "w", "iso-8859-1") as f:
-        for l in lines:
-            f.write(unicodedata.normalize('NFC', l)+"\n")
-
-# run command
-def run_command(commands):
-    """Run command"""
-
-    # process to run commands
-    process = subprocess.run(commands)
-
-    # return, if return code is not 0
-    if process.returncode:
-        print(stderr)
-        exit(1)
-
-# run command and capture output
-def run_command_capture_output(commands):
-    """Run command"""
-
-    # process to run commands
-    process = subprocess.Popen(commands, bufsize=-1, text=True,
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    # get stdout and stderr from process
-    (stdout, stderr) = process.communicate()
-
-    # return, if return code is not 0
-    if process.returncode:
-        print(stderr)
-        exit(1)
-
-    return stdout
 
 # paths
 current_path = os.getcwd()
 script_path = os.path.dirname(__file__)
-hst_imager_path = os.path.join(current_path, 'hst.imager')
-
-# use hst imager exe app, if present
-hst_imager_dev = os.path.join(current_path, 'hst.imager.exe')
-if os.path.isfile(hst_imager_dev):
-    hst_imager_path = hst_imager_dev
-
-# use hst imager development app, if present
-hst_imager_dev = os.path.join(current_path, 'Hst.Imager.ConsoleApp.exe')
-if os.path.isfile(hst_imager_dev):
-    hst_imager_path = hst_imager_dev
-
-# error, if hst imager is not found
-if not os.path.isfile(hst_imager_path):
-    print('Error: Hst Imager file \'{0}\' not found'.format(hst_imager_path))
-    exit(1)
+hst_imager_path = shared.get_hst_imager_path(script_path)
 
 # enter whdload lha file
-whdload_lha_path = input("Enter path to WHDLoad lha: ")
+whdload_lha_path = os.path.abspath(input("Enter path to WHDLoad lha: "))
 if not os.path.exists(whdload_lha_path):
     print('Error: WHDLoad lha file \'{0}\' not found'.format(whdload_lha_path))
     exit(1)
 
 # get whdload lha entries
-whdload_lha_entries_json = run_command_capture_output([hst_imager_path, 'fs', 'dir', whdload_lha_path, '--recursive', '--format', 'json'])
+whdload_lha_entries_json = shared.run_command_capture_output([hst_imager_path, 'fs', 'dir', whdload_lha_path, '--recursive', '--format', 'json'])
 whdload_lha_entries_dict = json.loads(whdload_lha_entries_json)
 
-# calculate disk size, get whdload slave paths
+# calculate disk size and get whdload slave paths
 disk_size = 0
 whdload_slave_paths = []
 for entry in whdload_lha_entries_dict['entries']:
@@ -99,40 +50,46 @@ if len(whdload_slave_paths) == 0:
     print('No WHDLoad slave files found in \'{0}\''.format(whdload_lha_path))
     exit(1)
 
-# show use pfs3 confirm input 
-use_pfs3 = re.search(r'^(|y|yes)$', input("Use PFS3 file system? (enter = yes):"), re.I)
+# confirm use pfs3 confirm 
+use_pfs3 = shared.confirm("Use PFS3 file system? (enter = yes, no = DOS3):")
 
 # get image path based on selected whdload lha
 image_path = os.path.join(current_path, '{0}.vhd'.format(os.path.splitext(os.path.basename(whdload_lha_path))[0]))
 print('Creating image file \'{0}\''.format(image_path))
 
 # create blank image of calculated disk size
-run_command([hst_imager_path, 'blank', image_path, str(disk_size)])
+shared.run_command([hst_imager_path, 'blank', image_path, str(disk_size)])
 
 # initialize rigid disk block for entire disk
-run_command([hst_imager_path, 'rdb', 'init', image_path])
+shared.run_command([hst_imager_path, 'rdb', 'init', image_path])
 
 if use_pfs3:
     # add rdb file system pfs3aio with dos type PDS3
-    run_command([hst_imager_path, 'rdb', 'fs', 'add', image_path, 'pfs3aio', 'PDS3'])
+    shared.run_command([hst_imager_path, 'rdb', 'fs', 'add', image_path, 'pfs3aio', 'PDS3'])
 
     # add rdb partition of entire disk with device name "DH0" and set bootable
-    run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'PDS3', '*', '--bootable'])
+    shared.run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'PDS3', '*', '--bootable'])
 else:
     # add rdb file system fast file system with dos type DOS3 imported from amiga os install adf
-    run_command([hst_imager_path, 'rdb', 'fs', 'import', image_path, amiga_os_install_adf_path, '--dos-type', 'DOS3', '--name', 'FastFileSystem'])
+    shared.run_command([hst_imager_path, 'rdb', 'fs', 'import', image_path, amigaos_install_adf_path, '--dos-type', 'DOS3', '--name', 'FastFileSystem'])
 
     # add rdb partition of entire disk with device name "DH0" and set bootable
-    run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'DOS3', '*', '--bootable'])
+    shared.run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'DOS3', '*', '--bootable'])
 
 # format rdb partition number 1 with volume name "WHDLoad"
-run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '1', 'WHDLoad'])
+shared.run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '1', 'WHDLoad'])
 
-# run install minimal whdload script
-run_command(['python', os.path.join(script_path, 'install-minimal-whdload.py'), '--image-path', image_path])
+# install minimal amigaos
+shared.install_minimal_amigaos(hst_imager_path, image_path)
+
+# install kickstart 1.3 rom
+shared.install_kickstart13_rom(hst_imager_path, image_path)
+
+# install minimal whdload script
+shared.install_minimal_whdload(hst_imager_path, image_path)
 
 # extract whdload lha to image file
-run_command([hst_imager_path, 'fs', 'extract', whdload_lha_path, os.path.join(image_path, 'rdb', 'dh0', 'WHDLoad'), '--recursive'])
+shared.run_command([hst_imager_path, 'fs', 'extract', whdload_lha_path, os.path.join(image_path, 'rdb', 'dh0', 'WHDLoad'), '--recursive'])
 
 # create startup sequence
 startup_sequence_lines = [
@@ -152,7 +109,7 @@ else:
     options = []
     for whdload_slave_path in whdload_slave_paths:
         options.append(os.path.splitext(os.path.basename(whdload_slave_path))[0])
-    startup_sequence_lines.append('set slave `RequestChoice "Start WHDLoad slave" "Select WHDLoad slave to start?" "{0}"``"'.format('|'.join(options)))
+    startup_sequence_lines.append('set slave `RequestChoice "Start WHDLoad slave" "Select WHDLoad slave to start?" "{0}"`'.format('|'.join(options)))
 
     option = 1
     for whdload_slave_path in whdload_slave_paths:
@@ -160,7 +117,7 @@ else:
             option = 0
 
         startup_sequence_lines.append('IF "$slave" EQ {0} VAL'.format(option))
-        startup_sequence_lines.append('  cd "{0}"'.format(os.path.join(os.path.dirname(whdload_slave_path)).replace('\\', '/')))
+        startup_sequence_lines.append('  cd "{0}"'.format(os.path.join("WHDLoad", os.path.dirname(whdload_slave_path)).replace('\\', '/')))
         startup_sequence_lines.append('  WHDLoad "{0}" PRELOAD'.format(os.path.basename(whdload_slave_path)))
         startup_sequence_lines.append('  SKIP end')
         startup_sequence_lines.append('ENDIF')
@@ -171,9 +128,9 @@ else:
 
 # write startup sequence
 startup_sequence_path = os.path.join(script_path, 'Startup-Sequence')
-write_text_lines_for_amiga(startup_sequence_path, startup_sequence_lines)
+shared.write_text_lines_for_amiga(startup_sequence_path, startup_sequence_lines)
 
 # copy startup sequence to image file
-run_command([hst_imager_path, 'fs', 'copy', startup_sequence_path, os.path.join(image_path, 'rdb', 'dh0', 'S')])
+shared.run_command([hst_imager_path, 'fs', 'copy', startup_sequence_path, os.path.join(image_path, 'rdb', 'dh0', 'S')])
 
 print('Done')
