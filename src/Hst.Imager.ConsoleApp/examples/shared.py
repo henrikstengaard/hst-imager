@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-05-14
+# Date:   2023-06-04
 #
 # A python script with shared functions for example scripts.
 
@@ -122,6 +122,49 @@ def write_text_lines_for_amiga(path, lines):
         for line in lines:
             file.write(unicodedata.normalize('NFC', line)+"\n")
 
+# get amigaos files
+def get_amigaos_files(files, path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+    src_adf_path = path
+    
+    for file in files:
+        dest_adf_exists = False
+    
+        while not dest_adf_exists:
+            dest_adf_filename = file['Filename']
+            dest_adf_path = os.path.join(path, dest_adf_filename)
+            dest_adf_exists = os.path.isfile(dest_adf_path)
+    
+            if dest_adf_exists:
+                break
+    
+            adf_path = os.path.join(src_adf_path, dest_adf_filename)
+            adf_exists = os.path.isfile(adf_path)
+    
+            if adf_exists:
+                # copy detected adf path
+                shutil.copyfile(adf_path, dest_adf_path)
+                os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+    
+                break
+    
+            adf_path = os.path.abspath(input("Enter path to {0} adf file: ".format(file['Name'])))
+            adf_exists = os.path.isfile(adf_path)
+    
+            if not adf_exists:
+                print('Error: {0} adf file \'{1}\' not found'.format(file['Name'], adf_path))
+                continue
+    
+            src_adf_path = os.path.dirname(adf_path)
+    
+            # copy entered adf path
+            shutil.copyfile(adf_path, dest_adf_path)
+            os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+    
+            break
+
 # enter amigaos adf path
 def enter_amigaos_adf_path(title, path):
     adf_file = os.path.abspath(input("{0}: ".format(title)))
@@ -164,19 +207,76 @@ def enter_kickstart_rom_path(title, path):
             dest_rom_key_file)
         os.chmod(dest_rom_key_file, os.stat(dest_rom_key_file).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
 
+def get_amigaos_workbench_adf_path(path, use_amigaos_31):
+    if use_amigaos_31:
+        # amigaos 3.1 workbench adf path
+        amigaos_workbench_adf_path = os.path.join(path, "amiga-os-310-workbench.adf")
+    
+        # return amigaos 3.1 workbench adf path, it it exists
+        if os.path.isfile(amigaos_workbench_adf_path):
+            return amigaos_workbench_adf_path
+
+        # enter amigaos 3.1 install adf path
+        return get_amigaos_adf_path("Enter Amiga OS 3.1 Workbench adf path", amigaos_workbench_adf_path)
+
+    # amigaos 3.2 workbench adf path
+    amigaos_workbench_adf_path = os.path.join(path, "Workbench3.2.adf")
+    if os.path.isfile(amigaos_workbench_adf_path):
+        return amigaos_workbench_adf_path
+
+    # amigaos 3.1.4 workbench adf path
+    amigaos_workbench_adf_path = os.path.join(path, "Workbench3_1_4.adf")
+    if os.path.isfile(amigaos_workbench_adf_path):
+        return amigaos_workbench_adf_path
+
+    amigaos_workbench_adf_path = os.path.join(path, 'amigaos-3.1.4-3.2-workbench.adf')
+    if os.path.isfile(amigaos_workbench_adf_path):
+        return amigaos_workbench_adf_path
+
+    enter_amigaos_adf_path("Enter path to AmigaOS Workbench adf file: ", amigaos_workbench_adf_path)
+    return amigaos_workbench_adf_path
+
+# get amigaos install adf path
+def get_amigaos_install_adf_path(image_path, use_amigaos_31):
+    if use_amigaos_31:
+        # amigaos 3.1 install adf path
+        amigaos_install_adf_path = os.path.join(image_path, 'amiga-os-310-install.adf')
+
+        # return amigaos 3.1 install adf path, it it exists
+        if os.path.isfile(amigaos_install_adf_path):
+            return amigaos_install_adf_path
+        
+        # enter amigaos 3.1 install adf path
+        return get_amigaos_adf_path("Enter Amiga OS 3.1 Install adf path", amigaos_install_adf_path)
+
+    amigaos_install_adf_path = os.path.join(image_path, 'Install3.2.adf')
+    if os.path.isfile(amigaos_install_adf_path):
+        return amigaos_install_adf_path
+
+    amigaos_install_adf_path = os.path.join(image_path, 'Install3_1_4.adf')
+    if os.path.isfile(amigaos_install_adf_path):
+        return amigaos_install_adf_path
+
+    amigaos_install_adf_path = os.path.join(image_path, 'amigaos-3.1.4-3.2-install.adf')
+    if os.path.isfile(amigaos_install_adf_path):
+        return amigaos_install_adf_path
+
+    print('Using DOS7 requires Fast File System from Amiga OS 3.1.4, 3.2+ install adf')
+    return get_amigaos_adf_path("Enter Amiga OS 3.1.4, 3.2+ install adf path", amigaos_install_adf_path)
+
 # create image
 def create_image(hst_imager_path, image_path, size):
     # show use pfs3 confirm dialog 
     use_pfs3 = re.search(r'^(|y|yes)$', input("Use PFS3 file system? (enter = yes, no = DOS7):"), re.I)
 
-    amigaos_install_adf_path = os.path.join(os.path.dirname(image_path), "amigaos-314-32-install.adf")
+    # get amigaos install adf path
+    amigaos_install_adf_path = None
     if not use_pfs3:
-        print('Using DOS7 requires Fast File System from Amiga OS 3.1.4, 3.2+ install adf')
-        get_amigaos_adf_path("Enter Amiga OS 3.1.4, 3.2+ install adf path", amigaos_install_adf_path)
+        amigaos_install_adf_path = get_amigaos_install_adf_path(os.path.dirname(image_path), False)
 
     print('Creating image file \'{0}\' of size {1}'.format(image_path, size))
     
-    # create blank image of calculated disk size
+    # create blank image of size
     run_command([hst_imager_path, 'blank', image_path, size, '--compatible'])
     
     # initialize rigid disk block for entire disk
@@ -237,45 +337,16 @@ def get_iconlib_lha_path(download_path):
     urlretrieve(url, iconlib_lha_path)
     return iconlib_lha_path
 
-def get_amigaos_workbench_adf_path(path):
-    # amigaos 3.1 workbench adf path
-    amigaos_workbench_adf_path = os.path.join(path, "amiga-os-310-workbench.adf")
-
-    # return amigaos 3.1 workbench adf path, it exists and confirm use amigaos 3.1 workbench adf
-    if os.path.isfile(amigaos_workbench_adf_path) and confirm("Use Amiga OS 3.1 Workbench adf (enter = yes)"):
-        return amigaos_workbench_adf_path
-
-    # amigaos workbench adf path
-    amigaos_workbench_adf_path = os.path.join(path, "amiga-os-workbench.adf")
-    if os.path.isfile(amigaos_workbench_adf_path):
-        return amigaos_workbench_adf_path
-
-    enter_amigaos_adf_path("Enter path to AmigaOS Workbench adf file: ", amigaos_workbench_adf_path)
-    return amigaos_workbench_adf_path
-
-def get_amigaos_install_adf_path(path, use_amigaos_31):
-    # amigaos 3.1 install adf path
-    amigaos_install_adf_path = os.path.join(path, "amiga-os-310-install.adf")
-
-    # return amigaos 3.1 install adf path, it exists and use amigaos 3.1
-    if os.path.isfile(amigaos_install_adf_path) and use_amigaos_31:
-        return amigaos_install_adf_path
-
-    # amigaos install adf path
-    amigaos_install_adf_path = os.path.join(path, "amiga-os-install.adf")
-    if os.path.isfile(amigaos_install_adf_path):
-        return amigaos_install_adf_path
-
-    enter_amigaos_adf_path("Enter path to AmigaOS Install adf file: ", amigaos_install_adf_path)
-    return amigaos_install_adf_path
-
 def install_minimal_amigaos(hst_imager_path, image_path):
     image_dir = os.path.dirname(image_path)
-    if image_dir == None or image_dir == '':
+    if image_dir is None or image_dir == '':
         image_dir = '.'
 
-    amigaos_workbench_adf_path = get_amigaos_workbench_adf_path(image_dir)
-    use_amigaos_31 = os.path.basename(amigaos_workbench_adf_path) == "amiga-os-310-workbench.adf"
+    # confirm use amiga os 3.1
+    use_amigaos_31 = confirm("Use Amiga OS 3.1 adf files (enter = yes)")
+    
+    # get amigaos workbench and install adf
+    amigaos_workbench_adf_path = get_amigaos_workbench_adf_path(image_dir, use_amigaos_31)
     amigaos_install_adf_path = get_amigaos_install_adf_path(image_dir, use_amigaos_31)
 
     # extract amiga os install adf to image file

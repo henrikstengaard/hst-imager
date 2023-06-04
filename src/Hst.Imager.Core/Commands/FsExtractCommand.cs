@@ -163,6 +163,13 @@ public class FsExtractCommand : FsCommandBase
         {
             return new Result<IEntryIterator>(lhaEntryIterator.Value);
         }
+        
+        // lzw
+        var lzwEntryIterator = await GetLzwEntryIterator(mediaResult.Value);
+        if (lzwEntryIterator != null && lzwEntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(lzwEntryIterator.Value);
+        }
 
         // adf
         var adfEntryIterator = await GetAdfEntryIterator(mediaResult.Value, recursive);

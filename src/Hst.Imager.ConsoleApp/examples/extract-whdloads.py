@@ -2,7 +2,7 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-05-14
+# Date:   2023-06-04
 #
 # A python script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
@@ -54,7 +54,7 @@ else:
         exit(1)
 
 # confirm install minimal whdload 
-if (create_image and shared.confirm("Do you want to install minimal WHDLoad? (enter = yes):")):
+if (shared.confirm("Do you want to install minimal WHDLoad? (enter = yes):")):
     # install kickstart 1.3 rom
     shared.install_kickstart13_rom(hst_imager_path, image_path)
 

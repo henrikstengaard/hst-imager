@@ -1,18 +1,18 @@
-﻿# Install Amiga OS 3.1
-# --------------------
+﻿# Install AmigaOS 3.1
+# -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-05-14
+# Date:   2023-06-04
 #
-# A python script to install AmigaOS 3.1 adf files to an amiga harddisk file
-# using Hst Imager console and Hst Amiga console.
+# A python script to install AmigaOS 3.1 adf files to an amiga harddisk
+# image file using Hst Imager console and Hst Amiga console.
 #
 # Requirements:
 # - Hst Amiga
 # - AmigaOS 3.1 adf files
 # - AmigaOS 3.1.4+ install adf for DOS7, if creating new image with DOS7 dostype.
 
-"""Install Amiga OS 3.1"""
+"""Install AmigaOS 3.1"""
 
 import os
 import stat
@@ -28,57 +28,50 @@ script_path = os.path.dirname(__file__)
 hst_imager_path = shared.get_hst_imager_path(script_path)
 hst_amiga_path = shared.get_hst_amiga_path(script_path)
 
-# amiga os 3.1 adf paths
-workbench_adf_path = os.path.join(script_path, "amiga-os-310-workbench.adf")
-locale_adf_path = os.path.join(script_path, "amiga-os-310-locale.adf")
-extras_adf_path = os.path.join(script_path, "amiga-os-310-extras.adf")
-fonts_adf_path = os.path.join(script_path, "amiga-os-310-fonts.adf")
-install_adf_path = os.path.join(script_path, "amiga-os-310-install.adf")
-storage_adf_path = os.path.join(script_path, "amiga-os-310-storage.adf")
+# amigaos 3.1 files
+amigaos_31_files = [
+    {
+        'Filename': 'amiga-os-310-install.adf',
+        'Name': 'AmigaOS 3.1 Install Disk'
+    },
+    {
+        'Filename': 'amiga-os-310-workbench.adf',
+        'Name': 'AmigaOS 3.1 Workbench Disk'
+    },
+    {
+        'Filename': 'amiga-os-310-extras.adf',
+        'Name': 'AmigaOS 3.1 Extras Disk'
+    },
+    {
+        'Filename': 'amiga-os-310-locale.adf',
+        'Name': 'AmigaOS 3.1 Locale Disk'
+    },
+    {
+        'Filename': 'amiga-os-310-fonts.adf',
+        'Name': 'AmigaOS 3.1 Fonts Disk'
+    },
+    {
+        'Filename': 'amiga-os-310-storage.adf',
+        'Name': 'AmigaOS 3.1 Storage Disk'
+    }
+]
 
-src_adf_path = script_path
-
-for adf_name in ["Workbench", "Locale", "Extras", "Fonts", "Install", "Storage"]:
-    dest_adf_exists = False
-
-    while not dest_adf_exists:
-        dest_adf_filename = "amiga-os-310-{0}.adf".format(adf_name.lower())
-        dest_adf_path = os.path.join(script_path, dest_adf_filename)
-        dest_adf_exists = os.path.isfile(dest_adf_path)
-
-        if dest_adf_exists:
-            break
-            
-        adf_path = os.path.join(src_adf_path, dest_adf_filename)
-        adf_exists = os.path.isfile(adf_path)
-
-        if adf_exists:
-            # copy detected adf path
-            shutil.copyfile(adf_path, dest_adf_path)
-            os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-
-            break
-
-        adf_path = os.path.abspath(input("Enter path to Amiga OS 3.1 {0} adf file: ".format(adf_name)))
-        adf_exists = os.path.isfile(adf_path)
-
-        if not adf_exists:
-            print('Error: Amiga OS 3.1 {0} adf file \'{1}\' not found'.format(adf_name, adf_path))
-            continue
-
-        src_adf_path = os.path.dirname(adf_path)
-
-        # copy entered adf path
-        shutil.copyfile(adf_path, dest_adf_path)
-        os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-
-        break
+# get amigaos 3.1 files copied to current path
+shared.get_amigaos_files(amigaos_31_files, current_path)
 
 # set image path
-image_path = os.path.join(current_path, "amigaos-310.vhd")
+image_path = os.path.join(current_path, "amigaos-3.1.vhd")
 
 # create 16gb image file
 shared.create_image(hst_imager_path, image_path, '16gb')
+
+# amigaos 3.1 adf paths
+workbench_adf_path = os.path.join(current_path, "amiga-os-310-workbench.adf")
+locale_adf_path = os.path.join(current_path, "amiga-os-310-locale.adf")
+extras_adf_path = os.path.join(current_path, "amiga-os-310-extras.adf")
+fonts_adf_path = os.path.join(current_path, "amiga-os-310-fonts.adf")
+install_adf_path = os.path.join(current_path, "amiga-os-310-install.adf")
+storage_adf_path = os.path.join(current_path, "amiga-os-310-storage.adf")
 
 # extract workbench adf to image file
 shared.run_command([hst_imager_path, 'fs', 'extract', workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0')])

@@ -12,6 +12,8 @@ using FileMode = Amiga.FileSystems.FileMode;
 
 public class AmigaVolumeEntryWriter : IEntryWriter
 {
+    private readonly bool isWindowsOperatingSystem;
+    private readonly IList<string> logs;
     private readonly byte[] buffer;
     private readonly Media media;
     private readonly string[] pathComponents;
@@ -21,13 +23,15 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
     public AmigaVolumeEntryWriter(Media media, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
+        this.isWindowsOperatingSystem = OperatingSystem.IsWindows();
+        this.logs = new List<string>();
         this.buffer = new byte[4096];
         this.media = media;
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
         this.currentPathComponents = Array.Empty<string>();
     }
-    
+
     private void Dispose(bool disposing)
     {
         if (disposed)
@@ -56,12 +60,12 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         for (var i = 0; i < fullPathComponents.Length; i++)
         {
             var part = fullPathComponents[i];
-            
+
             IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
 
             var dirEntry = entries.FirstOrDefault(x =>
                 x.Name.Equals(part, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
-            
+
             if (dirEntry == null)
             {
                 await fileSystemVolume.CreateDirectory(part);
@@ -70,12 +74,12 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             if (i == fullPathComponents.Length - 1)
             {
                 await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
-        
+
                 if (entry.Date.HasValue)
                 {
                     await fileSystemVolume.SetDate(part, entry.Date.Value);
                 }
-        
+
                 if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
                 {
                     await fileSystemVolume.SetComment(part, entry.Properties["Comment"]);
@@ -93,6 +97,16 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
         var fileName = fullPathComponents[^1];
 
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var windowsReservedName = string.IsNullOrEmpty(fileNameWithoutExtension) ? fileName : fileNameWithoutExtension;
+
+        if (isWindowsOperatingSystem && windowsReservedName.StartsWith(".") &&
+            Regexs.WindowsReservedNamesRegex.IsMatch(windowsReservedName.Substring(1)))
+        {
+            fileName = fileName.Substring(1);
+            logs.Add($"{(string.Join("/", entryPathComponents))} -> {fileName}");
+        }
+
         var directoryChanged = currentPathComponents.Length != fullPathComponents.Length - 1;
         if (!directoryChanged)
         {
@@ -102,6 +116,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 {
                     continue;
                 }
+
                 directoryChanged = true;
                 break;
             }
@@ -121,7 +136,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 }
 
                 await fileSystemVolume.ChangeDirectory(fullPathComponents[i]);
-                
             }
 
             currentPathComponents = fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
@@ -136,7 +150,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             {
                 bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                 await entryStream.WriteAsync(buffer, 0, bytesRead);
-            } while (bytesRead != 0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
+            } while
+                (bytesRead !=
+                 0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
         await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
@@ -145,7 +161,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         {
             await fileSystemVolume.SetComment(fileName, entry.Properties["Comment"]);
         }
-        
+
         if (entry.Date.HasValue)
         {
             await fileSystemVolume.SetDate(fileName, entry.Date.Value);
@@ -159,7 +175,13 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
     public IEnumerable<string> GetLogs()
     {
-        return new List<string>();
+        return this.logs.Count == 0
+            ? new List<string>()
+            : new[]
+            {
+                string.Empty,
+                "Following files were renamed to restore filenames previously conflicted with Windows OS reserved filenames:"
+            }.Concat(logs);
     }
 
     public async Task Flush()
@@ -173,7 +195,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         {
             return ProtectionBits.Read | ProtectionBits.Write | ProtectionBits.Executable | ProtectionBits.Delete;
         }
-        
+
         var protectionBits = ProtectionBits.None;
 
         foreach (var attribute in attributes)

@@ -31,13 +31,6 @@ public class DirectoryEntryWriter : IEntryWriter
     private static readonly Regex InvalidFilenameCharsRegex = new Regex("[ \\\\/:\\*\\?\"\\<\\>\\|#]",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-    // windows does not allow following filenames:
-    // CON, PRN, AUX, NUL, COM1, COM2, COM3, COM4, COM5, COM6, COM7, COM8, COM9, LPT1, LPT2, LPT3, LPT4, LPT5, LPT6, LPT7, LPT8, and LPT9
-    // https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file#naming-conventions
-    private static readonly Regex WindowsReservedNamesRegex = new Regex(
-        "^(CON|PRN|AUX|NUL|COM1|COM2|COM3|COM4|COM5|COM6|COM7|COM8|COM9|LPT1|LPT2|LPT3|LPT4|LPT5|LPT6|LPT7|LPT8|LPT9|NUL\\.txt)$",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
     private string GetEntryPath(string[] entryPathComponents)
     {
         return Path.Combine(path,
@@ -66,7 +59,7 @@ public class DirectoryEntryWriter : IEntryWriter
         }
 
         var fileName = Path.GetFileNameWithoutExtension(entryPath);
-        if (isWindowsOperatingSystem && WindowsReservedNamesRegex.IsMatch(fileName))
+        if (isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
         {
             var newFileName = $".{fileName}{Path.GetExtension(entryPath)}";
             entryPath = Path.Combine(dirPath, newFileName);

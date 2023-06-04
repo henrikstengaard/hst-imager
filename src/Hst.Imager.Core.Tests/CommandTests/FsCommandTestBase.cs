@@ -18,12 +18,14 @@ public class FsCommandTestBase : CommandTestBase
     protected static readonly byte[] Pfs3DosType = { 0x50, 0x44, 0x53, 0x3 };
     protected static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
     
-    protected async Task CreatePfs3FormattedDisk(string path, long diskSize = 10 * 1024 * 1024)
+    protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
     {
-        await using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
         
         var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
-        stream.SetLength(rigidDiskBlock.DiskSize);
         
         rigidDiskBlock.AddFileSystem(Pfs3DosType, await System.IO.File.ReadAllBytesAsync(Pfs3AioPath))
             .AddPartition("DH0", bootable: true);

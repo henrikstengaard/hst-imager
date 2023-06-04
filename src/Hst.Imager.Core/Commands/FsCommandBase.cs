@@ -48,6 +48,8 @@ public abstract class FsCommandBase : CommandBase
 
     private static readonly byte[] LhaMagicNumber = new byte[] { 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
 
+    private static readonly byte[] LzwMagicNumber = new byte[] { 0x1f, 0x9d }; // offset 0 (.Z archive)
+    
     private static readonly byte[] ZipMagicNumber1 = new byte[] { 0x50, 0x4B, 0x03, 0x04 }; // "PK" at offset 0 (Zip archive, normal archive)
     private static readonly byte[] ZipMagicNumber2 = new byte[] { 0x50, 0x4B, 0x05, 0x06 }; // "PK" at offset 0 (Zip archive, empty archive)
     private static readonly byte[] ZipMagicNumber3 = new byte[] { 0x50, 0x4B, 0x07, 0x08 }; // "PK" at offset 0 (Zip archive, spanned archive)
@@ -104,6 +106,22 @@ public abstract class FsCommandBase : CommandBase
         var sectorBytes = await stream.ReadBytes(512);
 
         return HasMagicNumber(LhaMagicNumber, sectorBytes, 2);
+    }
+
+    private async Task<bool> IsLzwMedia(MediaResult mediaResult)
+    {
+        // return false, if media file doesnt exist
+        if (!File.Exists(mediaResult.MediaPath))
+        {
+            return false;
+        }
+
+        await using var stream = File.OpenRead(mediaResult.MediaPath);
+
+        stream.Seek(0, SeekOrigin.Begin);
+        var sectorBytes = await stream.ReadBytes(512);
+
+        return HasMagicNumber(LzwMagicNumber, sectorBytes, 0);
     }
 
     private async Task<bool> IsIso9660Media(MediaResult mediaResult)
@@ -254,6 +272,16 @@ public abstract class FsCommandBase : CommandBase
             recursive));
     }
 
+    protected async Task<Result<IEntryIterator>> GetLzwEntryIterator(MediaResult mediaResult)
+    {
+        if (!await IsLzwMedia(mediaResult))
+        {
+            return null;
+        }
+
+        return new Result<IEntryIterator>(new LzwArchiveEntryIterator(mediaResult.MediaPath));
+    }
+    
     protected async Task<Result<IEntryIterator>> GetAdfEntryIterator(MediaResult mediaResult, bool recursive)
     {
         if (!await IsAdfMedia(mediaResult))

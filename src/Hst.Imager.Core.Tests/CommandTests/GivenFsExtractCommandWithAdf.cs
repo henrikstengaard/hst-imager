@@ -65,7 +65,8 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
     }
 
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromAdfSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromAdfSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -106,9 +107,10 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromAdfWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromAdfWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -153,7 +155,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
     public async Task WhenExtractingAFileFromAdfToLocalDirectoryThenFileIsExtracted()
     {
@@ -190,7 +192,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
     public async Task WhenExtractingAFileFromAdfSubdirectoryToLocalDirectoryThenFileIsExtracted()
     {
@@ -222,11 +224,12 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
             // assert - file3.txt file was extracted
             var file3TxtPath = Path.Combine(destPath, "file3.txt");
-            Assert.Equal(file3TxtPath, files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(file3TxtPath,
+                files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
             DeletePaths(srcPath, destPath);
         }
-    }    
+    }
 }
