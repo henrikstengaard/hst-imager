@@ -2,7 +2,7 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-04-21
+# Date:   2023-06-04
 #
 # A powershell script to convert a WHDLoad .lha file to an amiga harddisk file using Hst Imager console.
 
@@ -11,59 +11,15 @@ trap {
 	exit 1
 }
 
-# add winform assembly for dialogs
-Add-Type -AssemblyName System.Windows.Forms
-
-# show question dialog using winforms
-function QuestionDialog($title, $message, $icon = 'Question')
-{
-	$result = [System.Windows.Forms.MessageBox]::Show($message, $title, [System.Windows.Forms.MessageBoxButtons]::YesNo, $icon)
-
-	if($result -eq "YES")
-	{
-		return $true
-	}
-
-	return $false
-}
-
-# show open file dialog using winforms
-function OpenFileDialog($title, $directory, $filter)
-{
-    $openFileDialog = New-Object System.Windows.Forms.OpenFileDialog
-    $openFileDialog.initialDirectory = $directory
-    $openFileDialog.Filter = $filter
-    $openFileDialog.FilterIndex = 0
-    $openFileDialog.Multiselect = $false
-    $openFileDialog.Title = $title
-    $result = $openFileDialog.ShowDialog()
-
-    if($result -ne "OK")
-    {
-        return $null
-    }
-
-    return $openFileDialog.FileName
-}
-
 # paths
 $currentPath = (Get-Location).Path
 $scriptPath = Split-Path -Parent $PSCommandPath
-$hstImagerPath = Join-Path $currentPath -ChildPath 'hst.imager.exe'
 
-# use hst imager development app, if present
-$hstImagerDevPath = Join-Path $currentPath -ChildPath 'Hst.Imager.ConsoleApp.exe'
-if (Test-Path $hstImagerDevPath)
-{
-	$hstImagerPath = $hstImagerDevPath
-}
+# include shared script
+. (Join-Path $scriptPath -ChildPath 'shared.ps1')
 
-# error, if hst imager is not found
-if (!(Test-Path $hstImagerPath))
-{
-	Write-Error ("Hst Imager file '{0}' not found" -f $hstImagerPath)
-	exit 1
-}
+# get hst imager and hst amiga paths
+$hstImagerPath = GetHstImagerPath $scriptPath
 
 # show select whdload lha file open file dialog
 $whdloadLhaPath = OpenFileDialog "Select WHDLoad lha file" $romPath "Lha Files|*.lha|All Files|*.*"
@@ -97,6 +53,9 @@ foreach ($whdloadLhaEntry in $whdloadLhaEntries)
 # add 10mb extra for amiga os, kickstart and whdload files
 $diskSize += 10 * 1024 * 1024
 
+# show use amiga os 3.1 question dialog
+$useAmigaOs31 = QuestionDialog 'Use AmigaOS 3.1' 'Do you want to use AmigaOS 3.1?'
+
 # show use pfs3 question dialog
 $usePfs3 = QuestionDialog 'Use PFS3 file system' "Do you want to use PFS3 file system?`r`n`r`nIf No then DOS3 file system is used and will be imported`r`nfrom Amiga OS install disk."
 
@@ -120,6 +79,9 @@ if ($usePfs3)
 }
 else
 {
+	# get amigaos install adf path
+	$amigaOsInstallAdfPath = GetAmigaOsInstallAdfPath $currentPath $useAmigaOs31
+	
 	# add rdb file system fast file system with dos type DOS3 imported from amiga os install adf
 	& $hstImagerPath rdb fs import "$imagePath" $amigaOsInstallAdfPath --dos-type DOS3 --name FastFileSystem
 
@@ -130,8 +92,14 @@ else
 # format rdb partition number 1 with volume name "WHDLoad"
 & $hstImagerPath rdb part format "$imagePath" 1 WHDLoad
 
-# run install minimal whdload script
-& (Join-Path $scriptPath -ChildPath 'install-minimal-whdload.ps1') -imagePath $imagePath
+# install minimal amigaos
+InstallMinimalAmigaOs $hstImagerPath $imagePath $useAmigaOs31
+
+# install kickstart 1.3 rom
+InstallKickstart13Rom $hstImagerPath $imagePath
+
+# install minimal whdload input 
+InstallMinimalWhdload $hstImagerPath $imagePath
 
 # extract whdload lha to image file
 & $hstImagerPath fs extract "$whdloadLhaPath" "$imagePath\rdb\dh0\WHDLoad" --recursive

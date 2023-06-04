@@ -66,12 +66,6 @@
       <None Update="examples\extract-whdloads.ps1">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
-      <None Update="examples\install-minimal-whdload.ps1">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
-      <None Update="examples\install-minimal-whdload.py">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </None>
       <None Update="examples\extract-whdloads.py">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

@@ -201,12 +201,6 @@ function GetHstAmigaPath($path)
     return $hstAmigaPath
 }
 
-#def get_amigaos_adf_path(title, path):
-#if os.path.isfile(path):
-#return
-#enter_amigaos_adf_path(title, path)
-#
-
 function GetAmigaOsAdfPath($title, $adfPath)
 {
     if (Test-Path $adfPath)
@@ -232,13 +226,49 @@ function GetAmigaOsAdfPath($title, $adfPath)
     return $adfPath
 }
 
+# get amigaos workbench adf path
+function GetAmigaOsWorkbenchAdfPath($path, $useAmigaOs31)
+{
+    if ($useAmigaOs31)
+    {
+        # amigaos 3.1 workbench adf path
+        $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "amiga-os-310-workbench.adf"
+        if (Test-Path $amigaOsWorkbenchAdfPath)
+        {
+            return $amigaOsWorkbenchAdfPath
+        }
+
+        return GetAmigaOsAdfPath "Select Amiga OS 3.1 Workbench adf" $amigaOsWorkbenchAdfPath
+    }
+
+    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "Workbench3.2.adf"
+    if (Test-Path $amigaOsWorkbenchAdfPath)
+    {
+        return $amigaOsWorkbenchAdfPath
+    }
+
+    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "Workbench3_1_4.adf"
+    if (Test-Path $amigaOsWorkbenchAdfPath)
+    {
+        return $amigaOsWorkbenchAdfPath
+    }
+
+    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "amigaos-3.1.4-3.2-workbench.adf"
+    if (Test-Path $amigaOsWorkbenchAdfPath)
+    {
+        return $amigaOsWorkbenchAdfPath
+    }
+
+    return GetAmigaOsAdfPath "Select Amiga OS 3.1.4, 3.2+ Workbench adf" $amigaOsWorkbenchAdfPath
+}
+
 # get amigaos install adf path
-function GetAmigaOsInstallAdfPath($imagePath, $useAmigaOs31)
+function GetAmigaOsInstallAdfPath($path, $useAmigaOs31)
 {
     if ($useAmigaOs31)
     {
         # amigaos 3.1 install adf path
-        $amigaOsInstallAdfPath = Join-Path $imagePath -ChildPath "amiga-os-310-install.adf"
+        $amigaOsInstallAdfPath = Join-Path $path -ChildPath "amiga-os-310-install.adf"
         if (Test-Path $amigaOsInstallAdfPath)
         {
             return $amigaOsInstallAdfPath
@@ -247,19 +277,19 @@ function GetAmigaOsInstallAdfPath($imagePath, $useAmigaOs31)
         return GetAmigaOsAdfPath "Select Amiga OS 3.1 Install adf" $amigaOsInstallAdfPath
     }
     
-    $amigaOsInstallAdfPath = Join-Path $imagePath -ChildPath "Install3.2.adf"
+    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "Install3.2.adf"
     if (Test-Path $amigaOsInstallAdfPath)
     {
         return $amigaOsInstallAdfPath
     }
 
-    $amigaOsInstallAdfPath = Join-Path $imagePath -ChildPath "Install3_1_4.adf"
+    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "Install3_1_4.adf"
     if (Test-Path $amigaOsInstallAdfPath)
     {
         return $amigaOsInstallAdfPath
     }
 
-    $amigaOsInstallAdfPath = Join-Path $imagePath -ChildPath "amigaos-3.1.4-3.2-install.adf"
+    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "amigaos-3.1.4-3.2-install.adf"
     if (Test-Path $amigaOsInstallAdfPath)
     {
         return $amigaOsInstallAdfPath
@@ -316,6 +346,21 @@ function CreateImage($hstImagerPath, $imagePath, $size)
 
     # format rdb partition number 2 with volume name "Work"
     & $hstImagerPath rdb part format "$imagePath" 2 Work
+}
+
+function InstallMinimalAmigaOs($hstImagerPath, $imagePath, $useAmigaOs31)
+{
+    $imageDir = Split-Path $imagePath -Parent
+
+    # get amigaos workbench and install adf
+    $amigaOsWorkbenchAdfPath = GetAmigaOsWorkbenchAdfPath $imageDir $useAmigaOs31
+    $amigaOsInstallAdfPath = GetAmigaOsInstallAdfPath $imageDir $useAmigaOs31
+
+    # extract amiga os install adf to image file
+    & $hstImagerPath fs extract $amigaOsInstallAdfPath "$imagePath\rdb\dh0"
+
+    # extract amiga os workbench adf to image file
+    & $hstImagerPath fs extract $amigaOsWorkbenchAdfPath "$imagePath\rdb\dh0"
 }
 
 function InstallKickstart13Rom($hstImagerPath, $imagePath)

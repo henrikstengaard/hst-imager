@@ -35,7 +35,7 @@ if not os.path.isdir(whdloads_path):
     exit(1)
 
 # confirm create image confirm 
-create_image = shared.confirm("Do you want to create a new image file? (enter = yes):")
+create_image = shared.confirm("Do you want to create a new image file? (enter = yes): ")
 
 image_path = None
 if (create_image):
@@ -54,7 +54,7 @@ else:
         exit(1)
 
 # confirm install minimal whdload 
-if (shared.confirm("Do you want to install minimal WHDLoad? (enter = yes):")):
+if (shared.confirm("Do you want to install minimal WHDLoad? (enter = yes): ")):
     # install kickstart 1.3 rom
     shared.install_kickstart13_rom(hst_imager_path, image_path)
 

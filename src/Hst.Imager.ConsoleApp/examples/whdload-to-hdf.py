@@ -2,7 +2,7 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-05-14
+# Date:   2023-06-04
 #
 # A python script to convert a WHDLoad .lha file to an amiga harddisk file 
 # using Hst Imager console.
@@ -50,8 +50,11 @@ if len(whdload_slave_paths) == 0:
     print('No WHDLoad slave files found in \'{0}\''.format(whdload_lha_path))
     exit(1)
 
+# confirm use amiga os 3.1
+use_amigaos_31 = shared.confirm("Use Amiga OS 3.1 adf files (enter = yes, no = 3.1.4/3.2/other): ")
+
 # confirm use pfs3 confirm 
-use_pfs3 = shared.confirm("Use PFS3 file system? (enter = yes, no = DOS3):")
+use_pfs3 = shared.confirm("Use PFS3 file system? (enter = yes, no = DOS3): ")
 
 # get image path based on selected whdload lha
 image_path = os.path.join(current_path, '{0}.vhd'.format(os.path.splitext(os.path.basename(whdload_lha_path))[0]))
@@ -70,6 +73,9 @@ if use_pfs3:
     # add rdb partition of entire disk with device name "DH0" and set bootable
     shared.run_command([hst_imager_path, 'rdb', 'part', 'add', image_path, 'DH0', 'PDS3', '*', '--bootable'])
 else:
+    # get amigaos install adf path
+    amigaos_install_adf_path = shared.get_amigaos_install_adf_path(current_path, use_amigaos_31)
+    
     # add rdb file system fast file system with dos type DOS3 imported from amiga os install adf
     shared.run_command([hst_imager_path, 'rdb', 'fs', 'import', image_path, amigaos_install_adf_path, '--dos-type', 'DOS3', '--name', 'FastFileSystem'])
 
@@ -80,7 +86,7 @@ else:
 shared.run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '1', 'WHDLoad'])
 
 # install minimal amigaos
-shared.install_minimal_amigaos(hst_imager_path, image_path)
+shared.install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31)
 
 # install kickstart 1.3 rom
 shared.install_kickstart13_rom(hst_imager_path, image_path)

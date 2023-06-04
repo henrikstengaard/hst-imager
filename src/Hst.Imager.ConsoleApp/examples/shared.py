@@ -337,14 +337,11 @@ def get_iconlib_lha_path(download_path):
     urlretrieve(url, iconlib_lha_path)
     return iconlib_lha_path
 
-def install_minimal_amigaos(hst_imager_path, image_path):
+def install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31):
     image_dir = os.path.dirname(image_path)
     if image_dir is None or image_dir == '':
         image_dir = '.'
 
-    # confirm use amiga os 3.1
-    use_amigaos_31 = confirm("Use Amiga OS 3.1 adf files (enter = yes)")
-    
     # get amigaos workbench and install adf
     amigaos_workbench_adf_path = get_amigaos_workbench_adf_path(image_dir, use_amigaos_31)
     amigaos_install_adf_path = get_amigaos_install_adf_path(image_dir, use_amigaos_31)
