@@ -14,6 +14,7 @@ using Compression.Lha;
 using DiscUtils.Iso9660;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
@@ -453,6 +454,7 @@ public abstract class FsCommandBase : CommandBase
 
     protected Result<MediaResult> ResolveMedia(string path)
     {
+        path = PathHelper.GetFullPath(path);
         string mediaPath;
         var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
 

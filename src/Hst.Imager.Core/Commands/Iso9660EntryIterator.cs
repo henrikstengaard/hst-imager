@@ -21,12 +21,14 @@ public class Iso9660EntryIterator : IEntryIterator
     private bool isFirst;
     private Entry currentEntry;
     private bool disposed;
-    private const string PathSeparator = "/";
+
+    // backslash is required by diskutils iso9660 to list directories and files in a given iso file
+    private const string PathSeparator = "\\";
 
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
-        this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath.Replace("\\", PathSeparator);
+        this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath;
         this.rootPathComponents = GetPathComponents(this.rootPath);
         this.pathComponentMatcher = null;
         this.cdReader = cdReader;
@@ -145,9 +147,7 @@ public class Iso9660EntryIterator : IEntryIterator
     {
         foreach (var dirName in cdReader.GetDirectories(currentPath).OrderByDescending(x => x).ToList())
         {
-            var entryName = FormatPath(Path.Combine(currentPath, Path.GetFileName(dirName)));
-            
-            var fullPathComponents = GetPathComponents(entryName);
+            var fullPathComponents = GetPathComponents(dirName);
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var relativePath = string.Join(PathSeparator, relativePathComponents);
             
