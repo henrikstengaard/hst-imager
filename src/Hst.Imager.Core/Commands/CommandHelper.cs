@@ -10,6 +10,7 @@
     using DiscUtils.Streams;
     using DiscUtils.Vhd;
     using Amiga.RigidDiskBlocks;
+    using Helpers;
     using Hst.Core;
     using Models;
     using OperatingSystem = Hst.Core.OperatingSystem;
@@ -37,6 +38,7 @@
                 throw new ArgumentNullException(nameof(path));
             }
             
+            path = PathHelper.GetFullPath(path);
             if (create && File.Exists(path))
             {
                 File.Delete(path);
@@ -52,6 +54,7 @@
                 return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
 
+            path = PathHelper.GetFullPath(path);
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
@@ -94,7 +97,13 @@
 
         public virtual Result<Media> GetReadableFileMedia(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return new Result<Media>(new Error("Path not defined"));
+            }
+            
+            path = PathHelper.GetFullPath(path);
+            if (!File.Exists(path))
             {
                 return new Result<Media>(new PathNotFoundError($"Path '{path ?? "null"}' not found", nameof(path)));
             }
@@ -119,6 +128,7 @@
                 throw new ArgumentNullException(path);
             }
 
+            path = PathHelper.GetFullPath(path);
             var destDir = Path.GetDirectoryName(path);
 
             if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
