@@ -27,8 +27,8 @@ public class DirectoryEntryWriter : IEntryWriter
     {
     }
 
-    // NUL, \, /, :, *, ?, ", <, >, |, #
-    private static readonly Regex InvalidFilenameCharsRegex = new Regex("[ \\\\/:\\*\\?\"\\<\\>\\|#]",
+    // \, /, :, *, ?, ", <, >, |, #
+    private static readonly Regex InvalidFilenameCharsRegex = new Regex("[\\\\/:\\*\\?\"\\<\\>\\|#]",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     private string GetEntryPath(string[] entryPathComponents)
