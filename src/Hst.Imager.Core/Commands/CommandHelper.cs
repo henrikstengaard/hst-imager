@@ -37,17 +37,18 @@
             {
                 throw new ArgumentNullException(nameof(path));
             }
-            
+
             path = PathHelper.GetFullPath(path);
             if (create && File.Exists(path))
             {
                 File.Delete(path);
             }
-            
+
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
 
-        public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false)
+        public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+            bool writeable = false)
         {
             if (!isAdministrator)
             {
@@ -62,7 +63,8 @@
             }
 
             var physicalDrive =
-                physicalDrives.FirstOrDefault(x => x.Path.Equals(physicalDrivePath, StringComparison.OrdinalIgnoreCase));
+                physicalDrives.FirstOrDefault(x =>
+                    x.Path.Equals(physicalDrivePath, StringComparison.OrdinalIgnoreCase));
 
             if (physicalDrive == null)
             {
@@ -70,7 +72,8 @@
             }
 
             physicalDrive.SetWritable(writeable);
-            return new Result<Media>(new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size, Media.MediaType.Raw,
+            return new Result<Media>(new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
+                Media.MediaType.Raw,
                 true, physicalDrive.Open()));
         }
 
@@ -83,7 +86,7 @@
                 {
                     return $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[1].Value}";
                 }
-                
+
                 return Regexs.PhysicalDrivePathRegex.IsMatch(path) ? path : null;
             }
 
@@ -101,7 +104,7 @@
             {
                 return new Result<Media>(new Error("Path not defined"));
             }
-            
+
             path = PathHelper.GetFullPath(path);
             if (!File.Exists(path))
             {
@@ -118,7 +121,8 @@
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk, new SectorStream(vhdDisk.Content, true)));
+            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
+                new SectorStream(vhdDisk.Content, true)));
         }
 
         public virtual Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
@@ -177,7 +181,8 @@
         public virtual Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             long? size = null, bool create = false)
         {
-            return GetPhysicalDriveMedia(physicalDrives, path, true).Then(() => GetWritableFileMedia(path, size, create));
+            return GetPhysicalDriveMedia(physicalDrives, path, true)
+                .Then(() => GetWritableFileMedia(path, size, create));
         }
 
         public virtual long GetVhdSize(long size)
@@ -201,7 +206,7 @@
             var partitionTables = new List<PartitionTableInfo>();
 
             var disk = new DiscUtils.Raw.Disk(stream, Ownership.None);
-            
+
             try
             {
                 var biosPartitionTable = new BiosPartitionTable(disk);
@@ -212,7 +217,7 @@
                 {
                     Type = PartitionTableType.MasterBootRecord,
                     Size = disk.Capacity,
-                    Sectors = disk.Capacity / 512,
+                    Sectors = disk.Geometry.TotalSectorsLong,
                     Cylinders = 0,
                     Partitions = biosPartitionTable.Partitions.Select(x => new PartitionInfo
                     {
@@ -237,7 +242,9 @@
                         Size = 512
                     },
                     StartOffset = 0,
-                    EndOffset = disk.Capacity - 1
+                    EndOffset = disk.Capacity - 1,
+                    StartSector = 0,
+                    EndSector = disk.Geometry.TotalSectorsLong
                 });
             }
             catch (Exception)
@@ -305,8 +312,9 @@
                     var rdbPartitionNumber = 0;
 
                     var rdbStartCyl = 0;
-                    var rdbEndCyl = Next(rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize,
-                        (int)cylinderSize) - 1;
+                    var rdbEndCyl =
+                        Convert.ToInt32(Math.Ceiling((double)rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize /
+                                                     cylinderSize)) - 1;
 
                     var rdbStartOffset = rigidDiskBlock.RdbBlockLo * rigidDiskBlock.BlockSize;
                     var rdbEndOffset = ((rigidDiskBlock.RdbBlockHi + 1) * rigidDiskBlock.BlockSize) - 1;
@@ -314,7 +322,7 @@
                     {
                         Type = PartitionTableType.RigidDiskBlock,
                         Size = rigidDiskBlock.DiskSize,
-                        Sectors = rigidDiskBlock.Sectors,
+                        Sectors = rigidDiskBlock.DiskSize / rigidDiskBlock.BlockSize,
                         Cylinders = rigidDiskBlock.Cylinders,
                         Partitions = rigidDiskBlock.PartitionBlocks.Select(x => new PartitionInfo
                         {
@@ -339,7 +347,11 @@
                             Size = rdbEndOffset - rdbStartOffset + 1
                         },
                         StartOffset = rdbStartOffset,
-                        EndOffset = rdbStartOffset + rigidDiskBlock.DiskSize - 1
+                        EndOffset = rdbStartOffset + rigidDiskBlock.DiskSize - 1,
+                        StartCylinder = 0,
+                        EndCylinder = rigidDiskBlock.HiCylinder,
+                        StartSector = rigidDiskBlock.RdbBlockLo,
+                        EndSector = rigidDiskBlock.DiskSize / rigidDiskBlock.BlockSize,
                     });
                 }
             }
@@ -394,7 +406,7 @@
                 allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
             }
 
-            return CreateUnallocatedParts(diskInfo.Size, 0, 0, allocatedParts);
+            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0, allocatedParts);
         }
 
         private static PartitionTablePart CreateGptParts(DiskInfo diskInfo)
@@ -565,7 +577,8 @@
                 Size = diskInfo.RigidDiskBlock.DiskSize,
                 Sectors = diskInfo.RigidDiskBlock.Sectors,
                 Cylinders = diskInfo.RigidDiskBlock.Cylinders,
-                Parts = CreateUnallocatedParts(diskInfo.RigidDiskBlock.DiskSize, diskInfo.RigidDiskBlock.Sectors, 0,
+                Parts = CreateUnallocatedParts(diskInfo.RigidDiskBlock.DiskSize,
+                    diskInfo.RigidDiskBlock.DiskSize / diskInfo.RigidDiskBlock.BlockSize, 0,
                     parts)
             };
         }
@@ -597,8 +610,8 @@
                         Size = unallocatedSize,
                         StartOffset = offset,
                         EndOffset = part.StartOffset - 1,
-                        StartSector = part.StartOffset == 0 ? 0 : sector,
-                        EndSector = part.StartOffset == 0 ? 0 : part.StartSector - 1,
+                        StartSector = part.StartSector == 0 ? 0 : sector,
+                        EndSector = part.StartSector == 0 ? 0 : part.StartSector - 1,
                         StartCylinder = part.StartCylinder == 0 ? 0 : cylinder,
                         EndCylinder = part.StartCylinder == 0 ? 0 : part.StartCylinder - 1,
                         PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)

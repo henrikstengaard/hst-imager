@@ -83,7 +83,7 @@
             {
                 biosPartitionTable = new BiosPartitionTable(disk);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return new Result(new Error("Master Boot Record not found"));
             }
@@ -91,7 +91,7 @@
             // available size and default start offset
             var availableSize = disk.Geometry.Capacity;
             long startOffset = 512;
-            
+
             // get rdb partition table
             var rdbPartitionTable =
                 diskInfo.PartitionTables.FirstOrDefault(x =>
@@ -109,7 +109,7 @@
                 ? 0
                 : availableSize.ResolveSize(size).ToSectorSize();
             
-            // find unallocated part for partition size
+            // find unallocated part for partition size with start offset equal or larger
             var unallocatedPart = diskInfo.DiskParts.FirstOrDefault(x =>
                 x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
             if (unallocatedPart == null)
@@ -137,6 +137,13 @@
                 start = 1;
             }
 
+            // set partition start sector to first sector, if less than first sector
+            if (start < firstSector)
+            {
+                start = firstSector;
+            }
+
+            // calculate partition sectors
             var partitionSectors = partitionSize == 0
                 ? disk.Geometry.TotalSectorsLong - start
                 : partitionSize / 512;

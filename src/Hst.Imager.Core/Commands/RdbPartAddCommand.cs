@@ -72,7 +72,7 @@
             }
 
             OnInformationMessage($"Adding partition to Rigid Disk Block at '{path}'");
-            
+
             OnDebugMessage($"Opening '{path}' as writable");
 
             var mediaResult = commandHelper.GetWritableMedia(physicalDrives, path);
@@ -110,7 +110,7 @@
             {
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
-            
+
             var partitionSize = size.Value == 0 && size.Unit == Unit.Bytes
                 ? 0
                 : rigidDiskBlock.DiskSize.ResolveSize(size).ToSectorSize();
@@ -120,11 +120,20 @@
             OnInformationMessage($"- DOS type '{dosTypeBytes.FormatDosType()}'");
 
             // find unallocated part for partition size
+            var rdbPartitionTable =
+                diskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.RigidDiskBlock);
+            if (rdbPartitionTable == null)
+            {
+                return new Result(new Error("Rigid Disk Block not found"));
+            }
+            
             var unallocatedPart = diskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(x =>
-                x.PartType == PartType.Unallocated && x.Size >= partitionSize);
+                x.PartType == PartType.Unallocated && x.StartOffset > rdbPartitionTable.Reserved.EndOffset &&
+                x.Size >= partitionSize);
             if (unallocatedPart == null)
             {
-                return new Result(new Error($"Rigid Disk Block does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
+                return new Result(new Error(
+                    $"Rigid Disk Block does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
             }
 
             var cylinderSize = diskInfo.RigidDiskBlock.Sectors * diskInfo.RigidDiskBlock.Heads *
@@ -134,18 +143,20 @@
             {
                 lowCyl = diskInfo.RigidDiskBlock.LoCylinder;
             }
+
             var cylinders = partitionSize == 0
                 ? diskInfo.RigidDiskBlock.HiCylinder - lowCyl + 1
                 : Convert.ToUInt32(Math.Ceiling((double)partitionSize / cylinderSize));
 
             if (cylinders <= 0)
             {
-                return new Result(new Error($"Invalid cylinders for partition size '{partitionSize}', low cyl '{lowCyl}', cylinder size '{cylinderSize}', rdb hi cyl '{diskInfo.RigidDiskBlock.HiCylinder}'"));
+                return new Result(new Error(
+                    $"Invalid cylinders for partition size '{partitionSize}', low cyl '{lowCyl}', cylinder size '{cylinderSize}', rdb hi cyl '{diskInfo.RigidDiskBlock.HiCylinder}'"));
             }
-            
+
             var highCyl = lowCyl + cylinders - 1;
             partitionSize = cylinders * cylinderSize;
-            
+
             var partitionBlock = new PartitionBlock
             {
                 PartitionSize = partitionSize,
@@ -164,12 +175,12 @@
             // var partitionBlock =
             //     PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize ?? 512,
             //         bootable);
-            
+
             if (partitionBlock.HighCyl - partitionBlock.LowCyl + 1 <= 0)
             {
                 return new Result(new Error($"Invalid size '{size}'"));
             }
-            
+
             var flags = 0U;
             if (bootable)
             {
@@ -185,12 +196,12 @@
             {
                 partitionBlock.Reserved = reserved.Value;
             }
-            
+
             if (preAlloc.HasValue)
             {
                 partitionBlock.PreAlloc = preAlloc.Value;
             }
-            
+
             if (maxTransfer.HasValue)
             {
                 partitionBlock.MaxTransfer = maxTransfer.Value;
@@ -203,33 +214,35 @@
 
             if (buffers.HasValue)
             {
-                partitionBlock.NumBuffer = buffers.Value; 
+                partitionBlock.NumBuffer = buffers.Value;
             }
-            
+
             partitionBlock.Flags = flags;
-            
+
             if (bootPriority.HasValue)
             {
                 partitionBlock.BootPriority = bootPriority.Value;
             }
-            
+
             partitionBlock.SizeBlock = rigidDiskBlock.BlockSize / SizeOf.ULong;
 
-            OnInformationMessage($"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage(
+                $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
             OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
             OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
             OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
             OnInformationMessage($"- PreAlloc '{partitionBlock.PreAlloc}'");
             OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
-            OnInformationMessage($"- Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}' ({partitionBlock.MaxTransfer})");
+            OnInformationMessage(
+                $"- Max Transfer '0x{partitionBlock.MaxTransfer.FormatHex().ToUpper()}' ({partitionBlock.MaxTransfer})");
             OnInformationMessage($"- Mask '0x{partitionBlock.Mask.FormatHex().ToUpper()}' ({partitionBlock.Mask})");
             OnInformationMessage($"- Bootable '{partitionBlock.Bootable.ToString()}'");
             OnInformationMessage($"- Boot priority '{partitionBlock.BootPriority}'");
             OnInformationMessage($"- No mount '{partitionBlock.NoMount}'");
             OnInformationMessage($"- File System Block Size '{partitionBlock.Sectors * rigidDiskBlock.BlockSize}'");
-            
+
             rigidDiskBlock.PartitionBlocks = rigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
-            
+
             OnDebugMessage("Writing Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
