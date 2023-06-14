@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
+    using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
@@ -11,6 +12,7 @@
     using Hst.Core;
     using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Size = Models.Size;
     using PartitionBlock = Amiga.RigidDiskBlocks.PartitionBlock;
     using RigidDiskBlockWriter = Amiga.RigidDiskBlocks.RigidDiskBlockWriter;
@@ -84,7 +86,8 @@
 
             OnDebugMessage("Reading Rigid Disk Block");
 
-            var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
+            var rigidDiskBlock = diskInfo.RigidDiskBlock;
 
             if (rigidDiskBlock == null)
             {
@@ -103,20 +106,64 @@
 
             var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
             var nameBytes = AmigaTextHelper.GetBytes(name.ToUpper());
-            if (partitionBlocks.Any(x => AmigaTextHelper.GetBytes(x.DriveName).SequenceEqual(nameBytes)))
+            if (partitionBlocks.Any(x => AmigaTextHelper.GetBytes(x.DriveName.ToUpper()).SequenceEqual(nameBytes)))
             {
                 return new Result(new Error($"Partition name '{name}' already exists"));
             }
             
-            var partitionSize = rigidDiskBlock.DiskSize.ResolveSize(size).ToSectorSize();
+            var partitionSize = size.Value == 0 && size.Unit == Unit.Bytes
+                ? 0
+                : rigidDiskBlock.DiskSize.ResolveSize(size).ToSectorSize();
 
             OnInformationMessage($"- Partition number '{partitionBlocks.Count + 1}'");
             OnInformationMessage($"- Name '{name}'");
             OnInformationMessage($"- DOS type '{dosTypeBytes.FormatDosType()}'");
 
-            var partitionBlock =
-                PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize ?? 512,
-                    bootable);
+            // find unallocated part for partition size
+            var unallocatedPart = diskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(x =>
+                x.PartType == PartType.Unallocated && x.Size >= partitionSize);
+            if (unallocatedPart == null)
+            {
+                return new Result(new Error($"Rigid Disk Block does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
+            }
+
+            var cylinderSize = diskInfo.RigidDiskBlock.Sectors * diskInfo.RigidDiskBlock.Heads *
+                               diskInfo.RigidDiskBlock.BlockSize;
+            var lowCyl = Convert.ToUInt32(Math.Ceiling((double)unallocatedPart.StartOffset / cylinderSize));
+            if (lowCyl < diskInfo.RigidDiskBlock.LoCylinder)
+            {
+                lowCyl = diskInfo.RigidDiskBlock.LoCylinder;
+            }
+            var cylinders = partitionSize == 0
+                ? diskInfo.RigidDiskBlock.HiCylinder - lowCyl + 1
+                : Convert.ToUInt32(Math.Ceiling((double)partitionSize / cylinderSize));
+
+            if (cylinders <= 0)
+            {
+                return new Result(new Error($"Invalid cylinders for partition size '{partitionSize}', low cyl '{lowCyl}', cylinder size '{cylinderSize}', rdb hi cyl '{diskInfo.RigidDiskBlock.HiCylinder}'"));
+            }
+            
+            var highCyl = lowCyl + cylinders - 1;
+            partitionSize = cylinders * cylinderSize;
+            
+            var partitionBlock = new PartitionBlock
+            {
+                PartitionSize = partitionSize,
+                DosType = dosTypeBytes,
+                DriveName = name,
+                Flags = bootable ? (uint)PartitionFlagsEnum.Bootable : 0,
+                LowCyl = lowCyl,
+                HighCyl = highCyl,
+                BlocksPerTrack = rigidDiskBlock.Sectors,
+                Surfaces = rigidDiskBlock.Heads,
+                FileSystemBlockSize = (uint)(fileSystemBlockSize ?? 512),
+                Sectors = (uint)((fileSystemBlockSize ?? 512) / rigidDiskBlock.BlockSize),
+                SizeBlock = rigidDiskBlock.BlockSize / SizeOf.Long
+            };
+
+            // var partitionBlock =
+            //     PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize ?? 512,
+            //         bootable);
             
             if (partitionBlock.HighCyl - partitionBlock.LowCyl + 1 <= 0)
             {

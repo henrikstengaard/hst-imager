@@ -49,7 +49,7 @@ if ($createImage)
 }
 else
 {
-    $imagePath = OpenFileDialog "Select image file to extract WHDLoads to" $currentPath "Img Files|*.img|HDF Files|*.hdf|VHD Files|*.vhd|All Files|*.*"
+    $imagePath = OpenFileDialog "Select image file to extract WHDLoads to" $currentPath "Hard disk image files|*.img;*.hdf;*.vhd|All Files|*.*"
 
     # error, if image path is not found
     if (!(Test-Path $imagePath))

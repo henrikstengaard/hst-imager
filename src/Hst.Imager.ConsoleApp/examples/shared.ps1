@@ -208,8 +208,17 @@ function GetAmigaOsAdfPath($title, $adfPath)
         return $adfPath
     }
 
-    $currentPath = (Get-Location).Path
-    $selectedAdfPath = OpenFileDialog $title $currentPath "Adf Files|*.adf|All Files|*.*"
+    $adfPath = ${Env:AMIGAFOREVERDATA}
+    if ($adfPath)
+    {
+        $adfPath = Join-Path $adfPath -ChildPath "Shared\adf"
+    }
+    else
+    {
+        $adfPath = (Get-Location).Path
+    }
+    
+    $selectedAdfPath = OpenFileDialog $title $adfPath "Adf Files|*.adf|All Files|*.*"
 
     # throw error, if new image directory path is null
     if ($null -eq $selectedAdfPath)
@@ -352,6 +361,8 @@ function InstallMinimalAmigaOs($hstImagerPath, $imagePath, $useAmigaOs31)
 {
     $imageDir = Split-Path $imagePath -Parent
 
+    # detect amiga forever dir like install kickstart rom
+    
     # get amigaos workbench and install adf
     $amigaOsWorkbenchAdfPath = GetAmigaOsWorkbenchAdfPath $imageDir $useAmigaOs31
     $amigaOsInstallAdfPath = GetAmigaOsInstallAdfPath $imageDir $useAmigaOs31

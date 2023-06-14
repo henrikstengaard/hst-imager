@@ -12,11 +12,12 @@
     using Hst.Core;
     using Hst.Core.Extensions;
     using Microsoft.Extensions.Logging;
+    using Models;
     using Size = Models.Size;
 
     public class MbrPartAddCommand : CommandBase
     {
-        private readonly ILogger<RdbInitCommand> logger;
+        private readonly ILogger<MbrPartAddCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
@@ -27,7 +28,7 @@
         private readonly bool active;
         private const int RdbMbrGap = 512 * 1024;
 
-        public MbrPartAddCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
+        public MbrPartAddCommand(ILogger<MbrPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string type, Size size,
             long? startSector, long? endSector, bool active = false)
         {
@@ -71,9 +72,21 @@
             {
                 return new Result(new Error("Failed to read disk info"));
             }
-
+            
+            OnDebugMessage("Reading Master Boot Record");
+            
             // open stream as disk
             using var disk = new Disk(media.Stream, Ownership.None);
+            
+            BiosPartitionTable biosPartitionTable;
+            try
+            {
+                biosPartitionTable = new BiosPartitionTable(disk);
+            }
+            catch (Exception e)
+            {
+                return new Result(new Error("Master Boot Record not found"));
+            }
             
             // available size and default start offset
             var availableSize = disk.Geometry.Capacity;
@@ -87,35 +100,54 @@
             // reduce available size, if rdb is present and set start offset after rdb
             if (rdbPartitionTable != null)
             {
-                startOffset = (rdbPartitionTable.Size + RdbMbrGap).ToSectorSize();
+                startOffset = rdbPartitionTable.Size.ToSectorSize();
                 availableSize = diskInfo.Size - startOffset;
             }
 
-            // return error, if start sector is defined and it's less than start offset
-            if (startSector.HasValue && startSector < startOffset / 512)
-            {
-                return new Result(new Error($"Start sector {startSector} is overlapping Rigid Disk Block"));
-            }
-            
             // calculate partition size and sectors
-            var partitionSize = availableSize.ResolveSize(size).ToSectorSize();
-            var partitionSectors = partitionSize / 512;
+            var partitionSize = size.Value == 0 && size.Unit == Unit.Bytes
+                ? 0
+                : availableSize.ResolveSize(size).ToSectorSize();
             
-            OnDebugMessage("Reading Master Boot Record");
-            
-            BiosPartitionTable biosPartitionTable;
-            try
+            // find unallocated part for partition size
+            var unallocatedPart = diskInfo.DiskParts.FirstOrDefault(x =>
+                x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
+            if (unallocatedPart == null)
             {
-                biosPartitionTable = new BiosPartitionTable(disk);
+                return new Result(new Error($"Master Boot Record does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
             }
-            catch (Exception)
+
+            var firstSector = rdbPartitionTable == null
+                ? 1
+                : rdbPartitionTable.Size / 512;
+            if (!biosPartitionTable.Partitions.Any())
             {
-                return new Result(new Error("Master Boot Record not found"));
+                firstSector += RdbMbrGap / 512;
+            }
+
+            if (startSector.HasValue && startOffset < firstSector)
+            {
+                return new Result(new Error($"Invalid start sector '{startSector}' is less that first sector '{firstSector}'"));
             }
             
             // calculate start and end sector
-            var start = startSector ?? startOffset / 512;
+            var start = startSector ?? unallocatedPart.StartOffset / 512;
+            if (start == 0)
+            {
+                start = 1;
+            }
+
+            var partitionSectors = partitionSize == 0
+                ? disk.Geometry.TotalSectorsLong - start
+                : partitionSize / 512;
+
+            if (partitionSectors <= 0)
+            {
+                return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.TotalSectorsLong}'"));
+            }
+            
             var end = start + partitionSectors - 1;
+            partitionSize = partitionSectors * 512;
 
             // set end to last sector, if end is larger than last sector
             if (end > disk.Geometry.TotalSectorsLong)
@@ -123,6 +155,12 @@
                 end = disk.Geometry.TotalSectorsLong;
                 partitionSectors = end - start + 1;
                 partitionSize = partitionSectors * 512;
+            }
+            
+            // return error, if start it's less than start offset
+            if (start < startOffset / 512)
+            {
+                return new Result(new Error($"Start sector {startSector} is overlapping reversed partition space"));
             }
             
             OnInformationMessage($"- Partition number '{biosPartitionTable.Partitions.Count + 1}'");

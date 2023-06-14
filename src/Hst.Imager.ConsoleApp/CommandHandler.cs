@@ -275,7 +275,7 @@
 
         public static async Task MbrPartAdd(string path, string type, string size, long? startSector, bool active)
         {
-            await Execute(new MbrPartAddCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            await Execute(new MbrPartAddCommand(GetLogger<MbrPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, type, ParseSize(size), startSector, null, active));
         }
 

@@ -578,13 +578,13 @@
                 throw new ArgumentException($"Invalid disk size '{diskSize}'", nameof(diskSize));
             }
 
-            var partsList = parts.ToList();
+            var partsList = parts.OrderBy(x => x.StartOffset).ToList();
             var unallocatedParts = new List<PartInfo>();
 
             var offset = 0L;
             var sector = 0L;
             var cylinder = 0L;
-            foreach (var part in partsList.OrderBy(x => x.StartOffset).ToList())
+            foreach (var part in partsList)
             {
                 if (part.StartOffset > offset)
                 {
@@ -612,7 +612,7 @@
 
             if (offset < diskSize)
             {
-                var unallocatedSize = diskSize - offset + 1;
+                var unallocatedSize = diskSize - offset;
                 unallocatedParts.Add(new PartInfo
                 {
                     FileSystem = "Unallocated",
