@@ -1,4 +1,5 @@
-﻿# WHDLoad to HDF
+﻿#!/usr/bin/env python3
+# WHDLoad to HDF
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
@@ -10,6 +11,7 @@
 """WHDLoad to HDF"""
 
 import os
+import platform
 import re
 import subprocess
 import json
@@ -24,8 +26,8 @@ script_path = os.path.dirname(__file__)
 hst_imager_path = shared.get_hst_imager_path(script_path)
 
 # enter whdload lha file
-whdload_lha_path = os.path.abspath(input("Enter path to WHDLoad lha: "))
-if not os.path.exists(whdload_lha_path):
+whdload_lha_path = shared.select_file_path('WHDLoad lha')
+if not os.path.isfile(whdload_lha_path):
     print('Error: WHDLoad lha file \'{0}\' not found'.format(whdload_lha_path))
     exit(1)
 
@@ -51,10 +53,10 @@ if len(whdload_slave_paths) == 0:
     exit(1)
 
 # confirm use amiga os 3.1
-use_amigaos_31 = shared.confirm("Use Amiga OS 3.1 adf files (enter = yes, no = 3.1.4/3.2/other): ")
+use_amigaos_31 = shared.confirm("Use Amiga OS 3.1 adf files", "enter = yes, no = 3.1.4/3.2/other")
 
 # confirm use pfs3 confirm 
-use_pfs3 = shared.confirm("Use PFS3 file system? (enter = yes, no = DOS3): ")
+use_pfs3 = shared.confirm("Use PFS3 file system?", "enter = yes, no = DOS3")
 
 # get image path based on selected whdload lha
 image_path = os.path.join(current_path, '{0}.vhd'.format(os.path.splitext(os.path.basename(whdload_lha_path))[0]))

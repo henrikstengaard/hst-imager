@@ -63,11 +63,24 @@ classes_adf_path = os.path.join(current_path, "Classes3.2.adf")
 fonts_adf_path = os.path.join(current_path, "Fonts.adf")
 storage_adf_path = os.path.join(current_path, "Storage3.2.adf")
 
-# set image path
-image_path = os.path.join(current_path, "amigaos-3.2.vhd")
+# confirm create image confirm 
+create_image = shared.confirm("Do you want to create a new hard disk image file?", "enter = yes")
 
-# create 16gb image file
-shared.create_image(hst_imager_path, image_path, '16gb')
+image_path = None
+if (create_image):
+    # set image path
+    image_path = os.path.join(current_path, "amigaos-3.2.vhd")
+    
+    # create 16gb image file
+    shared.create_image(hst_imager_path, image_path, '16gb')
+else:
+    # select image path
+    image_path = shared.select_file_path('hard disk image file')
+    
+    # error, if image path is not found
+    if not os.path.isfile(image_path):
+        print('Error: Image path \'{0}\' doesn\'t exist'.format(image_path))
+        exit(1)
 
 install_path = os.path.join(current_path, 'temp', 'install')
 if os.path.exists(install_path):
@@ -222,15 +235,15 @@ shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb
 
 # update icons
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Prefs.info')] + '-x 12 -y 20'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Prefs\Printer.info')] + '-x 160 -y 48'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Prefs', 'Printer.info')] + '-x 160 -y 48'.split(' '))
 
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Utilities.info')] + '-x 98 -y 4'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Utilities\Clock.info')] + '-x 91 -y 11'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Utilities\MultiView.info')] + '-x 11 -y 11'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Utilities', 'Clock.info')] + '-x 91 -y 11'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Utilities', 'MultiView.info')] + '-x 11 -y 11'.split(' '))
 
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Tools.info')] + '-x 98 -y 38'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Tools\IconEdit.info')] + '-x 111 -y 45'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Tools\HDToolBox.info')] + '-x 202 -y 4'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Tools', 'IconEdit.info')] + '-x 111 -y 45'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Tools', 'HDToolBox.info')] + '-x 202 -y 4'.split(' '))
 
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'System.info')] + '-x 184 -y 4 -dh 150'.split(' '))
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'WBStartup.info')] + '-x 184 -y 38'.split(' '))
@@ -239,8 +252,8 @@ shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, '
 shutil.copyfile(os.path.join(icons_path, 'Devs.info'), os.path.join(icons_path, 'Storage.info'))
 
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Storage.info')] + '-x 270 -y 38 -dx 480 -dy 77 -dw 110 -dh 199'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Storage\Monitors.info')] + '-dx 156 -dy 77 -dw 270 -dh 199'.split(' '))
-shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Storage\Printers.info')] + '-dx 480 -dy 77 -dw 107 -dh 199'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Storage', 'Monitors.info')] + '-dx 156 -dy 77 -dw 270 -dh 199'.split(' '))
+shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Storage', 'Printers.info')] + '-dx 480 -dy 77 -dw 107 -dh 199'.split(' '))
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Expansion.info')] + '-x 356 -y 20'.split(' '))
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Disk.info')] + '-dx 28 -dy 29 -dw 462 -dh 103'.split(' '))
 

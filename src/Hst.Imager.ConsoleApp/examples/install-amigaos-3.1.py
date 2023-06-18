@@ -15,6 +15,7 @@
 """Install AmigaOS 3.1"""
 
 import os
+import platform
 import stat
 import re
 import shutil
@@ -27,6 +28,7 @@ current_path = os.getcwd()
 script_path = os.path.dirname(__file__)
 hst_imager_path = shared.get_hst_imager_path(script_path)
 hst_amiga_path = shared.get_hst_amiga_path(script_path)
+
 
 # amigaos 3.1 files
 amigaos_31_files = [
@@ -59,11 +61,24 @@ amigaos_31_files = [
 # get amigaos 3.1 files copied to current path
 shared.get_amigaos_files(amigaos_31_files, current_path)
 
-# set image path
-image_path = os.path.join(current_path, "amigaos-3.1.vhd")
+# confirm create image confirm 
+create_image = shared.confirm("Do you want to create a new hard disk image file?", "enter = yes")
 
-# create 16gb image file
-shared.create_image(hst_imager_path, image_path, '16gb')
+image_path = None
+if (create_image):
+    # set image path
+    image_path = os.path.join(current_path, "amigaos-3.1.vhd")
+    
+    # create 16gb image file
+    shared.create_image(hst_imager_path, image_path, '16gb')
+else:
+    # select image path
+    image_path = shared.select_file_path('hard disk image file')
+    
+    # error, if image path is not found
+    if not os.path.isfile(image_path):
+        print('Error: Image path \'{0}\' doesn\'t exist'.format(image_path))
+        exit(1)
 
 # amigaos 3.1 adf paths
 workbench_adf_path = os.path.join(current_path, "amiga-os-310-workbench.adf")

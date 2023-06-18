@@ -9,6 +9,7 @@
 """Shared"""
 
 import os
+import platform
 import re
 import stat
 import shutil
@@ -19,8 +20,26 @@ import unicodedata
 from urllib.request import urlretrieve
 
 # confirm
-def confirm(message):
-    return re.search(r'^(|y|yes)$', input(message), re.I)
+def confirm(message, action):
+    if platform.system() == 'Darwin':
+        return re.search(r'yes$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" buttons {{"Yes", "No"}} default button "Yes"'.format(message)]).strip(), re.I)
+    else:
+        return re.search(r'^(|y|yes)$', input("{0} ({1})".format(message, action)), re.I)
+
+# macos choose file dialog
+def macos_choose_file_dialog(title):
+    return run_command_capture_output(['osascript', '-e', 'set directory to POSIX path of (choose file with prompt "{0}" default location (path to desktop))'.format(title)]).strip()
+
+# macos choose folder dialog
+def macos_choose_folder_dialog(title):
+    return run_command_capture_output(['osascript', '-e', 'set directory to POSIX path of (choose folder with prompt "{0}" default location (path to desktop))'.format(title)]).strip()
+
+# select file path
+def select_file_path(title):
+    if platform.system() == 'Darwin':
+        return macos_choose_file_dialog("Select {0}".format(title))
+    else:
+        return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
 # run command
 def run_command(commands):
@@ -36,7 +55,7 @@ def run_command(commands):
 
 # run command and capture output
 def run_command_capture_output(commands):
-    """Run command"""
+    """Run command capture output"""
 
     # process to run commands
     process = subprocess.Popen(commands, bufsize=-1, text=True,
@@ -144,13 +163,13 @@ def get_amigaos_files(files, path):
             adf_exists = os.path.isfile(adf_path)
     
             if adf_exists:
-                # copy detected adf path
+                # copy adf file and change file permission to rwx
                 shutil.copyfile(adf_path, dest_adf_path)
                 os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
     
                 break
     
-            adf_path = os.path.abspath(input("Enter path to {0} adf file: ".format(file['Name'])))
+            adf_path = select_file_path("{0} adf file".format(file['Name']))
             adf_exists = os.path.isfile(adf_path)
     
             if not adf_exists:
@@ -159,34 +178,37 @@ def get_amigaos_files(files, path):
     
             src_adf_path = os.path.dirname(adf_path)
     
-            # copy entered adf path
+            # copy adf file and change file permission to rwx
             shutil.copyfile(adf_path, dest_adf_path)
             os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
     
             break
 
-# enter amigaos adf path
-def enter_amigaos_adf_path(title, path):
-    adf_file = os.path.abspath(input("{0}: ".format(title)))
+# copy amigaos adf path
+def copy_amigaos_adf_path(title, path):
+    adf_file = select_file_path(title)
 
     if not os.path.isfile(adf_file):
         print('Error: Adf file \'{0}\' doesn\'t exist'.format(adf_file))
         exit(1)
 
-    # copy adf file
+    adf_file = os.path.abspath(adf_file)
+
+    # copy adf file and change file permission to rwx
     shutil.copyfile(
         adf_file,
         path)
     os.chmod(path, os.stat(path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
 
+# get amigaos adf path
 def get_amigaos_adf_path(title, path):
     if os.path.isfile(path):
         return
-    enter_amigaos_adf_path(title, path)
+    copy_amigaos_adf_path(title, path)
 
-# enter kickstart rom path
-def enter_kickstart_rom_path(title, path):
-    rom_file = os.path.abspath(input("{0}: ".format(title)))
+# copy kickstart rom path
+def copy_kickstart_rom_path(title, path):
+    rom_file = select_file_path(title)
 
     if not os.path.isfile(rom_file):
         print('Error: Rom file \'{0}\' doesn\'t exist'.format(rom_file))
@@ -216,8 +238,9 @@ def get_amigaos_workbench_adf_path(path, use_amigaos_31):
         if os.path.isfile(amigaos_workbench_adf_path):
             return amigaos_workbench_adf_path
 
-        # enter amigaos 3.1 install adf path
-        return get_amigaos_adf_path("Enter Amiga OS 3.1 Workbench adf path", amigaos_workbench_adf_path)
+        # get amigaos 3.1 install adf path
+        get_amigaos_adf_path("Amiga OS 3.1 Workbench adf path", amigaos_workbench_adf_path)
+        return amigaos_workbench_adf_path
 
     # amigaos 3.2 workbench adf path
     amigaos_workbench_adf_path = os.path.join(path, "Workbench3.2.adf")
@@ -233,7 +256,7 @@ def get_amigaos_workbench_adf_path(path, use_amigaos_31):
     if os.path.isfile(amigaos_workbench_adf_path):
         return amigaos_workbench_adf_path
 
-    enter_amigaos_adf_path("Enter path to AmigaOS Workbench adf file: ", amigaos_workbench_adf_path)
+    copy_amigaos_adf_path("AmigaOS Workbench adf file", amigaos_workbench_adf_path)
     return amigaos_workbench_adf_path
 
 # get amigaos install adf path
@@ -247,7 +270,8 @@ def get_amigaos_install_adf_path(image_path, use_amigaos_31):
             return amigaos_install_adf_path
         
         # enter amigaos 3.1 install adf path
-        return get_amigaos_adf_path("Enter Amiga OS 3.1 Install adf path", amigaos_install_adf_path)
+        get_amigaos_adf_path("Amiga OS 3.1 Install adf", amigaos_install_adf_path)
+        return amigaos_install_adf_path
 
     amigaos_install_adf_path = os.path.join(image_path, 'Install3.2.adf')
     if os.path.isfile(amigaos_install_adf_path):
@@ -262,12 +286,12 @@ def get_amigaos_install_adf_path(image_path, use_amigaos_31):
         return amigaos_install_adf_path
 
     print('Using DOS7 requires Fast File System from Amiga OS 3.1.4, 3.2+ install adf')
-    return get_amigaos_adf_path("Enter Amiga OS 3.1.4, 3.2+ install adf path", amigaos_install_adf_path)
+    get_amigaos_adf_path("Amiga OS 3.1.4, 3.2+ install adf", amigaos_install_adf_path)
 
 # create image
 def create_image(hst_imager_path, image_path, size):
     # show use pfs3 confirm dialog 
-    use_pfs3 = re.search(r'^(|y|yes)$', input("Use PFS3 file system? (enter = yes, no = DOS7):"), re.I)
+    use_pfs3 = confirm("Use PFS3 file system?", "enter = yes, no = DOS7")
 
     # get amigaos install adf path
     amigaos_install_adf_path = None
@@ -360,9 +384,9 @@ def install_kickstart13_rom(hst_imager_path, image_path):
     # a500 kickstart 1.3 rom path
     kickstart13_a500_rom_path = os.path.join(image_dir, "kick34005.A500")
 
-    # enter a500 kickstart 1.3 rom path, if not present
+    # copy a500 kickstart 1.3 rom path, if not present
     if not os.path.exists(kickstart13_a500_rom_path):
-        enter_kickstart_rom_path("Enter path to Amiga 500 Kickstart 1.3 rom file", kickstart13_a500_rom_path)
+        copy_kickstart_rom_path("Amiga 500 Kickstart 1.3 rom file", kickstart13_a500_rom_path)
 
     # copy kickstart 1.3 to image file
     run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
