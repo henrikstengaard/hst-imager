@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Amiga;
@@ -19,6 +20,9 @@ using File = System.IO.File;
 public class FsCommandTestBase : CommandTestBase
 {
     protected static readonly byte[] Dos3DosType = { 0x44, 0x4f, 0x53, 0x3 };
+    protected static readonly byte[] Dos7DosType = { 0x44, 0x4f, 0x53, 0x7 };
+    protected static readonly byte[] DummyFastFileSystemBytes = Encoding.ASCII.GetBytes(
+        "$VER: FastFileSystem 0.1 (01/01/22) ");
     protected static readonly byte[] Pfs3DosType = { 0x50, 0x46, 0x53, 0x3 };
     protected static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
 
@@ -85,6 +89,24 @@ public class FsCommandTestBase : CommandTestBase
         await Pfs3Formatter.FormatPartition(stream, partitionBlock, "Workbench");
     }
 
+    protected async Task CreateDos7FormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
+
+        rigidDiskBlock.AddFileSystem(Dos7DosType, DummyFastFileSystemBytes)
+            .AddPartition("DH0", bootable: true);
+        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+
+        var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
+
+        await FastFileSystemFormatter.FormatPartition(stream, partitionBlock, "Workbench");
+    }
+    
     protected async Task CreateDos3FormattedAdf(string path)
     {
         await using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
