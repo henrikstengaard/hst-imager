@@ -64,7 +64,6 @@
                 return stream.Read(buffer, offset, count);
             }
             
-            Console.WriteLine($"read count {count}");
             var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
             var sectorBytesRead = stream.Read(sectorBuffer, offset, sectorBuffer.Length);
             var bytesRead = Math.Min(count, sectorBytesRead);
@@ -96,7 +95,6 @@
                 return;
             }
             
-            Console.WriteLine($"write count {count} -> {SectorSize}");
             var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
             Array.Copy(buffer, 0, sectorBuffer, 0, count);
             stream.Write(sectorBuffer, 0, sectorBuffer.Length);

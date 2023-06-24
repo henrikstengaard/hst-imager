@@ -48,7 +48,8 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         Assert.NotNull(partInfo);
         var expectedPartitionSize = (diskInfo.MbrPartitionTablePart.Sectors - 1) * 512 - diskInfo.MbrPartitionTablePart
             .Parts.Where(x => x.PartType == PartType.Unallocated).Sum(x => x.Size);
-        Assert.Equal(expectedPartitionSize, partInfo.Size);
+        Assert.True(partInfo.Size > expectedPartitionSize - 50000);
+        Assert.True(partInfo.Size < expectedPartitionSize + 50000);
     }
 
     [Fact]

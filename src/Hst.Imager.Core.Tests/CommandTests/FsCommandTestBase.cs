@@ -12,8 +12,12 @@ using Amiga.FileSystems.FastFileSystem;
 using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
 using Commands;
+using DiscUtils.Fat;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 
@@ -69,6 +73,20 @@ public class FsCommandTestBase : CommandTestBase
 
         rigidDiskBlock.AddFileSystem(Pfs3DosType, await File.ReadAllBytesAsync(Pfs3AioPath));
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+    }
+
+    protected void CreateFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
+            BiosPartitionTypes.Fat32Lba, false);
+        FatFileSystem.FormatPartition(disk, partitionIndex, "FAT");
     }
 
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,

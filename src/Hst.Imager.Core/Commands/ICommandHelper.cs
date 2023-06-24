@@ -19,5 +19,6 @@
         bool IsVhd(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);
         Task<DiskInfo> ReadDiskInfo(Media media, Stream stream);
+        Result<MediaResult> ResolveMedia(string path);
     }
 }

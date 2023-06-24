@@ -19,7 +19,7 @@ public class TestMediaStream : Stream
 
     protected override void Dispose(bool disposing)
     {
-        this.testMedia.SetData(this.stream.ToArray()); 
+        this.testMedia.SetData(this.stream.ToArray());
         base.Dispose(disposing);
     }
 

@@ -145,7 +145,7 @@ public class FsCopyCommand : FsCommandBase
         
         OnDebugMessage($"Resolving path '{path}'");
 
-        var mediaResult = ResolveMedia(path);
+        var mediaResult = commandHelper.ResolveMedia(path);
         if (mediaResult.IsFaulted)
         {
             return new Result<IEntryIterator>(mediaResult.Error);

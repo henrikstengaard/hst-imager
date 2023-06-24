@@ -30,7 +30,7 @@ public class ArcListCommand : FsCommandBase
     {
         OnDebugMessage($"Resolving path '{path}'");
 
-        var pathResult = ResolveMedia(path);
+        var pathResult = commandHelper.ResolveMedia(path);
         if (pathResult.IsFaulted)
         {
             return new Result(pathResult.Error);

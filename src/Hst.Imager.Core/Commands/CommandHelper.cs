@@ -121,7 +121,7 @@
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
+            return new Result<Media>(new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
                 new SectorStream(vhdDisk.Content, true)));
         }
 
@@ -172,10 +172,10 @@
                     imgStream));
             }
 
-            var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
-            vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false,
-                vhdDisk, new SectorStream(vhdDisk.Content, true)));
+            var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
+            disk.Content.Position = 0;
+            return new Result<Media>(new DiskMedia(path, name, disk.Capacity, Media.MediaType.Vhd, false,
+                disk, new SectorStream(disk.Content, true)));
         }
 
         public virtual Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
@@ -650,6 +650,68 @@
             var left = value % size;
 
             return left == 0 ? value : value - left + size;
+        }
+        
+        public virtual Result<MediaResult> ResolveMedia(string path)
+        {
+            path = PathHelper.GetFullPath(path);
+            string mediaPath;
+            var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
+
+            for (var i = 0; i < path.Length; i++)
+            {
+                if (path[i] == '\\' || path[i] == '/')
+                {
+                    directorySeparatorChar = path[i].ToString();
+                    break;
+                }
+            }
+
+            // physical drive
+            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
+            if (physicalDrivePathMatch.Success)
+            {
+                mediaPath = physicalDrivePathMatch.Value;
+                var firstSeparatorIndex = path.IndexOf(directorySeparatorChar, mediaPath.Length, StringComparison.Ordinal);
+
+                return new Result<MediaResult>(new MediaResult
+                {
+                    FullPath = path,
+                    MediaPath = mediaPath,
+                    FileSystemPath = firstSeparatorIndex >= 0
+                        ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1))
+                        : string.Empty,
+                    DirectorySeparatorChar = directorySeparatorChar
+                });
+            }
+
+            // media file
+            var next = 0;
+            do
+            {
+                next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
+                mediaPath = path.Substring(0, next == -1 ? path.Length : next);
+
+                if (File.Exists(mediaPath))
+                {
+                    return new Result<MediaResult>(new MediaResult
+                    {
+                        FullPath = path,
+                        MediaPath = mediaPath,
+                        FileSystemPath = mediaPath.Length + 1 < path.Length
+                            ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
+                            : string.Empty,
+                        DirectorySeparatorChar = directorySeparatorChar
+                    });
+                }
+
+                if (!Directory.Exists(mediaPath))
+                {
+                    break;
+                }
+            } while (next != -1);
+
+            return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
         }
     }
 }

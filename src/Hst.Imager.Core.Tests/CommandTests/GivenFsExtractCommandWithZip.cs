@@ -62,9 +62,10 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromZipSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromZipSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.zip";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -104,9 +105,10 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromZipWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromZipWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.zip";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -150,7 +152,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
     public async Task WhenExtractingAFileFromZipToLocalDirectoryThenFileIsExtracted()
     {
@@ -219,14 +221,15 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
 
             // assert - file3.txt file was extracted
             var file3TxtPath = Path.Combine(destPath, "file3.txt");
-            Assert.Equal(file3TxtPath, files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(file3TxtPath,
+                files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     private void CreateZipFileWithDirectoriesAndFiles(string path)
     {
         using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
