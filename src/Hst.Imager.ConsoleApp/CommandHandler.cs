@@ -429,6 +429,12 @@
                 await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
+        public static async Task BlockView(string path, int blockSize, long? start)
+        {
+            await Execute(new BlockViewCommand(GetLogger<BlockViewCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, blockSize, start));
+        }
+        
         public static async Task FsDir(string path, bool recursive, FormatEnum format)
         {
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), GetCommandHelper(),

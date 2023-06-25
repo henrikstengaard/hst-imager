@@ -55,7 +55,6 @@
                 return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
 
-            path = PathHelper.GetFullPath(path);
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
