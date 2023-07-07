@@ -1,29 +1,33 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using DiscUtils.Fat;
+using DiscUtils;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
-public class FatEntryWriter : IEntryWriter
+public class FileSystemEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer;
     private readonly Media media;
     private readonly string[] pathComponents;
-    private readonly FatFileSystem fatFileSystem;
+    private readonly IFileSystem fileSystem;
     private bool disposed;
 
-    public FatEntryWriter(Media media, FatFileSystem fatFileSystem, string[] pathComponents)
+    public FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] pathComponents)
     {
         this.buffer = new byte[4096];
         this.media = media;
         this.pathComponents = pathComponents;
-        this.fatFileSystem = fatFileSystem;
+        this.fileSystem = fileSystem;
     }
 
+    public string MediaPath => this.media.Path;
+    public string FileSystemPath => string.Empty;
+    
     private void Dispose(bool disposing)
     {
         if (disposed)
@@ -33,7 +37,10 @@ public class FatEntryWriter : IEntryWriter
 
         if (disposing)
         {
-            fatFileSystem.Dispose();
+            if (fileSystem is IDisposable disposable)
+            {
+                disposable.Dispose();
+            }
             media.Stream.Flush();
             media.Dispose();
         }
@@ -42,25 +49,25 @@ public class FatEntryWriter : IEntryWriter
     }
 
     public void Dispose() => Dispose(true);
-    
-    public Task CreateDirectory(Entry entry, string[] entryPathComponents)
+
+    public Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
 
         for (var i = 1; i <= fullPathComponents.Length; i++)
         {
-            fatFileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
+            fileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
         }
 
         return Task.CompletedTask;
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
+    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
         var fullPath = string.Join("\\", fullPathComponents);
 
-        await using var entryStream = fatFileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);
+        await using var entryStream = fileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);
         int bytesRead;
         do
         {
@@ -83,4 +90,6 @@ public class FatEntryWriter : IEntryWriter
     {
         return new List<string>();
     }
+    
+    public IEntryIterator CreateEntryIterator(string rootPath, bool recursive) => null;
 }

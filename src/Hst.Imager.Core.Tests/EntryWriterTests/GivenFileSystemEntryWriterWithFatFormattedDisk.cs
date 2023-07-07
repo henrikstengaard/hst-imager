@@ -13,7 +13,7 @@ using Models;
 using Models.FileSystems;
 using Xunit;
 
-public class GivenFatEntryWriter : FsCommandTestBase
+public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
 {
     [Fact]
     public async Task WhenCreateDirectoryAndWriteEntriesThenDirectoryAndFilesExist()
@@ -39,7 +39,7 @@ public class GivenFatEntryWriter : FsCommandTestBase
         var fatFileSystem = new FatFileSystem(partitionInfo.Open());
         
         // arrange - fat entry writer
-        var fatEntryWriter = new FatEntryWriter(media, fatFileSystem, Array.Empty<string>());
+        var fatEntryWriter = new FileSystemEntryWriter(media, fatFileSystem, Array.Empty<string>());
 
         // act - create directories and files
         await WriteEntry(fatEntryWriter, "file1.txt", new MemoryStream());
@@ -84,7 +84,7 @@ public class GivenFatEntryWriter : FsCommandTestBase
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.Dir
-        }, entryPathComponents);
+        }, entryPathComponents, false);
     }
 
     private async Task WriteEntry(IEntryWriter entryWriter, string entryPath, Stream stream)
@@ -102,6 +102,6 @@ public class GivenFatEntryWriter : FsCommandTestBase
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.File
-        }, entryPathComponents, stream);
+        }, entryPathComponents, stream, false);
     }
 }

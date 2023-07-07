@@ -38,7 +38,7 @@ public class GivenFsCopyCommandWithFatFormattedDisk : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "mbr", "1"), destPath, true, true);
+                Path.Combine(srcPath, "mbr", "1"), destPath, true, false, true);
 
             // act - extract
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);

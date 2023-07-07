@@ -2,6 +2,7 @@
 {
     using System.Threading.Tasks;
     using Commands;
+    using Models;
     using Xunit;
 
     public abstract class CommandTestBase
@@ -12,7 +13,7 @@
         {
             var mediaResult = commandHelper.GetReadableFileMedia(path);
             using var media = mediaResult.Value;
-            await using var stream = media.Stream;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
             var bytes = new byte[size];
             var bytesRead = await stream.ReadAsync(bytes, 0, bytes.Length);
 

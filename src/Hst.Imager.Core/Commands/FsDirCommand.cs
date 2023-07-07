@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Amiga.FileSystems;
+using Amiga.RigidDiskBlocks;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Extensions;
@@ -58,6 +60,14 @@ public class FsDirCommand : FsCommandBase
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
             await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
+            return new Result();
+        }
+
+        // lzx
+        var lzxEntryIterator = await GetLzxEntryIterator(pathResult.Value, recursive);
+        if (lzxEntryIterator != null && lzxEntryIterator.IsSuccess)
+        {
+            await ListEntries(lzxEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
@@ -224,7 +234,7 @@ public class FsDirCommand : FsCommandBase
         }
 
         var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new FatEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
+        var entryIterator = new FileSystemEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
 
         await ListEntries(entryIterator, fileSystemPath);
 
@@ -242,23 +252,57 @@ public class FsDirCommand : FsCommandBase
             return new Result<IEnumerable<Entry>>(new List<Entry>());
         }
 
+        var entries = new List<Entry>();
+        foreach (var partitionBlock in rigidDiskBlock.PartitionBlocks)
+        {
+            entries.Add(new Entry
+            {
+                Name = partitionBlock.DriveName,
+                FormattedName = partitionBlock.DriveName,
+                Type = EntryType.Dir,
+                Size = partitionBlock.PartitionSize,
+                Properties = await GetRdbPartitionProperties(stream, partitionBlock)
+            });
+        }
+        
         OnEntriesRead(new EntriesInfo
         {
             Path = path,
-            Entries = rigidDiskBlock.PartitionBlocks.Select(x => new Entry
-            {
-                Name = x.DriveName,
-                FormattedName = x.DriveName,
-                Type = EntryType.Dir,
-                Size = x.PartitionSize,
-                Properties = new Dictionary<string, string>
-                {
-                    { "DosType", string.Join(", ", x.PartitionSize.FormatBytes(), $"{x.DosTypeHex} ({x.DosTypeFormatted})") }
-                }
-            }).ToList()
+            Entries = entries
         });
 
         return new Result();
+    }
+
+    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Stream stream,
+        PartitionBlock partitionBlock)
+    {
+        IFileSystemVolume fileSystemVolume = null;
+        try
+        {
+            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(stream, partitionBlock);
+            fileSystemVolume = fileSystemVolumeResult.IsSuccess ? fileSystemVolumeResult.Value : null;
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+
+        var properties = new Dictionary<string, string>
+        {
+            { "Dos Type", $"{partitionBlock.DosTypeHex} ({partitionBlock.DosTypeFormatted})" }
+        };
+
+        if (fileSystemVolume == null)
+        {
+            return properties;
+        }
+        properties.Add("Volume Name", fileSystemVolume.Name);
+        properties.Add("File system size", fileSystemVolume.Size.FormatBytes());
+        properties.Add("File system free", fileSystemVolume.Free.FormatBytes());
+        properties.Add("File system used", (fileSystemVolume.Size - fileSystemVolume.Free).FormatBytes());
+
+        return properties;
     }
 
     private async Task<Result> ListRdbPartitionEntries(Stream stream, string[] parts)

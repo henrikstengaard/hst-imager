@@ -26,7 +26,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, true);
+                srcPath, destPath, true, false, true);
         
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -78,7 +78,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "test1.*"), destPath, true, true);
+                Path.Combine(srcPath, "test1.*"), destPath, true, false, true);
         
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -118,7 +118,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "test1"), destPath, true, true);
+                Path.Combine(srcPath, "test1"), destPath, true, false, true);
         
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -162,7 +162,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "test.txt"), destPath, true, true);
+                Path.Combine(srcPath, "test.txt"), destPath, true, false, true);
         
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -197,7 +197,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "test1", "test2", "test2.txt"), destPath, true, true);
+                Path.Combine(srcPath, "test1", "test2", "test2.txt"), destPath, true, false, true);
         
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

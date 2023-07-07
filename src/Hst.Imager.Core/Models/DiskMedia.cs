@@ -5,7 +5,7 @@
 
     public class DiskMedia : Media
     {
-        public readonly VirtualDisk Disk;
+        public VirtualDisk Disk { get; private set; }
 
         public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive, VirtualDisk disk, Stream stream = null) 
             : base(path, name, size, type, isPhysicalDrive, stream)
@@ -26,6 +26,12 @@
             {
                 base.Dispose(disposing);
             }
+        }
+
+        public void SetDisk(VirtualDisk disk)
+        {
+            this.Disk = disk;
+            SetStream(disk.Content);
         }
     }
 }

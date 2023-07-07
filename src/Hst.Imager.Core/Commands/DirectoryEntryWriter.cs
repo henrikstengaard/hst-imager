@@ -23,6 +23,9 @@ public class DirectoryEntryWriter : IEntryWriter
         this.logs = new List<string>();
     }
 
+    public string MediaPath => this.path;
+    public string FileSystemPath => string.Empty;
+    
     public void Dispose()
     {
     }
@@ -33,11 +36,22 @@ public class DirectoryEntryWriter : IEntryWriter
 
     private string GetEntryPath(string[] entryPathComponents)
     {
-        return Path.Combine(path,
-            Path.Combine(entryPathComponents.Select(x => InvalidFilenameCharsRegex.Replace(x, "_")).ToArray()));
+        var entryPath = Path.Combine(entryPathComponents);
+
+        if (!entryPathComponents.Any(x => InvalidFilenameCharsRegex.IsMatch(x)))
+        {
+            return Path.Combine(path, entryPath);
+        }
+
+        var newEntryPath =
+            Path.Combine(entryPathComponents.Select(x => InvalidFilenameCharsRegex.Replace(x, "_")).ToArray());
+        logs.Add($"{entryPath} -> {newEntryPath}");
+        entryPath = newEntryPath;
+
+        return Path.Combine(path, entryPath);
     }
 
-    public Task CreateDirectory(Entry entry, string[] entryPathComponents)
+    public Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
     {
         var entryPath = GetEntryPath(entryPathComponents);
         if (!string.IsNullOrEmpty(entryPath) && !Directory.Exists(entryPath))
@@ -48,7 +62,7 @@ public class DirectoryEntryWriter : IEntryWriter
         return Task.CompletedTask;
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
+    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
     {
         var entryPath = GetEntryPath(entryPathComponents);
         var dirPath = Path.GetDirectoryName(entryPath) ?? string.Empty;
@@ -105,7 +119,9 @@ public class DirectoryEntryWriter : IEntryWriter
             ? new List<string>()
             : new[]
             {
-                string.Empty, "Following files were renamed to due conflicts with Windows OS reserved filenames:"
+                string.Empty, "Following files were renamed to due invalid characters or conflicts with Windows OS reserved filenames:"
             }.Concat(logs);
     }
+
+    public IEntryIterator CreateEntryIterator(string rootPath, bool recursive) => null;
 }

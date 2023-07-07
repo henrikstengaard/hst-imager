@@ -21,16 +21,20 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     private string[] currentPathComponents;
     private bool disposed;
 
-    public AmigaVolumeEntryWriter(Media media, string[] pathComponents, IFileSystemVolume fileSystemVolume)
+    public AmigaVolumeEntryWriter(Media media, string fileSystemPath, string[] pathComponents, IFileSystemVolume fileSystemVolume)
     {
         this.isWindowsOperatingSystem = OperatingSystem.IsWindows();
         this.logs = new List<string>();
         this.buffer = new byte[4096];
         this.media = media;
+        this.FileSystemPath = fileSystemPath;
         this.pathComponents = pathComponents;
         this.fileSystemVolume = fileSystemVolume;
         this.currentPathComponents = Array.Empty<string>();
     }
+
+    public string MediaPath => this.media.Path;
+    public string FileSystemPath { get; }
 
     private void Dispose(bool disposing)
     {
@@ -42,7 +46,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         if (disposing)
         {
             fileSystemVolume.Flush().GetAwaiter().GetResult();
-            media.Stream.Flush();
+            if (media.Stream.CanRead)
+            {
+                media.Stream.Flush();
+            }
             media.Dispose();
         }
 
@@ -51,7 +58,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
     public void Dispose() => Dispose(true);
 
-    public async Task CreateDirectory(Entry entry, string[] entryPathComponents)
+    public async Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
     {
         await fileSystemVolume.ChangeDirectory("/");
 
@@ -73,7 +80,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
             if (i == fullPathComponents.Length - 1)
             {
-                await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
+                if (!skipAttributes)
+                {
+                    await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
+                }
 
                 if (entry.Date.HasValue)
                 {
@@ -92,7 +102,7 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         currentPathComponents = fullPathComponents;
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream)
+    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
         var fileName = fullPathComponents[^1];
@@ -155,7 +165,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                  0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
-        await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
+        if (!skipAttributes)
+        {
+            await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
+        }
 
         if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
         {
@@ -182,6 +195,11 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                 string.Empty,
                 "Following files were renamed to restore filenames previously conflicted with Windows OS reserved filenames:"
             }.Concat(logs);
+    }
+
+    public IEntryIterator CreateEntryIterator(string rootPath, bool recursive)
+    {
+        return new AmigaVolumeEntryIterator(media.Stream, rootPath, fileSystemVolume, recursive);
     }
 
     public async Task Flush()

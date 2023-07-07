@@ -30,7 +30,7 @@ public class GivenFsExtractCommandWithLzw : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, false, true);
+                srcPath, destPath, false, false, true);
             
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

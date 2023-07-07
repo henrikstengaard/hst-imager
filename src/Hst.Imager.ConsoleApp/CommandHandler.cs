@@ -446,10 +446,10 @@
             await Execute(command);
         }
 
-        public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool quiet)
+        public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
         {
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), srcPath, destPath, recursive, quiet);
+                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet);
             await Execute(command);
         }
 
@@ -464,10 +464,10 @@
             await Execute(command);
         }
 
-        public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool quiet)
+        public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
         {
             var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), srcPath, destPath, recursive, quiet);
+                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet);
             await Execute(command);
         }
         

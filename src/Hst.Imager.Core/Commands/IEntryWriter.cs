@@ -8,13 +8,16 @@ using Models.FileSystems;
 
 public interface IEntryWriter : IDisposable
 {
+    string MediaPath { get; }
+    string FileSystemPath { get; }
+
     /// <summary>
     /// Create directory for entry
     /// </summary>
     /// <param name="entry">Entry to create directory dir</param>
     /// <param name="entryPathComponents">Entry path components to entry</param>
     /// <returns></returns>
-    Task CreateDirectory(Entry entry, string[] entryPathComponents);
+    Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes);
     
     /// <summary>
     /// Write entry to stream 
@@ -23,7 +26,7 @@ public interface IEntryWriter : IDisposable
     /// <param name="entryPathComponents">Entry path components to entry</param>
     /// <param name="stream">Stream to write entry to</param>
     /// <returns></returns>
-    Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream);
+    Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes);
     
     /// <summary>
     /// Flush changes to stream
@@ -42,4 +45,6 @@ public interface IEntryWriter : IDisposable
     /// </summary>
     /// <returns></returns>
     IEnumerable<string> GetLogs();
+
+    IEntryIterator CreateEntryIterator(string rootPath, bool recursive);
 }

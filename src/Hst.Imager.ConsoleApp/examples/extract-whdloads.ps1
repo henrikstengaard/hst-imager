@@ -2,7 +2,7 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-07
 #
 # A powershell script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
@@ -80,7 +80,7 @@ if (!$targetDir -or $targetDir -eq '')
 
 # find .lha and .zip files whdloads directory
 $whdloadFiles = @()
-$whdloadFiles += Get-ChildItem $whdloadsPath -Recurse | Where-Object { $_.Name -match '.*\.lha|.*\.zip' }
+$whdloadFiles += Get-ChildItem $whdloadsPath -Recurse | Where-Object { $_.Name -match '.*\.lha|.*\.lzx|.*\.zip' }
 
 # extract each whdload file to image
 foreach ($whdloadFile in $whdloadFiles)

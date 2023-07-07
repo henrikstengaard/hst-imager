@@ -108,7 +108,8 @@ public class DirectoryEntryIterator : IEntryIterator
                 RelativePathComponents = relativePathComponents,
                 Date = dirInfo.LastWriteTime,
                 Size = 0,
-                Type = EntryType.Dir
+                Type = EntryType.Dir,
+                Properties = new Dictionary<string, string>()
             };
             
             if (recursive || this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
@@ -132,7 +133,8 @@ public class DirectoryEntryIterator : IEntryIterator
                 RelativePathComponents = relativePathComponents,
                 Date = fileInfo.LastWriteTime,
                 Size = fileInfo.Length,
-                Type = EntryType.File
+                Type = EntryType.File,
+                Properties = new Dictionary<string, string>()
             };
             
             if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))

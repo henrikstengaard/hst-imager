@@ -5,8 +5,8 @@
 
     public class Media : IDisposable
     {
-        private bool disposed;
-        
+        public bool IsDisposed { get; private set; }
+
         public enum MediaType
         {
             Raw,
@@ -18,6 +18,7 @@
         public long Size;
         public bool IsPhysicalDrive;
         public MediaType Type;
+        public bool IsWriteable { get; }
 
         public Stream Stream { get; private set; }
 
@@ -29,11 +30,12 @@
             Type = type;
             IsPhysicalDrive = isPhysicalDrive; 
             Stream = stream;
+            IsWriteable = stream?.CanWrite ?? false;
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposed)
+            if (IsDisposed)
             {
                 return;
             }
@@ -45,9 +47,15 @@
                 Stream = null;
             }
 
-            disposed = true;
+            IsDisposed = true;
         }
 
         public void Dispose() => Dispose(true);
+
+        public void SetStream(Stream stream)
+        {
+            IsDisposed = false;
+            this.Stream = stream;
+        }
     }
 }

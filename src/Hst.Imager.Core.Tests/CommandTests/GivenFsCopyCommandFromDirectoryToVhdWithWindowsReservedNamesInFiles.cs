@@ -33,7 +33,7 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, true);
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -48,7 +48,7 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             
             // assert - mount pfs3 volume
             using var media = mediaResult.Value;
-            await using var pfs3Volume = await MountVolume(media.Stream);
+            await using var pfs3Volume = await MountPfs3Volume(media.Stream);
             // assert - get root entries
             var entries = (await pfs3Volume.ListEntries()).ToList();
             
