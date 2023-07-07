@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-06-21
 #
 # A powershell script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -67,11 +67,28 @@ $fontsAdfPath = Join-Path $currentPath -ChildPath "amiga-os-310-fonts.adf"
 $installAdfPath = Join-Path $currentPath -ChildPath "amiga-os-310-install.adf"
 $storageAdfPath = Join-Path $currentPath -ChildPath "amiga-os-310-storage.adf"
 
-# set image path
-$imagePath = Join-Path $currentPath -ChildPath "amigaos-3.1.vhd"
+# show create image question dialog
+$createImage = QuestionDialog 'Create image' "Do you want to create a new image file?`r`n`r`nIf No then existing image file can be selected."
 
-# create 16gb image file
-CreateImage $hstImagerPath $imagePath '16gb'
+$imagePath = $null
+if ($createImage)
+{
+    # set image path
+    $imagePath = Join-Path $currentPath -ChildPath "amigaos-3.1.vhd"
+
+    CreateImage $hstImagerPath $imagePath "16gb"
+}
+else
+{
+    $imagePath = OpenFileDialog "Select image file to install AmigsOS 3.1 to" $currentPath "Hard disk image files|*.img;*.hdf;*.vhd|All Files|*.*"
+
+    # error, if image path is not found
+    if (!(Test-Path $imagePath))
+    {
+        Write-Error ("Image path '{0}' not found" -f $imagePath)
+        exit 1
+    }
+}
 
 # extract workbench adf to image file
 & $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0"

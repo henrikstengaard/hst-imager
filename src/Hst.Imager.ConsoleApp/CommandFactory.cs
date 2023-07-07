@@ -289,6 +289,7 @@
         {
             var command = new Command("block", "Block.");
             command.AddCommand(CreateBlockReadCommand());
+            command.AddCommand(CreateBlockViewCommand());
             return command;
         }
 
@@ -328,6 +329,30 @@
             blankCommand.AddOption(usedOption);
             blankCommand.AddOption(startOption);
             blankCommand.AddOption(endOption);
+
+            return blankCommand;
+        }
+        
+        public static Command CreateBlockViewCommand()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var blockSizeOption = new Option<int>(
+                new[] { "--block-size", "-bs" },
+                description: "Block size.",
+                getDefaultValue: () => 512);
+
+            var startOption = new Option<long?>(
+                new[] { "--start", "-s" },
+                description: "Start offset.");
+
+            var blankCommand = new Command("view", "View block as hex.");
+            blankCommand.SetHandler(CommandHandler.BlockView, pathArgument, blockSizeOption, startOption);
+            blankCommand.AddArgument(pathArgument);
+            blankCommand.AddOption(blockSizeOption);
+            blankCommand.AddOption(startOption);
 
             return blankCommand;
         }

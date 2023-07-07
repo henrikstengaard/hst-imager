@@ -18,14 +18,60 @@
     public class CommandHelper : ICommandHelper
     {
         private readonly bool isAdministrator;
+        
+        /// <summary>
+        /// Active medias contains opened medias and is used to get reuse medias without opening same media twice
+        /// </summary>
+        private readonly IList<Media> activeMedias;
 
         public CommandHelper(bool isAdministrator)
         {
             this.isAdministrator = isAdministrator;
+            this.activeMedias = new List<Media>();
             DiscUtils.Containers.SetupHelper.SetupContainers();
             DiscUtils.FileSystems.SetupHelper.SetupFileSystems();
         }
+        
+        /// <summary>
+        /// Clear active medias to avoid source and destination being reused between commands
+        /// </summary>
+        public void ClearActiveMedias()
+        {
+            foreach (var activeMedia in this.activeMedias)
+            {
+                activeMedia.Dispose();
+            }
+            this.activeMedias.Clear();
+        }
 
+        private Media GetActiveMedia(string path)
+        {
+            var media = this.activeMedias.FirstOrDefault(x => x.Path == path);
+            if (media == null)
+            {
+                return null;
+            }
+
+            if (media is DiskMedia diskMedia && diskMedia.Type == Media.MediaType.Vhd)
+            {
+                if (diskMedia.IsDisposed)
+                {
+                    var vhdDisk = VirtualDisk.OpenDisk(path, media.IsWriteable ? FileAccess.ReadWrite : FileAccess.Read);
+                    vhdDisk.Content.Position = 0;
+                    diskMedia.SetDisk(vhdDisk);
+                }
+                return diskMedia;
+            }
+
+            if (media.Stream == null)
+            {
+                media.SetStream(File.Open(path, FileMode.Open,
+                    media.IsWriteable ? FileAccess.ReadWrite : FileAccess.Read));
+            }
+
+            return media;
+        }
+        
         public virtual Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path)
         {
             return GetPhysicalDriveMedia(physicalDrives, path).Then(() => GetReadableFileMedia(path));
@@ -55,11 +101,16 @@
                 return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
 
-            path = PathHelper.GetFullPath(path);
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
                 return new Result<Media>(new Error($"Invalid physical drive path '{path}'"));
+            }
+
+            var media = GetActiveMedia(physicalDrivePath);
+            if (media != null)
+            {
+                return new Result<Media>(media);
             }
 
             var physicalDrive =
@@ -72,9 +123,11 @@
             }
 
             physicalDrive.SetWritable(writeable);
-            return new Result<Media>(new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
+            var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
                 Media.MediaType.Raw,
-                true, physicalDrive.Open()));
+                true, physicalDrive.Open());
+            this.activeMedias.Add(physicalDriveMedia);
+            return new Result<Media>(physicalDriveMedia);
         }
 
         private static string GetPhysicalDrivePath(string path)
@@ -111,18 +164,27 @@
                 return new Result<Media>(new PathNotFoundError($"Path '{path ?? "null"}' not found", nameof(path)));
             }
 
+            var media = GetActiveMedia(path);
+            if (media != null)
+            {
+                return new Result<Media>(media);
+            }
+
             var name = Path.GetFileName(path);
             if (!IsVhd(path))
             {
-                var imgStream = File.Open(path, FileMode.Open, FileAccess.Read);
-                return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
-                    imgStream));
+                var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
+                var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false, fileStream);
+                this.activeMedias.Add(fileMedia);
+                return new Result<Media>(fileMedia);
             }
 
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                new SectorStream(vhdDisk.Content, true)));
+            var vhdMedia = new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
+                new SectorStream(vhdDisk.Content, true));
+            this.activeMedias.Add(vhdMedia);
+            return new Result<Media>(vhdMedia);
         }
 
         public virtual Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
@@ -133,6 +195,13 @@
             }
 
             path = PathHelper.GetFullPath(path);
+            
+            var media = GetActiveMedia(path);
+            if (media != null)
+            {
+                return new Result<Media>(media);
+            }
+            
             var destDir = Path.GetDirectoryName(path);
 
             if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
@@ -146,9 +215,11 @@
             {
                 if (!IsVhd(path))
                 {
-                    var imgStream = CreateWriteableStream(path, true);
-                    return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
-                        imgStream));
+                    var fileStream = CreateWriteableStream(path, true);
+                    var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
+                        fileStream);
+                    this.activeMedias.Add(fileMedia);
+                    return new Result<Media>(fileMedia);
                 }
 
                 if (size == null || size.Value == 0)
@@ -167,15 +238,19 @@
 
             if (!IsVhd(path))
             {
-                var imgStream = CreateWriteableStream(path, false);
-                return new Result<Media>(new Media(path, name, imgStream.Length, Media.MediaType.Raw, false,
-                    imgStream));
+                var fileStream = CreateWriteableStream(path, false);
+                var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
+                    fileStream);
+                this.activeMedias.Add(fileMedia);
+                return new Result<Media>(fileMedia);
             }
 
-            var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
-            vhdDisk.Content.Position = 0;
-            return new Result<Media>(new VhdMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false,
-                vhdDisk, new SectorStream(vhdDisk.Content, true)));
+            var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
+            disk.Content.Position = 0;
+            var vhdMedia = new DiskMedia(path, name, disk.Capacity, Media.MediaType.Vhd, false,
+                disk, new SectorStream(disk.Content, true));
+            this.activeMedias.Add(vhdMedia);
+            return new Result<Media>(vhdMedia);
         }
 
         public virtual Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
@@ -650,6 +725,68 @@
             var left = value % size;
 
             return left == 0 ? value : value - left + size;
+        }
+        
+        public virtual Result<MediaResult> ResolveMedia(string path)
+        {
+            path = PathHelper.GetFullPath(path);
+            string mediaPath;
+            var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
+
+            for (var i = 0; i < path.Length; i++)
+            {
+                if (path[i] == '\\' || path[i] == '/')
+                {
+                    directorySeparatorChar = path[i].ToString();
+                    break;
+                }
+            }
+
+            // physical drive
+            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
+            if (physicalDrivePathMatch.Success)
+            {
+                mediaPath = physicalDrivePathMatch.Value;
+                var firstSeparatorIndex = path.IndexOf(directorySeparatorChar, mediaPath.Length, StringComparison.Ordinal);
+
+                return new Result<MediaResult>(new MediaResult
+                {
+                    FullPath = path,
+                    MediaPath = mediaPath,
+                    FileSystemPath = firstSeparatorIndex >= 0
+                        ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1))
+                        : string.Empty,
+                    DirectorySeparatorChar = directorySeparatorChar
+                });
+            }
+
+            // media file
+            var next = 0;
+            do
+            {
+                next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
+                mediaPath = path.Substring(0, next == -1 ? path.Length : next);
+
+                if (File.Exists(mediaPath))
+                {
+                    return new Result<MediaResult>(new MediaResult
+                    {
+                        FullPath = path,
+                        MediaPath = mediaPath,
+                        FileSystemPath = mediaPath.Length + 1 < path.Length
+                            ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
+                            : string.Empty,
+                        DirectorySeparatorChar = directorySeparatorChar
+                    });
+                }
+
+                if (!Directory.Exists(mediaPath))
+                {
+                    break;
+                }
+            } while (next != -1);
+
+            return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
         }
     }
 }

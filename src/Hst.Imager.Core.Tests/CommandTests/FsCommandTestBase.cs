@@ -3,6 +3,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Amiga;
@@ -11,14 +12,21 @@ using Amiga.FileSystems.FastFileSystem;
 using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
 using Commands;
+using DiscUtils.Fat;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 
 public class FsCommandTestBase : CommandTestBase
 {
     protected static readonly byte[] Dos3DosType = { 0x44, 0x4f, 0x53, 0x3 };
+    protected static readonly byte[] Dos7DosType = { 0x44, 0x4f, 0x53, 0x7 };
+    protected static readonly byte[] DummyFastFileSystemBytes = Encoding.ASCII.GetBytes(
+        "$VER: FastFileSystem 0.1 (01/01/22) ");
     protected static readonly byte[] Pfs3DosType = { 0x50, 0x46, 0x53, 0x3 };
     protected static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
 
@@ -51,7 +59,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        
         if (!path.ToLower().EndsWith(".vhd"))
         {
             stream.SetLength(diskSize);
@@ -67,12 +76,26 @@ public class FsCommandTestBase : CommandTestBase
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
     }
 
-    protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
+    protected void CreateFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
         var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
+            BiosPartitionTypes.Fat32Lba, false);
+        FatFileSystem.FormatPartition(disk, partitionIndex, "FAT");
+    }
+
+    protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
 
         var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
 
@@ -85,6 +108,43 @@ public class FsCommandTestBase : CommandTestBase
         await Pfs3Formatter.FormatPartition(stream, partitionBlock, "Workbench");
     }
 
+    protected async Task CreateAdfDisk(TestCommandHelper testCommandHelper, string path)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, 0, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        stream.SetLength(FloppyDiskConstants.DoubleDensity.Size);    
+        
+        await FastFileSystemFormatter.Format(stream, FloppyDiskConstants.DoubleDensity.LowCyl,
+            FloppyDiskConstants.DoubleDensity.HighCyl, FloppyDiskConstants.DoubleDensity.ReservedBlocks,
+            FloppyDiskConstants.DoubleDensity.Heads, FloppyDiskConstants.DoubleDensity.Sectors,
+            FloppyDiskConstants.BlockSize, FloppyDiskConstants.BlockSize, Dos3DosType, "Workbench");        
+    }
+    
+    protected async Task CreateDos7FormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        if (!path.ToLower().EndsWith(".vhd"))
+        {
+            stream.SetLength(diskSize);
+        }
+        
+        var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
+
+        rigidDiskBlock.AddFileSystem(Dos7DosType, DummyFastFileSystemBytes)
+            .AddPartition("DH0", bootable: true);
+        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+
+        var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
+
+        await FastFileSystemFormatter.FormatPartition(stream, partitionBlock, "Workbench");
+    }
+    
     protected async Task CreateDos3FormattedAdf(string path)
     {
         await using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
@@ -114,7 +174,7 @@ public class FsCommandTestBase : CommandTestBase
         await volume.CreateFile("test.txt");
     }
 
-    protected async Task<Pfs3Volume> MountVolume(Stream stream)
+    protected async Task<Pfs3Volume> MountPfs3Volume(Stream stream)
     {
         var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
@@ -123,6 +183,20 @@ public class FsCommandTestBase : CommandTestBase
         return await Pfs3Volume.Mount(stream, partitionBlock);
     }
 
+    protected async Task<FastFileSystemVolume> MountFastFileSystemVolume(Stream stream)
+    {
+        if (stream.Length == FloppyDiskConstants.DoubleDensity.Size)
+        {
+            return await FastFileSystemVolume.MountAdf(stream);
+        }
+        
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+
+        var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
+
+        return await FastFileSystemVolume.MountPartition(stream, partitionBlock);
+    }
+    
     protected void DeletePaths(params string[] paths)
     {
         foreach (var path in paths)

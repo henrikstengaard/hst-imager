@@ -29,7 +29,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, true);
+                srcPath, destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -62,9 +62,10 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromZipSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromZipSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.zip";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -79,7 +80,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "dir1"), destPath, true, true);
+                Path.Combine(srcPath, "dir1"), destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -104,9 +105,10 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
-    public async Task WhenExtractingAllRecursivelyFromZipWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    public async Task
+        WhenExtractingAllRecursivelyFromZipWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
         var srcPath = $"{Guid.NewGuid()}.zip";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -121,7 +123,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "file*.txt"), destPath, true, true);
+                Path.Combine(srcPath, "file*.txt"), destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -150,7 +152,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     [Fact]
     public async Task WhenExtractingAFileFromZipToLocalDirectoryThenFileIsExtracted()
     {
@@ -167,7 +169,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "file1.txt"), destPath, true, true);
+                Path.Combine(srcPath, "file1.txt"), destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -205,7 +207,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "dir1", "file3.txt"), destPath, true, true);
+                Path.Combine(srcPath, "dir1", "file3.txt"), destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -219,14 +221,15 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
 
             // assert - file3.txt file was extracted
             var file3TxtPath = Path.Combine(destPath, "file3.txt");
-            Assert.Equal(file3TxtPath, files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
+            Assert.Equal(file3TxtPath,
+                files.FirstOrDefault(x => x.Equals(file3TxtPath, StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
             DeletePaths(srcPath, destPath);
         }
     }
-    
+
     private void CreateZipFileWithDirectoriesAndFiles(string path)
     {
         using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);

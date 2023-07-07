@@ -2,11 +2,12 @@
 
     <ItemGroup>
       <PackageReference Include="CsvHelper" Version="27.2.1" />
-      <PackageReference Include="DiscUtils.Containers" Version="0.16.15" />
-      <PackageReference Include="DiscUtils.FileSystems" Version="0.16.15" />
-      <PackageReference Include="DiscUtils.Vhd" Version="0.16.15" />
-      <PackageReference Include="Hst.Amiga" Version="0.3.158" />
-      <PackageReference Include="hst.compression" Version="0.4.48" />
+      <PackageReference Include="Hst.Amiga" Version="0.3.159" />
+      <PackageReference Include="hst.compression" Version="0.4.55" />
+      <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.25" />
+      <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.25" />
+      <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.25" />
+      <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.25" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
       <PackageReference Include="plist-cil" Version="2.2.0" />
       <PackageReference Include="SharpZipLib" Version="1.4.2" />

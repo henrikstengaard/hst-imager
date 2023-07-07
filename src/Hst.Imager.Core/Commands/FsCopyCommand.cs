@@ -1,7 +1,9 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -15,16 +17,19 @@ public class FsCopyCommand : FsCommandBase
     private readonly string srcPath;
     private readonly string destPath;
     private readonly bool recursive;
+    private readonly bool skipAttributes;
     private readonly bool quiet;
 
     public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool quiet)
+        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive,
+        bool skipAttributes, bool quiet)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
         this.srcPath = srcPath;
         this.destPath = destPath;
         this.recursive = recursive;
+        this.skipAttributes = skipAttributes;
         this.quiet = quiet;
     }
 
@@ -34,18 +39,18 @@ public class FsCopyCommand : FsCommandBase
 
         var stopwatch = new Stopwatch();
 
-        // get source copy entry iterator
-        var srcEntryIteratorResult = await GetCopyEntryIterator(srcPath, recursive);
-        if (srcEntryIteratorResult.IsFaulted)
-        {
-            return new Result(srcEntryIteratorResult.Error);
-        }
-
         // get destination entry writer
         var destEntryWriterResult = await GetEntryWriter(destPath, false);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
+        }
+
+        // get source copy entry iterator
+        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath);
+        if (srcEntryIteratorResult.IsFaulted)
+        {
+            return new Result(srcEntryIteratorResult.Error);
         }
 
         // iterate through source entries and write in destination
@@ -67,13 +72,8 @@ public class FsCopyCommand : FsCommandBase
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive || srcEntryIterator.UsesPattern)
-                            {
-                                continue;
-                            }
-
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents);
+                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes);
                             break;
                         case EntryType.File:
                         {
@@ -86,36 +86,37 @@ public class FsCopyCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream);
+                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream,
+                                skipAttributes);
                             break;
                         }
                     }
-                    
+
                     count++;
 
                     if (count <= 200)
                     {
                         continue;
                     }
-                    
+
                     count = 0;
                     await srcEntryIterator.Flush();
                     await destEntryWriter.Flush();
                 }
-                
+
                 await srcEntryIterator.Flush();
             }
 
             await destEntryWriter.Flush();
-            
+
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
-                OnDebugMessage(log);                
+                OnDebugMessage(log);
             }
-            
+
             foreach (var log in destEntryWriter.GetLogs())
             {
-                OnInformationMessage(log);                
+                OnInformationMessage(log);
             }
         }
 
@@ -127,25 +128,20 @@ public class FsCopyCommand : FsCommandBase
         return new Result();
     }
 
-    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(string path, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path)
     {
-        // directory entry iterator
+        // get directory entry iterator and return if successful
         var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
         if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
         {
             return new Result<IEntryIterator>(directoryEntryIterator.Value);
         }
 
-        // file entry iterator
-        var fileEntryIterator = await GetFileEntryIterator(path, recursive);
-        if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
-        {
-            return new Result<IEntryIterator>(fileEntryIterator.Value);
-        }
+        // path is not a directory, so must be a file
         
         OnDebugMessage($"Resolving path '{path}'");
 
-        var mediaResult = ResolveMedia(path);
+        var mediaResult = commandHelper.ResolveMedia(path);
         if (mediaResult.IsFaulted)
         {
             return new Result<IEntryIterator>(mediaResult.Error);
@@ -154,6 +150,40 @@ public class FsCopyCommand : FsCommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"File system Path: '{mediaResult.Value.FileSystemPath}'");
         
+        // file entry iterator
+        if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
+        {
+            var fileEntryIterator = await GetFileEntryIterator(path, recursive);
+            if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
+            {
+                return new Result<IEntryIterator>(fileEntryIterator.Value);
+            }
+        }
+        
+        // create entry iterator from entry writer, if media is the same (copy from and to same media)
+        var entryIteratorFileSystemPathComponents =
+            mediaResult.Value.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+                .ToArray();
+        var entryWriterFileSystemPathComponents =
+            entryWriter.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2)
+                .ToArray();
+
+        if (mediaResult.Value.MediaPath.EndsWith(".adf") && mediaResult.Value.MediaPath == entryWriter.MediaPath)
+        {
+            var rootPath = mediaResult.Value.FileSystemPath;
+            return new Result<IEntryIterator>(entryWriter.CreateEntryIterator(rootPath,
+                recursive));
+        }
+        
+        if (mediaResult.Value.MediaPath == entryWriter.MediaPath &&
+            entryIteratorFileSystemPathComponents.Take(2).SequenceEqual(
+                entryWriterFileSystemPathComponents)) // and only if first two parts of file system path is equal
+        {
+            var rootPath = string.Join("/", entryIteratorFileSystemPathComponents.Skip(2));
+            return new Result<IEntryIterator>(entryWriter.CreateEntryIterator(rootPath,
+                recursive));
+        }
+
         // disk entry iterator
         var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
         if (diskEntryIterator != null && diskEntryIterator.IsSuccess)

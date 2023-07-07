@@ -35,7 +35,7 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             var writer = new DirectoryEntryWriter(path);
             
             // act - write directory entry
-            await writer.WriteEntry(entry, entry.RelativePathComponents, new MemoryStream());
+            await writer.WriteEntry(entry, entry.RelativePathComponents, new MemoryStream(), false);
             
             // assert - get written files
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);

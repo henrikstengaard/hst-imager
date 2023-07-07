@@ -9,6 +9,7 @@
 
     public interface ICommandHelper
     {
+        void ClearActiveMedias();
         Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false);
         Result<Media> GetReadableFileMedia(string path);
         Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false);
@@ -19,5 +20,6 @@
         bool IsVhd(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);
         Task<DiskInfo> ReadDiskInfo(Media media, Stream stream);
+        Result<MediaResult> ResolveMedia(string path);
     }
 }

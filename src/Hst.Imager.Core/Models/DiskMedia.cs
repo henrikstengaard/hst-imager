@@ -3,14 +3,14 @@
     using System.IO;
     using DiscUtils;
 
-    public class VhdMedia : Media
+    public class DiskMedia : Media
     {
-        private readonly VirtualDisk disk;
+        public VirtualDisk Disk { get; private set; }
 
-        public VhdMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive, VirtualDisk disk, Stream stream = null) 
+        public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive, VirtualDisk disk, Stream stream = null) 
             : base(path, name, size, type, isPhysicalDrive, stream)
         {
-            this.disk = disk;
+            this.Disk = disk;
         }
 
         protected override void Dispose(bool disposing)
@@ -19,13 +19,19 @@
             {
                 if (disposing)
                 {
-                    disk.Dispose();
+                    Disk.Dispose();
                 }
             }
             finally
             {
                 base.Dispose(disposing);
             }
+        }
+
+        public void SetDisk(VirtualDisk disk)
+        {
+            this.Disk = disk;
+            SetStream(disk.Content);
         }
     }
 }

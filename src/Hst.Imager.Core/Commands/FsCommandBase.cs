@@ -11,7 +11,13 @@ using Amiga.FileSystems.FastFileSystem;
 using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
 using Compression.Lha;
+using Compression.Lzx;
+using DiscUtils;
+using DiscUtils.Ext;
+using DiscUtils.Fat;
 using DiscUtils.Iso9660;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Helpers;
@@ -48,6 +54,7 @@ public abstract class FsCommandBase : CommandBase
         AdfDosMagicNumber = new byte[] { 0x44, 0x4f, 0x53 }; // "DOS" at offset 0 (Amiga Disk File)
 
     private static readonly byte[] LhaMagicNumber = new byte[] { 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
+    private static readonly byte[] LzxMagicNumber = new byte[] { 0x4C, 0x5A, 0x58 }; // "LZX" at offset 0 (Lzx archive)
 
     private static readonly byte[] LzwMagicNumber = new byte[] { 0x1f, 0x9d }; // offset 0 (.Z archive)
     
@@ -109,6 +116,22 @@ public abstract class FsCommandBase : CommandBase
         return HasMagicNumber(LhaMagicNumber, sectorBytes, 2);
     }
 
+    private async Task<bool> IsLzxMedia(MediaResult mediaResult)
+    {
+        // return false, if media file doesnt exist
+        if (!File.Exists(mediaResult.MediaPath))
+        {
+            return false;
+        }
+
+        await using var stream = File.OpenRead(mediaResult.MediaPath);
+
+        stream.Seek(0, SeekOrigin.Begin);
+        var sectorBytes = await stream.ReadBytes(512);
+
+        return HasMagicNumber(LzxMagicNumber, sectorBytes, 0);
+    }
+    
     private async Task<bool> IsLzwMedia(MediaResult mediaResult)
     {
         // return false, if media file doesnt exist
@@ -275,6 +298,20 @@ public abstract class FsCommandBase : CommandBase
             recursive));
     }
 
+    protected async Task<Result<IEntryIterator>> GetLzxEntryIterator(MediaResult mediaResult, bool recursive)
+    {
+        if (!await IsLzxMedia(mediaResult))
+        {
+            return null;
+        }
+
+        var lzxStream = File.OpenRead(mediaResult.MediaPath);
+        var lzxArchive = new LzxArchive(lzxStream, LzxOptions.AmigaLzxOptions);
+
+        return new Result<IEntryIterator>(new LzxArchiveEntryIterator(lzxStream, mediaResult.FileSystemPath, lzxArchive,
+            recursive));
+    }
+    
     protected async Task<Result<IEntryIterator>> GetLzwEntryIterator(MediaResult mediaResult)
     {
         if (!await IsLzwMedia(mediaResult))
@@ -320,11 +357,6 @@ public abstract class FsCommandBase : CommandBase
     protected async Task<Result<IEntryIterator>> GetDiskEntryIterator(MediaResult mediaResult, bool recursive,
         bool useCache, int cacheSize, int blockSize)
     {
-        if (!await IsDiskMedia(mediaResult))
-        {
-            return null;
-        }
-
         if (string.IsNullOrEmpty(mediaResult.FileSystemPath))
         {
             return new Result<IEntryIterator>(
@@ -343,13 +375,18 @@ public abstract class FsCommandBase : CommandBase
         {
             return new Result<IEntryIterator>(new Error($"No partition table in path"));
         }
-        
-        if (!parts[0].Equals("rdb", StringComparison.OrdinalIgnoreCase))
-        {
-            return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"));
-        }
 
-        if (parts.Length == 1)
+        return parts[0].ToLowerInvariant() switch
+        {
+            "mbr" => await GetFileSystemEntryIterator(media.Value, parts, recursive),
+            "rdb" => await GetAmigaVolumeEntryIterator(media.Value, parts, recursive),
+            _ => new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"))
+        };
+    }
+
+    private async Task<Result<IEntryIterator>> GetAmigaVolumeEntryIterator(Media media, string[] parts, bool recursive)
+    {
+        if (parts.Length < 2)
         {
             return new Result<IEntryIterator>(new Error($"No device name in path"));
         }
@@ -367,7 +404,7 @@ public abstract class FsCommandBase : CommandBase
         // }
         
         // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
-        var stream = media.Value.Stream;
+        var stream = media.Stream;
         //var stream = new CachedBlockStream(media.Value.Stream);
 
         var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
@@ -377,14 +414,39 @@ public abstract class FsCommandBase : CommandBase
         }
 
         var rootPath = string.Join("/", parts.Skip(2));
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media.Value.Stream, rootPath,
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media.Stream, rootPath,
             fileSystemVolumeResult.Value, recursive));
+    }
+
+    private async Task<Result<IEntryIterator>> GetFileSystemEntryIterator(Media media, string[] parts, bool recursive)
+    {
+        if (parts.Length < 2)
+        {
+            return new Result<IEntryIterator>(new Error($"No partition number in path"));
+        }
+
+        if (!int.TryParse(parts[1], out var partitionNumber))
+        {
+            return new Result<IEntryIterator>(new Error($"Invalid partition number '{parts[1]}'"));
+        }
+        
+        // open stream as disk
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[1]);
+        if (mbrFileSystemResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mbrFileSystemResult.Error);
+        }
+
+        var rootPath = string.Join("\\", parts.Skip(2));
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, mbrFileSystemResult.Value, rootPath, recursive));
     }
 
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool useCache)
     {
         // resolve media path
-        var mediaResult = ResolveMedia(destPath);
+        var mediaResult = commandHelper.ResolveMedia(destPath);
 
         // return directory writer, if media path doesn't exist. otherwise return error
         if (mediaResult.IsFaulted)
@@ -397,33 +459,30 @@ public abstract class FsCommandBase : CommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 
-        // adf
-        if (File.Exists(mediaResult.Value.MediaPath) &&
-            (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            var adfStream = File.Open(mediaResult.Value.MediaPath, FileMode.Open, FileAccess.ReadWrite);
-            var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
-            if (fileSystemVolumeResult.IsFaulted)
-            {
-                return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
-            }
-
-            var adfMedia = new Media(mediaResult.Value.MediaPath, Path.GetFileName(mediaResult.Value.MediaPath),
-                adfStream.Length, Media.MediaType.Raw, false, adfStream);
-
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(adfMedia,
-                mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
-                fileSystemVolumeResult.Value));
-        }
-
-        // disk
         var media = commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
         if (media.IsFaulted)
         {
             return new Result<IEntryWriter>(media.Error);
         }
 
+        // adf
+        if (File.Exists(mediaResult.Value.MediaPath) &&
+            (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var stream = media.Value.Stream;
+            var fileSystemVolumeResult = await MountAdfFileSystemVolume(stream);
+            if (fileSystemVolumeResult.IsFaulted)
+            {
+                return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
+            }
+
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, string.Empty,
+                mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
+                fileSystemVolumeResult.Value));
+        }
+
+        // disk
         var parts = mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length == 0)
@@ -433,6 +492,18 @@ public abstract class FsCommandBase : CommandBase
 
         switch (parts[0].ToLowerInvariant())
         {
+            case "mbr":
+                var disk = media.Value is DiskMedia diskMedia
+                    ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Value.Stream, Ownership.None);
+
+                var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[1]);
+                if (mbrFileSystemResult.IsFaulted)
+                {
+                    return new Result<IEntryWriter>(mbrFileSystemResult.Error);
+                }
+                
+                // skip 2 first parts, partition table and partition number
+                return new Result<IEntryWriter>(new FileSystemEntryWriter(media.Value, mbrFileSystemResult.Value, parts.Skip(2).ToArray()));
             case "rdb":
                 if (parts.Length == 1)
                 {
@@ -447,73 +518,11 @@ public abstract class FsCommandBase : CommandBase
                 }
 
                 // skip 2 first parts, partition table and device/drive name
-                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, parts.Skip(2).ToArray(),
+                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, mediaResult.Value.FileSystemPath, parts.Skip(2).ToArray(),
                     fileSystemVolumeResult.Value));
             default:
                 return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
         }
-    }
-
-    protected Result<MediaResult> ResolveMedia(string path)
-    {
-        path = PathHelper.GetFullPath(path);
-        string mediaPath;
-        var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
-
-        for (var i = 0; i < path.Length; i++)
-        {
-            if (path[i] == '\\' || path[i] == '/')
-            {
-                directorySeparatorChar = path[i].ToString();
-                break;
-            }
-        }
-
-        // physical drive
-        var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
-        if (physicalDrivePathMatch.Success)
-        {
-            mediaPath = physicalDrivePathMatch.Value;
-            var firstSeparatorIndex = path.IndexOf(directorySeparatorChar, mediaPath.Length, StringComparison.Ordinal);
-
-            return new Result<MediaResult>(new MediaResult
-            {
-                FullPath = path,
-                MediaPath = mediaPath,
-                FileSystemPath = firstSeparatorIndex >= 0
-                    ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1))
-                    : string.Empty,
-                DirectorySeparatorChar = directorySeparatorChar
-            });
-        }
-
-        // media file
-        var next = 0;
-        do
-        {
-            next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
-            mediaPath = path.Substring(0, next == -1 ? path.Length : next);
-
-            if (File.Exists(mediaPath))
-            {
-                return new Result<MediaResult>(new MediaResult
-                {
-                    FullPath = path,
-                    MediaPath = mediaPath,
-                    FileSystemPath = mediaPath.Length + 1 < path.Length
-                        ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
-                        : string.Empty,
-                    DirectorySeparatorChar = directorySeparatorChar
-                });
-            }
-
-            if (!Directory.Exists(mediaPath))
-            {
-                break;
-            }
-        } while (next != -1);
-
-        return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
     }
 
     protected async Task<Result<IFileSystemVolume>> MountAdfFileSystemVolume(Stream stream)
@@ -527,6 +536,60 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IFileSystemVolume>(fileSystemVolume);
     }
 
+    protected async Task<Result<IFileSystem>> MountMbrFileSystem(VirtualDisk disk, string partitionNumber)
+    {
+        if (!int.TryParse(partitionNumber, out var partitionNumberIntValue))
+        {
+            return new Result<IFileSystem>(new Error($"Invalid partition number '{partitionNumber}'"));
+        }
+        
+        OnDebugMessage("Reading Master Boot Record");
+        
+        BiosPartitionTable biosPartitionTable;
+        try
+        {
+            biosPartitionTable = new BiosPartitionTable(disk);
+        }
+        catch (Exception)
+        {
+            return new Result<IFileSystem>(new Error("Master Boot Record not found"));
+        }
+
+        OnDebugMessage($"Partition number '{partitionNumber}'");
+
+        if (partitionNumberIntValue < 0 || partitionNumberIntValue - 1 > biosPartitionTable.Partitions.Count)
+        {
+            return new Result<IFileSystem>(new Error($"Invalid partition number {partitionNumber}, expected to between 1-{biosPartitionTable.Partitions.Count}"));
+        }
+
+        var partitionInfo = biosPartitionTable.Partitions[partitionNumberIntValue - 1];
+        
+        OnDebugMessage($"Mounting file system");
+
+        var stream = partitionInfo.Open();
+        var partitionOffset = stream.Position;
+
+        // read first 64kb block bytes of partition
+        var blockBytes = await stream.ReadBytes(512 * 128);
+
+        // ext super block magic signature
+        if (blockBytes[1024 + 0x38] == 0x53 && blockBytes[1024 + 0x39] == 0xEF)
+        {
+            return new Result<IFileSystem>(new ExtFileSystem(stream));
+        }
+        
+        for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
+        {
+            // fat magic Signature
+            if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
+            {
+                return new Result<IFileSystem>(new FatFileSystem(stream));
+            }
+        }
+        
+        return new Result<IFileSystem>(new Error("Unsupported Master Boor Record file system"));
+    }
+    
     protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Stream stream, string partitionName)
     {
         OnDebugMessage("Reading Rigid Disk Block");

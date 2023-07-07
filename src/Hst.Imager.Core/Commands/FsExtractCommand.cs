@@ -18,16 +18,18 @@ public class FsExtractCommand : FsCommandBase
     private readonly string srcPath;
     private readonly string destPath;
     private readonly bool recursive;
+    private readonly bool skipAttributes;
     private readonly bool quiet;
 
     public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool quiet)
+        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
         this.srcPath = srcPath;
         this.destPath = destPath;
         this.recursive = recursive;
+        this.skipAttributes = skipAttributes;
         this.quiet = quiet;
     }
 
@@ -76,7 +78,7 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents);
+                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes);
                             break;
                         case EntryType.File:
                         {
@@ -89,7 +91,7 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream);
+                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream, skipAttributes);
                             break;
                         }
                     }
@@ -134,7 +136,7 @@ public class FsExtractCommand : FsCommandBase
     {
         OnDebugMessage($"Resolving path '{path}'");
 
-        var mediaResult = ResolveMedia(path);
+        var mediaResult = commandHelper.ResolveMedia(path);
         if (mediaResult.IsFaulted)
         {
             return new Result<IEntryIterator>(mediaResult.Error);
@@ -162,6 +164,13 @@ public class FsExtractCommand : FsCommandBase
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
             return new Result<IEntryIterator>(lhaEntryIterator.Value);
+        }
+
+        // lzx
+        var lzxEntryIterator = await GetLzxEntryIterator(mediaResult.Value, recursive);
+        if (lzxEntryIterator != null && lzxEntryIterator.IsSuccess)
+        {
+            return new Result<IEntryIterator>(lzxEntryIterator.Value);
         }
         
         // lzw

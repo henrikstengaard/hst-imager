@@ -51,6 +51,11 @@ public static class FsCommandFactory
             description: "Recursively copy sub-directories.",
             getDefaultValue: () => true);
 
+        var skipAttributesOption = new Option<bool>(
+            new[] { "--skip-attributes", "-sa" },
+            description: "Attributes of directories and files are not set when copied.",
+            getDefaultValue: () => false);
+        
         var quietOption = new Option<bool>(
             new[] { "--quiet", "-q" },
             description: "Quiet mode.",
@@ -58,10 +63,11 @@ public static class FsCommandFactory
 
         var command = new Command("copy", "Copy files or subdirectories from source to destination.");
         command.AddAlias("c");
-        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, quietOption);
+        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
+        command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
 
         return command;
@@ -82,6 +88,11 @@ public static class FsCommandFactory
             description: "Recursively extract sub-directories.",
             getDefaultValue: () => true);
         
+        var skipAttributesOption = new Option<bool>(
+            new[] { "--skip-attributes", "-sa" },
+            description: "Attributes of directories and files are not set when copied.",
+            getDefaultValue: () => false);
+        
         var quietOption = new Option<bool>(
             new[] { "--quiet", "-q" },
             description: "Quiet mode.",
@@ -89,10 +100,11 @@ public static class FsCommandFactory
 
         var command = new Command("extract", "Extract files or subdirectories from source to destination.");
         command.AddAlias("x");
-        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption, quietOption);
+        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
+        command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
 
         return command;

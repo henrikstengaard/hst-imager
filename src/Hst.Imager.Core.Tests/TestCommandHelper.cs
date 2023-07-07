@@ -9,6 +9,7 @@
     using Hst.Core;
     using Core;
     using Commands;
+    using DiscUtils.Streams;
     using Hst.Core.Extensions;
     using Models;
 
@@ -60,14 +61,13 @@
 
         public void AddTestMedia(string path, string name = null, byte[] data = null)
         {
-            TestMedias.Add(new TestMedia(path, name ?? Path.GetFileNameWithoutExtension(path),
+            TestMedias.Add(new TestMedia(path, name ?? Path.GetFileNameWithoutExtension(path), 0,
                 data ?? Array.Empty<byte>()));
         }
 
         public void AddTestMedia(string path, long size)
         {
-            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path),
-                CreateTestData(size)));
+            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size, CreateTestData(size)));
         }
 
         public byte[] CreateTestData(long size)
@@ -97,16 +97,21 @@
             }
 
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (testMedia != null)
+            if (testMedia == null)
             {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
-                    testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
-                        ? Media.MediaType.Vhd
-                        : Media.MediaType.Raw,
-                    false, new MemoryStream(testMedia.Data)));
+                return base.GetReadableFileMedia(path);
             }
 
-            return base.GetReadableFileMedia(path);
+            var stream = new MemoryStream(testMedia.Data);
+            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
+                    Media.MediaType.Raw, false, stream));
+            }
+            
+            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.None);
+            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, false, disk,
+                stream));            
         }
 
         public override Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
@@ -117,16 +122,33 @@
             }
 
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (testMedia != null)
+            if (testMedia == null)
             {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
-                    testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase)
-                        ? Media.MediaType.Vhd
-                        : Media.MediaType.Raw,
-                    false, new TestMediaStream(testMedia)));
+                return base.GetWritableFileMedia(path, size, create);
             }
 
-            return base.GetWritableFileMedia(path, size, create);
+            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
+            {
+                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
+                    Media.MediaType.Raw, false, new TestMediaStream(testMedia)));
+            }
+            
+            if (create && size == null)
+            {
+                return new Result<Media>(new Error("Vhd requires size"));
+            }
+
+            if (create || testMedia.Data.Length == 0)
+            {
+                testMedia.SetSize(size ?? 0);
+            }
+
+            var stream = new TestMediaStream(testMedia);
+            var disk = create || testMedia.Data.Length == 0
+                ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
+                : new DiscUtils.Vhd.Disk(stream, Ownership.None);
+            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, false, disk,
+                stream));
         }
 
         public override Stream CreateWriteableStream(string path, bool create)
@@ -156,6 +178,28 @@
             }
 
             return await base.GetRigidDiskBlock(stream);
+        }
+
+        public override Result<MediaResult> ResolveMedia(string path)
+        {
+            if (path == null)
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            var testMedia = TestMedias.FirstOrDefault(x => path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase));
+            if (testMedia == null)
+            {
+                return base.ResolveMedia(path);
+            }
+            
+            return new Result<MediaResult>(new MediaResult
+            {
+                FullPath = path,
+                MediaPath = testMedia.Path,
+                DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "//",
+                FileSystemPath = path.Length > testMedia.Path.Length ? path.Substring(testMedia.Path.Length + 1) : path
+            });
         }
     }
 }

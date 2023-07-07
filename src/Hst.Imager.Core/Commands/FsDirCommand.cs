@@ -6,8 +6,14 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Amiga.FileSystems;
+using Amiga.RigidDiskBlocks;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
+using Extensions;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
+using Models;
 using Entry = Models.FileSystems.Entry;
 using EntryType = Models.FileSystems.EntryType;
 
@@ -32,7 +38,7 @@ public class FsDirCommand : FsCommandBase
     {
         OnDebugMessage($"Opening '{path}' as readable");
 
-        var pathResult = ResolveMedia(path);
+        var pathResult = commandHelper.ResolveMedia(path);
         if (pathResult.IsFaulted)
         {
             return new Result(pathResult.Error);
@@ -54,6 +60,14 @@ public class FsDirCommand : FsCommandBase
         if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
         {
             await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
+            return new Result();
+        }
+
+        // lzx
+        var lzxEntryIterator = await GetLzxEntryIterator(pathResult.Value, recursive);
+        if (lzxEntryIterator != null && lzxEntryIterator.IsSuccess)
+        {
+            await ListEntries(lzxEntryIterator.Value, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
@@ -87,27 +101,37 @@ public class FsDirCommand : FsCommandBase
 
         if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
         {
-            await ListPartitionTables(stream);
+            await ListPartitionTables(media, stream);
         }
         else
         {
-            switch (parts[0])
+            switch (parts[0].ToLowerInvariant())
             {
+                case "mbr":
+                    if (parts.Length == 1)
+                    {
+                        var listPartitionsResult = await ListMbrPartitions(media);
+                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
+                    }
+
+                    var listMbrEntriesResult = await ListMbrPartitionEntries(media, parts.Skip(1).ToArray());
+                    if (listMbrEntriesResult.IsFaulted)
+                    {
+                        return new Result(listMbrEntriesResult.Error);
+                    }
+
+                    break;
                 case "rdb":
                     if (parts.Length == 1)
                     {
-                        var listPartitionsResult = await ListRdbPartitions(stream, pathResult.Value.FileSystemPath);
-                        if (listPartitionsResult.IsFaulted)
-                        {
-                            return new Result(listPartitionsResult.Error);
-                        }
-                        return new Result();
+                        var listPartitionsResult = await ListRdbPartitions(stream);
+                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
                     }
 
-                    var listEntriesResult = await ListRdbPartitionEntries(stream, parts.Skip(1).ToArray());
-                    if (listEntriesResult.IsFaulted)
+                    var listRdbEntriesResult = await ListRdbPartitionEntries(stream, parts.Skip(1).ToArray());
+                    if (listRdbEntriesResult.IsFaulted)
                     {
-                        return new Result(listEntriesResult.Error);
+                        return new Result(listRdbEntriesResult.Error);
                     }
 
                     break;
@@ -119,21 +143,32 @@ public class FsDirCommand : FsCommandBase
         return new Result();
     }
 
-    private async Task<Result> ListPartitionTables(Stream stream)
+    private async Task ListPartitionTables(Media media, Stream stream)
     {
         OnDebugMessage($"Listing partition tables");
 
         var entries = new List<Entry>();
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
 
-        if (rigidDiskBlock != null)
+        if (diskInfo.MbrPartitionTablePart != null)
+        {
+            entries.Add(new Entry
+            {
+                Name = "MBR",
+                FormattedName = "MBR", 
+                Type = EntryType.Dir,
+                Size = diskInfo.MbrPartitionTablePart.Size
+            });
+        }
+        
+        if (diskInfo.RdbPartitionTablePart != null)
         {
             entries.Add(new Entry
             {
                 Name = "RDB",
                 FormattedName = "RDB", 
                 Type = EntryType.Dir,
-                Size = 0
+                Size = diskInfo.RdbPartitionTablePart.Size
             });
         }
 
@@ -142,11 +177,71 @@ public class FsDirCommand : FsCommandBase
             Path = path,
             Entries = entries
         });
+    }
+
+    private Task<Result> ListMbrPartitions(Media media)
+    {
+        OnDebugMessage("Reading Master Boot Record");
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            
+        BiosPartitionTable biosPartitionTable;
+        try
+        {
+            biosPartitionTable = new BiosPartitionTable(disk);
+        }
+        catch (Exception)
+        {
+            return Task.FromResult<Result>(new Result<IEntryIterator>(new Error("Master Boot Record not found")));
+        }
+
+        var partitionNumber = 0;
+
+        var entries = new List<Entry>();
+        foreach (var partition in biosPartitionTable.Partitions)
+        {
+            var partitionNumberFormatted = (++partitionNumber).ToString();
+            entries.Add(new Entry
+            {
+                Name = partitionNumberFormatted,
+                FormattedName = partitionNumberFormatted,
+                Type = EntryType.Dir,
+                Size = 0,
+                Properties = new Dictionary<string, string>
+                {
+                    { "Info", string.Join(", ", (partition.SectorCount * 512).FormatBytes(), partition.TypeAsString) }
+                }
+            });
+        }
+        
+        OnEntriesRead(new EntriesInfo
+        {
+            Path = path,
+            Entries = entries
+        });
+
+        return Task.FromResult(new Result());
+    }
+    
+    private async Task<Result> ListMbrPartitionEntries(Media media, string[] parts)
+    {
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            
+        var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[0]);
+        if (mbrFileSystemResult.IsFaulted)
+        {
+            return new Result(mbrFileSystemResult.Error);
+        }
+
+        var fileSystemPath = string.Join("/", parts.Skip(1));
+        var entryIterator = new FileSystemEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
+
+        await ListEntries(entryIterator, fileSystemPath);
 
         return new Result();
     }
-
-    private async Task<Result> ListRdbPartitions(Stream stream, string fileSystemPath)
+    
+    private async Task<Result> ListRdbPartitions(Stream stream)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
@@ -157,19 +252,57 @@ public class FsDirCommand : FsCommandBase
             return new Result<IEnumerable<Entry>>(new List<Entry>());
         }
 
+        var entries = new List<Entry>();
+        foreach (var partitionBlock in rigidDiskBlock.PartitionBlocks)
+        {
+            entries.Add(new Entry
+            {
+                Name = partitionBlock.DriveName,
+                FormattedName = partitionBlock.DriveName,
+                Type = EntryType.Dir,
+                Size = partitionBlock.PartitionSize,
+                Properties = await GetRdbPartitionProperties(stream, partitionBlock)
+            });
+        }
+        
         OnEntriesRead(new EntriesInfo
         {
             Path = path,
-            Entries = rigidDiskBlock.PartitionBlocks.Select(x => new Entry
-            {
-                Name = x.DriveName,
-                FormattedName = x.DriveName,
-                Type = EntryType.Dir,
-                Size = 0
-            }).ToList()
+            Entries = entries
         });
 
         return new Result();
+    }
+
+    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Stream stream,
+        PartitionBlock partitionBlock)
+    {
+        IFileSystemVolume fileSystemVolume = null;
+        try
+        {
+            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(stream, partitionBlock);
+            fileSystemVolume = fileSystemVolumeResult.IsSuccess ? fileSystemVolumeResult.Value : null;
+        }
+        catch (Exception)
+        {
+            // ignored
+        }
+
+        var properties = new Dictionary<string, string>
+        {
+            { "Dos Type", $"{partitionBlock.DosTypeHex} ({partitionBlock.DosTypeFormatted})" }
+        };
+
+        if (fileSystemVolume == null)
+        {
+            return properties;
+        }
+        properties.Add("Volume Name", fileSystemVolume.Name);
+        properties.Add("File system size", fileSystemVolume.Size.FormatBytes());
+        properties.Add("File system free", fileSystemVolume.Free.FormatBytes());
+        properties.Add("File system used", (fileSystemVolume.Size - fileSystemVolume.Free).FormatBytes());
+
+        return properties;
     }
 
     private async Task<Result> ListRdbPartitionEntries(Stream stream, string[] parts)

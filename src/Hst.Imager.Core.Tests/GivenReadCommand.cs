@@ -138,7 +138,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - create source physical drive
                 testCommandHelper.AddTestMedia(sourcePath, ImageSize);
 
-                // arrange - read command
+                // arrange - read command read 8192 bytes
                 var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(firstReadSize, Unit.Bytes), 0, false, false, 0);
@@ -153,6 +153,10 @@ namespace Hst.Imager.Core.Tests
                 var destinationBytes = await testCommandHelper.ReadMediaData(destinationPath);
                 Assert.Equal(sourceBytes, destinationBytes);
             
+                // arrange - clear active medias to avoid source and destination being reused between commands
+                testCommandHelper.ClearActiveMedias();
+                
+                // arrange - read command read 16384 bytes
                 readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(secondReadSize, Unit.Bytes), 0, false, false, 0);
             

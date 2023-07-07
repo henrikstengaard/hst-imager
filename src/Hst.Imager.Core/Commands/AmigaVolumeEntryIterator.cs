@@ -71,11 +71,17 @@ public class AmigaVolumeEntryIterator : IEntryIterator
             return false;
         }
 
-        currentEntry = this.nextEntries.Pop();
-        if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+        bool skipEntry;
+        do
         {
-            await EnqueueDirectory(currentEntry.FullPathComponents);
-        }
+            skipEntry = false;
+            currentEntry = this.nextEntries.Pop();
+            if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+            {
+                await EnqueueDirectory(currentEntry.FullPathComponents);
+                skipEntry = this.patternMatcher != null && !this.patternMatcher.IsMatch(currentEntry.Name);
+            }
+        } while (currentEntry.Type == Models.FileSystems.EntryType.Dir && skipEntry);
 
         return true;
     }
@@ -187,7 +193,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                     {
                         continue;
                     }
-                    
+            
                     files.Add(new Entry
                     {
                         Name = entry.Name,
