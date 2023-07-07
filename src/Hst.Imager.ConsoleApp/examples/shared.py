@@ -409,7 +409,7 @@ def install_kickstart13_rom(hst_imager_path, image_path):
     run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
 
     # rom key path
-    rom_key_path = os.path.join(image_path, 'rom.key')
+    rom_key_path = os.path.join(image_dir, 'rom.key')
 
     # copy rom key to image, if present
     if os.path.exists(rom_key_path):
