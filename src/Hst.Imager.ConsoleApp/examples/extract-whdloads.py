@@ -26,8 +26,8 @@ current_path = os.getcwd()
 script_path = os.path.dirname(__file__)
 hst_imager_path = shared.get_hst_imager_path(script_path)
 
-# enter whdloads directory to extract
-whdloads_path = os.path.abspath(input('Enter WHDLoads directory to extract: '))
+# select whdloads directory to extract
+whdloads_path = shared.select_folder_path('directory with WHDLoads to extract')
 
 # error, if whdloads path is not found
 if not os.path.isdir(whdloads_path):
@@ -62,7 +62,7 @@ if (shared.confirm("Do you want to install minimal WHDLoad?", "enter = yes")):
     shared.install_minimal_whdload(hst_imager_path, image_path)
 
 # enter target directory whdloads are extracted to
-target_dir = input('Target directory WHDLoads are extracted to (enter = DH1/WHDLoads): ')
+target_dir = shared.input_box('Target directory WHDLoads are extracted to (enter = DH1/WHDLoads)')
 
 # set default target directory, if not set or empty
 if target_dir is None or target_dir == '':

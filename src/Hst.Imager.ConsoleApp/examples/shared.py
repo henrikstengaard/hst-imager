@@ -26,6 +26,16 @@ def confirm(message, action):
     else:
         return re.search(r'^(|y|yes)$', input("{0} ({1})".format(message, action)), re.I)
 
+# input box
+def input_box(message):
+    if platform.system() == 'Darwin':
+        text_match = re.search(r'text[^:]*:(.*)$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" default answer "" buttons {{"OK", "Cancel"}} default button "OK"'.format(message)]).strip(), re.I)
+        if not text_match:
+            return None
+        return text_match.group(1).strip()
+    else:
+        return input('{0}: '.format(message)).strip()
+
 # macos choose file dialog
 def macos_choose_file_dialog(title):
     return run_command_capture_output(['osascript', '-e', 'set directory to POSIX path of (choose file with prompt "{0}" default location (path to desktop))'.format(title)]).strip()
@@ -38,6 +48,13 @@ def macos_choose_folder_dialog(title):
 def select_file_path(title):
     if platform.system() == 'Darwin':
         return macos_choose_file_dialog("Select {0}".format(title))
+    else:
+        return os.path.abspath(input("Enter path to {0}: ".format(title)))
+
+# select folder path
+def select_folder_path(title):
+    if platform.system() == 'Darwin':
+        return macos_choose_folder_dialog("Select {0}".format(title))
     else:
         return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
