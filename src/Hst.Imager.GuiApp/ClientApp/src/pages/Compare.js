@@ -463,7 +463,7 @@ export default function Verify() {
                 <Grid item xs={12}>
                     <CheckboxField
                         id="force"
-                        label="Force read and ignore errors"
+                        label="Force compare and ignore errors"
                         value={force}
                         onChange={(checked) => setForce(checked)}
                     />

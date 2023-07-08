@@ -2,8 +2,8 @@
 
     <ItemGroup>
       <PackageReference Include="CsvHelper" Version="27.2.1" />
-      <PackageReference Include="Hst.Amiga" Version="0.3.159" />
-      <PackageReference Include="hst.compression" Version="0.4.55" />
+      <PackageReference Include="Hst.Amiga" Version="0.3.161" />
+      <PackageReference Include="hst.compression" Version="0.4.57" />
       <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.25" />
       <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.25" />
       <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.25" />
