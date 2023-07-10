@@ -15,18 +15,18 @@ hst imager - demo
       - add pfs3 filesystem
       - add dh0 partition
       - format partition 1
-      - show in winuae/fs-uae
+      - show in winuae/fs-uae, configure from scratch, no existing config files
     - scripting
       - script to create 16gb disk
       - show in winuae/fs-uae
       - copy 16gb script to new 128gb
-      - show in winuae/fs-uae
+      - show in winuae/fs-uae, configure from scratch, no existing config files
     - examples
       - whdload to hdf:
         - flashback, superfrog
-        - show in winuae/fs-uae
+        - show in winuae/fs-uae, configure from scratch, no existing config files
       - install amiga os 3.2
         - download hst amiga console
-        - show in winuae/fs-uae
+        - show in winuae/fs-uae, configure from scratch, no existing config files
       - extract whdloads
-        - show in winuae/fs-uae
+        - show in winuae/fs-uae, configure from scratch, no existing config files
