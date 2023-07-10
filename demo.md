@@ -1,0 +1,32 @@
+hst imager - demo
+
+- gui:
+  - download hst imager gui
+  - info
+  - read from usb
+  - write to usb
+  - compare image and usb
+- console:
+    - download hst imager console
+    - extract adf and rom from amiga forever iso and amigaos 3.2 iso
+    - step by step creating a rdb hard disk image:
+      - blank
+      - init
+      - add pfs3 filesystem
+      - add dh0 partition
+      - format partition 1
+      - show in winuae/fs-uae
+    - scripting
+      - script to create 16gb disk
+      - show in winuae/fs-uae
+      - copy 16gb script to new 128gb
+      - show in winuae/fs-uae
+    - examples
+      - whdload to hdf:
+        - flashback, superfrog
+        - show in winuae/fs-uae
+      - install amiga os 3.2
+        - download hst amiga console
+        - show in winuae/fs-uae
+      - extract whdloads
+        - show in winuae/fs-uae

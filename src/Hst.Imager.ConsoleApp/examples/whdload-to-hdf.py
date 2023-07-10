@@ -3,7 +3,7 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-10
 #
 # A python script to convert a WHDLoad .lha file to an amiga harddisk file 
 # using Hst Imager console.
@@ -53,7 +53,7 @@ if len(whdload_slave_paths) == 0:
     exit(1)
 
 # confirm use amiga os 3.1
-use_amigaos_31 = shared.confirm("Use Amiga OS 3.1 adf files", "enter = yes, no = 3.1.4/3.2/other")
+use_amigaos_31 = shared.confirm("Use Amiga OS 3.1 adf files", "enter = yes, no = 3.1+/other")
 
 # confirm use pfs3 confirm 
 use_pfs3 = shared.confirm("Use PFS3 file system?", "enter = yes, no = DOS3")
@@ -89,9 +89,6 @@ shared.run_command([hst_imager_path, 'rdb', 'part', 'format', image_path, '1', '
 
 # install minimal amigaos
 shared.install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31)
-
-# install kickstart 1.3 rom
-shared.install_kickstart13_rom(hst_imager_path, image_path)
 
 # install minimal whdload script
 shared.install_minimal_whdload(hst_imager_path, image_path)

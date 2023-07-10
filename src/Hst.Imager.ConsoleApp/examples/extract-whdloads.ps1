@@ -2,7 +2,7 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-07
+# Date:   2023-07-10
 #
 # A powershell script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
@@ -60,12 +60,9 @@ else
 }
 
 # show install minimal whdload question dialog
-if (QuestionDialog 'Install minimal WHDLoad' "Do you want to install minimal WHDLoad?")
+if (QuestionDialog 'Install minimal WHDLoad' "Do you want to install minimal WHDLoad (WHDLoad+SKick+Kickstarts+IconLib)?")
 {
-    # install kickstart 1.3 rom
-    InstallKickstart13Rom $hstImagerPath $imagePath
-
-    # install minimal whdload input 
+    # install minimal whdload 
     InstallMinimalWhdload $hstImagerPath $imagePath
 }
 

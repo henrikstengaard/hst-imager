@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-10
 #
 # A python script with shared functions for example scripts.
 
@@ -24,7 +24,7 @@ def confirm(message, action):
     if platform.system() == 'Darwin':
         return re.search(r'yes$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" buttons {{"Yes", "No"}} default button "Yes"'.format(message)]).strip(), re.I)
     else:
-        return re.search(r'^(|y|yes)$', input("{0} ({1})".format(message, action)), re.I)
+        return re.search(r'^(|y|yes)$', input("{0} ({1}): ".format(message, action)), re.I)
 
 # input box
 def input_box(message):
@@ -158,48 +158,99 @@ def write_text_lines_for_amiga(path, lines):
         for line in lines:
             file.write(unicodedata.normalize('NFC', line)+"\n")
 
-# get amigaos files
-def get_amigaos_files(files, path):
-    if not os.path.exists(path):
-        os.makedirs(path)
+# get adf files
+def get_adf_files(adfFiles, output_path):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
-    src_adf_path = path
+    # set src path to output path
+    src_path = output_path
     
-    for file in files:
+    for adfFile in adfFiles:
         dest_adf_exists = False
     
         while not dest_adf_exists:
-            dest_adf_filename = file['Filename']
-            dest_adf_path = os.path.join(path, dest_adf_filename)
+            dest_adf_path = os.path.join(output_path, adfFile['Filename'])
             dest_adf_exists = os.path.isfile(dest_adf_path)
-    
+
+            # skip, if adf file exists in output path
             if dest_adf_exists:
                 break
     
-            adf_path = os.path.join(src_adf_path, dest_adf_filename)
-            adf_exists = os.path.isfile(adf_path)
-    
-            if adf_exists:
+            adf_path = os.path.join(src_path, adfFile['Filename'])
+
+            # skip, if adf path exist src adf path
+            if os.path.isfile(adf_path):
                 # copy adf file and change file permission to rwx
                 shutil.copyfile(adf_path, dest_adf_path)
                 os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-    
                 break
-    
-            adf_path = select_file_path("{0} adf file".format(file['Name']))
-            adf_exists = os.path.isfile(adf_path)
-    
-            if not adf_exists:
-                print('Error: {0} adf file \'{1}\' not found'.format(file['Name'], adf_path))
+
+            # select adf file
+            adf_path = select_file_path("{0} adf file".format(adfFile['Name']))
+            if not os.path.isfile(adf_path):
+                print('Error: {0} adf file \'{1}\' not found'.format(adfFile['Name'], adf_path))
                 continue
-    
-            src_adf_path = os.path.dirname(adf_path)
+
+            # set src path to path with adf file
+            src_path = os.path.dirname(adf_path)
     
             # copy adf file and change file permission to rwx
             shutil.copyfile(adf_path, dest_adf_path)
             os.chmod(dest_adf_path, os.stat(dest_adf_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
     
             break
+
+# get rom files
+def get_rom_files(romFiles, output_path):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    # set src path to output path
+    src_path = output_path
+
+    # set dest rom key
+    dest_rom_key = os.path.join(output_path, 'rom.key')
+
+    for romFile in romFiles:
+        dest_rom_exists = False
+
+        while not dest_rom_exists:
+            dest_rom_path = os.path.join(output_path, romFile['DestFilename'])
+            dest_rom_exists = os.path.isfile(dest_rom_path)
+
+            # skip, if rom file exists in output path
+            if dest_rom_exists:
+                break
+
+            rom_path = os.path.join(src_path, romFile['SrcFilename'])
+
+            # skip, if rom path exist src rom path
+            if os.path.isfile(rom_path):
+                # copy rom file and change file permission to rwx
+                shutil.copyfile(rom_path, dest_rom_path)
+                os.chmod(dest_rom_path, os.stat(dest_rom_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+                break
+
+            # select rom file
+            rom_path = select_file_path("{0} rom file".format(romFile['Name']))
+            if not os.path.isfile(rom_path):
+                print('Error: {0} rom file \'{1}\' not found'.format(romFile['Name'], rom_path))
+                continue
+
+            # set src path to path with rom file
+            src_path = os.path.dirname(rom_path)
+
+            # copy rom file and change file permission to rwx
+            shutil.copyfile(rom_path, dest_rom_path)
+            os.chmod(dest_rom_path, os.stat(dest_rom_path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
+
+            break
+
+        # copy rom key, if present
+        rom_key = os.path.join(src_path, 'rom.key')
+        if not os.path.isfile(dest_rom_key) and os.path.isfile(rom_key):
+            shutil.copyfile(rom_key, dest_rom_key)
 
 # copy amigaos adf path
 def copy_amigaos_adf_path(title, path):
@@ -212,9 +263,7 @@ def copy_amigaos_adf_path(title, path):
     adf_file = os.path.abspath(adf_file)
 
     # copy adf file and change file permission to rwx
-    shutil.copyfile(
-        adf_file,
-        path)
+    shutil.copyfile(adf_file, path)
     os.chmod(path, os.stat(path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
 
 # get amigaos adf path
@@ -231,20 +280,9 @@ def copy_kickstart_rom_path(title, path):
         print('Error: Rom file \'{0}\' doesn\'t exist'.format(rom_file))
         exit(1)
 
-    # copy rom file
-    shutil.copyfile(
-        rom_file,
-        path)
+    # copy rom file and change file permission to rwx
+    shutil.copyfile(rom_file, path)
     os.chmod(path, os.stat(path).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
-    
-    # copy rom key, if present
-    rom_key_file = os.path.join(os.path.dirname(rom_file), "rom.key")
-    if os.path.exists(rom_key_file):
-        dest_rom_key_file = os.path.join(os.path.dirname(path), "rom.key")
-        shutil.copyfile(
-            rom_key_file,
-            dest_rom_key_file)
-        os.chmod(dest_rom_key_file, os.stat(dest_rom_key_file).st_mode | stat.S_IREAD | stat.S_IWRITE | stat.S_IEXEC)
 
 def get_amigaos_workbench_adf_path(path, use_amigaos_31):
     if use_amigaos_31:
@@ -259,21 +297,11 @@ def get_amigaos_workbench_adf_path(path, use_amigaos_31):
         get_amigaos_adf_path("Amiga OS 3.1 Workbench adf path", amigaos_workbench_adf_path)
         return amigaos_workbench_adf_path
 
-    # amigaos 3.2 workbench adf path
-    amigaos_workbench_adf_path = os.path.join(path, "Workbench3.2.adf")
+    amigaos_workbench_adf_path = os.path.join(path, 'amigaos-3.x-workbench.adf')
     if os.path.isfile(amigaos_workbench_adf_path):
         return amigaos_workbench_adf_path
 
-    # amigaos 3.1.4 workbench adf path
-    amigaos_workbench_adf_path = os.path.join(path, "Workbench3_1_4.adf")
-    if os.path.isfile(amigaos_workbench_adf_path):
-        return amigaos_workbench_adf_path
-
-    amigaos_workbench_adf_path = os.path.join(path, 'amigaos-3.1.4-3.2-workbench.adf')
-    if os.path.isfile(amigaos_workbench_adf_path):
-        return amigaos_workbench_adf_path
-
-    copy_amigaos_adf_path("AmigaOS Workbench adf file", amigaos_workbench_adf_path)
+    copy_amigaos_adf_path("AmigaOS 3.1+ Workbench adf file", amigaos_workbench_adf_path)
     return amigaos_workbench_adf_path
 
 # get amigaos install adf path
@@ -290,20 +318,12 @@ def get_amigaos_install_adf_path(image_path, use_amigaos_31):
         get_amigaos_adf_path("Amiga OS 3.1 Install adf", amigaos_install_adf_path)
         return amigaos_install_adf_path
 
-    amigaos_install_adf_path = os.path.join(image_path, 'Install3.2.adf')
-    if os.path.isfile(amigaos_install_adf_path):
-        return amigaos_install_adf_path
-
-    amigaos_install_adf_path = os.path.join(image_path, 'Install3_1_4.adf')
-    if os.path.isfile(amigaos_install_adf_path):
-        return amigaos_install_adf_path
-
-    amigaos_install_adf_path = os.path.join(image_path, 'amigaos-3.1.4-3.2-install.adf')
+    amigaos_install_adf_path = os.path.join(image_path, 'amigaos-3.x-install.adf')
     if os.path.isfile(amigaos_install_adf_path):
         return amigaos_install_adf_path
 
     print('Using DOS7 requires Fast File System from Amiga OS 3.1.4, 3.2+ install adf')
-    get_amigaos_adf_path("Amiga OS 3.1.4, 3.2+ install adf", amigaos_install_adf_path)
+    get_amigaos_adf_path("Amiga OS 3.1+ install adf", amigaos_install_adf_path)
 
 # create image
 def create_image(hst_imager_path, image_path, size):
@@ -393,23 +413,57 @@ def install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31):
     # extract amiga os workbench adf to image file
     run_command([hst_imager_path, 'fs', 'extract', amigaos_workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0')])
 
-def install_kickstart13_rom(hst_imager_path, image_path):
+def install_kickstart_roms(hst_imager_path, image_path):
+    # kickstart rom files
+    kickstart_rom_files = [
+        {
+            'SrcFilename': 'amiga-os-130.rom',
+            'DestFilename': 'kick34005.A500',
+            'Name': 'Amiga 500 Kickstart 1.3'
+        },
+        {
+            'SrcFilename': 'amiga-os-120.rom',
+            'DestFilename': 'kick33180.A500',
+            'Name': 'Amiga 500 Kickstart 1.2'
+        },
+        {
+            'SrcFilename': 'amiga-os-310-a600.rom',
+            'DestFilename': 'kick40063.A600',
+            'Name': 'Amiga 600 Kickstart 3.1'
+        },
+        {
+            'SrcFilename': 'amiga-os-310-a1200.rom',
+            'DestFilename': 'kick40068.A1200',
+            'Name': 'Amiga 1200 Kickstart 3.1'
+        },
+        {
+            'SrcFilename': 'amiga-os-310-a4000.rom',
+            'DestFilename': 'kick40068.A4000',
+            'Name': 'Amiga 4000 Kickstart 3.1'
+        }
+    ]
+    
     image_dir = os.path.dirname(image_path)
     if image_dir == None or image_dir == '':
         image_dir = '.'
 
-    # a500 kickstart 1.3 rom path
+    # get rom files copied to image dir
+    get_rom_files(kickstart_rom_files, image_dir)
+
+    # kickstart rom paths
+    kickstart12_a500_rom_path = os.path.join(image_dir, "kick33180.A500")
     kickstart13_a500_rom_path = os.path.join(image_dir, "kick34005.A500")
+    kickstart31_a600_rom_path = os.path.join(image_dir, "kick40063.A600")
+    kickstart31_a1200_rom_path = os.path.join(image_dir, "kick40068.A1200")
+    kickstart31_a4000_rom_path = os.path.join(image_dir, "kick40068.A4000")
+    rom_key_path = os.path.join(image_dir, "rom.key")
 
-    # copy a500 kickstart 1.3 rom path, if not present
-    if not os.path.exists(kickstart13_a500_rom_path):
-        copy_kickstart_rom_path("Amiga 500 Kickstart 1.3 rom file", kickstart13_a500_rom_path)
-
-    # copy kickstart 1.3 to image file
+    # copy kickstart roms to image file
+    run_command([hst_imager_path, 'fs', 'copy', kickstart12_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
     run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-
-    # rom key path
-    rom_key_path = os.path.join(image_dir, 'rom.key')
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a600_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a1200_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a4000_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
 
     # copy rom key to image, if present
     if os.path.exists(rom_key_path):
@@ -417,6 +471,9 @@ def install_kickstart13_rom(hst_imager_path, image_path):
 
 # install minimal whdload
 def install_minimal_whdload(hst_imager_path, image_path):
+    # install kickstart roms
+    install_kickstart_roms(hst_imager_path, image_path)
+
     image_dir = os.path.dirname(image_path)
     if image_dir == None or image_dir == '':
         image_dir = '.'

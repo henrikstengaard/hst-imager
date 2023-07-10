@@ -1,8 +1,9 @@
-﻿# Install AmigaOS 3.2
+﻿#!/usr/bin/env python3
+# Install AmigaOS 3.2
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-10
 #
 # A python script to install Amiga OS 3.1 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
@@ -53,7 +54,7 @@ amigaos_32_files = [
 ]
 
 # get amigaos 3.2 files copied to current path
-shared.get_amigaos_files(amigaos_32_files, current_path)
+shared.get_adf_files(amigaos_32_files, current_path)
 
 # amigaos 3.1 adf paths
 install_adf_path = os.path.join(current_path, "Install3.2.adf")

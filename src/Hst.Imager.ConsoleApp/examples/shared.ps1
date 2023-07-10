@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-10
 #
 # A powershell module with shared functions for example scripts.
 
@@ -59,7 +59,7 @@ Function FolderBrowserDialog($title, $directory, $showNewFolderButton)
     return $folderBrowserDialog.SelectedPath
 }
 
-function SelectAmigaOsAdfFile($title)
+function SelectAdfFile($title)
 {
     $adfPath = ${Env:AMIGAFOREVERDATA}
     if ($adfPath)
@@ -82,6 +82,29 @@ function SelectAmigaOsAdfFile($title)
     return $adfFile
 }
 
+function SelectRomFile($title)
+{
+    $romPath = ${Env:AMIGAFOREVERDATA}
+    if ($romPath)
+    {
+        $romPath = Join-Path $romPath -ChildPath "Shared\rom"
+    }
+    else
+    {
+        $romPath = ${Env:USERPROFILE}
+    }
+
+    $romFile = OpenFileDialog $title $romPath "Rom Files|*.rom|All Files|*.*"
+
+    if (!$romFile -or $romFile -eq '')
+    {
+        Write-Error "Rom file not selected"
+        exit 1
+    }
+
+    return $romFile
+}
+
 # read text lines for amiga
 function ReadTextLinesForAmiga($path)
 {
@@ -95,62 +118,149 @@ function WriteTextLinesForAmiga($path, $lines)
     [System.IO.File]::WriteAllText($path, $text, [System.Text.Encoding]::GetEncoding('iso-8859-1'))
 }
 
-# get amigaos files
-function GetAmigaOsFiles($files, $path)
+# get adf files
+function GetAdfFiles($adfFiles, $outputPath)
 {
-    if (!(Test-Path $path))
+    if (!(Test-Path $outputPath))
     {
-        mkdir $path | Out-Null
+        mkdir $outputPath | Out-Null
     }
+
+    # set src path to output path
+    $srcPath = $outputPath
     
-    $srcAdfPath = $path
-    foreach ($file in $files)
+    foreach ($adfFile in $adfFiles)
     {
         $destAdfExists = $false
 
         while (!$destAdfExists)
         {
-            $destAdfFilename = $file.Filename
-            $destAdfPath = Join-Path $path -ChildPath $destAdfFilename
+            $destAdfPath = Join-Path $outputPath -ChildPath $adfFile.Filename
             $destAdfExists = Test-Path $destAdfPath
 
+            # skip, if adf file exists in output path
             if ($destAdfExists)
             {
                 break
             }
 
-            $adfPath = Join-Path $srcAdfPath -ChildPath $destAdfFilename
-            $adfExists = Test-Path $adfPath
+            $adfPath = Join-Path $srcPath -ChildPath $adfFile.Filename
 
-            if ($adfExists)
+            # skip, if adf path exist src adf path
+            if (Test-Path $adfPath)
             {
-                # copy detected adf path
+                # copy adf path to dest adf path
                 Copy-Item $adfPath $destAdfPath -Force
 
                 # remove readonly
-                Set-ItemProperty $destAdfPath -name IsReadOnly -value $false
+                if ((Get-ChildItem -Path $destAdfPath).IsReadOnly)
+                {
+                    Set-ItemProperty $destAdfPath -name IsReadOnly -value $false
+                }
 
                 break
             }
 
-            $adfPath = SelectAmigaOsAdfFile ("Select {0} adf file" -f $file.Name)
-            $adfExists = Test-Path $adfPath
-
-            if (!$adfExists)
+            # select adf file
+            $adfPath = SelectAdfFile ("Select {0} adf file" -f $adfFile.Name)
+            if (!(Test-Path $adfPath))
             {
-                Write-Error ("Error: {0} adf file \'{1}\' not found" -f $file.Name, $adfPath)
+                Write-Error ("Error: {0} adf file \'{1}\' not found" -f $adfFile.Name, $adfPath)
                 continue
             }
 
-            $srcAdfPath = Split-Path $adfPath -Parent
+            # set src path to path with adf file
+            $srcPath = Split-Path $adfPath -Parent
 
-            # copy selected adf path
+            # copy adf path to dest adf path
             Copy-Item $adfPath $destAdfPath -Force
 
             # remove readonly
-            Set-ItemProperty $destAdfPath -name IsReadOnly -value $false
+            if ((Get-ChildItem -Path $destAdfPath).IsReadOnly)
+            {
+                Set-ItemProperty $destAdfPath -name IsReadOnly -value $false
+            }
             
             break
+        }
+    }
+}
+
+# get rom files
+function GetRomFiles($romFiles, $outputPath)
+{
+    # create output path, if not exist
+    if (!(Test-Path $outputPath))
+    {
+        mkdir $outputPath | Out-Null
+    }
+
+    # set src path to output path
+    $srcPath = $outputPath
+    
+    # set dest rom key
+    $destRomKey = Join-Path $outputPath -ChildPath "rom.key"
+    
+    foreach ($romFile in $romFiles)
+    {
+        $destRomExists = $false
+
+        while (!$destRomExists)
+        {
+            $destRomPath = Join-Path $outputPath -ChildPath $romFile.DestFilename
+            $destRomExists = Test-Path $destRomPath
+
+            # skip, if rom file exists in output path
+            if ($destRomExists)
+            {
+                break
+            }
+
+            $romPath = Join-Path $srcPath -ChildPath $romFile.SrcFilename
+
+            # skip, if rom path exist src path
+            if (Test-Path $romPath)
+            {
+                # copy rom path to dest rom path
+                Copy-Item $romPath $destRomPath -Force
+
+                # remove readonly
+                if ((Get-ChildItem -Path $destRomPath).IsReadOnly)
+                {
+                    Set-ItemProperty $destRomPath -name IsReadOnly -value $false
+                }
+
+                break
+            }
+
+            # select rom file
+            $romPath = SelectRomFile ("Select {0} rom file" -f $romFile.Name)
+            if (!(Test-Path $romPath))
+            {
+                Write-Error ("Error: {0} rom file \'{1}\' not found" -f $romFile.Name, $romPath)
+                continue
+            }
+
+            # set src path to path with rom file
+            $srcPath = Split-Path $romPath -Parent
+
+            # copy rom path to dest rom path
+            Copy-Item $romPath $destRomPath -Force
+
+            # remove readonly
+            if ((Get-ChildItem -Path $destRomPath).IsReadOnly)
+            {
+                Set-ItemProperty $destRomPath -name IsReadOnly -value $false
+            }
+
+            break
+        }
+
+        # copy rom key, if present
+        $romKey = Join-Path $srcPath -ChildPath "rom.key"
+        if (!(Test-Path $destRomKey) -and (Test-Path $romKey))
+        {
+            Copy-Item $romKey $outputPath
         }
     }
 }
@@ -208,17 +318,17 @@ function GetAmigaOsAdfPath($title, $adfPath)
         return $adfPath
     }
 
-    $adfPath = ${Env:AMIGAFOREVERDATA}
-    if ($adfPath)
+    $initialPath = ${Env:AMIGAFOREVERDATA}
+    if ($initialPath)
     {
-        $adfPath = Join-Path $adfPath -ChildPath "Shared\adf"
+        $initialPath = Join-Path $initialPath -ChildPath "Shared\adf"
     }
     else
     {
-        $adfPath = (Get-Location).Path
+        $initialPath = (Get-Location).Path
     }
     
-    $selectedAdfPath = OpenFileDialog $title $adfPath "Adf Files|*.adf|All Files|*.*"
+    $selectedAdfPath = OpenFileDialog $title $initialPath "Adf Files|*.adf|All Files|*.*"
 
     # throw error, if new image directory path is null
     if ($null -eq $selectedAdfPath)
@@ -230,7 +340,10 @@ function GetAmigaOsAdfPath($title, $adfPath)
     Copy-Item $selectedAdfPath $adfPath -Force
 
     # remove readonly
-    Set-ItemProperty $adfPath -name IsReadOnly -value $false
+    if ((Get-ChildItem -Path $adfPath).IsReadOnly)
+    {
+        Set-ItemProperty $adfPath -name IsReadOnly -value $false
+    }
 
     return $adfPath
 }
@@ -250,25 +363,13 @@ function GetAmigaOsWorkbenchAdfPath($path, $useAmigaOs31)
         return GetAmigaOsAdfPath "Select Amiga OS 3.1 Workbench adf" $amigaOsWorkbenchAdfPath
     }
 
-    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "Workbench3.2.adf"
+    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "amigaos-3.x-workbench.adf"
     if (Test-Path $amigaOsWorkbenchAdfPath)
     {
         return $amigaOsWorkbenchAdfPath
     }
 
-    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "Workbench3_1_4.adf"
-    if (Test-Path $amigaOsWorkbenchAdfPath)
-    {
-        return $amigaOsWorkbenchAdfPath
-    }
-
-    $amigaOsWorkbenchAdfPath = Join-Path $path -ChildPath "amigaos-3.1.4-3.2-workbench.adf"
-    if (Test-Path $amigaOsWorkbenchAdfPath)
-    {
-        return $amigaOsWorkbenchAdfPath
-    }
-
-    return GetAmigaOsAdfPath "Select Amiga OS 3.1.4, 3.2+ Workbench adf" $amigaOsWorkbenchAdfPath
+    return GetAmigaOsAdfPath "Select Amiga OS 3.1+ Workbench adf" $amigaOsWorkbenchAdfPath
 }
 
 # get amigaos install adf path
@@ -286,25 +387,13 @@ function GetAmigaOsInstallAdfPath($path, $useAmigaOs31)
         return GetAmigaOsAdfPath "Select Amiga OS 3.1 Install adf" $amigaOsInstallAdfPath
     }
     
-    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "Install3.2.adf"
+    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "amigaos-3.x-install.adf"
     if (Test-Path $amigaOsInstallAdfPath)
     {
         return $amigaOsInstallAdfPath
     }
 
-    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "Install3_1_4.adf"
-    if (Test-Path $amigaOsInstallAdfPath)
-    {
-        return $amigaOsInstallAdfPath
-    }
-
-    $amigaOsInstallAdfPath = Join-Path $path -ChildPath "amigaos-3.1.4-3.2-install.adf"
-    if (Test-Path $amigaOsInstallAdfPath)
-    {
-        return $amigaOsInstallAdfPath
-    }
-
-    return GetAmigaOsAdfPath "Select Amiga OS 3.1.4, 3.2+ Install adf" $amigaOsInstallAdfPath
+    return GetAmigaOsAdfPath "Select Amiga OS 3.1+ Install adf" $amigaOsInstallAdfPath
 }
 
 function CreateImage($hstImagerPath, $imagePath, $size)
@@ -361,8 +450,6 @@ function InstallMinimalAmigaOs($hstImagerPath, $imagePath, $useAmigaOs31)
 {
     $imageDir = Split-Path $imagePath -Parent
 
-    # detect amiga forever dir like install kickstart rom
-    
     # get amigaos workbench and install adf
     $amigaOsWorkbenchAdfPath = GetAmigaOsWorkbenchAdfPath $imageDir $useAmigaOs31
     $amigaOsInstallAdfPath = GetAmigaOsInstallAdfPath $imageDir $useAmigaOs31
@@ -374,49 +461,61 @@ function InstallMinimalAmigaOs($hstImagerPath, $imagePath, $useAmigaOs31)
     & $hstImagerPath fs extract $amigaOsWorkbenchAdfPath "$imagePath\rdb\dh0"
 }
 
-function InstallKickstart13Rom($hstImagerPath, $imagePath)
+function InstallKickstartRoms($hstImagerPath, $imagePath)
 {
+    # kickstart rom files
+    $kickstartRomFiles = @(
+        @{
+            'SrcFilename' = 'amiga-os-130.rom';
+            'DestFilename' = 'kick34005.A500';
+            'Name' = 'Amiga 500 Kickstart 1.3'
+        },
+        @{
+            'SrcFilename' = 'amiga-os-120.rom';
+            'DestFilename' = 'kick33180.A500';
+            'Name' = 'Amiga 500 Kickstart 1.2'
+        },
+        @{
+            'SrcFilename' = 'amiga-os-310-a600.rom';
+            'DestFilename' = 'kick40063.A600';
+            'Name' = 'Amiga 600 Kickstart 3.1'
+        },
+        @{
+            'SrcFilename' = 'amiga-os-310-a1200.rom';
+            'DestFilename' = 'kick40068.A1200';
+            'Name' = 'Amiga 1200 Kickstart 3.1'
+        },
+        @{
+            'SrcFilename' = 'amiga-os-310-a4000.rom';
+            'DestFilename' = 'kick40068.A4000';
+            'Name' = 'Amiga 4000 Kickstart 3.1'
+        }
+    )
+
     $imageDir = Split-Path $imagePath -Parent
+
+    # get rom files copied to image dir
+    GetRomFiles $kickstartRomFiles $imageDir
     
-    # select and copy amiga 500 kickstart 1.3 rom, if not present
+    # kickstart rom paths
+    $kickstart12A500RomPath = Join-Path $imageDir -ChildPath "kick33180.A500"
     $kickstart13A500RomPath = Join-Path $imageDir -ChildPath "kick34005.A500"
-    if (!(Test-Path $kickstart13A500RomPath))
-    {
-        $romPath = ${Env:AMIGAFOREVERDATA}
-        if ($romPath)
-        {
-            $romPath = Join-Path $romPath -ChildPath "Shared\rom"
-        }
-        else
-        {
-            $romPath = ${Env:USERPROFILE}
-        }
-
-        $romFile = OpenFileDialog "Select Amiga 500 Kickstart 1.3 rom file" $romPath "Rom Files|*.rom|All Files|*.*"
-
-        if (!$romFile -or $romFile -eq '')
-        {
-            throw "Rom file not selected"
-        }
-
-        # copy rom file to whdload kickstart naming convention
-        Copy-Item $romFile $kickstart13A500RomPath
-
-        # copy rom key, if present
-        $romKey = Join-Path (Split-Path $romFile -Parent) -ChildPath "rom.key"
-        if (Test-Path $romKey)
-        {
-            Copy-Item $romKey $scriptPath
-        }
-    }
-
-    # copy kickstart 1.3 to image file
+    $kickstart31A600RomPath = Join-Path $imageDir -ChildPath "kick40063.A600"
+    $kickstart31A1200RomPath = Join-Path $imageDir -ChildPath "kick40068.A1200"
+    $kickstart31A4000RomPath = Join-Path $imageDir -ChildPath "kick40068.A4000"
+    $romKeyPath = Join-Path $imageDir -ChildPath "rom.key"
+    
+    # copy kickstart roms to image file
+    & $hstImagerPath fs copy $kickstart12A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
     & $hstImagerPath fs copy $kickstart13A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
+    & $hstImagerPath fs copy $kickstart31A600RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
+    & $hstImagerPath fs copy $kickstart31A1200RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
+    & $hstImagerPath fs copy $kickstart31A4000RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
 
     # copy rom.key to image file, if present
-    if (Test-Path "rom.key")
+    if (Test-Path $romKeyPath)
     {
-        & $hstImagerPath fs copy "rom.key" "$imagePath\rdb\dh0\Devs\Kickstarts"
+        & $hstImagerPath fs copy $romKeyPath "$imagePath\rdb\dh0\Devs\Kickstarts"
     }
 }
 
@@ -465,6 +564,9 @@ function GetIconLibLhaPath($downloadPath)
 # install minimal whdload
 function InstallMinimalWhdload($hstImagerPath, $imagePath)
 {
+    # install kickstart roms
+    InstallKickstartRoms $hstImagerPath $imagePath
+    
     $imageDir = Split-Path $imagePath -Parent
 
     $sKickLhaPath = GetSkickLhaPath $imageDir

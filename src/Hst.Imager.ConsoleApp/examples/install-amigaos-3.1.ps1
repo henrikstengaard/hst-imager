@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-21
+# Date:   2023-07-10
 #
 # A powershell script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -57,7 +57,7 @@ $amigaOs31Files = @(
 )
 
 # get amigaos 3.1 files copied to current path
-GetAmigaOsFiles $amigaOs31Files $currentPath
+GetAdfFiles $amigaOs31Files $currentPath
 
 # amigaos 3.1 adf paths
 $workbenchAdfPath = Join-Path $currentPath -ChildPath "amiga-os-310-workbench.adf"

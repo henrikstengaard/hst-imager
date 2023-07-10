@@ -1,8 +1,9 @@
-﻿# Install AmigaOS 3.1
+﻿#!/usr/bin/env python3
+# Install AmigaOS 3.1
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-06-04
+# Date:   2023-07-10
 #
 # A python script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -59,7 +60,7 @@ amigaos_31_files = [
 ]
 
 # get amigaos 3.1 files copied to current path
-shared.get_amigaos_files(amigaos_31_files, current_path)
+shared.get_adf_files(amigaos_31_files, current_path)
 
 # confirm create image confirm 
 create_image = shared.confirm("Do you want to create a new hard disk image file?", "enter = yes")
