@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2023-07-16
 #
 # A python script with shared functions for example scripts.
 
@@ -19,20 +19,49 @@ import codecs
 import unicodedata
 from urllib.request import urlretrieve
 
+# globals
+is_initialized = False
+use_dialog = False
+platform_system = ''
+
+# init
+def init():
+    global is_initialized
+    global use_dialog
+    global platform_system
+    
+    if is_initialized:
+        return
+
+    try:
+        use_dialog = run_command_capture_error_code(['dialog', '--version']) == 0
+    except:
+        use_dialog = False
+    platform_system = platform.system()
+    if platform_system != 'Darwin' and not use_dialog:
+        input("Dialog is not installed, fallback to simple text input! (enter = continue): ")
+    is_initialized = True
+
 # confirm
 def confirm(message, action):
-    if platform.system() == 'Darwin':
+    init()
+    if platform_system == 'Darwin':
         return re.search(r'yes$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" buttons {{"Yes", "No"}} default button "Yes"'.format(message)]).strip(), re.I)
+    elif use_dialog:
+        return run_command_capture_error_code(['dialog', '--clear', '--stdout', '--yesno', '"{0}"'.format(message), '0', '0']) == 0
     else:
         return re.search(r'^(|y|yes)$', input("{0} ({1}): ".format(message, action)), re.I)
 
 # input box
 def input_box(message):
-    if platform.system() == 'Darwin':
+    init()
+    if platform_system == 'Darwin':
         text_match = re.search(r'text[^:]*:(.*)$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" default answer "" buttons {{"OK", "Cancel"}} default button "OK"'.format(message)]).strip(), re.I)
         if not text_match:
             return None
         return text_match.group(1).strip()
+    elif use_dialog:
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--inputbox', '"{0}"'.format(message), '0', '0']).strip()
     else:
         return input('{0}: '.format(message)).strip()
 
@@ -46,15 +75,21 @@ def macos_choose_folder_dialog(title):
 
 # select file path
 def select_file_path(title):
-    if platform.system() == 'Darwin':
+    init()
+    if platform_system == 'Darwin':
         return macos_choose_file_dialog("Select {0}".format(title))
+    elif use_dialog:
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--fselect', '{0}/'.format(os.getcwd()), '14', '48']).strip()
     else:
         return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
 # select folder path
 def select_folder_path(title):
-    if platform.system() == 'Darwin':
+    init()
+    if platform_system == 'Darwin':
         return macos_choose_folder_dialog("Select {0}".format(title))
+    elif use_dialog:
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--dselect', '{0}/'.format(os.getcwd()), '14', '48']).strip()
     else:
         return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
@@ -69,6 +104,20 @@ def run_command(commands):
     if process.returncode:
         print(stderr)
         exit(1)
+
+# run command capture error code
+def run_command_capture_error_code(commands):
+    """Run command capture error code"""
+
+    # process to run commands
+    process = subprocess.Popen(commands, bufsize=-1, text=True,
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+    # get stdout and stderr from process
+    (stdout, stderr) = process.communicate()
+
+    # return error code
+    return process.returncode
 
 # run command and capture output
 def run_command_capture_output(commands):
@@ -294,14 +343,14 @@ def get_amigaos_workbench_adf_path(path, use_amigaos_31):
             return amigaos_workbench_adf_path
 
         # get amigaos 3.1 install adf path
-        get_amigaos_adf_path("Amiga OS 3.1 Workbench adf path", amigaos_workbench_adf_path)
+        get_amigaos_adf_path("AmigaOS 3.1 Workbench adf path", amigaos_workbench_adf_path)
         return amigaos_workbench_adf_path
 
     amigaos_workbench_adf_path = os.path.join(path, 'amigaos-3.x-workbench.adf')
     if os.path.isfile(amigaos_workbench_adf_path):
         return amigaos_workbench_adf_path
 
-    copy_amigaos_adf_path("AmigaOS 3.1+ Workbench adf file", amigaos_workbench_adf_path)
+    get_amigaos_adf_path("AmigaOS 3.1.4, 3.2+ Workbench adf file", amigaos_workbench_adf_path)
     return amigaos_workbench_adf_path
 
 # get amigaos install adf path
@@ -315,15 +364,16 @@ def get_amigaos_install_adf_path(image_path, use_amigaos_31):
             return amigaos_install_adf_path
         
         # enter amigaos 3.1 install adf path
-        get_amigaos_adf_path("Amiga OS 3.1 Install adf", amigaos_install_adf_path)
+        get_amigaos_adf_path("AmigaOS 3.1 Install adf", amigaos_install_adf_path)
         return amigaos_install_adf_path
 
     amigaos_install_adf_path = os.path.join(image_path, 'amigaos-3.x-install.adf')
     if os.path.isfile(amigaos_install_adf_path):
         return amigaos_install_adf_path
 
-    print('Using DOS7 requires Fast File System from Amiga OS 3.1.4, 3.2+ install adf')
-    get_amigaos_adf_path("Amiga OS 3.1+ install adf", amigaos_install_adf_path)
+    print('Using DOS7 requires Fast File System from AmigaOS 3.1.4, 3.2+ install adf')
+    get_amigaos_adf_path("AmigaOS 3.1.4, 3.2+ install adf", amigaos_install_adf_path)
+    return amigaos_install_adf_path
 
 # create image
 def create_image(hst_imager_path, image_path, size):
