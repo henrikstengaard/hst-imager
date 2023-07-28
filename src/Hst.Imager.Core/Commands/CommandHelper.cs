@@ -100,7 +100,6 @@
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
                 return new Result<Media>((Media)null);
-                // return new Result<Media>(new Error($"Invalid physical drive path '{path}'"));
             }
 
             var media = GetActiveMedia(physicalDrivePath);
