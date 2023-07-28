@@ -7,8 +7,13 @@ public static class MediaExtensions
 {
     public static Result<T> Then<T>(this Result<T> firstResult, Func<Result<T>> secondResult)
     {
-        return firstResult != null && firstResult.IsSuccess && firstResult.Value != null
+        return firstResult.HasResult()
             ? firstResult
             : secondResult.Invoke();
+    }
+
+    public static bool HasResult<T>(this Result<T> result)
+    {
+        return (result.IsSuccess && result.Value != null) || result.IsFaulted;
     }
 }

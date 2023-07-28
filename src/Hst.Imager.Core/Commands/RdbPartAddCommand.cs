@@ -86,7 +86,7 @@
 
             OnDebugMessage("Reading Rigid Disk Block");
 
-            var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
             var rigidDiskBlock = diskInfo.RigidDiskBlock;
 
             if (rigidDiskBlock == null)

@@ -96,21 +96,19 @@
         public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             bool writeable = false)
         {
-            if (!isAdministrator)
-            {
-                return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
-            }
-
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
-                return new Result<Media>(new Error($"Invalid physical drive path '{path}'"));
+                return new Result<Media>((Media)null);
+                // return new Result<Media>(new Error($"Invalid physical drive path '{path}'"));
             }
 
             var media = GetActiveMedia(physicalDrivePath);
             if (media != null)
             {
-                return new Result<Media>(media);
+                return !isAdministrator 
+                    ? new Result<Media>(new Error($"Path '{path}' requires administrator privileges"))
+                    : new Result<Media>(media);
             }
 
             var physicalDrive =
@@ -120,6 +118,11 @@
             if (physicalDrive == null)
             {
                 return new Result<Media>(new Error($"Physical drive '{path}' not found"));
+            }
+
+            if (!isAdministrator)
+            {
+                return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
             }
 
             physicalDrive.SetWritable(writeable);
@@ -276,11 +279,13 @@
             return await RigidDiskBlockReader.Read(stream);
         }
 
-        public virtual async Task<DiskInfo> ReadDiskInfo(Media media, Stream stream)
+        public virtual async Task<DiskInfo> ReadDiskInfo(Media media)
         {
             var partitionTables = new List<PartitionTableInfo>();
-
-            var disk = new DiscUtils.Raw.Disk(stream, Ownership.None);
+            
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
             try
             {
@@ -311,7 +316,7 @@
                         StartOffset = 0,
                         EndOffset = 511,
                         StartSector = 0,
-                        EndSector = 1,
+                        EndSector = 0,
                         StartCylinder = 0,
                         EndCylinder = 0,
                         Size = 512
@@ -319,7 +324,7 @@
                     StartOffset = 0,
                     EndOffset = disk.Capacity - 1,
                     StartSector = 0,
-                    EndSector = disk.Geometry.TotalSectorsLong
+                    EndSector = disk.Geometry.TotalSectorsLong - 1
                 });
             }
             catch (Exception)
@@ -365,7 +370,7 @@
                         Size = guidReservedSize
                     },
                     StartOffset = 0,
-                    EndOffset = disk.Capacity,
+                    EndOffset = disk.Capacity - 1,
                     StartSector = guidPartitionTable.FirstUsableSector,
                     EndSector = guidPartitionTable.LastUsableSector,
                     StartCylinder = 0,
@@ -380,7 +385,7 @@
             RigidDiskBlock rigidDiskBlock = null;
             try
             {
-                rigidDiskBlock = await GetRigidDiskBlock(stream);
+                rigidDiskBlock = await GetRigidDiskBlock(media.Stream);
                 if (rigidDiskBlock != null)
                 {
                     var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
@@ -481,7 +486,7 @@
                 allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
             }
 
-            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0, allocatedParts);
+            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0, allocatedParts, true, false);
         }
 
         private static PartitionTablePart CreateGptParts(DiskInfo diskInfo)
@@ -533,7 +538,7 @@
                 Size = diskInfo.Size,
                 Sectors = 0,
                 Cylinders = 0,
-                Parts = CreateUnallocatedParts(gptPartitionTable.Size, gptPartitionTable.Sectors, 0, parts)
+                Parts = CreateUnallocatedParts(gptPartitionTable.Size, gptPartitionTable.Sectors, 0, parts, true, false)
             };
         }
 
@@ -586,7 +591,7 @@
                 Size = diskInfo.Size,
                 Sectors = mbrPartitionTable.Sectors,
                 Cylinders = 0,
-                Parts = CreateUnallocatedParts(mbrPartitionTable.Size, mbrPartitionTable.Sectors, 0, parts)
+                Parts = CreateUnallocatedParts(mbrPartitionTable.Size, mbrPartitionTable.Sectors, 0, parts, true, false)
             };
         }
 
@@ -654,12 +659,12 @@
                 Cylinders = diskInfo.RigidDiskBlock.Cylinders,
                 Parts = CreateUnallocatedParts(diskInfo.RigidDiskBlock.DiskSize,
                     diskInfo.RigidDiskBlock.DiskSize / diskInfo.RigidDiskBlock.BlockSize, 0,
-                    parts)
+                    parts, true, true)
             };
         }
 
         private static IEnumerable<PartInfo> CreateUnallocatedParts(long diskSize, long sectors, long cylinders,
-            IEnumerable<PartInfo> parts)
+            IEnumerable<PartInfo> parts, bool useSectors, bool useCylinders)
         {
             if (diskSize <= 0)
             {
@@ -693,9 +698,9 @@
                     });
                 }
 
-                offset = part.EndOffset == 0 ? 0 : part.EndOffset + 1;
-                sector = part.EndSector == 0 ? 0 : part.EndSector + 1;
-                cylinder = part.EndCylinder == 0 ? 0 : part.EndCylinder + 1;
+                offset = part.EndOffset + 1;
+                sector = useSectors ? part.EndSector + 1 : 0;
+                cylinder = useCylinders ? part.EndCylinder + 1 : 0;
             }
 
             if (offset < diskSize)

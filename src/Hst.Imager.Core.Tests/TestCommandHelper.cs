@@ -159,9 +159,9 @@
                 : base.CreateWriteableStream(path, create);
         }
 
-        public override async Task<DiskInfo> ReadDiskInfo(Media media, Stream stream)
+        public override async Task<DiskInfo> ReadDiskInfo(Media media)
         {
-            var diskInfo = await base.ReadDiskInfo(media, stream);
+            var diskInfo = await base.ReadDiskInfo(media);
             if (rigidDiskBlock != null)
             {
                 diskInfo.RigidDiskBlock = rigidDiskBlock;

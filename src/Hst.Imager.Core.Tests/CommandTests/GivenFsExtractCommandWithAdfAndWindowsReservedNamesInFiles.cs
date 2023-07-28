@@ -44,13 +44,15 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
             // assert - 2 file was extracted
             Assert.Equal(2, files.Length);
 
+            var windowsReservedPrefix = OperatingSystem.IsWindows() ? "." : string.Empty;
+
             // assert - aux file was extracted
-            var auxPath = Path.Combine(destPath, ".AUX");
+            var auxPath = Path.Combine(destPath, $"{windowsReservedPrefix}AUX");
             Assert.Equal(auxPath,
                 files.FirstOrDefault(x => x.Equals(auxPath, StringComparison.OrdinalIgnoreCase)));
 
             // assert - aux.info file was extracted
-            var auxInfoPath = Path.Combine(destPath, ".AUX.info");
+            var auxInfoPath = Path.Combine(destPath, $"{windowsReservedPrefix}AUX.info");
             Assert.Equal(auxInfoPath,
                 files.FirstOrDefault(x => x.Equals(auxInfoPath, StringComparison.OrdinalIgnoreCase)));
         }

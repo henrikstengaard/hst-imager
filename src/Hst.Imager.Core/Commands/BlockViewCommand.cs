@@ -115,6 +115,6 @@ public class BlockViewCommand : CommandBase
 
     private static char FormatByte(byte value)
     {
-        return value >= 33 ? (char)value : '.';
+        return value >= 32 && value <= 127 ? (char)value : '.';
     }
 }

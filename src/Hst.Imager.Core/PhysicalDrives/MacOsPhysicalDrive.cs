@@ -17,7 +17,8 @@
         public override Stream Open()
         {
             "diskutil".RunProcess($"unmountDisk {Path}");
-            return File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read);
+            return new MacOsMediaStream(File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read),
+                Path, Size);
         }
     }
 }

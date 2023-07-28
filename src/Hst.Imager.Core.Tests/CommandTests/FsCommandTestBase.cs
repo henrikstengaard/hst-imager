@@ -86,7 +86,7 @@ public class FsCommandTestBase : CommandTestBase
         using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
-            BiosPartitionTypes.Fat32Lba, false);
+            BiosPartitionTypes.Fat32Lba, true);
         FatFileSystem.FormatPartition(disk, partitionIndex, "FAT");
     }
 

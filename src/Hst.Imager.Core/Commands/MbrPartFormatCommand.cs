@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -45,9 +47,10 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            var stream = media.Stream;
             
-            using var disk = new Disk(stream, Ownership.None);
+            using var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new Disk(media.Stream, Ownership.None);
             
             OnDebugMessage("Reading Master Boot Record");
             
@@ -77,10 +80,11 @@
 
             OnInformationMessage($"- Partition name '{name}'");
             
+            // format mbr partition
             using var fatFileSystem = FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
             
-            await disk.Content.DisposeAsync();
-            disk.Dispose();
+            // flush disk content
+            await disk.Content.FlushAsync(token);
             
             return new Result();
         }

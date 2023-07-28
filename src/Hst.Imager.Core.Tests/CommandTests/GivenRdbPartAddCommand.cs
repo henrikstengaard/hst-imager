@@ -42,7 +42,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.RigidDiskBlock);
 
         // assert - added rdb partition size is equal to rdb disk size
@@ -84,7 +84,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.RigidDiskBlock);
 
         // assert - added rdb partition size is equal to 50% of rdb disk size
@@ -136,7 +136,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.RigidDiskBlock);
 
         // assert - rdb has 2 partitions
@@ -192,7 +192,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo);
 
         // assert - disk img contains 2 partition tables

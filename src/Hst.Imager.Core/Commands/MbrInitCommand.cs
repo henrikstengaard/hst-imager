@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands
 {
     using System.Collections.Generic;
     using System.Linq;
@@ -39,16 +41,18 @@
                 return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
-            var stream = media.Stream;
             
-            using var disk = new Disk(stream, Ownership.None);
+            using var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new Disk(media.Stream, Ownership.None);
             
             OnDebugMessage("Initializing Master Boot Record");
 
+            // initialize mbr
             BiosPartitionTable.Initialize(disk);
 
-            await disk.Content.DisposeAsync();
-            disk.Dispose();
+            // flush disk content
+            await disk.Content.FlushAsync(token);
             
             return new Result();
         }

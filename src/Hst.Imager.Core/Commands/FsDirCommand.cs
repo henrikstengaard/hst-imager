@@ -148,7 +148,7 @@ public class FsDirCommand : FsCommandBase
         OnDebugMessage($"Listing partition tables");
 
         var entries = new List<Entry>();
-        var diskInfo = await commandHelper.ReadDiskInfo(media, stream);
+        var diskInfo = await commandHelper.ReadDiskInfo(media);
 
         if (diskInfo.MbrPartitionTablePart != null)
         {

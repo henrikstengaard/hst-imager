@@ -41,7 +41,7 @@
 
             OnDebugMessage($"Reading Rigid Disk Block from path '{path}'");
             
-            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
 
             OnRdbInfoRead(new MediaInfo
             {

@@ -86,7 +86,10 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
         
         var dir1Path = Path.Combine(path, "dir1");
         Directory.CreateDirectory(dir1Path);
-        await File.WriteAllBytesAsync(Path.Combine(dir1Path, ".AUX"), Array.Empty<byte>());
-        await File.WriteAllBytesAsync(Path.Combine(dir1Path, ".AUX.info"), Array.Empty<byte>());
+
+        var windowsReservedPrefix = OperatingSystem.IsWindows() ? "." : string.Empty;
+        
+        await File.WriteAllBytesAsync(Path.Combine(dir1Path, $"{windowsReservedPrefix}AUX"), Array.Empty<byte>());
+        await File.WriteAllBytesAsync(Path.Combine(dir1Path, $"{windowsReservedPrefix}AUX.info"), Array.Empty<byte>());
     }
 }

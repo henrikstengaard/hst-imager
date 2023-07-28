@@ -67,7 +67,7 @@
 
             OnDebugMessage($"Media size '{media.Size}'");
         
-            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
             if (diskInfo == null)
             {
                 return new Result(new Error("Failed to read disk info"));
@@ -75,9 +75,10 @@
             
             OnDebugMessage("Reading Master Boot Record");
             
-            // open stream as disk
-            using var disk = new Disk(media.Stream, Ownership.None);
-            
+            using var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new Disk(media.Stream, Ownership.None);
+
             BiosPartitionTable biosPartitionTable;
             try
             {
@@ -143,9 +144,11 @@
                 start = firstSector;
             }
 
+            var diskSectors = disk.Geometry.TotalSectorsLong;
+
             // calculate partition sectors
             var partitionSectors = partitionSize == 0
-                ? disk.Geometry.TotalSectorsLong - start
+                ? diskSectors - start
                 : partitionSize / 512;
 
             if (partitionSectors <= 0)
@@ -157,9 +160,9 @@
             partitionSize = partitionSectors * 512;
 
             // set end to last sector, if end is larger than last sector
-            if (end > disk.Geometry.TotalSectorsLong)
+            if (end > diskSectors)
             {
-                end = disk.Geometry.TotalSectorsLong;
+                end = diskSectors;
                 partitionSectors = end - start + 1;
                 partitionSize = partitionSectors * 512;
             }
@@ -180,9 +183,8 @@
             // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);
 
-            // dispose content and disk
-            await disk.Content.DisposeAsync();
-            disk.Dispose();
+            // flush disk content
+            await disk.Content.FlushAsync(token);
             
             return new Result();
         }

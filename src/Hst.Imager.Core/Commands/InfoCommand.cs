@@ -41,7 +41,7 @@
 
             OnDebugMessage($"Media size '{media.Size}'");
 
-            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
 
             OnDebugMessage($"Path '{path}', disk size '{diskInfo.Size}'");
 

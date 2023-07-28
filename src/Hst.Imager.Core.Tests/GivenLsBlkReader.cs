@@ -11,7 +11,7 @@
         [Fact]
         public async Task WhenParseJsonOutputFromLsBlkThenLsBlkIsReturned()
         {
-            var lsBlk = LsBlkReader.ParseLsBlk(await File.ReadAllTextAsync(@"TestData\lsblk.json"));
+            var lsBlk = LsBlkReader.ParseLsBlk(await File.ReadAllTextAsync(Path.Combine("TestData","lsblk.json")));
 
             Assert.NotNull(lsBlk);
             Assert.NotEmpty(lsBlk.BlockDevices);

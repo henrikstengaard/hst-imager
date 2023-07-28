@@ -38,7 +38,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.MbrPartitionTablePart);
 
         // assert - added mbr partition size is equal to remaining disk size
@@ -78,7 +78,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
-        var diskInfo = await testCommandHelper.ReadDiskInfo(media, media.Stream);
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.MbrPartitionTablePart);
 
         // assert - added mbr partition size is equal to 50% of rdb disk size with an allowed margin of 5kb

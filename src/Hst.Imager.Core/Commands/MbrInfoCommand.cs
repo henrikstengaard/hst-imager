@@ -5,9 +5,6 @@
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using DiscUtils.Partitions;
-    using DiscUtils.Raw;
-    using DiscUtils.Streams;
     using Hst.Core;
     using Microsoft.Extensions.Logging;
 
@@ -43,7 +40,7 @@
             
             OnDebugMessage($"Reading Master Boot Record from path '{path}'");
 
-            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
             
             OnMbrInfoRead(new MediaInfo
             {

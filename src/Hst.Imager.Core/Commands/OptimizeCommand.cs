@@ -48,7 +48,7 @@
 
             OnDebugMessage($"Media size '{media.Size}'");
         
-            var diskInfo = await commandHelper.ReadDiskInfo(media, media.Stream);
+            var diskInfo = await commandHelper.ReadDiskInfo(media);
             if (diskInfo == null)
             {
                 return new Result(new Error("Failed to read disk info"));

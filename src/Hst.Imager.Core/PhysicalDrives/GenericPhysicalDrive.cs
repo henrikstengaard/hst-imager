@@ -21,7 +21,8 @@ namespace Hst.Imager.Core.PhysicalDrives
 
         public virtual Stream Open()
         {
-            return File.Open(Path, FileMode.Open, FileAccess.ReadWrite);
+            return new MediaStream(File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read),
+                Size);
         }
 
         public void SetWritable(bool writable)

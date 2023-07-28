@@ -10,7 +10,7 @@
         [Fact]
         public void WhenParseListOutputFromDiskUtilThenDisksAreReturned()
         {
-            var disks = DiskUtilReader.ParseList(File.OpenRead(@"TestData\diskutil-list.plist")).ToList();
+            var disks = DiskUtilReader.ParseList(File.OpenRead(Path.Combine("TestData","diskutil-list.plist"))).ToList();
             
             Assert.Single(disks);
             var disk = disks.First();
@@ -25,7 +25,7 @@
         [Fact]
         public void WhenParseListOutputFromDiskUtilWithoutPartitionsThenDisksAreReturned()
         {
-            var disks = DiskUtilReader.ParseList(File.OpenRead(@"TestData\diskutil-list-no-partitions.plist")).ToList();
+            var disks = DiskUtilReader.ParseList(File.OpenRead(Path.Combine("TestData","diskutil-list-no-partitions.plist"))).ToList();
             
             Assert.Single(disks);
             var disk = disks.First();
@@ -37,7 +37,7 @@
         [Fact]
         public void WhenParseInfoOutputFromDiskUtilThenInfoIsReturned()
         {
-            var info = DiskUtilReader.ParseInfo(File.OpenRead(@"TestData\diskutil-info-disk.plist"));
+            var info = DiskUtilReader.ParseInfo(File.OpenRead(Path.Combine("TestData","diskutil-info-disk.plist")));
             
             Assert.NotNull(info);
             Assert.Equal("USB", info.BusProtocol);
