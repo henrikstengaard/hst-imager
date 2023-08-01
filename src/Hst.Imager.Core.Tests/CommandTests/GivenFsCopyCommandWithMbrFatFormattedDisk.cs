@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Models;
 using Xunit;
 
-public class GivenFsCopyCommandWithFatFormattedDisk : FsCommandTestBase
+public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
 {
     [Fact]
     public async Task WhenCopyingAllRecursivelyFromDiskToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
@@ -32,7 +32,7 @@ public class GivenFsCopyCommandWithFatFormattedDisk : FsCommandTestBase
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            CreateFatFormattedDisk(testCommandHelper, srcPath, 10.MB());
+            CreateMbrFatFormattedDisk(testCommandHelper, srcPath, 10.MB());
             CreateDirectoriesAndFiles(testCommandHelper, srcPath);
 
             // arrange - create fs copy command

@@ -1,5 +1,4 @@
 using System.IO;
-using Hst.Core.Extensions;
 
 namespace Hst.Imager.Core;
 
@@ -43,29 +42,4 @@ public class MediaStream : Stream
     public override bool CanWrite => stream.CanWrite;
     public override long Length { get; }
     public override long Position { get => stream.Position; set => stream.Position = value; }
-}
-
-public class MacOsMediaStream : MediaStream
-{
-    private readonly string path;
-
-    public MacOsMediaStream(Stream stream, string path, long size) : base(stream, size)
-    {
-        this.path = path;
-    }
-    
-    protected override void Dispose(bool disposing)
-    {
-        try
-        {
-            if (disposing)
-            {
-                "diskutil".RunProcess($"mountDisk {path}");
-            }
-        }
-        finally
-        {
-            base.Dispose(disposing);
-        }
-    }
 }

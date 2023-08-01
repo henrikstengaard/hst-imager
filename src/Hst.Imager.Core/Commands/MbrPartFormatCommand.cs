@@ -1,4 +1,6 @@
-﻿using Hst.Imager.Core.Models;
+﻿using DiscUtils;
+using DiscUtils.Ntfs;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -16,14 +18,14 @@ namespace Hst.Imager.Core.Commands
 
     public class MbrPartFormatCommand : CommandBase
     {
-        private readonly ILogger<RdbInitCommand> logger;
+        private readonly ILogger<MbrPartFormatCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
         private readonly int partitionNumber;
         private readonly string name;
 
-        public MbrPartFormatCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
+        public MbrPartFormatCommand(ILogger<MbrPartFormatCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name)
         {
             this.logger = logger;
@@ -34,7 +36,7 @@ namespace Hst.Imager.Core.Commands
             this.name = name;
         }
 
-        public override async Task<Result> Execute(CancellationToken token)
+        public override Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Formatting partition in Master Boot Record at '{path}'");
 
@@ -44,13 +46,13 @@ namespace Hst.Imager.Core.Commands
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
-                return new Result(mediaResult.Error);
+                return Task.FromResult(new Result(mediaResult.Error));
             }
             using var media = mediaResult.Value;
             
             using var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+                : new Disk(media.Stream, Ownership.Dispose);
             
             OnDebugMessage("Reading Master Boot Record");
             
@@ -61,32 +63,42 @@ namespace Hst.Imager.Core.Commands
             }
             catch (Exception)
             {
-                return new Result(new Error("Master Boot Record not found"));
+                return Task.FromResult(new Result(new Error("Master Boot Record not found")));
             }
 
             OnInformationMessage($"- Partition number '{partitionNumber}'");
 
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
-                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
+                return Task.FromResult(new Result(new Error($"Invalid partition number '{partitionNumber}'")));
             }
 
             var partitionInfo = biosPartitionTable.Partitions[partitionNumber - 1];
             
-            if (partitionInfo.BiosType != BiosPartitionTypes.Fat32)
-            {
-                return new Result(new Error("Unsupported partition type"));
-            }
-
+            OnInformationMessage($"- Type '{partitionInfo.TypeAsString}'");
             OnInformationMessage($"- Partition name '{name}'");
-            
+
             // format mbr partition
-            using var fatFileSystem = FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
+            switch (partitionInfo.BiosType)
+            {
+                case BiosPartitionTypes.Fat12:
+                case BiosPartitionTypes.Fat16:
+                case BiosPartitionTypes.Fat32:
+                case BiosPartitionTypes.Fat16Small:
+                case BiosPartitionTypes.Fat16Lba:
+                case BiosPartitionTypes.Fat32Lba:
+                    FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
+                    break;
+                case BiosPartitionTypes.Ntfs:
+                    var partition = disk.Partitions.Partitions[partitionNumber - 1];
+                    NtfsFileSystem.Format(partition.Open(), name, Geometry.FromCapacity(partition.SectorCount * 512), 
+                        partition.FirstSector, partition.SectorCount);
+                    break;
+                default:
+                    return Task.FromResult(new Result(new Error("Unsupported partition type")));
+            }
             
-            // flush disk content
-            await disk.Content.FlushAsync(token);
-            
-            return new Result();
+            return Task.FromResult(new Result());
         }
     }
 }

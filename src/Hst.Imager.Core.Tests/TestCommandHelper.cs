@@ -159,9 +159,10 @@
                 : base.CreateWriteableStream(path, create);
         }
 
-        public override async Task<DiskInfo> ReadDiskInfo(Media media)
+        public override async Task<DiskInfo> ReadDiskInfo(Media media,
+            PartitionTableType partitionTableTypeContext = PartitionTableType.None)
         {
-            var diskInfo = await base.ReadDiskInfo(media);
+            var diskInfo = await base.ReadDiskInfo(media, partitionTableTypeContext);
             if (rigidDiskBlock != null)
             {
                 diskInfo.RigidDiskBlock = rigidDiskBlock;

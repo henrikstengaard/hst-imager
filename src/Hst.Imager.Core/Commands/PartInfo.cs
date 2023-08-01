@@ -6,6 +6,7 @@ public class PartInfo
     public int? PartitionNumber { get; set; }
     public PartitionTableType PartitionTableType { get; set; }
     public PartType PartType { get; set; }
+    public int BiosType { get; set; }
     public long Size { get; set; }
     public long StartOffset { get; set; }
     public long EndOffset { get; set; }

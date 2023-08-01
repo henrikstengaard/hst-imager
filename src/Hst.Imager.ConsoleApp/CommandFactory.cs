@@ -39,6 +39,7 @@
             rootCommand.AddCommand(CreateBlockCommand());
             rootCommand.AddCommand(CreateCompareCommand());
             rootCommand.AddCommand(CreateWriteCommand());
+            rootCommand.AddCommand(GptCommandFactory.CreateGptCommand());
             rootCommand.AddCommand(MbrCommandFactory.CreateMbrCommand());
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
             rootCommand.AddCommand(FsCommandFactory.CreateFsCommand());

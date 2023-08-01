@@ -19,7 +19,8 @@
         long GetVhdSize(long size);
         bool IsVhd(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);
-        Task<DiskInfo> ReadDiskInfo(Media media);
+        Task<DiskInfo> ReadDiskInfo(Media media,
+            PartitionTableType partitionTableTypeContext = PartitionTableType.None);
         Result<MediaResult> ResolveMedia(string path);
     }
 }

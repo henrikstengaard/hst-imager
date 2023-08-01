@@ -11,5 +11,6 @@
         public long EndSector { get; set; }
         public long StartCylinder { get; set; }
         public long EndCylinder { get; set; }
+        public int BiosType { get; set; }
     }
 }

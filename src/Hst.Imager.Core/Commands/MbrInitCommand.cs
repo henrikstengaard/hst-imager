@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using System;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -44,16 +45,52 @@ namespace Hst.Imager.Core.Commands
             
             using var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+                : new Disk(media.Stream, Ownership.Dispose);
+
+            var deleteSectorCount = 0L;
+
+            try
+            {
+                var biosPartitionTable = new BiosPartitionTable(disk);
+                deleteSectorCount = 1;
+            }
+            catch (Exception)
+            {
+                // ignored, if bios partition table doesnt exist
+            }
+
+            try
+            {
+                var guidPartitionTable = new GuidPartitionTable(disk);
+                if (guidPartitionTable.FirstUsableSector - 1 > deleteSectorCount)
+                {
+                    deleteSectorCount = guidPartitionTable.FirstUsableSector;
+                }
+            }
+            catch (Exception)
+            {
+                // ignored, if guid partition table doesnt exist
+            }
+            
+            if (deleteSectorCount > 0)
+            {
+                OnDebugMessage($"Deleting sector{(deleteSectorCount == 1 ? $" {deleteSectorCount}" : $"s 0-{deleteSectorCount - 1}")}");
+                
+                var blankSectorBytes = new byte[disk.SectorSize];
+                var offset = 0;
+                for (var i = 0; i < deleteSectorCount; i++)
+                {
+                    disk.Content.Position = offset;
+                    await disk.Content.WriteAsync(blankSectorBytes, 0, blankSectorBytes.Length, token);
+                    offset += disk.SectorSize;
+                }
+            }
             
             OnDebugMessage("Initializing Master Boot Record");
 
             // initialize mbr
             BiosPartitionTable.Initialize(disk);
 
-            // flush disk content
-            await disk.Content.FlushAsync(token);
-            
             return new Result();
         }
     }

@@ -121,6 +121,20 @@ public class FsDirCommand : FsCommandBase
                     }
 
                     break;
+                case "gpt":
+                    if (parts.Length == 1)
+                    {
+                        var listPartitionsResult = await ListGptPartitions(media);
+                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
+                    }
+
+                    var listGptEntriesResult = await ListGptPartitionEntries(media, parts.Skip(1).ToArray());
+                    if (listGptEntriesResult.IsFaulted)
+                    {
+                        return new Result(listGptEntriesResult.Error);
+                    }
+
+                    break;
                 case "rdb":
                     if (parts.Length == 1)
                     {
@@ -158,6 +172,17 @@ public class FsDirCommand : FsCommandBase
                 FormattedName = "MBR", 
                 Type = EntryType.Dir,
                 Size = diskInfo.MbrPartitionTablePart.Size
+            });
+        }
+        
+        if (diskInfo.GptPartitionTablePart != null)
+        {
+            entries.Add(new Entry
+            {
+                Name = "GPT",
+                FormattedName = "GPT", 
+                Type = EntryType.Dir,
+                Size = diskInfo.GptPartitionTablePart.Size
             });
         }
         
@@ -239,6 +264,68 @@ public class FsDirCommand : FsCommandBase
         await ListEntries(entryIterator, fileSystemPath);
 
         return new Result();
+    }
+    
+    private async Task<Result> ListGptPartitionEntries(Media media, string[] parts)
+    {
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            
+        var gptFileSystemResult = await MountGptFileSystem(disk, parts[0]);
+        if (gptFileSystemResult.IsFaulted)
+        {
+            return new Result(gptFileSystemResult.Error);
+        }
+
+        var fileSystemPath = string.Join("/", parts.Skip(1));
+        var entryIterator = new FileSystemEntryIterator(media, gptFileSystemResult.Value, fileSystemPath, recursive);
+
+        await ListEntries(entryIterator, fileSystemPath);
+
+        return new Result();
+    }
+
+    private Task<Result> ListGptPartitions(Media media)
+    {
+        OnDebugMessage("Reading Guid Partition Table");
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            
+        GuidPartitionTable guidPartitionTable;
+        try
+        {
+            guidPartitionTable = new GuidPartitionTable(disk);
+        }
+        catch (Exception)
+        {
+            return Task.FromResult<Result>(new Result<IEntryIterator>(new Error("Guid Partition Table not found")));
+        }
+
+        var partitionNumber = 0;
+
+        var entries = new List<Entry>();
+        foreach (var partition in guidPartitionTable.Partitions)
+        {
+            var partitionNumberFormatted = (++partitionNumber).ToString();
+            entries.Add(new Entry
+            {
+                Name = partitionNumberFormatted,
+                FormattedName = partitionNumberFormatted,
+                Type = EntryType.Dir,
+                Size = 0,
+                Properties = new Dictionary<string, string>
+                {
+                    { "Info", string.Join(", ", (partition.SectorCount * 512).FormatBytes(), partition.TypeAsString) }
+                }
+            });
+        }
+        
+        OnEntriesRead(new EntriesInfo
+        {
+            Path = path,
+            Entries = entries
+        });
+
+        return Task.FromResult(new Result());
     }
     
     private async Task<Result> ListRdbPartitions(Stream stream)

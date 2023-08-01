@@ -1,22 +1,21 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using DiscUtils;
+using DiscUtils.Ntfs;
 
-using System.Collections.Generic;
+namespace Hst.Imager.Core.Tests.CommandTests;
+
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Amiga;
 using Amiga.Extensions;
 using Amiga.FileSystems.FastFileSystem;
 using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
-using Commands;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Core.Extensions;
-using Microsoft.Extensions.Logging.Abstractions;
 using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
@@ -30,30 +29,42 @@ public class FsCommandTestBase : CommandTestBase
     protected static readonly byte[] Pfs3DosType = { 0x50, 0x46, 0x53, 0x3 };
     protected static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
 
-    protected async Task CreateMbr(TestCommandHelper testCommandHelper, string path,
+    protected void CreateMbrDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
         var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
-        using (var media = mediaResult.Value)
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        if (!path.ToLower().EndsWith(".vhd"))
         {
-            var stream = media.Stream;
-            if (!path.ToLower().EndsWith(".vhd"))
-            {
-                stream.SetLength(diskSize);
-            }
+            stream.SetLength(diskSize);
         }
-        
-        var cancellationTokenSource = new CancellationTokenSource();
-        var mbrInitCommand = new MbrInitCommand(new NullLogger<MbrInitCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), path);
-        var result = await mbrInitCommand.Execute(cancellationTokenSource.Token);
 
-        if (result.IsFaulted)
-        {
-            throw new IOException(result.Error.ToString());
-        }
+        using var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
+            
+        BiosPartitionTable.Initialize(disk);
     }
-    
+
+    protected void CreateGptDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        if (!path.ToLower().EndsWith(".vhd"))
+        {
+            stream.SetLength(diskSize);
+        }
+            
+        using var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
+            
+        GuidPartitionTable.Initialize(disk.Content, Geometry.FromCapacity(disk.Capacity));
+    }
+
     protected async Task CreateRdbWithPfs3(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024, long rdbSize = 0, uint rdbBlockLo = 0)
     {
@@ -76,7 +87,7 @@ public class FsCommandTestBase : CommandTestBase
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
     }
 
-    protected void CreateFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
+    protected void CreateMbrFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
         var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
@@ -87,7 +98,23 @@ public class FsCommandTestBase : CommandTestBase
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
             BiosPartitionTypes.Fat32Lba, true);
-        FatFileSystem.FormatPartition(disk, partitionIndex, "FAT");
+        FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
+    }
+
+    protected void CreateMbrNtfsFormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
+            BiosPartitionTypes.Ntfs, true);
+        var partition = biosPartitionTable.Partitions[partitionIndex];
+        NtfsFileSystem.Format(partition.Open(), "NTFSDISK", Geometry.FromCapacity(partition.SectorCount * 512), 
+            partition.FirstSector, partition.SectorCount);
     }
 
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.ConsoleApp
+﻿using Hst.Imager.Core.Commands.GptCommands;
+
+namespace Hst.Imager.ConsoleApp
 {
     using System;
     using System.Collections.Generic;
@@ -256,6 +258,41 @@
                 compatibleSize));
         }
 
+        public static async Task GptInfo(string path, bool showUnallocated)
+        {
+            var command = new GptInfoCommand(GetLogger<GptInfoCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path);
+            command.GptInfoRead += (_, args) =>
+            {
+                Log.Logger.Information(GuidPartitionTablePresenter.Present(args.MediaInfo, showUnallocated));
+            };
+            await Execute(command);
+        }
+
+        public static async Task GptInit(string path)
+        {
+            await Execute(new GptInitCommand(GetLogger<GptInitCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path));
+        }
+
+        public static async Task GptPartAdd(string path, GptPartType type, string name, string size, long? startSector)
+        {
+            await Execute(new GptPartAddCommand(GetLogger<GptPartAddCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, type, name, ParseSize(size), startSector, null));
+        }
+
+        public static async Task GptPartDel(string path, int partitionNumber)
+        {
+            await Execute(new GptPartDelCommand(GetLogger<GptPartDelCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, partitionNumber));
+        }
+
+        public static async Task GptPartFormat(string path, int partitionNumber, GptPartType type, string name)
+        {
+            await Execute(new GptPartFormatCommand(GetLogger<GptPartFormatCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, partitionNumber, type, name));
+        }
+
         public static async Task MbrInfo(string path, bool showUnallocated)
         {
             var command = new MbrInfoCommand(GetLogger<MbrInfoCommand>(), GetCommandHelper(),
@@ -287,7 +324,7 @@
 
         public static async Task MbrPartFormat(string path, int partitionNumber, string name)
         {
-            await Execute(new MbrPartFormatCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name));
         }
 

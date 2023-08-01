@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using DiscUtils.Ntfs;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -578,18 +580,90 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IFileSystem>(new ExtFileSystem(stream));
         }
         
-        for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
+        // for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
+        // {
+        //     // fat magic Signature
+        //     if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
+        //     {
+        //     }
+        // }
+        
+        if (FatFileSystem.Detect(stream))
         {
-            // fat magic Signature
-            if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
-            {
-                return new Result<IFileSystem>(new FatFileSystem(stream));
-            }
+            return new Result<IFileSystem>(new FatFileSystem(stream));
+        }
+
+        if (NtfsFileSystem.Detect(stream))
+        {
+            return new Result<IFileSystem>(new NtfsFileSystem(stream));
         }
         
-        return new Result<IFileSystem>(new Error("Unsupported Master Boor Record file system"));
+        return new Result<IFileSystem>(new Error("Unsupported Master Boot Record file system"));
     }
-    
+
+        protected async Task<Result<IFileSystem>> MountGptFileSystem(VirtualDisk disk, string partitionNumber)
+    {
+        if (!int.TryParse(partitionNumber, out var partitionNumberIntValue))
+        {
+            return new Result<IFileSystem>(new Error($"Invalid partition number '{partitionNumber}'"));
+        }
+        
+        OnDebugMessage("Reading Guid Partition Table");
+        
+        GuidPartitionTable guidPartitionTable;
+        try
+        {
+            guidPartitionTable = new GuidPartitionTable(disk);
+        }
+        catch (Exception)
+        {
+            return new Result<IFileSystem>(new Error("Guid Partition Table not found"));
+        }
+
+        OnDebugMessage($"Partition number '{partitionNumber}'");
+
+        if (partitionNumberIntValue < 0 || partitionNumberIntValue - 1 > guidPartitionTable.Partitions.Count)
+        {
+            return new Result<IFileSystem>(new Error($"Invalid partition number {partitionNumber}, expected to between 1-{guidPartitionTable.Partitions.Count}"));
+        }
+
+        var partitionInfo = guidPartitionTable.Partitions[partitionNumberIntValue - 1];
+        
+        OnDebugMessage($"Mounting file system");
+
+        var stream = partitionInfo.Open();
+        var partitionOffset = stream.Position;
+
+        // read first 64kb block bytes of partition
+        var blockBytes = await stream.ReadBytes(512 * 128);
+
+        // ext super block magic signature
+        if (blockBytes[1024 + 0x38] == 0x53 && blockBytes[1024 + 0x39] == 0xEF)
+        {
+            return new Result<IFileSystem>(new ExtFileSystem(stream));
+        }
+        
+        // for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
+        // {
+        //     // fat magic Signature
+        //     if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
+        //     {
+        //     }
+        // }
+        
+        if (FatFileSystem.Detect(stream))
+        {
+            return new Result<IFileSystem>(new FatFileSystem(stream));
+        }
+
+        if (NtfsFileSystem.Detect(stream))
+        {
+            return new Result<IFileSystem>(new NtfsFileSystem(stream));
+        }
+        
+        return new Result<IFileSystem>(new Error("Unsupported Guid Partition Table file system"));
+    }
+
     protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Stream stream, string partitionName)
     {
         OnDebugMessage("Reading Rigid Disk Block");

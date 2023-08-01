@@ -77,7 +77,7 @@
             
             using var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+                : new Disk(media.Stream, Ownership.Dispose);
 
             BiosPartitionTable biosPartitionTable;
             try
@@ -89,8 +89,12 @@
                 return new Result(new Error("Master Boot Record not found"));
             }
             
+            OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
+            OnDebugMessage($"Sectors: {disk.Geometry.TotalSectorsLong}");
+            OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
+
             // available size and default start offset
-            var availableSize = disk.Geometry.Capacity;
+            var availableSize = disk.Capacity;
             long startOffset = 512;
 
             // get rdb partition table
@@ -101,6 +105,7 @@
             // reduce available size, if rdb is present and set start offset after rdb
             if (rdbPartitionTable != null)
             {
+                OnDebugMessage($"Rigid Disk Block found");
                 startOffset = rdbPartitionTable.Size.ToSectorSize();
                 availableSize = diskInfo.Size - startOffset;
             }
@@ -121,12 +126,14 @@
             var firstSector = rdbPartitionTable == null
                 ? 1
                 : rdbPartitionTable.Size / 512;
-            if (!biosPartitionTable.Partitions.Any())
+            
+            // add rdb mbr gap, if rdb is present and mbr doesn't have any partitions
+            if (rdbPartitionTable != null && !biosPartitionTable.Partitions.Any())
             {
                 firstSector += RdbMbrGap / 512;
             }
 
-            if (startSector.HasValue && startOffset < firstSector)
+            if (startSector.HasValue && startSector.Value < firstSector)
             {
                 return new Result(new Error($"Invalid start sector '{startSector}' is less that first sector '{firstSector}'"));
             }
@@ -147,9 +154,7 @@
             var diskSectors = disk.Geometry.TotalSectorsLong;
 
             // calculate partition sectors
-            var partitionSectors = partitionSize == 0
-                ? diskSectors - start
-                : partitionSize / 512;
+            var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / 512;
 
             if (partitionSectors <= 0)
             {
@@ -183,9 +188,6 @@
             // create mbr partition
             biosPartitionTable.CreatePrimaryBySector(start, end, biosPartitionTypeResult.Value, active);
 
-            // flush disk content
-            await disk.Content.FlushAsync(token);
-            
             return new Result();
         }
 
@@ -193,7 +195,13 @@
         {
             return type.ToLower() switch
             {
+                "fat12" => new Result<byte>(BiosPartitionTypes.Fat12),
+                "fat16" => new Result<byte>(BiosPartitionTypes.Fat16),
                 "fat32" => new Result<byte>(BiosPartitionTypes.Fat32),
+                "fat16small" => new Result<byte>(BiosPartitionTypes.Fat16Small),
+                "fat16lba" => new Result<byte>(BiosPartitionTypes.Fat16Lba),
+                "fat32lba" => new Result<byte>(BiosPartitionTypes.Fat32Lba),
+                "ntfs" => new Result<byte>(BiosPartitionTypes.Ntfs),
                 _ => new Result<byte>(new Error($"Unsupported partition type '{type}'"))
             };
         }

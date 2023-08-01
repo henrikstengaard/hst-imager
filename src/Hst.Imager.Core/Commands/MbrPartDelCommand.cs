@@ -31,7 +31,7 @@ namespace Hst.Imager.Core.Commands
             this.partitionNumber = partitionNumber;
         }
 
-        public override async Task<Result> Execute(CancellationToken token)
+        public override Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Deleting partition from Master Boot Record at '{path}'");
             
@@ -41,13 +41,13 @@ namespace Hst.Imager.Core.Commands
             var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
-                return new Result(mediaResult.Error);
+                return Task.FromResult(new Result(mediaResult.Error));
             }
             using var media = mediaResult.Value;
             
             using var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+                : new Disk(media.Stream, Ownership.Dispose);
             
             OnDebugMessage("Reading Master Boot Record");
             
@@ -58,23 +58,20 @@ namespace Hst.Imager.Core.Commands
             }
             catch (Exception)
             {
-                return new Result(new Error("Master Boot Record not found"));
+                return Task.FromResult(new Result(new Error("Master Boot Record not found")));
             }
 
             OnDebugMessage($"Deleting partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
-                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
+                return Task.FromResult(new Result(new Error($"Invalid partition number '{partitionNumber}'")));
             }
             
             // delete mbr partition
             biosPartitionTable.Delete(partitionNumber - 1);
             
-            // flush disk content
-            await disk.Content.FlushAsync(token);
-            
-            return new Result();
+            return Task.FromResult(new Result());
         }
     }
 }

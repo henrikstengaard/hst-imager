@@ -177,7 +177,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(rdbPartAddResult.IsSuccess);
 
         // arrange - create mbr at sector 0
-        await CreateMbr(testCommandHelper, imgPath);
+        CreateMbrDisk(testCommandHelper, imgPath);
 
         // arrange - mbr partition add command with type FAT32 and size 0
         cancellationTokenSource = new CancellationTokenSource();

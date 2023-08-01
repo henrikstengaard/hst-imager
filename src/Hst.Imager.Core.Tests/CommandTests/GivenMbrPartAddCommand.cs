@@ -23,7 +23,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         testCommandHelper.AddTestMedia(imgPath);
 
         // arrange - create mbr
-        await CreateMbr(testCommandHelper, imgPath);
+        CreateMbrDisk(testCommandHelper, imgPath);
 
         // arrange - mbr partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
@@ -41,15 +41,16 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.MbrPartitionTablePart);
 
-        // assert - added mbr partition size is equal to remaining disk size
+        // assert - added mbr partition size is equal to remaining disk size with an allowed margin of 50kb
+        var expectedPartitionSize = diskInfo.MbrPartitionTablePart.Size - diskInfo.MbrPartitionTablePart
+            .Parts.Where(x => x.PartType == PartType.PartitionTable).Sum(x => x.Size);
+        var margin = 5000;
         var partInfo =
             diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>
-                x.PartType == PartType.Partition && x.FileSystem.StartsWith("FAT32"));
+                x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
+                x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        var expectedPartitionSize = (diskInfo.MbrPartitionTablePart.Sectors - 1) * 512 - diskInfo.MbrPartitionTablePart
-            .Parts.Where(x => x.PartType == PartType.Unallocated).Sum(x => x.Size);
-        Assert.True(partInfo.Size > expectedPartitionSize - 50000);
-        Assert.True(partInfo.Size < expectedPartitionSize + 50000);
+        Assert.Equal("FAT32 (non-LBA)", partInfo.FileSystem);
     }
 
     [Fact]
@@ -63,7 +64,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         testCommandHelper.AddTestMedia(imgPath);
 
         // arrange - create mbr
-        await CreateMbr(testCommandHelper, imgPath);
+        CreateMbrDisk(testCommandHelper, imgPath);
 
         // arrange - mbr partition add command with type FAT32 and size 50% of rdb disk size
         var cancellationTokenSource = new CancellationTokenSource();
@@ -82,13 +83,13 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         Assert.NotNull(diskInfo?.MbrPartitionTablePart);
 
         // assert - added mbr partition size is equal to 50% of rdb disk size with an allowed margin of 5kb
+        var expectedPartitionSize = diskInfo.MbrPartitionTablePart.Size * 0.5;
+        var margin = 5000;
         var partInfo =
             diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>
-                x.PartType == PartType.Partition && x.FileSystem.StartsWith("FAT32"));
+                x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
+                x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        var sectors = Math.Ceiling((diskInfo.Size - 512) * 0.5d / 512);
-        var expectedPartitionSize = sectors * 512;
-        Assert.True(partInfo.Size > expectedPartitionSize - 5000);
-        Assert.True(partInfo.Size < expectedPartitionSize + 5000);
+        Assert.Equal("FAT32 (non-LBA)", partInfo.FileSystem);
     }
 }
