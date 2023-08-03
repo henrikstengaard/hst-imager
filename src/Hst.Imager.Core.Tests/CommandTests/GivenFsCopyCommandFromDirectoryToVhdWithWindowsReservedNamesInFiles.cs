@@ -49,6 +49,7 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             // assert - mount pfs3 volume
             using var media = mediaResult.Value;
             await using var pfs3Volume = await MountPfs3Volume(media.Stream);
+            
             // assert - get root entries
             var entries = (await pfs3Volume.ListEntries()).ToList();
             

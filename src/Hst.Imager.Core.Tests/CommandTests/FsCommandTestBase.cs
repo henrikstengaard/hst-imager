@@ -117,6 +117,34 @@ public class FsCommandTestBase : CommandTestBase
             partition.FirstSector, partition.SectorCount);
     }
 
+    protected void CreateGptFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var guidPartitionTable = GuidPartitionTable.Initialize(disk);
+        var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
+        FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
+    }
+
+    protected void CreateGptNtfsFormattedDisk(TestCommandHelper testCommandHelper, string path,
+        long diskSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var guidPartitionTable = GuidPartitionTable.Initialize(disk);
+        var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
+        var partition = guidPartitionTable.Partitions[partitionIndex];
+        NtfsFileSystem.Format(partition.Open(), "NTFSDISK", Geometry.FromCapacity(partition.SectorCount * 512), 
+            partition.FirstSector, partition.SectorCount);
+    }
+    
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {

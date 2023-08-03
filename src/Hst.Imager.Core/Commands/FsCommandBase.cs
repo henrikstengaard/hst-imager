@@ -380,7 +380,8 @@ public abstract class FsCommandBase : CommandBase
 
         return parts[0].ToLowerInvariant() switch
         {
-            "mbr" => await GetFileSystemEntryIterator(media.Value, parts, recursive),
+            "mbr" => await GetMbrFileSystemEntryIterator(media.Value, parts, recursive),
+            "gpt" => await GetGptFileSystemEntryIterator(media.Value, parts, recursive),
             "rdb" => await GetAmigaVolumeEntryIterator(media.Value, parts, recursive),
             _ => new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"))
         };
@@ -420,7 +421,7 @@ public abstract class FsCommandBase : CommandBase
             fileSystemVolumeResult.Value, recursive));
     }
 
-    private async Task<Result<IEntryIterator>> GetFileSystemEntryIterator(Media media, string[] parts, bool recursive)
+    private async Task<Result<IEntryIterator>> GetMbrFileSystemEntryIterator(Media media, string[] parts, bool recursive)
     {
         if (parts.Length < 2)
         {
@@ -445,6 +446,31 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IEntryIterator>(new FileSystemEntryIterator(media, mbrFileSystemResult.Value, rootPath, recursive));
     }
 
+    private async Task<Result<IEntryIterator>> GetGptFileSystemEntryIterator(Media media, string[] parts, bool recursive)
+    {
+        if (parts.Length < 2)
+        {
+            return new Result<IEntryIterator>(new Error($"No partition number in path"));
+        }
+
+        if (!int.TryParse(parts[1], out var partitionNumber))
+        {
+            return new Result<IEntryIterator>(new Error($"Invalid partition number '{parts[1]}'"));
+        }
+        
+        // open stream as disk
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
+        if (gptFileSystemResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(gptFileSystemResult.Error);
+        }
+
+        var rootPath = string.Join("\\", parts.Skip(2));
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, gptFileSystemResult.Value, rootPath, recursive));
+    }
+    
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool useCache)
     {
         // resolve media path
@@ -492,12 +518,12 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(new Error($"No partition table in path"));
         }
 
+        var disk = media.Value is DiskMedia diskMedia
+            ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Value.Stream, Ownership.None);
+
         switch (parts[0].ToLowerInvariant())
         {
             case "mbr":
-                var disk = media.Value is DiskMedia diskMedia
-                    ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Value.Stream, Ownership.None);
-
                 var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[1]);
                 if (mbrFileSystemResult.IsFaulted)
                 {
@@ -506,6 +532,15 @@ public abstract class FsCommandBase : CommandBase
                 
                 // skip 2 first parts, partition table and partition number
                 return new Result<IEntryWriter>(new FileSystemEntryWriter(media.Value, mbrFileSystemResult.Value, parts.Skip(2).ToArray()));
+            case "gpt":
+                var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
+                if (gptFileSystemResult.IsFaulted)
+                {
+                    return new Result<IEntryWriter>(gptFileSystemResult.Error);
+                }
+                
+                // skip 2 first parts, partition table and partition number
+                return new Result<IEntryWriter>(new FileSystemEntryWriter(media.Value, gptFileSystemResult.Value, parts.Skip(2).ToArray()));
             case "rdb":
                 if (parts.Length == 1)
                 {

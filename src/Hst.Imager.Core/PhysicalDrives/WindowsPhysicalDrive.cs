@@ -25,14 +25,13 @@
             
             foreach (var driveLetter in driveLetters)
             {
-                // open win32 disk for each drive letter, lock device and dismount
+                // open win32 disk for each drive letter
                 var win32RawDisk = new Win32RawDisk(driveLetter, true);
-                if (!win32RawDisk.LockDevice())
-                {
-                    win32RawDisk.Dispose();
-                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to lock device '{driveLetter}'");
-                }
+                
+                // lock device (ignored, if fails)
+                win32RawDisk.LockDevice();
 
+                // dismount device
                 if (!win32RawDisk.DismountDevice())
                 {
                     win32RawDisk.UnlockDevice();

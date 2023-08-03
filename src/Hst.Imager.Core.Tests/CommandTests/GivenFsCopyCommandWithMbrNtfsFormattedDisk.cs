@@ -90,7 +90,7 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
 
         if (partition == null)
         {
-            throw new IOException("No partitions in master boot record");
+            throw new IOException("No partitions in Master Boot Record");
         }
 
         using var fileSystem = new NtfsFileSystem(partition.Open());

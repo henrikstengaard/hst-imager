@@ -109,9 +109,9 @@
                     Media.MediaType.Raw, false, stream));
             }
             
-            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.None);
+            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
             return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, false, disk,
-                stream));            
+                stream));        
         }
 
         public override Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)

@@ -12,7 +12,7 @@ public static class Formatters
         }
         
         var diskPathMatch = Regexs.DiskPathRegex.Match(path);
-        return diskPathMatch.Success ? $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[1].Value}" : path;
+        return diskPathMatch.Success ? $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}" : path;
     }
 
     public static string FormatDiskPath(string path)
@@ -23,6 +23,6 @@ public static class Formatters
         }
         
         var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
-        return physicalDrivePathMatch.Success ? $"Disk{physicalDrivePathMatch.Groups[2].Value}" : path;
+        return physicalDrivePathMatch.Success ? $"\\disk{physicalDrivePathMatch.Groups[2].Value}" : path;
     }
 }

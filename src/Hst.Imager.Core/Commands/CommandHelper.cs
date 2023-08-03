@@ -142,7 +142,7 @@ namespace Hst.Imager.Core.Commands
                 var diskPathMatch = Regexs.DiskPathRegex.Match(path);
                 if (diskPathMatch.Success)
                 {
-                    return $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[1].Value}";
+                    return $"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}";
                 }
 
                 return Regexs.PhysicalDrivePathRegex.IsMatch(path) ? path : null;
@@ -798,8 +798,11 @@ namespace Hst.Imager.Core.Commands
         
         public virtual Result<MediaResult> ResolveMedia(string path)
         {
-            path = PathHelper.GetFullPath(path);
-            string mediaPath;
+            var diskPathMatch = Regexs.DiskPathRegex.Match(path);
+            var physicalDrivePath = diskPathMatch.Success
+                ? string.Concat($"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}", path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
+                : path;
+
             var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
 
             for (var i = 0; i < path.Length; i++)
@@ -812,29 +815,32 @@ namespace Hst.Imager.Core.Commands
             }
 
             // physical drive
-            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
+            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(physicalDrivePath);
+            Console.WriteLine($"path '{path}', physicalDrivePathMatch {physicalDrivePathMatch.Success}");
             if (physicalDrivePathMatch.Success)
             {
-                mediaPath = physicalDrivePathMatch.Value;
-                var firstSeparatorIndex = path.IndexOf(directorySeparatorChar, mediaPath.Length, StringComparison.Ordinal);
+                var physicalDriveMediaPath = physicalDrivePathMatch.Value;
+                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar, physicalDriveMediaPath.Length, StringComparison.Ordinal);
 
                 return new Result<MediaResult>(new MediaResult
                 {
-                    FullPath = path,
-                    MediaPath = mediaPath,
+                    FullPath = physicalDrivePath,
+                    MediaPath = physicalDriveMediaPath,
                     FileSystemPath = firstSeparatorIndex >= 0
-                        ? path.Substring(firstSeparatorIndex + 1, path.Length - (firstSeparatorIndex + 1))
+                        ? physicalDrivePath.Substring(firstSeparatorIndex + 1, physicalDrivePath.Length - (firstSeparatorIndex + 1))
                         : string.Empty,
                     DirectorySeparatorChar = directorySeparatorChar
                 });
             }
-
+            
+            path = PathHelper.GetFullPath(path);
+            
             // media file
             var next = 0;
             do
             {
                 next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
-                mediaPath = path.Substring(0, next == -1 ? path.Length : next);
+                var mediaPath = path.Substring(0, next == -1 ? path.Length : next);
 
                 if (File.Exists(mediaPath))
                 {
