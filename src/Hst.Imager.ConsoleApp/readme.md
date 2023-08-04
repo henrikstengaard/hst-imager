@@ -115,7 +115,7 @@ Displays information about a physical drive or image file by reading Master Boot
 
 Example of display information about a Windows physical drive disk 2:
 ```
-hst.imager info disk2
+hst.imager info \disk2
 ```
 
 Example of display information about a Linux physical drive /dev/sdb:
@@ -134,12 +134,12 @@ Reads physical drive to an image file. Requires administrator privileges.
 
 Example of displaying usage for reading a physical drive to an image file:
 ```
-hst.imager read disk2 4gb.vhd
+hst.imager read \disk2 4gb.vhd
 ```
 
 Example of reading Windows physical drive to 4gb.vhd image file:
 ```
-hst.imager read disk2 4gb.vhd
+hst.imager read \disk2 4gb.vhd
 ```
 
 Example of reading Linux physical drive /dev/sdb to 4gb.vhd image file:
@@ -177,7 +177,7 @@ hst.imager compare
 
 Example of comparing 4GB vhd image file and Windows physical drive disk 2:
 ```
-hst.imager compare 4gb.vhd disk2
+hst.imager compare 4gb.vhd \disk2
 ```
 
 Example of comparing 4GB vhd image file and Linux physical drive /dev/sdb:
