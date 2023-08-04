@@ -3,7 +3,7 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Hst.Imager.Core.PhysicalDrives;
+    using PhysicalDrives;
     using Xunit;
 
     public class GivenLsBlkReader

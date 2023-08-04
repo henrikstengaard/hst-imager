@@ -26,7 +26,19 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var lsBlkJson = await GetLsBlkJson();
 
-            var lsBlk = LsBlkReader.ParseLsBlk(lsBlkJson);
+            return Parse(lsBlkJson, all);
+        }
+
+        private async Task<string> GetLsBlkJson()
+        {
+            var output = await "lsblk".RunProcessAsync("-ba -o TYPE,NAME,RM,MODEL,PATH,SIZE,VENDOR --json");
+            logger.LogDebug(output);
+            return output;
+        }
+
+        public static IEnumerable<IPhysicalDrive> Parse(string json, bool all = false)
+        {
+            var lsBlk = LsBlkReader.ParseLsBlk(json);
 
             if (lsBlk.BlockDevices == null)
             {
@@ -40,22 +52,10 @@ namespace Hst.Imager.Core.PhysicalDrives
                     x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase) &&
                     x.Removable).ToList();
 
-            var physicalDrives = lsBlk.BlockDevices.Select(x =>
+            var physicalDrives = blockDevices.Select(x =>
                 new GenericPhysicalDrive(x.Path, x.Type ?? string.Empty, string.Concat(x.Vendor, " ", x.Model), x.Size ?? 0)).ToList();
 
-            foreach (var physicalDrive in physicalDrives)
-            {
-                logger.LogDebug($"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
-            }
-            
             return physicalDrives;
-        }
-
-        private async Task<string> GetLsBlkJson()
-        {
-            var output = await "lsblk".RunProcessAsync("-ba -o TYPE,NAME,RM,MODEL,PATH,SIZE,VENDOR --json");
-            logger.LogDebug(output);
-            return output;
         }
     }
 }

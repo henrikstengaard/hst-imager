@@ -67,6 +67,9 @@
       <None Update="TestData\Lzx\xpk_compress.lzx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\raspberry-pi-lsblk.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
 </Project>
