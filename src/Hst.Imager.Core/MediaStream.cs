@@ -4,27 +4,38 @@ namespace Hst.Imager.Core;
 
 public class MediaStream : Stream
 {
-    private readonly Stream stream;
+    protected readonly Stream Stream;
 
     public MediaStream(Stream stream, long size)
     {
-        this.stream = stream;
+        this.Stream = stream;
         Length = size;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+
+        if (!disposing)
+        {
+            return;
+        }
+        Stream.Flush();
     }
 
     public override void Flush()
     {
-        stream.Flush();
+        Stream.Flush();
     }
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        return stream.Read(buffer, offset, count);
+        return Stream.Read(buffer, offset, count);
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        return stream.Seek(offset, origin);
+        return Stream.Seek(offset, origin);
     }
 
     public override void SetLength(long value)
@@ -34,12 +45,12 @@ public class MediaStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        stream.Write(buffer, offset, count);
+        Stream.Write(buffer, offset, count);
     }
 
-    public override bool CanRead => stream.CanRead;
-    public override bool CanSeek => stream.CanSeek;
-    public override bool CanWrite => stream.CanWrite;
+    public override bool CanRead => Stream.CanRead;
+    public override bool CanSeek => Stream.CanSeek;
+    public override bool CanWrite => Stream.CanWrite;
     public override long Length { get; }
-    public override long Position { get => stream.Position; set => stream.Position = value; }
+    public override long Position { get => Stream.Position; set => Stream.Position = value; }
 }

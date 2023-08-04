@@ -15,23 +15,20 @@ public class MacOsMediaStream : MediaStream
     
     protected override void Dispose(bool disposing)
     {
+        base.Dispose(disposing);
+
+        if (!disposing)
+        {
+            return;
+        }
+            
         try
         {
-            if (disposing)
-            {
-                try
-                {
-                    "diskutil".RunProcess($"mountDisk {path}");
-                }
-                catch (Exception)
-                {
-                    // ignored, if mount disk fails
-                }
-            }
+            "diskutil".RunProcess($"mountDisk {path}");
         }
-        finally
+        catch (Exception)
         {
-            base.Dispose(disposing);
+            // ignored, if mount disk fails
         }
     }
 }
