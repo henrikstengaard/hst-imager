@@ -816,7 +816,6 @@ namespace Hst.Imager.Core.Commands
 
             // physical drive
             var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(physicalDrivePath);
-            Console.WriteLine($"path '{path}', physicalDrivePathMatch {physicalDrivePathMatch.Success}");
             if (physicalDrivePathMatch.Success)
             {
                 var physicalDriveMediaPath = physicalDrivePathMatch.Value;
