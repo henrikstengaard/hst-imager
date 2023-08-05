@@ -48,7 +48,7 @@ def confirm(message, action):
     if platform_system == 'Darwin':
         return re.search(r'yes$', run_command_capture_output(['osascript', '-e', 'display dialog "{0}" buttons {{"Yes", "No"}} default button "Yes"'.format(message)]).strip(), re.I)
     elif use_dialog:
-        return run_command_capture_error_code(['dialog', '--clear', '--stdout', '--yesno', '"{0}"'.format(message), '0', '0']) == 0
+        return run_command_capture_error_code(['dialog', '--clear', '--stdout', '--yesno', message, '6', '80']) == 0
     else:
         return re.search(r'^(|y|yes)$', input("{0} ({1}): ".format(message, action)), re.I)
 
@@ -61,7 +61,7 @@ def input_box(message):
             return None
         return text_match.group(1).strip()
     elif use_dialog:
-        return run_command_capture_output(['dialog', '--clear', '--stdout', '--inputbox', '"{0}"'.format(message), '0', '0']).strip()
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--inputbox', message, '6', '80']).strip()
     else:
         return input('{0}: '.format(message)).strip()
 
@@ -79,7 +79,7 @@ def select_file_path(title):
     if platform_system == 'Darwin':
         return macos_choose_file_dialog("Select {0}".format(title))
     elif use_dialog:
-        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--fselect', '{0}/'.format(os.getcwd()), '14', '48']).strip()
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--fselect', '{0}/'.format(os.getcwd()), '40', '120']).strip()
     else:
         return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
@@ -89,7 +89,7 @@ def select_folder_path(title):
     if platform_system == 'Darwin':
         return macos_choose_folder_dialog("Select {0}".format(title))
     elif use_dialog:
-        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--dselect', '{0}/'.format(os.getcwd()), '14', '48']).strip()
+        return run_command_capture_output(['dialog', '--clear', '--stdout', '--title', 'Select {0}'.format(title), '--dselect', '{0}/'.format(os.getcwd()), '40', '120']).strip()
     else:
         return os.path.abspath(input("Enter path to {0}: ".format(title)))
 
