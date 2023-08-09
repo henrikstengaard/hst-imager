@@ -2,6 +2,7 @@ hst imager - demo
 
 - gui:
   - download hst imager gui
+  - blank: 1gb image for testing and show .img vs .vhd
   - info
   - read from usb
   - write to usb

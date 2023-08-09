@@ -132,6 +132,11 @@
                 return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
                     Media.MediaType.Raw, false, new TestMediaStream(testMedia)));
             }
+
+            if (size.HasValue)
+            {
+                size = GetVhdSize(size.Value);
+            }
             
             if (create && size == null)
             {

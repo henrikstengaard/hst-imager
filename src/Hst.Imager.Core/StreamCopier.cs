@@ -105,7 +105,7 @@
                 foreach (var dataSector in dataSectors)
                 {
                     var sectorSize = bytesProcessed + dataSector.Start + dataSector.Size > size
-                        ? (int)(size - bytesProcessed + dataSector.Start)
+                        ? (int)(size - (bytesProcessed + dataSector.Start))
                         : dataSector.Size;
 
                     var sectorData = new byte[sectorSize];

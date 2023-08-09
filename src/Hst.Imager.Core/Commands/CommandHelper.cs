@@ -1,7 +1,4 @@
-﻿using DiscUtils.Fat;
-using DiscUtils.Ntfs;
-
-namespace Hst.Imager.Core.Commands
+﻿namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -267,8 +264,8 @@ namespace Hst.Imager.Core.Commands
 
         public virtual long GetVhdSize(long size)
         {
-            // vhd size dividable by 512
-            return size % 512 != 0 ? size - (size % 512) : size;
+            // increase size to next sector size, if not dividable by 512
+            return size % 512 != 0 ? size + (512 - size % 512) : size;
         }
 
         public bool IsVhd(string path)

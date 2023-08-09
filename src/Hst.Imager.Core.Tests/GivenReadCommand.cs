@@ -1,3 +1,5 @@
+using Hst.Core.Extensions;
+
 namespace Hst.Imager.Core.Tests
 {
     using System;
@@ -15,7 +17,7 @@ namespace Hst.Imager.Core.Tests
     public class GivenReadCommand : CommandTestBase
     {
         [Fact]
-        public async Task WhenReadPhysicalDriveTToImgThenReadDataIsIdentical()
+        public async Task WhenReadPhysicalDriveToImgThenReadDataIsIdentical()
         {
             // arrange - paths and test command helper
             var sourcePath = TestCommandHelper.PhysicalDrivePath;
@@ -204,7 +206,7 @@ namespace Hst.Imager.Core.Tests
                 // get source bytes
                 var sourceBytes = await testCommandHelper.ReadMediaData(sourcePath);
 
-                // get destination bytes from vhd
+                // get destination bytes
                 var destinationBytes =
                     await ReadMediaBytes(testCommandHelper, destinationPath, ImageSize);
                 var destinationPathSize = new FileInfo(destinationPath).Length;
@@ -229,16 +231,16 @@ namespace Hst.Imager.Core.Tests
             var sourcePath = TestCommandHelper.PhysicalDrivePath;
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
-            var fakeCommandHelper = new TestCommandHelper();
+            var testCommandHelper = new TestCommandHelper();
             
             try
             {
                 // arrange - create source physical drive
-                fakeCommandHelper.AddTestMedia(sourcePath, ImageSize);
+                testCommandHelper.AddTestMedia(sourcePath, ImageSize);
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
-                var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), fakeCommandHelper,
+                var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false, 0);
 
                 // act - read source physical drive to destination vhd
@@ -246,15 +248,15 @@ namespace Hst.Imager.Core.Tests
                 Assert.True(result.IsSuccess);
 
                 // get source bytes
-                var sourceBytes = (await fakeCommandHelper.ReadMediaData(sourcePath)).Take(size).ToArray();
+                var sourceBytes = (await testCommandHelper.ReadMediaData(sourcePath)).Take(size).ToArray();
                 Assert.Equal(size, sourceBytes.Length);
 
-                // get destination bytes from vhd
-                var destinationBytes = await fakeCommandHelper.ReadMediaData(destinationPath);
-                var destinationPathSize = new FileInfo(destinationPath).Length;
+                // get destination bytes
+                var destinationBytes = await testCommandHelper.ReadMediaData(destinationPath);
 
-                // assert length is not the same (vhd file format different than img) and bytes are the same
-                Assert.NotEqual(sourceBytes.Length, destinationPathSize);
+                // assert - source bytes are equal to destination bytes
+                destinationBytes = destinationBytes.Take(size).ToArray();
+                Assert.Equal(sourceBytes.Length, destinationBytes.Length);
                 Assert.Equal(sourceBytes, destinationBytes);
             }
             finally
@@ -262,6 +264,57 @@ namespace Hst.Imager.Core.Tests
                 if (File.Exists(destinationPath))
                 {
                     File.Delete(destinationPath);
+                }
+            }
+        }
+
+        [Fact]
+        public async Task WhenReadPhysicalDriveToVhdWithSizeNotDividableBy512ThenReadDataIsIdentical()
+        {
+            // arrange - paths, size to read and test command helper
+            var srcPath = TestCommandHelper.PhysicalDrivePath;
+            var destPath = $"{Guid.NewGuid()}.vhd";
+            var size = 1000000;
+            var testCommandHelper = new TestCommandHelper();
+            
+            try
+            {
+                // arrange - create source physical drive
+                testCommandHelper.AddTestMedia(srcPath, 10.MB());
+
+                // arrange - read command
+                var cancellationTokenSource = new CancellationTokenSource();
+                var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
+                    Enumerable.Empty<IPhysicalDrive>(), srcPath, destPath, new Size(size, Unit.Bytes), 0, false, false, 0);
+
+                // act - read source physical drive to destination vhd
+                var result = await readCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+
+                // get source bytes
+                var sourceBytes = (await testCommandHelper.ReadMediaData(srcPath)).Take(size).ToArray();
+                Assert.Equal(size, sourceBytes.Length);
+
+                // get destination bytes
+                var destinationBytes = await testCommandHelper.ReadMediaData(destPath);
+                
+                // assert - destination bytes are larger than size and dividable by 512
+                Assert.True(destinationBytes.Length > size);
+                Assert.True(destinationBytes.Length % 512 == 0);
+                
+                // assert - destination bytes are equal to size rounded to next sector
+                Assert.Equal(size + (512 - size % 512), destinationBytes.Length);
+
+                // assert - source bytes are equal to destination bytes
+                destinationBytes = destinationBytes.Take(size).ToArray();
+                Assert.Equal(sourceBytes.Length, destinationBytes.Length);
+                Assert.Equal(sourceBytes, destinationBytes);
+            }
+            finally
+            {
+                if (File.Exists(destPath))
+                {
+                    File.Delete(destPath);
                 }
             }
         }
