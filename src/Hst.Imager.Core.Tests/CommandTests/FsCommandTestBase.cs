@@ -40,7 +40,7 @@ public class FsCommandTestBase : CommandTestBase
             stream.SetLength(diskSize);
         }
 
-        using var disk = media is DiskMedia diskMedia
+        var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
             : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
             
@@ -58,7 +58,7 @@ public class FsCommandTestBase : CommandTestBase
             stream.SetLength(diskSize);
         }
             
-        using var disk = media is DiskMedia diskMedia
+        var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
             : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
             
@@ -94,7 +94,7 @@ public class FsCommandTestBase : CommandTestBase
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
             BiosPartitionTypes.Fat32Lba, true);
@@ -108,7 +108,7 @@ public class FsCommandTestBase : CommandTestBase
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
             BiosPartitionTypes.Ntfs, true);
@@ -124,7 +124,7 @@ public class FsCommandTestBase : CommandTestBase
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var guidPartitionTable = GuidPartitionTable.Initialize(disk);
         var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
         FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
@@ -137,7 +137,7 @@ public class FsCommandTestBase : CommandTestBase
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var guidPartitionTable = GuidPartitionTable.Initialize(disk);
         var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
         var partition = guidPartitionTable.Partitions[partitionIndex];

@@ -171,12 +171,12 @@
             {
                 return new Result<Media>(media);
             }
-
+            
             var name = Path.GetFileName(path);
             if (!IsVhd(path))
             {
                 var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
-                var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false, fileStream);
+                var fileMedia = ResolveFileMedia(path, name, fileStream);
                 this.activeMedias.Add(fileMedia);
                 return new Result<Media>(fileMedia);
             }
@@ -187,6 +187,18 @@
                 new SectorStream(vhdDisk.Content, true));
             this.activeMedias.Add(vhdMedia);
             return new Result<Media>(vhdMedia);
+        }
+
+        private Media ResolveFileMedia(string path, string name, Stream stream)
+        {
+            if (SharpCompress.Compressors.Xz.XZStream.IsXZStream(stream))
+            {
+                stream.Position = 0;
+                var zxStream = new CloseStream(new SharpCompress.Compressors.Xz.XZStream(stream), stream);
+                return new Media(path, name, 0, Media.MediaType.Raw, false, zxStream);
+            }
+
+            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, stream);
         }
 
         public virtual Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)

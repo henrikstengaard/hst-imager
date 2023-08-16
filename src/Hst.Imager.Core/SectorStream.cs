@@ -11,11 +11,22 @@
         private readonly Stream stream;
         private readonly bool leaveOpen;
         private const int SectorSize = 512;
+        private readonly byte[] sectorBuffer;
 
         public SectorStream(Stream baseStream, bool leaveOpen = false)
         {
             this.stream = baseStream;
             this.leaveOpen = leaveOpen;
+            this.sectorBuffer = new byte[SectorSize];
+            this.SectorBufferPosition = 0;
+        }
+
+        public int SectorBufferPosition { get; private set; }
+
+        public override void Close()
+        {
+            Flush();
+            base.Close();
         }
 
         protected override void Dispose(bool disposing)
@@ -35,9 +46,16 @@
                 base.Dispose(disposing);
             }
         }
-
+        
         public override void Flush()
         {
+            if (SectorBufferPosition > 0)
+            {
+                stream.Write(sectorBuffer, 0, SectorSize);
+                Array.Fill<byte>(sectorBuffer, 0);
+                SectorBufferPosition = 0;
+            }
+            
             stream.Flush();
         }
 
@@ -84,20 +102,41 @@
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (offset != 0)
+            if (SectorBufferPosition > 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(offset), $"Sector stream offset {offset} not supported, only offset 0");
+                var fillBytes = SectorBufferPosition + count > SectorSize
+                    ? SectorSize - SectorBufferPosition
+                    : count;
+                Array.Copy(buffer, offset, sectorBuffer, SectorBufferPosition, fillBytes);
+                SectorBufferPosition += fillBytes;
+                offset += fillBytes;
+
+                if (SectorBufferPosition < SectorSize)
+                {
+                    return;
+                }
+                
+                stream.Write(sectorBuffer, 0, sectorBuffer.Length);
+                Array.Fill<byte>(sectorBuffer, 0);
+                SectorBufferPosition = 0;
             }
 
-            if (count % SectorSize == 0)
+            var remainingBytes = count - offset;
+            var sectors = Convert.ToInt32(Math.Floor((double)remainingBytes / SectorSize));
+            var sectorsLength = sectors * SectorSize;
+            if (sectors > 0)
             {
-                stream.Write(buffer, 0, count);
+                stream.Write(buffer, offset, sectorsLength);
+            }
+
+            var left = (count - offset - sectorsLength) % SectorSize;
+            if (left == 0)
+            {
                 return;
             }
             
-            var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
-            Array.Copy(buffer, 0, sectorBuffer, 0, count);
-            stream.Write(sectorBuffer, 0, sectorBuffer.Length);
+            Array.Copy(buffer, offset + sectorsLength, sectorBuffer, SectorBufferPosition, left);
+            SectorBufferPosition += left;
         }
 
         public override bool CanRead => stream.CanRead;

@@ -155,7 +155,7 @@
             }
 
             var highCyl = lowCyl + cylinders - 1;
-            partitionSize = cylinders * cylinderSize;
+            partitionSize = (long)cylinders * cylinderSize;
 
             var partitionBlock = new PartitionBlock
             {
@@ -171,10 +171,6 @@
                 Sectors = (uint)((fileSystemBlockSize ?? 512) / rigidDiskBlock.BlockSize),
                 SizeBlock = rigidDiskBlock.BlockSize / SizeOf.Long
             };
-
-            // var partitionBlock =
-            //     PartitionBlock.Create(rigidDiskBlock, dosTypeBytes, name, partitionSize, fileSystemBlockSize ?? 512,
-            //         bootable);
 
             if (partitionBlock.HighCyl - partitionBlock.LowCyl + 1 <= 0)
             {

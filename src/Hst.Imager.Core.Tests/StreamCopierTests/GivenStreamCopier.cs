@@ -236,4 +236,38 @@ public class GivenStreamCopier
         Assert.Equal(sourceBytes.Length, destinationBytes.Length);
         Assert.Equal(sourceBytes, destinationBytes);
     }
+
+    [Fact]
+    public async Task WhenCopyStreamWithSize0ThenAllDataIsCopiedAndEqual()
+    {
+        // arrange - test data
+        var data = CreateTestData(10.MB());
+        
+        // arrange - source stream with test data
+        using var source = new MemoryStream();
+        await source.WriteBytes(data);
+
+        // arrange - destination stream
+        using var destination = new MemoryStream();
+        
+        // arrange - stream copier
+        var streamCopier = new StreamCopier(1024 * 1024);
+        
+        // act - copy from source to destination
+        var size = 0;
+        var sourceOffset = 0;
+        var destinationOffset = 0;
+        var cancellationTokenSource = new CancellationTokenSource();
+        await streamCopier.Copy(cancellationTokenSource.Token, source, destination, size, sourceOffset, destinationOffset, false);
+
+        // get source bytes
+        var sourceBytes = data.ToArray();
+        
+        // get destination bytes
+        var destinationBytes = destination.ToArray();
+        
+        // assert - source bytes are equal to destination bytes
+        Assert.Equal(sourceBytes.Length, destinationBytes.Length);
+        Assert.Equal(sourceBytes, destinationBytes);
+    }
 }

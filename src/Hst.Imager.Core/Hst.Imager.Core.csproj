@@ -10,6 +10,7 @@
       <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.25" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.3" />
       <PackageReference Include="plist-cil" Version="2.2.0" />
+      <PackageReference Include="SharpCompress" Version="0.33.0" />
       <PackageReference Include="SharpZipLib" Version="1.4.2" />
     </ItemGroup>
 

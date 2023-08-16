@@ -42,7 +42,7 @@
             destination.Seek(0, SeekOrigin.Begin);
 
             sendDataProcessed = true;
-            OnDataProcessed(0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
+            OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
             
             timer.Start();
             
@@ -143,7 +143,7 @@
                 var timeTotal = timeElapsed + timeRemaining;
                 var bytesPerSecond = Convert.ToInt64(offset / timeElapsed.TotalSeconds);
 
-                OnDataProcessed(percentComplete, offset, bytesRemaining, size, timeElapsed, timeRemaining, timeTotal,
+                OnDataProcessed(size == 0, percentComplete, offset, bytesRemaining, size, timeElapsed, timeRemaining, timeTotal,
                     bytesPerSecond);
             } while (srcBytesRead == bufferSize && offset < size);
 
@@ -151,12 +151,12 @@
             stopwatch.Stop();
             
             sendDataProcessed = true;
-            OnDataProcessed(100, offset, 0, offset, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
+            OnDataProcessed(size == 0, 100, offset, 0, offset, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
             
             return new Result();
         }
 
-        private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
+        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             if (!sendDataProcessed)
@@ -165,7 +165,7 @@
             }
             
             DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
+                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
             sendDataProcessed = false;
         }

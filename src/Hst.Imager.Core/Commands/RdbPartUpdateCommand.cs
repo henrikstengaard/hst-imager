@@ -166,7 +166,7 @@
                 }
                 
                 hasChanges = true;
-                OnInformationMessage($"Bootable '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
+                OnInformationMessage($"NoMount '{(flags & (int)PartitionBlock.PartitionFlagsEnum.NoMount) == (int)PartitionBlock.PartitionFlagsEnum.NoMount}'");
             }
 
             // update flags, if changed

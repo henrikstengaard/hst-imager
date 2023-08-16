@@ -24,7 +24,7 @@
             var fakeCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             
-            var listCommand = new ListCommand(new NullLogger<ListCommand>(), fakeCommandHelper, physicalDrives);
+            var listCommand = new ListCommand(new NullLogger<ListCommand>(), fakeCommandHelper, physicalDrives, false);
             IEnumerable<MediaInfo> mediaInfos = null;
             listCommand.ListRead += (sender, args) =>
             {
@@ -58,7 +58,7 @@
             var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             
-            var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives);
+            var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives, false);
             IEnumerable<MediaInfo> mediaInfos = null;
             listCommand.ListRead += (sender, args) =>
             {

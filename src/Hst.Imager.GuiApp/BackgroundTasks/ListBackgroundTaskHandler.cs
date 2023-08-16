@@ -37,7 +37,7 @@
 
             var commandHelper = new CommandHelper(appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
-            var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
+            var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives, false);
 
             listCommand.ListRead += async (_, args) =>
             {

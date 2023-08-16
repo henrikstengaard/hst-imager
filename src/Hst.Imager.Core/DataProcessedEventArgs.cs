@@ -4,6 +4,7 @@
 
     public class DataProcessedEventArgs : EventArgs
     {
+        public readonly bool Indeterminate;
         public readonly double PercentComplete;
         public readonly long BytesProcessed;
         public readonly long BytesRemaining;
@@ -13,9 +14,10 @@
         public readonly TimeSpan TimeTotal;
         public readonly long BytesPerSecond;
 
-        public DataProcessedEventArgs(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
+        public DataProcessedEventArgs(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
+            Indeterminate = indeterminate;
             PercentComplete = percentComplete;
             BytesProcessed = bytesProcessed;
             BytesRemaining = bytesRemaining;

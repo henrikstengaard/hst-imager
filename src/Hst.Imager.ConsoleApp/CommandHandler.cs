@@ -42,7 +42,7 @@ namespace Hst.Imager.ConsoleApp
             return new CommandHelper(User.IsAdministrator);
         }
 
-        private static async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives()
+        private static async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
         {
             if (!User.IsAdministrator)
             {
@@ -51,7 +51,7 @@ namespace Hst.Imager.ConsoleApp
 
             var physicalDriveManager =
                 new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>()).Create();
-            return (await physicalDriveManager.GetPhysicalDrives()).ToList();
+            return (await physicalDriveManager.GetPhysicalDrives(all)).ToList();
         }
 
         private static readonly Regex IntRegex =
@@ -178,9 +178,9 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task List()
+        public static async Task List(bool all)
         {
-            var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives());
+            var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives(all), all);
             command.ListRead += (_, args) => { Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos)); };
             await Execute(command, true);
         }
@@ -517,8 +517,18 @@ namespace Hst.Imager.ConsoleApp
         
         private static void WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
-            var progressMessage =
-                $"{args.PercentComplete:0.0}% [{args.BytesPerSecond.FormatBytes(format: "0.0")}/s] [{args.BytesProcessed.FormatBytes()} / {args.BytesTotal.FormatBytes()}] [{args.TimeElapsed.FormatElapsed()} / {args.TimeTotal.FormatElapsed()}]   \r";
+            var parts = new List<string>();
+
+            if (!args.Indeterminate)
+            {
+                parts.Add($"{args.PercentComplete:0.0}%");
+            }
+            parts.Add($"[{args.BytesPerSecond.FormatBytes(format: "0.0")}/s]");
+            parts.Add($"[{args.BytesProcessed.FormatBytes()}{(!args.Indeterminate ? $" / {args.BytesTotal.FormatBytes()}" : string.Empty)}]");
+            parts.Add($"[{args.TimeElapsed.FormatElapsed()}{(!args.Indeterminate ? $" / {args.TimeTotal.FormatElapsed()}" : string.Empty)}]");
+            parts.Add("   \r");
+
+            var progressMessage = string.Join(" ", parts);
             Console.Write(args.PercentComplete >= 100
                 ? string.Concat(new string(' ', progressMessage.Length + 3), "\r")
                 : progressMessage);

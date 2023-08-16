@@ -82,8 +82,14 @@
 
         public static Command CreateListCommand()
         {
+            var allOption = new Option<bool>(
+                new[] { "--all", "-a" },
+                description: "Show all physical drives.",
+                getDefaultValue: () => false);
+            
             var listCommand = new Command("list", "Display list of physical drives.");
-            listCommand.SetHandler(CommandHandler.List);
+            listCommand.AddOption(allOption);
+            listCommand.SetHandler(CommandHandler.List, allOption);
 
             return listCommand;
         }

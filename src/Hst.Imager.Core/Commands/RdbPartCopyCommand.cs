@@ -156,7 +156,7 @@
             {
                 statusBytesProcessed = e.BytesProcessed;
                 statusTimeElapsed = e.TimeElapsed;
-                OnDataProcessed(e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
+                OnDataProcessed(e.Indeterminate, e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
             await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, sourceOffset, destinationOffset, isVhd);
@@ -166,11 +166,11 @@
             return new Result();
         }
         
-        private void OnDataProcessed(double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
+        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
             DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
+                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
         }
     }

@@ -11,10 +11,12 @@
     public class ListCommand : CommandBase
     {
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
+        private readonly bool all;
 
-        public ListCommand(ILogger<ListCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives)
+        public ListCommand(ILogger<ListCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, bool all)
         {
             this.physicalDrives = physicalDrives;
+            this.all = all;
         }
 
         public event EventHandler<ListReadEventArgs> ListRead;
@@ -29,23 +31,30 @@
                 OnDebugMessage($"Physical drive size '{physicalDrive.Size}'");
                 OnDebugMessage($"Opening physical drive '{physicalDrive.Path}'");
 
-                long diskSize;
-                await using (var sourceStream = physicalDrive.Open())
+                try
                 {
-                    var streamSize = sourceStream.Length;
-                    diskSize = streamSize is > 0 ? streamSize : physicalDrive.Size;
-                }
+                    long diskSize;
+                    await using (var sourceStream = physicalDrive.Open())
+                    {
+                        var streamSize = sourceStream.Length;
+                        diskSize = streamSize is > 0 ? streamSize : physicalDrive.Size;
+                    }
 
-                OnDebugMessage($"Disk size '{diskSize}'");
-                
-                mediaInfos.Add(new MediaInfo
+                    OnDebugMessage($"Disk size '{diskSize}'");
+
+                    mediaInfos.Add(new MediaInfo
+                    {
+                        Path = physicalDrive.Path,
+                        Name = physicalDrive.Name,
+                        IsPhysicalDrive = true,
+                        Type = Media.MediaType.Raw,
+                        DiskSize = diskSize
+                    });
+                }
+                catch (Exception e)
                 {
-                    Path = physicalDrive.Path,
-                    Name = physicalDrive.Name,
-                    IsPhysicalDrive = true,
-                    Type = Media.MediaType.Raw,
-                    DiskSize = diskSize
-                });
+                    OnDebugMessage($"Unable to open physical drive '{physicalDrive.Path}' and read disk size: {e}");
+                }
             }
 
             OnListRead(mediaInfos);

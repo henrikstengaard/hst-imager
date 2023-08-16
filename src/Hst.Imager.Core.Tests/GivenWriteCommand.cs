@@ -81,5 +81,51 @@
                 }
             }
         }
+        
+        [Fact]
+        public async Task WhenWriteImgXzToPhysicalDriveThenWrittenDataIsIdentical()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img.xz";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
+            var testCommandHelper = new TestCommandHelper();
+            
+            try
+            {
+                // arrange - create source img xz media
+                File.Copy(Path.Combine("TestData", "Xz", "test.txt.xz"), sourcePath);
+                
+                // arrange - create destination physical drive
+                testCommandHelper.AddTestMedia(destinationPath);
+
+                // act - write img media to physical drive
+                var cancellationTokenSource = new CancellationTokenSource();
+                var writeCommand =
+                    new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                        sourcePath, destinationPath, new Size(), 0, false, false);
+                DataProcessedEventArgs dataProcessedEventArgs = null;
+                writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
+                var result = await writeCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+
+                Assert.NotNull(dataProcessedEventArgs);
+                Assert.NotEqual(0, dataProcessedEventArgs.PercentComplete);
+                Assert.NotEqual(0, dataProcessedEventArgs.BytesProcessed);
+                Assert.Equal(0, dataProcessedEventArgs.BytesRemaining);
+                Assert.Equal(0, dataProcessedEventArgs.BytesTotal);
+
+                // assert data is identical
+                var sourceBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Xz", "test.txt"), cancellationTokenSource.Token);
+                var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
+                Assert.Equal(sourceBytes, destinationBytes);
+            }
+            finally
+            {
+                if (File.Exists(sourcePath))
+                {
+                    File.Delete(sourcePath);
+                }
+            }
+        }
     }
 }

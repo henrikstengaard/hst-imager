@@ -70,6 +70,16 @@
       <None Update="TestData\raspberry-pi-lsblk.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\Xz\test.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Xz\test.txt.xz">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="TestData\Xz\" />
     </ItemGroup>
 
 </Project>

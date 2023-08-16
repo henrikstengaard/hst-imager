@@ -15,16 +15,10 @@
 
         protected override void Dispose(bool disposing)
         {
-            try
+            base.Dispose(disposing);
+            if (disposing)
             {
-                if (disposing)
-                {
-                    Disk.Dispose();
-                }
-            }
-            finally
-            {
-                base.Dispose(disposing);
+                Disk.Dispose();
             }
         }
 
