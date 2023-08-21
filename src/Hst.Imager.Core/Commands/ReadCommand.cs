@@ -67,10 +67,13 @@
             var sourceSize = sourceMedia.Size;
             OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
             
+            var startOffset = start ?? 0;
+            OnDebugMessage($"Start offset {startOffset}");
             var readSize = sourceSize.ResolveSize(size);
             OnInformationMessage($"Size '{readSize.FormatBytes()}' ({readSize} bytes)");
             
             OnDebugMessage($"Opening '{destinationPath}' as writable");
+
             
             var destinationMediaResult = commandHelper.GetWritableFileMedia(destinationPath, readSize, true);
             if (destinationMediaResult.IsFaulted)
@@ -97,7 +100,7 @@
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
 
-            var result = await streamCopier.Copy(token, sourceStream, destinationStream, readSize, 0, 0, isVhd);
+            var result = await streamCopier.Copy(token, sourceStream, destinationStream, readSize, startOffset, 0, isVhd);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);

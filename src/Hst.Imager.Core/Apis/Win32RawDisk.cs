@@ -217,8 +217,23 @@
                 VendorId = vendorId,
                 ProductId = productId,
                 ProductRevision = productRevision,
-                SerialNumber = serialNumber
+                SerialNumber = serialNumber,
+                BusType = descriptor.BusType.ToString()
             };
+        }
+
+        public bool Verify()
+        {
+            uint bytesReturned = 0;
+            return DeviceApi.DeviceIoControl(
+                    safeFileHandle,
+                    DeviceApi.IOCTL_STORAGE_CHECK_VERIFY2,
+                    IntPtr.Zero, 
+                    0,
+                    IntPtr.Zero,
+                    0,
+                    ref bytesReturned,
+                    IntPtr.Zero);
         }
 
         public static string GetData(byte[] array, int index, bool reverse = false)
@@ -282,9 +297,10 @@
                 return bytesRead;
             }
 
+            var offset = Position();
             var error = Marshal.GetLastWin32Error();
             throw new IOException(
-                $"Failed to read data '{buffer.Length}' and count '{count}', ReadFile returned Win32 error {error}");
+                $"Failed to read data '{buffer.Length}', count '{count}' and offset '{offset}', ReadFile returned Win32 error {error}");
         }
 
         public uint Write(byte[] buffer, int count)
@@ -295,9 +311,10 @@
                 return bytesWritten;
             }
 
+            var offset = Position();
             var error = Marshal.GetLastWin32Error();
             throw new IOException(
-                $"Failed to write data '{buffer.Length}' and count '{count}', WriteFile returned Win32 error {error}");
+                $"Failed to write data '{buffer.Length}', count '{count}' and offset '{offset}', WriteFile returned Win32 error {error}");
         }
 
         public long Seek(long offset, SeekOrigin origin)
@@ -352,28 +369,5 @@
         }
 
         public void Dispose() => Dispose(true);
-    }
-
-    public class DiskExtendsResult
-    {
-        public uint DiskNumber { get; set; }
-        public long StartingOffset { get; set; }
-        public long ExtentLength { get; set; }
-    }
-
-    public class StoragePropertyQueryResult
-    {
-        public string VendorId { get; set; }
-        public string ProductId { get; set; }
-        public string ProductRevision { get; set; }
-        public string SerialNumber { get; set; }
-    }
-
-    public class DiskGeometryExResult
-    {
-        public string MediaType { get; set; }
-        public long Cylinders { get; set; }
-        public uint TracksPerCylinder { get; set; }
-        public uint BytesPerSector { get; set; }
     }
 }

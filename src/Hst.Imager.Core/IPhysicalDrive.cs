@@ -9,8 +9,10 @@
         string Name { get; }
         long Size { get; }
         bool Writable { get; }
+        bool ByteSwap { get; }
 
         Stream Open();
         void SetWritable(bool writable);
+        void SetByteSwap(bool byteSwap);
     }
 }

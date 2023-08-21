@@ -18,4 +18,6 @@ public class MediaResult
     public string FileSystemPath { get; set; }
     
     public string DirectorySeparatorChar { get; set; }
+    
+    public bool ByteSwap { get; set; }
 }

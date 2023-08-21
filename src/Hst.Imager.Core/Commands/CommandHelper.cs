@@ -96,6 +96,15 @@
         public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             bool writeable = false)
         {
+            var modifiersResult = ResolveModifiers(path);
+            var modifiers = ModifierEnum.None;
+            if (modifiersResult.HasModifiers)
+            {
+                path = modifiersResult.Path;
+                modifiers = modifiersResult.Modifiers;
+            }
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+            
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
@@ -125,6 +134,7 @@
             }
 
             physicalDrive.SetWritable(writeable);
+            physicalDrive.SetByteSwap(byteSwap);
             var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
                 Media.MediaType.Raw,
                 true, physicalDrive.Open());
@@ -160,6 +170,14 @@
                 return new Result<Media>(new Error("Path not defined"));
             }
 
+            var modifiersResult = ResolveModifiers(path);
+            var modifiers = ModifierEnum.None;
+            if (modifiersResult.HasModifiers)
+            {
+                path = modifiersResult.Path;
+                modifiers = modifiersResult.Modifiers;
+            }
+            
             path = PathHelper.GetFullPath(path);
             if (!File.Exists(path))
             {
@@ -171,12 +189,12 @@
             {
                 return new Result<Media>(media);
             }
-            
+
             var name = Path.GetFileName(path);
             if (!IsVhd(path))
             {
                 var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
-                var fileMedia = ResolveFileMedia(path, name, fileStream);
+                var fileMedia = ResolveFileMedia(path, name, fileStream, modifiers);
                 this.activeMedias.Add(fileMedia);
                 return new Result<Media>(fileMedia);
             }
@@ -184,12 +202,12 @@
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
             var vhdMedia = new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                new SectorStream(vhdDisk.Content, true));
+                new SectorStream(vhdDisk.Content, modifiers.HasFlag(ModifierEnum.ByteSwap), leaveOpen:true));
             this.activeMedias.Add(vhdMedia);
             return new Result<Media>(vhdMedia);
         }
 
-        private Media ResolveFileMedia(string path, string name, Stream stream)
+        private Media ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
         {
             if (SharpCompress.Compressors.Xz.XZStream.IsXZStream(stream))
             {
@@ -198,7 +216,9 @@
                 return new Media(path, name, 0, Media.MediaType.Raw, false, zxStream);
             }
 
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, stream);
+            stream.Position = 0;
+            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, 
+                modifiers.HasFlag(ModifierEnum.ByteSwap) ? new SectorStream(stream, byteSwap: true) : stream);
         }
 
         public virtual Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
@@ -262,7 +282,7 @@
             var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
             disk.Content.Position = 0;
             var vhdMedia = new DiskMedia(path, name, disk.Capacity, Media.MediaType.Vhd, false,
-                disk, new SectorStream(disk.Content, true));
+                disk, new SectorStream(disk.Content, leaveOpen:true));
             this.activeMedias.Add(vhdMedia);
             return new Result<Media>(vhdMedia);
         }
@@ -807,6 +827,15 @@
         
         public virtual Result<MediaResult> ResolveMedia(string path)
         {
+            var modifiersResult = ResolveModifiers(path);
+            var modifiers = ModifierEnum.None;
+            if (modifiersResult.HasModifiers)
+            {
+                path = modifiersResult.Path;
+                modifiers = modifiersResult.Modifiers;
+            }
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+            
             var diskPathMatch = Regexs.DiskPathRegex.Match(path);
             var physicalDrivePath = diskPathMatch.Success
                 ? string.Concat($"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}", path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
@@ -833,11 +862,12 @@
                 return new Result<MediaResult>(new MediaResult
                 {
                     FullPath = physicalDrivePath,
-                    MediaPath = physicalDriveMediaPath,
+                    MediaPath = string.Concat(physicalDriveMediaPath, modifiersResult.Raw),
                     FileSystemPath = firstSeparatorIndex >= 0
                         ? physicalDrivePath.Substring(firstSeparatorIndex + 1, physicalDrivePath.Length - (firstSeparatorIndex + 1))
                         : string.Empty,
-                    DirectorySeparatorChar = directorySeparatorChar
+                    DirectorySeparatorChar = directorySeparatorChar,
+                    ByteSwap = byteSwap
                 });
             }
             
@@ -855,11 +885,12 @@
                     return new Result<MediaResult>(new MediaResult
                     {
                         FullPath = path,
-                        MediaPath = mediaPath,
+                        MediaPath = string.Concat(mediaPath, modifiersResult.Raw),
                         FileSystemPath = mediaPath.Length + 1 < path.Length
                             ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
                             : string.Empty,
-                        DirectorySeparatorChar = directorySeparatorChar
+                        DirectorySeparatorChar = directorySeparatorChar,
+                        ByteSwap = byteSwap
                     });
                 }
 
@@ -870,6 +901,67 @@
             } while (next != -1);
 
             return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
+        }
+
+        public ModifierResult ResolveModifiers(string path)
+        {
+            var modifiersResult = ModifierEnum.None;
+            
+            //
+            var modifierMatch = Regexs.ModifiersRegex.Match(path.ToLower());
+            
+            if (!modifierMatch.Success)
+            {
+                return new ModifierResult
+                {
+                    Raw = string.Empty,
+                    Path = path,
+                    HasModifiers = false,
+                    Modifiers = ModifierEnum.None
+                };
+            }
+
+            var modifiers = modifierMatch.Groups[1].Value.Split('+').ToList();
+            path = path.Substring(modifierMatch.Index);
+
+            foreach (var modifier in modifiers)
+            {
+                switch (modifier)
+                {
+                    case "bs":
+                        modifiersResult |= ModifierEnum.ByteSwap;
+                        break;
+                }
+            }
+            
+            return new ModifierResult
+            {
+                Raw = modifierMatch.Groups[1].Value,
+                Path = path.Substring(0, modifierMatch.Groups[1].Index),
+                HasModifiers = modifiersResult != ModifierEnum.None,
+                Modifiers = modifiersResult
+            };
+        }
+
+        private string FormatModifiers(ModifierEnum modifiers)
+        {
+            if (modifiers == ModifierEnum.None)
+            {
+                return string.Empty;
+            }
+
+            var parts = new List<string>();
+            foreach (var modifier in Enum.GetValues<ModifierEnum>())
+            {
+                switch (modifier)
+                {
+                    case ModifierEnum.ByteSwap:
+                        parts.Add("bs");
+                        break;
+                }
+            }
+
+            return $"+{string.Join("+", parts)}";
         }
     }
 }

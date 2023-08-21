@@ -40,7 +40,7 @@
                 var driveName = drive.Name[..2];
                 var drivePath = $"\\\\.\\{driveName}";
                 logger.LogDebug($"Opening win32 raw disk access to drive letter '{driveName}'");
-                
+
                 using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
                 if (win32RawDisk.IsInvalid())
                 {
@@ -48,8 +48,9 @@
                 }
 
                 var diskExtendsResult = win32RawDisk.DiskExtends();
-                logger.LogDebug($"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
-                
+                logger.LogDebug(
+                    $"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
+
                 if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
                 {
                     physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
@@ -59,11 +60,11 @@
             }
 
             // iterate physical drives, get media type from geometry, get name from storage property query and size 
-            var physicalDrives = new List<IPhysicalDrive>();
+            var physicalDrives = new List<WindowsPhysicalDrive>();
             for (uint i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
             {
                 var physicalDrivePath = $"\\\\.\\PhysicalDrive{i}";
-                
+
                 try
                 {
                     using var win32RawDisk = new Win32RawDisk(physicalDrivePath, false, true);
@@ -73,7 +74,13 @@
                     }
 
                     logger.LogDebug($"Opening win32 raw disk access to physical drive '{physicalDrivePath}'");
-                    
+
+                    if (!win32RawDisk.Verify())
+                    {
+                        logger.LogDebug($"Verify physical drive '{physicalDrivePath}' returned false, skip");
+                        continue;
+                    }
+
                     var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
                     var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
                     var name = string.Join(" ",
@@ -83,15 +90,20 @@
 
                     var driveLetters =
                         physicalDriveLettersIndex.TryGetValue(i, out var value) ? value : new List<string>();
-                    physicalDrives.Add(new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType, name,
-                        size, driveLetters));
+                    var physicalDrive = new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType,
+                        storagePropertyQueryResult.BusType, name,
+                        size, driveLetters);
+                    physicalDrives.Add(physicalDrive);
+                    logger.LogDebug(
+                        $"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");
                 }
                 catch (Win32Exception e)
                 {
                     // skip physical drive, if win32 not ready error occurs
                     if (e.NativeErrorCode == 21)
                     {
-                        logger.LogDebug($"Skip win32 raw disk access to physical drive '{physicalDrivePath}' returning not ready error");
+                        logger.LogDebug(
+                            $"Skip win32 raw disk access to physical drive '{physicalDrivePath}' returning not ready error");
                         continue;
                     }
 
@@ -99,21 +111,26 @@
                 }
                 catch (Exception e)
                 {
-                    throw new IOException($"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications accessing the physical drive '{physicalDrivePath}' and retry!", e);
+                    throw new IOException(
+                        $"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications accessing the physical drive '{physicalDrivePath}' and retry!",
+                        e);
                 }
             }
 
             if (!all)
             {
-                physicalDrives = physicalDrives.Where(x => x.Type != "FixedMedia").ToList();
+                physicalDrives = physicalDrives.Where(IsRemovable).ToList();
             }
 
-            foreach (var physicalDrive in physicalDrives)
-            {
-                logger.LogDebug($"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
-            }
-            
             return physicalDrives;
+        }
+
+        private static bool IsRemovable(WindowsPhysicalDrive windowsPhysicalDrive)
+        {
+            return (windowsPhysicalDrive.Type == "RemovableMedia" && windowsPhysicalDrive.BusType != "BusTypeSata") ||
+                   (windowsPhysicalDrive.Type == "FixedMedia" && (windowsPhysicalDrive.BusType == "BusTypeUsb" ||
+                                                                  windowsPhysicalDrive.BusType == "BusTypeSd" ||
+                                                                  windowsPhysicalDrive.BusType == "BusTypeMmc"));
         }
 
         private async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrivesUsingWmic(bool all = false)
@@ -135,7 +152,7 @@
                         x.MediaType.Equals("External hard disk media", StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
-            
+
             return wmicDiskDrives.Select(x =>
                 CreatePhysicalDrive(x, wmicDiskDriveToDiskPartitions, wmicLogicalDiskToPartitions));
         }
@@ -154,7 +171,7 @@
                 size = win32RawDisk.Size();
             }
 
-            return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.Model,
+            return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.InterfaceType, wmicDiskDrive.Model,
                 size, driveLetters);
         }
 

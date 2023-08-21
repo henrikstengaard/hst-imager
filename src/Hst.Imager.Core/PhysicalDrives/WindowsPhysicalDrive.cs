@@ -9,11 +9,13 @@
 
     public class WindowsPhysicalDrive : GenericPhysicalDrive
     {
+        public readonly string BusType;
         public readonly IEnumerable<string> DriveLetters;
 
-        public WindowsPhysicalDrive(string path, string type, string name, long size, IEnumerable<string> driveLetters) : base(
+        public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, IEnumerable<string> driveLetters) : base(
             path, type, name, size)
         {
+            this.BusType = busType;
             this.DriveLetters = driveLetters;
         }
 
@@ -43,7 +45,7 @@
                 dismountedDrives.Add(win32RawDisk);
             }
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), true);
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), byteSwap: ByteSwap, leaveOpen:true);
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Hst.Imager.Core.PhysicalDrives
         public string Name { get; }
         public long Size { get; protected set; }
         public bool Writable { get; private set; }
+        public bool ByteSwap { get; private set; }
 
         public GenericPhysicalDrive(string path, string type, string name, long size, bool writable = false)
         {
@@ -28,6 +29,11 @@ namespace Hst.Imager.Core.PhysicalDrives
         public void SetWritable(bool writable)
         {
             Writable = writable;
+        }
+
+        public void SetByteSwap(bool byteSwap)
+        {
+            ByteSwap = byteSwap;
         }
     }
 }

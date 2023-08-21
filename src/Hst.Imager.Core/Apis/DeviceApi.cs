@@ -15,8 +15,54 @@
         public const uint FSCTL_DISMOUNT_VOLUME = 0x00090020;
         public const uint IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS = 0x00560000;
         public const uint IOCTL_DISK_GET_DRIVE_GEOMETRY_EX = 0x000700A0U;
-        public const uint IOCTL_STORAGE_QUERY_PROPERTY = 0x2D1400;
-        
+        // public const uint IOCTL_STORAGE_QUERY_PROPERTY = 0x2D1400;
+
+        // https://stackoverflow.com/questions/61440688/deviceiocontrol-control-codes
+        public const uint IOCTL_STORAGE_CHECK_VERIFY = 0x002d4800;
+        public const uint IOCTL_STORAGE_CHECK_VERIFY2 = 0x002d0800;
+        public const uint IOCTL_STORAGE_MEDIA_REMOVAL = 0x002d4804;
+        public const uint IOCTL_STORAGE_EJECT_MEDIA = 0x002d4808;
+        public const uint IOCTL_STORAGE_LOAD_MEDIA = 0x002d480c;
+        public const uint IOCTL_STORAGE_LOAD_MEDIA2 = 0x002d080c;
+        public const uint IOCTL_STORAGE_RESERVE = 0x002d4810;
+        public const uint IOCTL_STORAGE_RELEASE = 0x002d4814;
+        public const uint IOCTL_STORAGE_FIND_NEW_DEVICES = 0x002d4818;
+        public const uint IOCTL_STORAGE_EJECTION_CONTROL = 0x002d0940;
+        public const uint IOCTL_STORAGE_MCN_CONTROL = 0x002d0944;
+        public const uint IOCTL_STORAGE_GET_MEDIA_TYPES = 0x002d0c00;
+        public const uint IOCTL_STORAGE_GET_MEDIA_TYPES_EX = 0x002d0c04;
+        public const uint IOCTL_STORAGE_GET_MEDIA_SERIAL_NUMBER = 0x002d0c10;
+        public const uint IOCTL_STORAGE_GET_HOTPLUG_INFO = 0x002d0c14;
+        public const uint IOCTL_STORAGE_SET_HOTPLUG_INFO = 0x002dcc18;
+        public const uint IOCTL_STORAGE_RESET_BUS = 0x002d5000;
+        public const uint IOCTL_STORAGE_RESET_DEVICE = 0x002d5004;
+        public const uint IOCTL_STORAGE_BREAK_RESERVATION = 0x002d5014;
+        public const uint IOCTL_STORAGE_PERSISTENT_RESERVE_IN = 0x002d5018;
+        public const uint IOCTL_STORAGE_PERSISTENT_RESERVE_OUT = 0x002dd01c;
+        public const uint IOCTL_STORAGE_GET_DEVICE_NUMBER = 0x002d1080;
+        public const uint IOCTL_STORAGE_GET_DEVICE_NUMBER_EX = 0x002d1084;
+        public const uint IOCTL_STORAGE_PREDICT_FAILURE = 0x002d1100;
+        public const uint IOCTL_STORAGE_FAILURE_PREDICTION_CONFIG = 0x002d1104;
+        public const uint IOCTL_STORAGE_GET_COUNTERS = 0x002d1108;
+        public const uint IOCTL_STORAGE_READ_CAPACITY = 0x002d5140;
+        public const uint IOCTL_STORAGE_GET_DEVICE_TELEMETRY = 0x002dd1c0;
+        public const uint IOCTL_STORAGE_DEVICE_TELEMETRY_NOTIFY = 0x002dd1c4;
+        public const uint IOCTL_STORAGE_DEVICE_TELEMETRY_QUERY_CAPS = 0x002dd1c8;
+        public const uint IOCTL_STORAGE_GET_DEVICE_TELEMETRY_RAW = 0x002dd1cc;
+        public const uint IOCTL_STORAGE_SET_TEMPERATURE_THRESHOLD = 0x002dd200;
+        public const uint IOCTL_STORAGE_PROTOCOL_COMMAND = 0x002dd3c0;
+        public const uint IOCTL_STORAGE_QUERY_PROPERTY = 0x002d1400;
+        public const uint IOCTL_STORAGE_MANAGE_DATA_SET_ATTRIBUTES = 0x002d9404;
+        public const uint IOCTL_STORAGE_GET_LB_PROVISIONING_MAP_RESOURCES = 0x002d5408;
+        public const uint IOCTL_STORAGE_SET_PROPERTY = 0x002d940c;
+        public const uint IOCTL_STORAGE_REINITIALIZE_MEDIA = 0x002d9640;
+        public const uint IOCTL_STORAGE_GET_BC_PROPERTIES = 0x002d5800;
+        public const uint IOCTL_STORAGE_ALLOCATE_BC_STREAM = 0x002dd804;
+        public const uint IOCTL_STORAGE_FREE_BC_STREAM = 0x002dd808;
+        public const uint IOCTL_STORAGE_CHECK_PRIORITY_HINT_SUPPORT = 0x002d1880;
+        public const uint IOCTL_STORAGE_START_DATA_INTEGRITY_CHECK = 0x002dd884;
+        public const uint IOCTL_STORAGE_STOP_DATA_INTEGRITY_CHECK = 0x002dd888; 
+            
         /// <summary>
         /// The maximum length of a path in characters.
         /// </summary>

@@ -9,13 +9,15 @@
     public class SectorStream : Stream
     {
         private readonly Stream stream;
+        private readonly bool byteSwap;
         private readonly bool leaveOpen;
         private const int SectorSize = 512;
         private readonly byte[] sectorBuffer;
 
-        public SectorStream(Stream baseStream, bool leaveOpen = false)
+        public SectorStream(Stream baseStream, bool byteSwap = false, bool leaveOpen = false)
         {
             this.stream = baseStream;
+            this.byteSwap = byteSwap;
             this.leaveOpen = leaveOpen;
             this.sectorBuffer = new byte[SectorSize];
             this.SectorBufferPosition = 0;
@@ -77,16 +79,64 @@
                 throw new ArgumentOutOfRangeException(nameof(offset), "Sector stream only supports offset 0");
             }
 
-            if (count % SectorSize == 0)
+            if (SectorBufferPosition > 0)
             {
-                return stream.Read(buffer, offset, count);
+                var sectorBufferCopyLength = Math.Min(count, SectorSize - SectorBufferPosition);
+                Array.Copy(this.sectorBuffer, SectorBufferPosition, buffer, 0, sectorBufferCopyLength);
+                SectorBufferPosition += sectorBufferCopyLength;
+                offset += sectorBufferCopyLength;
             }
+
+            if (offset == count)
+            {
+                if (byteSwap)
+                {
+                    ByteSwapBuffer(buffer, count);
+                }
+                
+                return offset;
+            }
+
+            var readLength = count - offset;
+            var readBuffer = new byte[readLength % SectorSize == 0
+                ? readLength
+                : readLength - (readLength % SectorSize) + SectorSize];
+            var bytesRead = stream.Read(readBuffer, 0, readBuffer.Length);
+
+            if (bytesRead < readLength)
+            {
+                readLength = bytesRead;
+            }
+
+            // copy read length to buffer
+            Array.Copy(readBuffer, 0, buffer, offset, readLength);
+            offset += readLength;
+
+            if (byteSwap)
+            {
+                ByteSwapBuffer(buffer, readLength);
+            }
+
+            var bytesLeftInReadBuffer = readLength % SectorSize;
+            if (bytesLeftInReadBuffer == 0)
+            {
+                return offset;
+            }
+
+            // copy left to sector buffer
+            Array.Fill<byte>(sectorBuffer, 0);
+            Array.Copy(readBuffer, readLength - bytesLeftInReadBuffer, sectorBuffer, 0, SectorSize);
+            SectorBufferPosition = bytesLeftInReadBuffer;
             
-            var sectorBuffer = new byte[count - (count % SectorSize) + SectorSize];
-            var sectorBytesRead = stream.Read(sectorBuffer, offset, sectorBuffer.Length);
-            var bytesRead = Math.Min(count, sectorBytesRead);
-            Array.Copy(sectorBuffer, 0, buffer, 0, bytesRead);
-            return bytesRead;
+            return offset;
+        }
+
+        private void ByteSwapBuffer(byte[] buffer, int count)
+        {
+            for (var i = 0; i < count - count % 2; i += 2)
+            {
+                (buffer[i + 1], buffer[i]) = (buffer[i], buffer[i + 1]);
+            }
         }
 
         public override long Seek(long offset, SeekOrigin origin)
