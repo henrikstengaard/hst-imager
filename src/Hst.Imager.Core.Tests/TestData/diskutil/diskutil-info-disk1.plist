@@ -139,7 +139,7 @@
 	<key>SystemImage</key>
 	<false/>
 	<key>TotalSize</key>
-	<integer>511900434432</integer>
+	<real>5.11900434432E11</real>
 	<key>VirtualOrPhysical</key>
 	<string>Virtual</string>
 	<key>VolumeName</key>

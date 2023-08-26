@@ -92,19 +92,33 @@
                 throw new IOException("Invalid diskutil info plist");
             }
             
+            var deviceBlockSize = GetLongNumber(pList, "DeviceBlockSize");
             var busProtocol = GetString(pList, "BusProtocol");
             var ioRegistryEntryName = GetString(pList, "IORegistryEntryName");
             var size = GetLongNumber(pList, "Size");
             var deviceNode = GetString(pList, "DeviceNode");
             var mediaType = GetString(pList, "MediaType");
+            var virtualOrPhysical = GetString(pList, "VirtualOrPhysical");
 
             return new DiskUtilInfo
             {
+                DeviceBlockSize = deviceBlockSize,
                 BusProtocol = busProtocol,
                 IoRegistryEntryName = ioRegistryEntryName,
                 Size = size,
                 DeviceNode = deviceNode,
-                MediaType = mediaType
+                MediaType = mediaType,
+                DiskType = GetDiskType(virtualOrPhysical)
+            };
+        }
+
+        private static DiskUtilInfo.DiskTypeEnum GetDiskType(string virtualOrPhysical)
+        {
+            return virtualOrPhysical.ToLower() switch
+            {
+                "physical" => DiskUtilInfo.DiskTypeEnum.Physical,
+                "virtual" => DiskUtilInfo.DiskTypeEnum.Virtual,
+                _ => DiskUtilInfo.DiskTypeEnum.Unknown
             };
         }
 

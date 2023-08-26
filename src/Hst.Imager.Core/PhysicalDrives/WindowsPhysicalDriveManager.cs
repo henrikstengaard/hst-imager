@@ -27,10 +27,17 @@
                 throw new NotSupportedException("Windows physical drive manager is not running on Windows environment");
             }
 
-            return Task.FromResult(GetPhysicalDrivesUsingKernel32(all));
+            var physicalDrives = GetPhysicalDrivesUsingKernel32();
+            
+            if (!all)
+            {
+                physicalDrives = physicalDrives.Where(IsRemovable).ToList();
+            }
+            
+            return Task.FromResult(physicalDrives);
         }
 
-        private IEnumerable<IPhysicalDrive> GetPhysicalDrivesUsingKernel32(bool all = false)
+        protected virtual IEnumerable<IPhysicalDrive> GetPhysicalDrivesUsingKernel32()
         {
             // iterate drive letters and get their relation to physical drives
             var physicalDriveLettersIndex = new Dictionary<uint, List<string>>();
@@ -83,9 +90,7 @@
 
                     var diskGeometryExResult = win32RawDisk.DiskGeometryEx();
                     var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
-                    var name = string.Join(" ",
-                        new[] { storagePropertyQueryResult.VendorId, storagePropertyQueryResult.ProductId }.Where(x =>
-                            !string.IsNullOrWhiteSpace(x)));
+                    var name = GetPhysicalDriveName(storagePropertyQueryResult);
                     var size = win32RawDisk.Size();
 
                     var driveLetters =
@@ -117,16 +122,31 @@
                 }
             }
 
-            if (!all)
-            {
-                physicalDrives = physicalDrives.Where(IsRemovable).ToList();
-            }
-
             return physicalDrives;
         }
 
-        private static bool IsRemovable(WindowsPhysicalDrive windowsPhysicalDrive)
+        private static string GetPhysicalDriveName(StoragePropertyQueryResult storagePropertyQueryResult)
         {
+            var nameParts = new List<string>();
+            
+            if (!string.IsNullOrWhiteSpace(storagePropertyQueryResult.VendorId))
+            {
+                nameParts.Add(storagePropertyQueryResult.VendorId);
+            }
+            if (!string.IsNullOrWhiteSpace(storagePropertyQueryResult.ProductId))
+            {
+                nameParts.Add(storagePropertyQueryResult.ProductId);
+            }
+
+            return string.Join(" ", nameParts);
+        }
+
+        private static bool IsRemovable(IPhysicalDrive physicalDrive)
+        {
+            if (!(physicalDrive is WindowsPhysicalDrive windowsPhysicalDrive))
+            {
+                return false;
+            }
             return (windowsPhysicalDrive.Type == "RemovableMedia" && windowsPhysicalDrive.BusType != "BusTypeSata") ||
                    (windowsPhysicalDrive.Type == "FixedMedia" && (windowsPhysicalDrive.BusType == "BusTypeUsb" ||
                                                                   windowsPhysicalDrive.BusType == "BusTypeSd" ||
@@ -175,21 +195,21 @@
                 size, driveLetters);
         }
 
-        private async Task<string> GetWmicDiskDriveListCsv()
+        protected virtual async Task<string> GetWmicDiskDriveListCsv()
         {
             var output = await "wmic".RunProcessAsync("diskdrive list /format:csv");
             logger.LogDebug(output);
             return output;
         }
 
-        private async Task<string> GetWmicWin32DiskDriveToDiskPartitionPath()
+        protected virtual async Task<string> GetWmicWin32DiskDriveToDiskPartitionPath()
         {
             var output = await "wmic".RunProcessAsync("path Win32_DiskDriveToDiskPartition get * /format:csv");
             logger.LogDebug(output);
             return output;
         }
 
-        private async Task<string> GetWmicWin32LogicalDiskToPartitionPath()
+        protected virtual async Task<string> GetWmicWin32LogicalDiskToPartitionPath()
         {
             var output = await "wmic".RunProcessAsync("path Win32_LogicalDiskToPartition get * /format:csv");
             logger.LogDebug(output);

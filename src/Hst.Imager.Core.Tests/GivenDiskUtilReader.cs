@@ -10,40 +10,33 @@
         [Fact]
         public void WhenParseListOutputFromDiskUtilThenDisksAreReturned()
         {
-            var disks = DiskUtilReader.ParseList(File.OpenRead(Path.Combine("TestData","diskutil-list.plist"))).ToList();
+            var disks = DiskUtilReader.ParseList(File.OpenRead(Path.Combine("TestData", "diskutil", "diskutil-all-usb-stick.plist"))).ToList();
             
-            Assert.Single(disks);
-            var disk = disks.First();
-            Assert.Equal("disk2", disk.DeviceIdentifier);
-            Assert.Equal(15682240512, disk.Size);
-            Assert.Single(disk.Partitions);
-            var partition = disk.Partitions.First();
-            Assert.Equal("disk2s1", partition.DeviceIdentifier);
-            Assert.Equal(15682224128, partition.Size);
-        }
+            Assert.Equal(3, disks.Count);
+            
+            var disk1 = disks[0];
+            Assert.Equal("disk0", disk1.DeviceIdentifier);
+            Assert.Equal(512110190592, disk1.Size);
 
-        [Fact]
-        public void WhenParseListOutputFromDiskUtilWithoutPartitionsThenDisksAreReturned()
-        {
-            var disks = DiskUtilReader.ParseList(File.OpenRead(Path.Combine("TestData","diskutil-list-no-partitions.plist"))).ToList();
+            var disk2 = disks[1];
+            Assert.Equal("disk1", disk2.DeviceIdentifier);
+            Assert.Equal(511900434432, disk2.Size);
             
-            Assert.Single(disks);
-            var disk = disks.First();
-            Assert.Equal("disk2", disk.DeviceIdentifier);
-            Assert.Equal(15682240512, disk.Size);
-            Assert.Empty(disk.Partitions);
+            var disk3 = disks[2];
+            Assert.Equal("disk2", disk3.DeviceIdentifier);
+            Assert.Equal(15682240512, disk3.Size);
         }
         
         [Fact]
         public void WhenParseInfoOutputFromDiskUtilThenInfoIsReturned()
         {
-            var info = DiskUtilReader.ParseInfo(File.OpenRead(Path.Combine("TestData","diskutil-info-disk.plist")));
+            var info = DiskUtilReader.ParseInfo(File.OpenRead(Path.Combine("TestData", "diskutil", "diskutil-info-disk0.plist")));
             
             Assert.NotNull(info);
-            Assert.Equal("USB", info.BusProtocol);
-            Assert.Equal("SanDisk' Cruzer Fit Media", info.IoRegistryEntryName);
-            Assert.Equal(15682240512, info.Size);
-            Assert.Equal("/dev/disk2", info.DeviceNode);
+            Assert.Equal("PCI-Express", info.BusProtocol);
+            Assert.Equal("INTEL SSDPEKNW512G8 Media", info.IoRegistryEntryName);
+            Assert.Equal(512110190592, info.Size);
+            Assert.Equal("/dev/disk0", info.DeviceNode);
             Assert.Equal("Generic", info.MediaType);
         }
     }

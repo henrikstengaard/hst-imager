@@ -4,11 +4,20 @@
 
     public class DiskUtilInfo
     {
+        public enum DiskTypeEnum
+        {
+            Unknown,
+            Physical,
+            Virtual
+        }
+        
+        public long DeviceBlockSize { get; set; }
         public string BusProtocol { get; set; }
         public string IoRegistryEntryName { get; set; }
         public long Size { get; set; }
         public string DeviceNode { get; set; }
         public string MediaType { get; set; }
+        public DiskTypeEnum DiskType { get; set; }
     }
 
     public class DiskUtilDisk

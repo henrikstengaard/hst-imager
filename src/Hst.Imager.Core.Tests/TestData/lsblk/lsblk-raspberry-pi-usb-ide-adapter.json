@@ -1,0 +1,15 @@
+{
+  "blockdevices": [
+    {"type":"disk", "name":"sda", "rm":false, "model":"SSD_PM830_mSATA", "path":"/dev/sda", "size":128035676160, "vendor":"SAMSUNG ", "tran":"usb",
+      "children": [
+        {"type":"part", "name":"sda1", "rm":false, "model":null, "path":"/dev/sda1", "size":12623921664, "vendor":null, "tran":null}
+      ]
+    },
+    {"type":"disk", "name":"mmcblk0", "rm":false, "model":null, "path":"/dev/mmcblk0", "size":30989615104, "vendor":null, "tran":null,
+      "children": [
+        {"type":"part", "name":"mmcblk0p1", "rm":false, "model":null, "path":"/dev/mmcblk0p1", "size":268435456, "vendor":null, "tran":null},
+        {"type":"part", "name":"mmcblk0p2", "rm":false, "model":null, "path":"/dev/mmcblk0p2", "size":30716985344, "vendor":null, "tran":null}
+      ]
+    }
+  ]
+}

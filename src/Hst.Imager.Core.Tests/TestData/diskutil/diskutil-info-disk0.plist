@@ -33,7 +33,7 @@
 	<key>GlobalPermissionsEnabled</key>
 	<false/>
 	<key>IOKitSize</key>
-	<integer>512110190592</integer>
+	<real>5.12110190592E11</real>
 	<key>IORegistryEntryName</key>
 	<string>INTEL SSDPEKNW512G8 Media</string>
 	<key>Internal</key>
