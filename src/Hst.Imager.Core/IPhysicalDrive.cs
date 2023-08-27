@@ -8,6 +8,7 @@
         string Type { get; }
         string Name { get; }
         long Size { get; }
+        bool Removable { get; }
         bool Writable { get; }
         bool ByteSwap { get; }
 

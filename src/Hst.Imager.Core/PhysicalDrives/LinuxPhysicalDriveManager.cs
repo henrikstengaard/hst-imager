@@ -35,7 +35,20 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var lsBlkJson = await GetLsBlkJson();
 
-            return Parse(lsBlkJson, all);
+            var physicalDrives = Parse(lsBlkJson).ToList();
+
+            if (!all)
+            {
+                physicalDrives = physicalDrives.Where(x => x.Removable).ToList();
+            }
+
+            foreach (var physicalDrive in physicalDrives)
+            {
+                logger.LogDebug(
+                    $"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', Size = '{physicalDrive.Size}'");
+            }
+
+            return physicalDrives.ToList();
         }
 
         protected virtual async Task<string> GetLsBlkJson()
@@ -45,7 +58,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             return output;
         }
 
-        private static IEnumerable<IPhysicalDrive> Parse(string json, bool all = false)
+        private static IEnumerable<IPhysicalDrive> Parse(string json)
         {
             var lsBlk = LsBlkReader.ParseLsBlk(json);
 
@@ -54,20 +67,19 @@ namespace Hst.Imager.Core.PhysicalDrives
                 return Enumerable.Empty<IPhysicalDrive>();
             }
 
-            var blockDevices = all
-                ? lsBlk.BlockDevices
-                : lsBlk.BlockDevices.Where(x =>
-                    !string.IsNullOrWhiteSpace(x.Type) &&
-                    x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase) &&
-                    (x.Removable || (!string.IsNullOrWhiteSpace(x.Tran) &&
-                                     x.Tran.Equals("usb", StringComparison.OrdinalIgnoreCase)))).ToList();
-
-            
-            var physicalDrives = blockDevices.Select(x =>
+            var physicalDrives = lsBlk.BlockDevices.Select(x =>
                 new GenericPhysicalDrive(x.Path, x.Type ?? string.Empty, GetPhysicalDriveName(x),
-                    x.Size ?? 0)).ToList();
+                    x.Size ?? 0, IsRemovable(x))).ToList();
 
             return physicalDrives;
+        }
+
+        private static bool IsRemovable(BlockDevice blockDevice)
+        {
+            return !string.IsNullOrWhiteSpace(blockDevice.Type) &&
+                   blockDevice.Type.Equals("disk", StringComparison.OrdinalIgnoreCase) &&
+                   (blockDevice.Removable || (!string.IsNullOrWhiteSpace(blockDevice.Tran) &&
+                                              blockDevice.Tran.Equals("usb", StringComparison.OrdinalIgnoreCase)));
         }
 
         private static string GetPhysicalDriveName(BlockDevice blockDevice)

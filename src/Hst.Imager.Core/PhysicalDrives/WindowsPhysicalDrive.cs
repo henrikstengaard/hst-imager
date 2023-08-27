@@ -1,10 +1,8 @@
 ﻿namespace Hst.Imager.Core.PhysicalDrives
 {
     using System.Collections.Generic;
-    using System.ComponentModel;
     using System.IO;
     using System.Linq;
-    using System.Runtime.InteropServices;
     using Apis;
 
     public class WindowsPhysicalDrive : GenericPhysicalDrive
@@ -12,8 +10,8 @@
         public readonly string BusType;
         public readonly IEnumerable<string> DriveLetters;
 
-        public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, IEnumerable<string> driveLetters) : base(
-            path, type, name, size)
+        public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, bool removable,
+            IEnumerable<string> driveLetters) : base(path, type, name, size, removable)
         {
             this.BusType = busType;
             this.DriveLetters = driveLetters;

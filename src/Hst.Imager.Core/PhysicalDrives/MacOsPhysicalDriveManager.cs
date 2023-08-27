@@ -48,16 +48,18 @@ namespace Hst.Imager.Core.PhysicalDrives
 
                 var info = DiskUtilReader.ParseInfo(new MemoryStream(Encoding.UTF8.GetBytes(infoOutput)));
 
-                if (info.DiskType != DiskUtilInfo.DiskTypeEnum.Physical || (!all &&
-                                                                            !"usb".Equals(
-                                                                                info.BusProtocol ?? string.Empty,
-                                                                                StringComparison.OrdinalIgnoreCase)))
+                if (info.DiskType != DiskUtilInfo.DiskTypeEnum.Physical)
                 {
                     continue;
                 }
 
                 physicalDrives.Add(new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName,
-                    info.Size, partitionDevices));
+                    info.Size, IsRemovable(info.BusProtocol), partitionDevices));
+            }
+            
+            if (!all)
+            {
+                physicalDrives = physicalDrives.Where(x => x.Removable).ToList();
             }
 
             foreach (var physicalDrive in physicalDrives)
@@ -67,6 +69,12 @@ namespace Hst.Imager.Core.PhysicalDrives
             }
 
             return physicalDrives;
+        }
+
+        private static bool IsRemovable(string busProtocol)
+        {
+            return !string.IsNullOrWhiteSpace(busProtocol) &&
+                   busProtocol.Equals("usb", StringComparison.OrdinalIgnoreCase);
         }
 
         protected virtual async Task<string> GetDiskUtilExternalDisks(bool all)
