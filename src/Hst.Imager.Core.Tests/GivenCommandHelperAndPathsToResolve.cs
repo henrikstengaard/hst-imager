@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
 using Xunit;
 
@@ -23,7 +24,7 @@ public class GivenCommandHelperAndPathsToResolve
     }
 
     [Fact]
-    public void WhenGetReadableFileMediaWithByteSwapModifierThenDataReadIsByteSwapped()
+    public async Task WhenGetReadableFileMediaWithByteSwapModifierThenDataReadIsByteSwapped()
     {
         // arrange - create data to read
         var data = new byte[512];
@@ -48,7 +49,7 @@ public class GivenCommandHelperAndPathsToResolve
             var commandHelper = new CommandHelper(false);
 
             // act - get file media byte swapped
-            var mediaResult = commandHelper.GetReadableFileMedia($"{path}+bs");
+            var mediaResult = await commandHelper.GetReadableFileMedia($"{path}+bs");
             using var media = mediaResult.Value;
             var stream = media.Stream;
 

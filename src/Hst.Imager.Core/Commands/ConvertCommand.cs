@@ -1,7 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
     using System;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Extensions;
@@ -44,7 +43,7 @@
             
             OnDebugMessage($"Opening '{sourcePath}' as readable");
 
-            var sourceMediaResult = commandHelper.GetReadableFileMedia(sourcePath);
+            var sourceMediaResult = await commandHelper.GetReadableFileMedia(sourcePath);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
@@ -63,7 +62,7 @@
 
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
-            var destinationMediaResult = commandHelper.GetWritableFileMedia(destinationPath, convertSize, true);
+            var destinationMediaResult = await commandHelper.GetWritableFileMedia(destinationPath, convertSize, true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);

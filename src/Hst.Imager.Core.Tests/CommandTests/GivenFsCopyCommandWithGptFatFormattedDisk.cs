@@ -4,16 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Commands;
-using DiscUtils.Fat;
-using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Models;
 using Xunit;
 
 public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
@@ -32,8 +27,8 @@ public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            CreateGptFatFormattedDisk(testCommandHelper, srcPath, 10.MB());
-            using (var media = DiskFileSystemHelper.GetDiskMedia(testCommandHelper, srcPath))
+            await CreateGptFatFormattedDisk(testCommandHelper, srcPath, 10.MB());
+            using (var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, srcPath))
             {
                 DiskFileSystemHelper.CreateGptFatDirectoriesAndFiles(DiskFileSystemHelper.ToDisk(media));
             }
@@ -93,7 +88,7 @@ public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
             DiskFileSystemHelper.CreateLocalDirectoriesAndFiles(srcPath);
             
             // arrange - destination disk image
-            CreateGptFatFormattedDisk(testCommandHelper, destPath, 10.MB());
+            await CreateGptFatFormattedDisk(testCommandHelper, destPath, 10.MB());
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -106,7 +101,7 @@ public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get media
-            using var media = DiskFileSystemHelper.GetDiskMedia(testCommandHelper, destPath);
+            using var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, destPath);
 
             // arrange - get fat file system
             var fileSystem = DiskFileSystemHelper.GetGptFatFileSystem(DiskFileSystemHelper.ToDisk(media));

@@ -2,7 +2,7 @@
 {
     using System.IO;
     using System.Linq;
-    using Hst.Imager.Core.PhysicalDrives;
+    using PhysicalDrives;
     using Xunit;
 
     public class GivenDiskUtilReader

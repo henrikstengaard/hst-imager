@@ -10,5 +10,6 @@
         public Media.MediaType Type;        
         public long DiskSize { get; set; }
         public DiskInfo DiskInfo { get; set; }
+        public bool Byteswap { get; set; }
     }
 }

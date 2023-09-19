@@ -15,5 +15,7 @@
 
         [Required] 
         public string Path { get; set; }
+
+        public bool Byteswap { get; set; }
     }
 }

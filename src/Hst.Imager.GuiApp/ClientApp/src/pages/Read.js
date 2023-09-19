@@ -53,6 +53,7 @@ export default function Read() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
+    const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [destinationPath, setDestinationPath] = React.useState(null)
@@ -89,7 +90,7 @@ export default function Read() {
         await getMedias()
     }, [api])
 
-    const getInfo = async (path) => {
+    const getInfo = async (path, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -98,7 +99,8 @@ export default function Read() {
             },
             body: JSON.stringify({
                 sourceType: 'PhysicalDisk',
-                path
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -122,6 +124,7 @@ export default function Read() {
                 .start()
                 .then(() => {
                     newConnection.on("Info", (media) => {
+                        console.log(media)
                         setSourceMedia(media)
 
                         // default set size and unit to largest comparable size
@@ -168,7 +171,7 @@ export default function Read() {
                         setMedias(medias || [])
                         if (newMedia) {
                             setSourceMedia(newMedia)
-                            await getInfo(newMedia.path)
+                            await getInfo(newMedia.path, byteswap)
                         }
                     })
 
@@ -189,7 +192,7 @@ export default function Read() {
             }
             connection.stop();
         };
-    }, [connection, setConnection, getMedias, getPath, setMedias, setSourceMedia, sourceMedia, setPrefillSize,
+    }, [byteswap, connection, setConnection, getMedias, getPath, setMedias, setSourceMedia, sourceMedia, setPrefillSize,
         setPrefillSizeOptions, setUnit, setSize])
     
     const handleRead = async () => {
@@ -206,7 +209,8 @@ export default function Read() {
                 size: (size * unitOption.size),
                 retries,
                 verify,
-                force
+                force,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -233,6 +237,7 @@ export default function Read() {
         setConfirmOpen(false)
         setSourceMedia(null)
         setMedias(null)
+        setByteswap(false)
         setSize(0)
         setUnit('bytes')
         setDestinationPath(null)
@@ -289,6 +294,16 @@ export default function Read() {
                                 id="read-destination-path"
                                 title="Select destination image"
                                 onChange={(path) => setDestinationPath(path)}
+                                fileFilters = {[{
+                                    name: 'Compressed hard disk image files',
+                                    extensions: ['gz', 'zip']
+                                }, {
+                                    name: 'Hard disk image files',
+                                    extensions: ['img', 'hdf', 'vhd']
+                                }, {
+                                    name: 'All files',
+                                    extensions: ['*']
+                                }]}
                             />
                         }
                         onChange={(event) => setDestinationPath(get(event, 'target.value'))}
@@ -297,6 +312,21 @@ export default function Read() {
                                 return
                             }
                             setConfirmOpen(true)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap source sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            setByteswap(checked)
+                            if (sourceMedia) {
+                                await getInfo(sourceMedia.path, checked)
+                            }
                         }}
                     />
                 </Grid>

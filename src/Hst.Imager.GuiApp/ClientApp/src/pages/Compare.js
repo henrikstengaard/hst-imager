@@ -58,6 +58,7 @@ export default function Verify() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [sourcePath, setSourcePath] = React.useState(null)
+    const [byteswap, setByteswap] = React.useState(false);
     const [medias, setMedias] = React.useState(null)
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
@@ -95,7 +96,7 @@ export default function Verify() {
         await getMedias()
     }, [api])
 
-    const getInfo = React.useCallback(async (path) => {
+    const getInfo = async (path, sourceType, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -103,14 +104,15 @@ export default function Verify() {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                sourceType: sourceType,
-                path
+                sourceType,
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
             console.error('Failed to get info')
         }
-    }, [sourceType])
+    }
 
     React.useEffect(() => {
         if (connection) {
@@ -174,7 +176,7 @@ export default function Verify() {
                         if (newMedia) {
                             setSourcePath(newPath)
                             setSourceMedia(newMedia)
-                            await getInfo(newPath)
+                            await getInfo(newPath, sourceType, byteswap)
                         }
                     })
                 })
@@ -193,7 +195,7 @@ export default function Verify() {
             }
             connection.stop();
         };
-    }, [connection, getInfo, getPath, setMedias, setSourcePath, setSourceMedia, sourcePath, setPrefillSize,
+    }, [byteswap, connection, getInfo, getPath, setMedias, setSourcePath, setSourceMedia, sourcePath, setPrefillSize,
         setPrefillSizeOptions, setSize, setUnit])
 
     const handleSourceTypeChange = async (value) => {
@@ -213,7 +215,7 @@ export default function Verify() {
                 setSourcePath(newPath)
                 setSourceMedia(newMedia)
                 if (value === 'PhysicalDisk' && newMedia) {
-                    await getInfo(newPath)
+                    await getInfo(newPath, sourceType, byteswap)
                 }
 
                 break
@@ -238,7 +240,8 @@ export default function Verify() {
                 destinationPath,
                 size: (size * unitOption.size),
                 retries,
-                force
+                force,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -261,6 +264,7 @@ export default function Verify() {
         setConfirmOpen(false)
         setSourceMedia(null)
         setSourcePath(null)
+        setByteswap(false)
         setMedias(null)
         setSize(0)
         setUnit('bytes')
@@ -326,8 +330,18 @@ export default function Verify() {
                                     title="Select source file"
                                     onChange={async (path) => {
                                         setSourcePath(path)
-                                        await getInfo(path)
+                                        await getInfo(path, sourceType, byteswap)
                                     }}
+                                    fileFilters = {[{
+                                        name: 'Compressed hard disk image files',
+                                        extensions: ['xz', 'gz', 'zip', 'rar']
+                                    }, {
+                                        name: 'Hard disk image files',
+                                        extensions: ['img', 'hdf', 'vhd']
+                                    }, {
+                                        name: 'All files',
+                                        extensions: ['*']
+                                    }]}
                                 />
                             }
                             onChange={(event) => {
@@ -340,7 +354,7 @@ export default function Verify() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo(sourcePath)
+                                await getInfo(sourcePath, sourceType, byteswap)
                             }}
                         />
                     )}
@@ -357,7 +371,7 @@ export default function Verify() {
                             onChange={async (media) => {
                                 setSourcePath(media)
                                 setSourceMedia(media.path)
-                                await getInfo(media.path)
+                                await getInfo(media.path, sourceType, byteswap)
                             }}                        
                         />
                     )}
@@ -387,6 +401,21 @@ export default function Verify() {
                             }
                             setConfirmOpen(true)
                         }}                    
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap source sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            setByteswap(checked)
+                            if (sourceMedia) {
+                                await getInfo(sourceMedia.path, sourceType, checked)
+                            }
+                        }}
                     />
                 </Grid>
             </Grid>

@@ -41,7 +41,8 @@
             {
                 Title = request.Title,
                 SourcePath = request.SourcePath,
-                DestinationPath = request.DestinationPath
+                DestinationPath = request.DestinationPath,
+                Byteswap = request.Byteswap
             };
             var handler = new ConvertBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
             await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);

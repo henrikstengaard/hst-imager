@@ -25,10 +25,10 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
         testCommandHelper.AddTestMedia(path);
 
         // arrange - source disk image file with directories
-        CreateMbrFatFormattedDisk(testCommandHelper, path, 10.MB());
+        await CreateMbrFatFormattedDisk(testCommandHelper, path, 10.MB());
         
         // arrange - get writeable media
-        var mediaResult = testCommandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
+        var mediaResult = await testCommandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
         using var media = mediaResult.Value;
         var diskMedia = media as DiskMedia;
         Assert.NotNull(diskMedia);

@@ -32,8 +32,8 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            CreateMbrNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
-            CreateMbrNtfsDirectoriesAndFiles(testCommandHelper, srcPath);
+            await CreateMbrNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
+            await CreateMbrNtfsDirectoriesAndFiles(testCommandHelper, srcPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -73,9 +73,9 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
         }
     }
 
-    private void CreateMbrNtfsDirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
+    private async Task CreateMbrNtfsDirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
     {
-        var mediaResult = testCommandHelper.GetWritableFileMedia(path);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         if (mediaResult.IsFaulted)
         {
             throw new IOException(mediaResult.Error.ToString());

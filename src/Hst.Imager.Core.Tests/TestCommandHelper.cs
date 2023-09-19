@@ -33,7 +33,7 @@
                 return testMedia.Data;
             }
 
-            var mediaResult = GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
+            var mediaResult = await GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
             using var media = mediaResult.Value;
             var stream = media.Stream;
             return await stream.ReadBytes((int)stream.Length);
@@ -48,7 +48,7 @@
                 return;
             }
 
-            var destinationMediaResult = GetWritableMedia(new List<IPhysicalDrive>(), path, data.Length, true);
+            var destinationMediaResult = await GetWritableMedia(new List<IPhysicalDrive>(), path, data.Length, true);
             using var destinationMedia = destinationMediaResult.Value;
             var destinationStream = destinationMedia.Stream;
             await destinationStream.WriteAsync(data, 0, data.Length);
@@ -82,14 +82,14 @@
             return data;
         }
 
-        public override Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+        public override Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             bool writeable = false)
         {
             // return writable file, if path is equal physical drive path. otherwise null
-            return path == PhysicalDrivePath ? GetWritableFileMedia(path) : new Result<Media>((Media)null);
+            return path == PhysicalDrivePath ? GetWritableFileMedia(path) : Task.FromResult(new Result<Media>((Media)null));
         }
 
-        public override Result<Media> GetReadableFileMedia(string path)
+        public override async Task<Result<Media>> GetReadableFileMedia(string path)
         {
             if (path == null)
             {
@@ -99,22 +99,22 @@
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
             {
-                return base.GetReadableFileMedia(path);
+                return await base.GetReadableFileMedia(path);
             }
 
             var stream = new MemoryStream(testMedia.Data);
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
                 return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
-                    Media.MediaType.Raw, false, stream));
+                    Media.MediaType.Raw, false, stream, false));
             }
             
             var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
-            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, false, disk,
-                stream));        
+            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, 
+                false, disk, false, stream));        
         }
 
-        public override Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
+        public override Task<Result<Media>> GetWritableFileMedia(string path, long? size = null, bool create = false)
         {
             if (path == null)
             {
@@ -129,8 +129,8 @@
 
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
-                    Media.MediaType.Raw, false, new TestMediaStream(testMedia)));
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
+                    Media.MediaType.Raw, false, new TestMediaStream(testMedia), false)));
             }
 
             if (size.HasValue)
@@ -140,7 +140,7 @@
             
             if (create && size == null)
             {
-                return new Result<Media>(new Error("Vhd requires size"));
+                return Task.FromResult(new Result<Media>(new Error("Vhd requires size")));
             }
 
             if (create || testMedia.Data.Length == 0)
@@ -152,8 +152,8 @@
             var disk = create || testMedia.Data.Length == 0
                 ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
-            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, false, disk,
-                stream));
+            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, 
+                Media.MediaType.Vhd, false, disk, false, stream)));
         }
 
         public override Stream CreateWriteableStream(string path, bool create)

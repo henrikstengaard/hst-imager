@@ -47,7 +47,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             testCommandHelper.ClearActiveMedias();
             
             // assert - get media
-            var mediaResult = testCommandHelper.GetReadableFileMedia(imagePath);
+            var mediaResult = await testCommandHelper.GetReadableFileMedia(imagePath);
             if (mediaResult.IsFaulted)
             {
                 throw new IOException(mediaResult.Error.ToString());
@@ -106,37 +106,6 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             // assert - dir1 directory contains file1.txt file
             Assert.Equal("file1.txt",
                 entries.FirstOrDefault(x => x.Type == EntryType.File && x.Name.Equals("file1.txt", StringComparison.OrdinalIgnoreCase))?.Name);
-            //
-            // // assert - change to copied directory
-            // await ffsVolume.ChangeDirectory("/");
-            // await ffsVolume.ChangeDirectory("copied");
-            //
-            // // assert - get copied entries
-            // entries = (await ffsVolume.ListEntries()).ToList();
-            //
-            // // assert - root directory contains 2 entries
-            // Assert.Equal(2, entries.Count);
-            //
-            // // assert - copied directory contains dir1 directory
-            // Assert.Equal("dir1",
-            //     entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir1", StringComparison.OrdinalIgnoreCase))?.Name);
-            //
-            // // assert - copied directory contains dir2 directory
-            // Assert.Equal("dir2",
-            //     entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir2", StringComparison.OrdinalIgnoreCase))?.Name);
-            //
-            // // assert - change to copied directory
-            // await ffsVolume.ChangeDirectory("dir1");
-            //
-            // // assert - get copied/dir1 entries
-            // entries = (await ffsVolume.ListEntries()).ToList();
-            //
-            // // assert - copied/dir1 directory contains 1 entry
-            // Assert.Single(entries);
-            //
-            // // assert - copied/dir1 directory contains dir3 directory
-            // Assert.Equal("dir3",
-            //     entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir3", StringComparison.OrdinalIgnoreCase))?.Name);
         }
         finally
         {
@@ -146,7 +115,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
     
     private async Task CreateAdfContent(TestCommandHelper testCommandHelper, string path)
     {
-        var mediaResult = testCommandHelper.GetWritableFileMedia(path);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         if (mediaResult.IsFaulted)
         {
             throw new IOException(mediaResult.Error.ToString());

@@ -39,7 +39,7 @@ public class GivenRdbInitCommand : FsCommandTestBase
     private async Task AssertRdb(ICommandHelper commandHelper, string path)
     {
         // assert - read disk info
-        var mediaResult = commandHelper.GetReadableMedia(new List<IPhysicalDrive>(), path);
+        var mediaResult = await commandHelper.GetReadableMedia(new List<IPhysicalDrive>(), path);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await commandHelper.ReadDiskInfo(media);

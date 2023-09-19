@@ -42,7 +42,8 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
-                        readBackgroundTask.SourcePath, readBackgroundTask.DestinationPath, 
+                        string.Concat(readBackgroundTask.SourcePath, readBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                        readBackgroundTask.DestinationPath, 
                         new Size(readBackgroundTask.Size, Unit.Bytes), readBackgroundTask.Retries,
                         readBackgroundTask.Verify, readBackgroundTask.Force, 0);
                 readCommand.DataProcessed += async (_, args) =>

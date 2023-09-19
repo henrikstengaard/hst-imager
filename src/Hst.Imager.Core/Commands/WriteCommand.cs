@@ -51,7 +51,7 @@
             OnDebugMessage($"Opening '{sourcePath}' as readable");
             
             var physicalDrivesList = physicalDrives.ToList();
-            var sourceMediaResult = commandHelper.GetReadableFileMedia(sourcePath);
+            var sourceMediaResult = await commandHelper.GetReadableFileMedia(sourcePath);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
@@ -69,7 +69,7 @@
             
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
-            var destinationMediaResult = commandHelper.GetPhysicalDriveMedia(physicalDrivesList, destinationPath, true);
+            var destinationMediaResult = await commandHelper.GetPhysicalDriveMedia(physicalDrivesList, destinationPath, true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);

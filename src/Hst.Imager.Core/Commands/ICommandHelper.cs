@@ -10,14 +10,16 @@
     public interface ICommandHelper
     {
         void ClearActiveMedias();
-        Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false);
-        Result<Media> GetReadableFileMedia(string path);
-        Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false);
-        Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path);
-        Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, long? size = null,
+        Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, bool writeable = false);
+        Task<Result<Media>> GetReadableFileMedia(string path);
+        Task<Result<Media>> GetWritableFileMedia(string path, long? size = null, bool create = false);
+        Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path);
+        Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, long? size = null,
             bool create = false);
         long GetVhdSize(long size);
         bool IsVhd(string path);
+        bool IsZip(string path);
+        bool IsGZip(string path);
         Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);
         Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None);

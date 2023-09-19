@@ -31,7 +31,7 @@
 
             OnDebugMessage($"Opening '{path}' as readable");
 
-            var sourceMediaResult = commandHelper.GetReadableMedia(physicalDrives, path);
+            var sourceMediaResult = await commandHelper.GetReadableMedia(physicalDrives, path);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
@@ -47,12 +47,13 @@
 
             OnDiskInfoRead(new MediaInfo
             {
-                Path = path,
+                Path = media.Path,
                 Name = media.Model,
                 IsPhysicalDrive = media.IsPhysicalDrive,
                 Type = media.Type,
                 DiskSize = diskInfo.Size,
-                DiskInfo = diskInfo
+                DiskInfo = diskInfo,
+                Byteswap = media.Byteswap
             });
 
             return new Result();

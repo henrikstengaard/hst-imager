@@ -14,11 +14,13 @@ import ConfirmDialog from "../components/ConfirmDialog";
 import Typography from "@mui/material/Typography";
 import Media from "../components/Media";
 import {HubConnectionBuilder} from "@microsoft/signalr";
+import CheckboxField from "../components/CheckboxField";
 
 export default function Convert() {
     const [confirmOpen, setConfirmOpen] = React.useState(false)
     const [media, setMedia] = React.useState(null)
     const [sourcePath, setSourcePath] = React.useState(null)
+    const [byteswap, setByteswap] = React.useState(false);
     const [destinationPath, setDestinationPath] = React.useState(null)
     const [connection, setConnection] = React.useState(null)
 
@@ -26,6 +28,7 @@ export default function Convert() {
         setConfirmOpen(false)
         setMedia(null)
         setSourcePath(null)
+        setByteswap(false)
         setDestinationPath(null)
         setConnection(null)
     }
@@ -66,7 +69,7 @@ export default function Convert() {
         };
     }, [connection, setMedia])
     
-    const getInfo = async (path) => {
+    const getInfo = async (path, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -75,7 +78,8 @@ export default function Convert() {
             },
             body: JSON.stringify({
                 sourceType: 'ImageFile',
-                path
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -93,7 +97,8 @@ export default function Convert() {
             body: JSON.stringify({
                 title: `Converting file '${sourcePath}' to file '${destinationPath}'`,
                 sourcePath,
-                destinationPath
+                destinationPath,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -139,6 +144,16 @@ export default function Convert() {
                                 id="browse-source-path"
                                 title="Select source image file"
                                 onChange={(path) => setSourcePath(path)}
+                                fileFilters = {[{
+                                    name: 'Compressed hard disk image files',
+                                    extensions: ['xz', 'gz', 'zip', 'rar']
+                                }, {
+                                    name: 'Hard disk image files',
+                                    extensions: ['img', 'hdf', 'vhd']
+                                }, {
+                                    name: 'All files',
+                                    extensions: ['*']
+                                }]}
                             />
                         }
                         onChange={(event) => {
@@ -151,7 +166,7 @@ export default function Convert() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            await getInfo(sourcePath)
+                            await getInfo(sourcePath, byteswap)
                         }}
                     />
                 </Grid>
@@ -179,6 +194,21 @@ export default function Convert() {
                                 return
                             }
                             setConfirmOpen(true)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap source sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            setByteswap(checked)
+                            if (media) {
+                                await getInfo(media.path, checked)
+                            }
                         }}
                     />
                 </Grid>

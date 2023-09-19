@@ -39,7 +39,8 @@
 
             var commandHelper = new CommandHelper(appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
-            var infoCommand = new InfoCommand(logger, commandHelper, physicalDrives, infoBackgroundTask.Path);
+            var infoCommand = new InfoCommand(logger, commandHelper, physicalDrives,
+                string.Concat(infoBackgroundTask.Path, infoBackgroundTask.Byteswap ? "+bs" : string.Empty));
 
             infoCommand.DiskInfoRead += async (_, args) =>
             {
@@ -51,7 +52,7 @@
             {
                 // send null info result for views to reset/clear
                 await resultHubConnection.SendInfoResult(null);
-                
+
                 var message = result.Error?.Message ?? "Info command returned error without message error";
                 logger.LogError(message);
                 await errorHubConnection.UpdateError(message, context.Token);

@@ -40,7 +40,7 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             Assert.True(result.IsSuccess);
 
             // assert - get dest media
-            var mediaResult = testCommandHelper.GetReadableFileMedia(destPath);
+            var mediaResult = await testCommandHelper.GetReadableFileMedia(destPath);
             if (mediaResult.IsFaulted)
             {
                 throw new IOException(mediaResult.Error.ToString());

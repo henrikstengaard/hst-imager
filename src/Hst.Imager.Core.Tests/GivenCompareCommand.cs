@@ -201,7 +201,7 @@
                 new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
                     sourcePath, destinationPath, new Size(), 0, false);
             var bytesProcessed = 0L;
-            compareCommand.DataProcessed += (sender, args) =>
+            compareCommand.DataProcessed += (_, args) =>
             {
                 bytesProcessed = args.BytesProcessed;
             };
@@ -210,6 +210,52 @@
             
             // assert - bytes processed comparing is equal to destination size
             Assert.Equal(destinationSize, bytesProcessed);
+        }
+
+        [Fact]
+        public async Task WhenComparingZipAndGZipCompressedImgThenDataIsIdentical()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img.zip";
+            var destinationPath = $"{Guid.NewGuid()}.img.gz";
+            var testCommandHelper = new TestCommandHelper();
+            
+            try
+            {
+                // arrange - create source zip compressed img media
+                File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.zip"), sourcePath);
+
+                // arrange - create destination gzip compressed img media
+                File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.gz"), destinationPath);
+                
+                // act - compare zip compressed img media and gzip compressed img media
+                var cancellationTokenSource = new CancellationTokenSource();
+                var compareCommand =
+                    new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                        sourcePath, destinationPath, new Size(), 0, false);
+                DataProcessedEventArgs dataProcessedEventArgs = null;
+                compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
+                var result = await compareCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+                
+                // assert - data processed is 100 percent complete and has processed all uncompressed 
+                Assert.NotNull(dataProcessedEventArgs);
+                Assert.Equal(100, dataProcessedEventArgs.PercentComplete);
+                Assert.Equal(1020055040, dataProcessedEventArgs.BytesProcessed);
+                Assert.Equal(0, dataProcessedEventArgs.BytesRemaining);
+                Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
+            }
+            finally
+            {
+                if (File.Exists(sourcePath))
+                {
+                    File.Delete(sourcePath);
+                }
+                if (File.Exists(destinationPath))
+                {
+                    File.Delete(destinationPath);
+                }
+            }
         }
     }
 }

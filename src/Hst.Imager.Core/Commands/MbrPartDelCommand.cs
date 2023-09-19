@@ -31,17 +31,17 @@ namespace Hst.Imager.Core.Commands
             this.partitionNumber = partitionNumber;
         }
 
-        public override Task<Result> Execute(CancellationToken token)
+        public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Deleting partition from Master Boot Record at '{path}'");
             
             OnDebugMessage($"Opening '{path}' as writable");
 
             var physicalDrivesList = physicalDrives.ToList();
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            var mediaResult = await commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
-                return Task.FromResult(new Result(mediaResult.Error));
+                return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
             
@@ -58,20 +58,20 @@ namespace Hst.Imager.Core.Commands
             }
             catch (Exception)
             {
-                return Task.FromResult(new Result(new Error("Master Boot Record not found")));
+                return new Result(new Error("Master Boot Record not found"));
             }
 
             OnDebugMessage($"Deleting partition number '{partitionNumber}'");
             
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
-                return Task.FromResult(new Result(new Error($"Invalid partition number '{partitionNumber}'")));
+                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
             }
             
             // delete mbr partition
             biosPartitionTable.Delete(partitionNumber - 1);
             
-            return Task.FromResult(new Result());
+            return new Result();
         }
     }
 }

@@ -19,10 +19,12 @@ import MediaSelectField from "../components/MediaSelectField";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import {Api} from "../utils/Api";
 import Typography from "@mui/material/Typography";
+import CheckboxField from "../components/CheckboxField";
 
 const initialState = {
     loading: true,
-    sourceType: 'ImageFile'
+    sourceType: 'ImageFile',
+    byteswap: false
 }
 
 export default function Info() {
@@ -36,7 +38,8 @@ export default function Info() {
 
     const {
         loading,
-        sourceType
+        sourceType,
+        byteswap
     } = state
 
     const api = React.useMemo(() => new Api(), []);
@@ -61,7 +64,7 @@ export default function Info() {
         return media === null ? medias[0].path : media.path
     }, [])
 
-    const getInfo = React.useCallback(async (path) => {
+    const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -70,13 +73,14 @@ export default function Info() {
             },
             body: JSON.stringify({
                 sourceType,
-                path
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
             console.error('Failed to get info')
         }
-    }, [sourceType])
+    }, [])
 
     // initialize
     React.useEffect(() => {
@@ -113,7 +117,7 @@ export default function Info() {
                         setMedias(medias || [])
                         if (newMedia) {
                             setPath(newPath)
-                            await getInfo(newPath)
+                            await getInfo(newPath, sourceType, byteswap)
                         }
                     })
                 })
@@ -132,7 +136,7 @@ export default function Info() {
             }
             connection.stop();
         };
-    }, [connection, getInfo, getPath, path, setMedia, setMedias, setPath, sourceType])
+    }, [byteswap, connection, getInfo, getPath, path, setMedia, setMedias, setPath, sourceType])
     
     const getInfoDisabled = isNil(path)
 
@@ -146,7 +150,7 @@ export default function Info() {
             setPath(newPath)
             setMedia(newMedia)
             if (newMedia) {
-                await getInfo(newPath)
+                await getInfo(newPath, sourceType, byteswap)
             }
         }
         set(state, name, value)
@@ -213,8 +217,18 @@ export default function Info() {
                                     title="Select image file"
                                     onChange={async (path) => {
                                         setPath(path)
-                                        await getInfo(path)
+                                        await getInfo(path, sourceType, byteswap)
                                     }}
+                                    fileFilters = {[{
+                                        name: 'Compressed hard disk image files',
+                                        extensions: ['xz', 'gz', 'zip', 'rar']
+                                    }, {
+                                        name: 'Hard disk image files',
+                                        extensions: ['img', 'hdf', 'vhd']
+                                    }, {
+                                        name: 'All files',
+                                        extensions: ['*']
+                                    }]}
                                 />
                             }
                             onChange={(event) => {
@@ -227,7 +241,7 @@ export default function Info() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo(path)
+                                await getInfo(path, sourceType, byteswap)
                             }}
                         />
                     )}
@@ -244,11 +258,29 @@ export default function Info() {
                             path={sourceType === 'PhysicalDisk' ? path || '' : null}
                             onChange={async (media) => {
                                 setPath(media.path)
-                                await getInfo(media.path)
+                                await getInfo(media.path, sourceType, byteswap)
                             }}
                         />
                     )}
                     </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            await handleChange({
+                                name: 'byteswap',
+                                value: checked
+                            })
+                            if (media) {
+                                await getInfo(path, sourceType, checked)
+                            }
+                        }}
+                    />
+                </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
@@ -270,7 +302,7 @@ export default function Info() {
                             <Button
                                 disabled={getInfoDisabled}
                                 icon="info"
-                                onClick={async () => await getInfo(path)}
+                                onClick={async () => await getInfo(path, sourceType, byteswap)}
                             >
                                 Get info
                             </Button>

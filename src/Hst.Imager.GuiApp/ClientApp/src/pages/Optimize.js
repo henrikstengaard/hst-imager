@@ -14,6 +14,7 @@ import SelectField from "../components/SelectField";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Media from "../components/Media";
 import Typography from "@mui/material/Typography";
+import CheckboxField from "../components/CheckboxField";
 
 const unitOptions = [{
     title: 'GB',
@@ -49,6 +50,7 @@ const formatPartitionTableType = (partitionTableType) => {
 export default function Optimize() {
     const [confirmOpen, setConfirmOpen] = React.useState(false);
     const [media, setMedia] = React.useState(null)
+    const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [path, setPath] = React.useState(null)
@@ -129,7 +131,7 @@ export default function Optimize() {
         };
     }, [connection, setMedia, setPrefillSize, setPrefillSizeOptions, setUnit, setSize])
     
-    const getInfo = async (path) => {
+    const getInfo = async (path, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -138,7 +140,8 @@ export default function Optimize() {
             },
             body: JSON.stringify({
                 sourceType: 'ImageFile',
-                path
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -157,7 +160,7 @@ export default function Optimize() {
             body: JSON.stringify({
                 title: `Optimizing image file '${path}'`,
                 path,
-                size: (size * unitOption.size),
+                size: (size * unitOption.size)
             })
         });
         if (!response.ok) {
@@ -171,6 +174,7 @@ export default function Optimize() {
         }
         setConfirmOpen(false)
         setMedia(null)
+        setByteswap(false)
         setSize(0)
         setUnit('bytes')
         setPath(null)
@@ -187,7 +191,7 @@ export default function Optimize() {
     }
 
     const handleUpdate = async () => {
-        await getInfo(path)
+        await getInfo(path, byteswap)
     }
     
     const unitOption = isNil(unit) ? null : unitOptions.find(x => x.value === unit)
@@ -223,7 +227,7 @@ export default function Optimize() {
                                 title="Select image file"
                                 onChange={async (path) => {
                                     setPath(path)
-                                    await getInfo(path)
+                                    await getInfo(path, byteswap)
                                 }}
                             />
                         }
@@ -237,7 +241,22 @@ export default function Optimize() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            await getInfo(path)
+                            await getInfo(path, byteswap)
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            setByteswap(checked)
+                            if (media) {
+                                await getInfo(path, checked)
+                            }
                         }}
                     />
                 </Grid>

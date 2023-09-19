@@ -22,11 +22,10 @@ using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Core.Extensions;
-using Hst.Imager.Core.Helpers;
+using Helpers;
 using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
-using FileMode = System.IO.FileMode;
 
 public abstract class FsCommandBase : CommandBase
 {
@@ -38,31 +37,6 @@ public abstract class FsCommandBase : CommandBase
         this.commandHelper = commandHelper;
         this.physicalDrives = physicalDrives;
     }
-
-    private static readonly byte[]
-        VhdMagicNumber = new byte[]
-        {
-            0x63, 0x6F, 0x6E, 0x65, 0x63, 0x74, 0x69, 0x78
-        }; // "conectix" at offset 0 (Windows Virtual PC Virtual Hard Disk file format)
-
-    private static readonly byte[]
-        RdbMagicNumber = new byte[] { 0x52, 0x44, 0x53, 0x4B }; // "RDSK" at sector 0-15 (Amiga Rigid Disk Block)
-
-    private static readonly byte[]
-        Iso9660MagicNumber = new byte[]
-            { 0x43, 0x44, 0x30, 0x30, 0x31 }; // CD001 at offset 0x8001, 0x8801 or 0x9001 (ISO9660 CD/DVD image file)
-
-    private static readonly byte[]
-        AdfDosMagicNumber = new byte[] { 0x44, 0x4f, 0x53 }; // "DOS" at offset 0 (Amiga Disk File)
-
-    private static readonly byte[] LhaMagicNumber = new byte[] { 0x2D, 0x6C, 0x68 }; // "-lh" at offset 2 (Lha archive)
-    private static readonly byte[] LzxMagicNumber = new byte[] { 0x4C, 0x5A, 0x58 }; // "LZX" at offset 0 (Lzx archive)
-
-    private static readonly byte[] LzwMagicNumber = new byte[] { 0x1f, 0x9d }; // offset 0 (.Z archive)
-    
-    private static readonly byte[] ZipMagicNumber1 = new byte[] { 0x50, 0x4B, 0x03, 0x04 }; // "PK" at offset 0 (Zip archive, normal archive)
-    private static readonly byte[] ZipMagicNumber2 = new byte[] { 0x50, 0x4B, 0x05, 0x06 }; // "PK" at offset 0 (Zip archive, empty archive)
-    private static readonly byte[] ZipMagicNumber3 = new byte[] { 0x50, 0x4B, 0x07, 0x08 }; // "PK" at offset 0 (Zip archive, spanned archive)
     
     private async Task<bool> IsAdfMedia(MediaResult mediaResult)
     {
@@ -77,7 +51,7 @@ public abstract class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        if (!HasMagicNumber(AdfDosMagicNumber, sectorBytes, 0))
+        if (!MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, sectorBytes, 0))
         {
             return false;
         }
@@ -98,8 +72,8 @@ public abstract class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return HasMagicNumber(ZipMagicNumber1, sectorBytes, 0) || HasMagicNumber(ZipMagicNumber2, sectorBytes, 0) ||
-               HasMagicNumber(ZipMagicNumber3, sectorBytes, 0);
+        return MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber1, sectorBytes, 0) || MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber2, sectorBytes, 0) ||
+               MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber3, sectorBytes, 0);
     }
     
     private async Task<bool> IsLhaMedia(MediaResult mediaResult)
@@ -115,7 +89,7 @@ public abstract class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return HasMagicNumber(LhaMagicNumber, sectorBytes, 2);
+        return MagicBytes.HasMagicNumber(MagicBytes.LhaMagicNumber, sectorBytes, 2);
     }
 
     private async Task<bool> IsLzxMedia(MediaResult mediaResult)
@@ -131,7 +105,7 @@ public abstract class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return HasMagicNumber(LzxMagicNumber, sectorBytes, 0);
+        return MagicBytes.HasMagicNumber(MagicBytes.LzxMagicNumber, sectorBytes, 0);
     }
     
     private async Task<bool> IsLzwMedia(MediaResult mediaResult)
@@ -147,7 +121,7 @@ public abstract class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return HasMagicNumber(LzwMagicNumber, sectorBytes, 0);
+        return MagicBytes.HasMagicNumber(MagicBytes.LzwMagicNumber, sectorBytes, 0);
     }
 
     private async Task<bool> IsIso9660Media(MediaResult mediaResult)
@@ -165,7 +139,7 @@ public abstract class FsCommandBase : CommandBase
         var sectorBytes = await stream.ReadBytes(512);
 
         // return true, if offset 0x8001 has iso magic number
-        if (HasMagicNumber(Iso9660MagicNumber, sectorBytes, 1))
+        if (MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1))
         {
             return true;
         }
@@ -175,7 +149,7 @@ public abstract class FsCommandBase : CommandBase
         sectorBytes = await stream.ReadBytes(512);
 
         // return true, if offset 0x8801 has iso magic number
-        if (HasMagicNumber(Iso9660MagicNumber, sectorBytes, 1))
+        if (MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1))
         {
             return true;
         }
@@ -185,7 +159,7 @@ public abstract class FsCommandBase : CommandBase
         sectorBytes = await stream.ReadBytes(512);
 
         // return true, if offset 0x9001 has iso magic number
-        return HasMagicNumber(Iso9660MagicNumber, sectorBytes, 1);
+        return MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1);
     }
 
     private async Task<bool> IsDiskMedia(MediaResult mediaResult)
@@ -210,10 +184,10 @@ public abstract class FsCommandBase : CommandBase
     private async Task<bool> HasDiskMediaMagicNumber(Stream stream)
     {
         stream.Seek(0, SeekOrigin.Begin);
-        var sectorBytes = await stream.ReadBytes(VhdMagicNumber.Length);
+        var sectorBytes = await stream.ReadBytes(MagicBytes.VhdMagicNumber.Length);
 
         // virtual disk
-        if (HasMagicNumber(VhdMagicNumber, sectorBytes, 0))
+        if (MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sectorBytes, 0))
         {
             return true;
         }
@@ -221,7 +195,7 @@ public abstract class FsCommandBase : CommandBase
         // rigid disk block
         for (var i = 1; i <= 16; i++)
         {
-            if (HasMagicNumber(RdbMagicNumber, sectorBytes, 0))
+            if (MagicBytes.HasMagicNumber(MagicBytes.RdbMagicNumber, sectorBytes, 0))
             {
                 return true;
             }
@@ -233,23 +207,10 @@ public abstract class FsCommandBase : CommandBase
             }
 
             stream.Seek(i * 512, SeekOrigin.Begin);
-            sectorBytes = await stream.ReadBytes(VhdMagicNumber.Length);
+            sectorBytes = await stream.ReadBytes(MagicBytes.VhdMagicNumber.Length);
         }
 
         return false;
-    }
-
-    private bool HasMagicNumber(byte[] magicNumber, byte[] data, int dataOffset)
-    {
-        for (var i = 0; i < magicNumber.Length && dataOffset + i < data.Length; i++)
-        {
-            if (magicNumber[i] != data[dataOffset + i])
-            {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
@@ -365,7 +326,7 @@ public abstract class FsCommandBase : CommandBase
                 new Error($"Partition table not found in path '{mediaResult.FileSystemPath}'"));
         }
 
-        var media = commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath);
+        var media = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath);
         if (media.IsFaulted)
         {
             return new Result<IEntryIterator>(media.Error);
@@ -487,7 +448,7 @@ public abstract class FsCommandBase : CommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 
-        var media = commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
+        var media = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
         if (media.IsFaulted)
         {
             return new Result<IEntryWriter>(media.Error);

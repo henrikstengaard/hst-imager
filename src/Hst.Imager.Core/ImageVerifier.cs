@@ -38,8 +38,15 @@
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            source.Seek(0, SeekOrigin.Begin);
-            destination.Seek(0, SeekOrigin.Begin);
+            if (source.CanSeek)
+            {
+                source.Seek(0, SeekOrigin.Begin);
+            }
+
+            if (destination.CanSeek)
+            {
+                destination.Seek(0, SeekOrigin.Begin);
+            }
 
             sendDataProcessed = true;
             OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
@@ -58,7 +65,9 @@
                     return new Result<Error>(new Error("Cancelled"));
                 }
 
-                var verifyBytes = Convert.ToInt32(offset + bufferSize > size ? size - offset : bufferSize);
+                var verifyBytes = size == 0
+                    ? bufferSize
+                    : Convert.ToInt32(offset + bufferSize > size ? size - offset : bufferSize);
                 
                 bool srcReadFailed;
                 var srcRetry = 0;
@@ -66,7 +75,11 @@
                 {
                     try
                     {
-                        source.Seek(offset, SeekOrigin.Begin);
+                        if (source.CanSeek)
+                        {
+                            source.Seek(offset, SeekOrigin.Begin);
+                        }
+
                         srcBytesRead = await source.ReadAsync(srcBuffer, 0, verifyBytes, token);
                         srcReadFailed = false;
                     }
@@ -91,7 +104,11 @@
                 {
                     try
                     {
-                        destination.Seek(offset, SeekOrigin.Begin);
+                        if (destination.CanSeek)
+                        {
+                            destination.Seek(offset, SeekOrigin.Begin);
+                        }
+
                         destBytesRead = await destination.ReadAsync(destBuffer, 0, verifyBytes, token);
                         destReadFailed = false;
                     }

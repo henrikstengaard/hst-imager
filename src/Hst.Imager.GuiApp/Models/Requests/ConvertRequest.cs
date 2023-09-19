@@ -12,5 +12,6 @@
         
         [Required]
         public string DestinationPath { get; set; }
+        public bool Byteswap { get; set; }
     }
 }

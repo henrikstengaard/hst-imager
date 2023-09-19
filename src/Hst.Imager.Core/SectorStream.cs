@@ -27,7 +27,11 @@
 
         public override void Close()
         {
-            Flush();
+            if (stream != null && stream.CanWrite)
+            {
+                Flush();
+            }
+
             base.Close();
         }
 

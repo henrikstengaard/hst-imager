@@ -42,7 +42,8 @@
 
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var writeCommand =
-                    new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives, writeBackgroundTask.SourcePath,
+                    new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives,
+                        string.Concat(writeBackgroundTask.SourcePath, writeBackgroundTask.Byteswap ? "+bs" : string.Empty),
                         writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
                         writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force);
                 writeCommand.DataProcessed += async (_, args) =>

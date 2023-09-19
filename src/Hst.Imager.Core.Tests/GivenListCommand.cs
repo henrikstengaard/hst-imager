@@ -26,7 +26,7 @@
             
             var listCommand = new ListCommand(new NullLogger<ListCommand>(), fakeCommandHelper, physicalDrives, false);
             IEnumerable<MediaInfo> mediaInfos = null;
-            listCommand.ListRead += (sender, args) =>
+            listCommand.ListRead += (_, args) =>
             {
                 mediaInfos = args?.MediaInfos;
             };
@@ -60,7 +60,7 @@
             
             var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives, false);
             IEnumerable<MediaInfo> mediaInfos = null;
-            listCommand.ListRead += (sender, args) =>
+            listCommand.ListRead += (_, args) =>
             {
                 mediaInfos = args?.MediaInfos;
             };

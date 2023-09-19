@@ -62,7 +62,7 @@ public class BlockReadCommand : CommandBase
 
         OnDebugMessage($"Opening '{path}' as readable");
 
-        var mediaResult = commandHelper.GetReadableMedia(physicalDrives, path);
+        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, path);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);

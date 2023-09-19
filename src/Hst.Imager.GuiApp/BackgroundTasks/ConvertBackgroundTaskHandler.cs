@@ -38,7 +38,8 @@
                 var commandHelper = new CommandHelper(appState.IsAdministrator);
                 var convertCommand =
                     new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper, 
-                        convertBackgroundTask.SourcePath, convertBackgroundTask.DestinationPath, new Size(), false);
+                        string.Concat(convertBackgroundTask.SourcePath, convertBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                        convertBackgroundTask.DestinationPath, new Size(), false);
                 convertCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubContext.SendProgress(new Progress

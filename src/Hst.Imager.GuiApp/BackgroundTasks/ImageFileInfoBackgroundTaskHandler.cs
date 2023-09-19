@@ -37,7 +37,7 @@
             var commandHelper = new CommandHelper(appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
             var infoCommand = new InfoCommand(logger, commandHelper, Enumerable.Empty<IPhysicalDrive>(),
-                infoBackgroundTask.Path);
+                string.Concat(infoBackgroundTask.Path, infoBackgroundTask.Byteswap ? "+bs" : string.Empty));
 
             infoCommand.DiskInfoRead += async (_, args) =>
             {

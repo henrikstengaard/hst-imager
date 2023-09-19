@@ -33,7 +33,7 @@ public class RdbBackupCommand : CommandBase
             
         OnDebugMessage($"Opening '{diskPath}' as readable");
 
-        var mediaResult = commandHelper.GetReadableMedia(physicalDrives, diskPath);
+        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, diskPath);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);

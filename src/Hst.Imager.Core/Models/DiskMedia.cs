@@ -7,8 +7,9 @@
     {
         public VirtualDisk Disk { get; private set; }
 
-        public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive, VirtualDisk disk, Stream stream = null) 
-            : base(path, name, size, type, isPhysicalDrive, stream)
+        public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive,
+            VirtualDisk disk, bool byteswap, Stream stream = null) 
+            : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
         {
             this.Disk = disk;
         }

@@ -54,7 +54,7 @@
             
             var physicalDrivesList = physicalDrives.ToList();
             
-            var sourceMediaResult = commandHelper.GetPhysicalDriveMedia(physicalDrivesList, sourcePath);
+            var sourceMediaResult = await commandHelper.GetPhysicalDriveMedia(physicalDrivesList, sourcePath);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
@@ -73,9 +73,8 @@
             OnInformationMessage($"Size '{readSize.FormatBytes()}' ({readSize} bytes)");
             
             OnDebugMessage($"Opening '{destinationPath}' as writable");
-
             
-            var destinationMediaResult = commandHelper.GetWritableFileMedia(destinationPath, readSize, true);
+            var destinationMediaResult = await commandHelper.GetWritableFileMedia(destinationPath, readSize, true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);
@@ -84,7 +83,9 @@
             var destinationStream = destinationMedia.Stream;
 
             var isVhd = commandHelper.IsVhd(destinationPath);
-            if (!isVhd)
+            var isZip = commandHelper.IsZip(destinationPath);
+            var isGZip = commandHelper.IsGZip(destinationPath);
+            if (!isVhd && !isZip && !isGZip)
             {
                 destinationStream.SetLength(readSize);
             }

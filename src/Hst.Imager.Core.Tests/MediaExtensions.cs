@@ -2,7 +2,7 @@
 {
     using System;
     using System.IO;
-    using Hst.Imager.Core.Models;
+    using Models;
 
     public static class MediaExtensions
     {

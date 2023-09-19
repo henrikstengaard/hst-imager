@@ -101,7 +101,7 @@ public class GivenMbrInitCommand : FsCommandTestBase
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, imgPath, new byte[diskSize]);
 
-        CreateMbrDisk(testCommandHelper, imgPath, diskSize);
+        await CreateMbrDisk(testCommandHelper, imgPath, diskSize);
         
         // arrange - mbr init command
         var cancellationTokenSource = new CancellationTokenSource();
@@ -127,7 +127,7 @@ public class GivenMbrInitCommand : FsCommandTestBase
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, imgPath, new byte[diskSize]);
 
-        CreateGptDisk(testCommandHelper, imgPath, diskSize);
+        await CreateGptDisk(testCommandHelper, imgPath, diskSize);
         
         // arrange - mbr init command
         var cancellationTokenSource = new CancellationTokenSource();
@@ -145,7 +145,7 @@ public class GivenMbrInitCommand : FsCommandTestBase
     private async Task AssertMbr(ICommandHelper commandHelper, string path)
     {
         // assert - read disk info
-        var mediaResult = commandHelper.GetReadableMedia(new List<IPhysicalDrive>(), path);
+        var mediaResult = await commandHelper.GetReadableMedia(new List<IPhysicalDrive>(), path);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await commandHelper.ReadDiskInfo(media);

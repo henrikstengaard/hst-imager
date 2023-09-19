@@ -6,6 +6,7 @@
     public class InfoBackgroundTask : IBackgroundTask
     {
         public string Path { get; set; }
+        public bool Byteswap { get; set; }
 
         [JsonIgnore]
         public CancellationToken Token { get; set; }

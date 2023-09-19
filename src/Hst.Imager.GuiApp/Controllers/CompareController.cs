@@ -48,7 +48,8 @@
                     DestinationPath = request.DestinationPath,
                     Size = request.Size,
                     Force = request.Force,
-                    Retries = request.Retries
+                    Retries = request.Retries,
+                    Byteswap = request.Byteswap
                 };
                 var handler =
                     new ImageFileCompareBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
@@ -66,7 +67,8 @@
                     DestinationPath = request.DestinationPath,
                     Size = request.Size,
                     Force = request.Force,
-                    Retries = request.Retries
+                    Retries = request.Retries,
+                    Byteswap = request.Byteswap
                 }
             });
 

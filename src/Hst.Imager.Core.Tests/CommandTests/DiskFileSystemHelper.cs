@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using System.Threading.Tasks;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.IO;
@@ -46,9 +48,9 @@ public static class DiskFileSystemHelper
         return guidPartitionTable.Partitions[partitionIndex];
     }
 
-    public static Media GetDiskMedia(ICommandHelper commandHelper, string path)
+    public static async Task<Media> GetDiskMedia(ICommandHelper commandHelper, string path)
     {
-        var mediaResult = commandHelper.GetWritableFileMedia(path);
+        var mediaResult = await commandHelper.GetWritableFileMedia(path);
         if (mediaResult.IsFaulted)
         {
             throw new IOException(mediaResult.Error.ToString());
@@ -61,7 +63,8 @@ public static class DiskFileSystemHelper
         }
         
         var disk = new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-        return new DiskMedia(path, Path.GetFileName(path), disk.Capacity, Media.MediaType.Raw, false, disk, media.Stream);
+        return new DiskMedia(path, Path.GetFileName(path), disk.Capacity, Media.MediaType.Raw, false, disk, 
+            media.Byteswap, media.Stream);
     }
 
     public static VirtualDisk ToDisk(Media media)

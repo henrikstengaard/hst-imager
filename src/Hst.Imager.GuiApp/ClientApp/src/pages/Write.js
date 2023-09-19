@@ -54,6 +54,7 @@ export default function Write() {
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [destinationMedia, setDestinationMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
+    const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [sourcePath, setSourcePath] = React.useState(null)
@@ -90,7 +91,7 @@ export default function Write() {
         await getMedias()
     }, [api])
 
-    const getInfo = async (path) => {
+    const getInfo = async (path, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -99,7 +100,8 @@ export default function Write() {
             },
             body: JSON.stringify({
                 sourceType: 'ImageFile',
-                path
+                path,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -206,7 +208,8 @@ export default function Write() {
                 size: (size * unitOption.size),
                 retries,
                 verify,
-                force
+                force,
+                byteswap
             })
         });
         if (!response.ok) {
@@ -234,10 +237,15 @@ export default function Write() {
         setSourceMedia(null)
         setDestinationMedia(null)
         setMedias([])
+        setByteswap(false)
+        setSize(0)
+        setUnit('bytes')
         setSourcePath(null)
         setVerify(false)
         setForce(false)
         setRetries(5)
+        setPrefillSize(null)
+        setPrefillSizeOptions([])
         setConnection(null)
     }
     
@@ -272,8 +280,18 @@ export default function Write() {
                                 title="Select source image file"
                                 onChange={async (path) => {
                                     setSourcePath(path)
-                                    await getInfo(path)
+                                    await getInfo(path, byteswap)
                                 }}
+                                fileFilters = {[{
+                                    name: 'Compressed hard disk image files',
+                                    extensions: ['xz', 'gz', 'zip', 'rar']
+                                }, {
+                                    name: 'Hard disk image files',
+                                    extensions: ['img', 'hdf', 'vhd']
+                                }, {
+                                    name: 'All files',
+                                    extensions: ['*']
+                                }]}
                             />
                         }
                         onChange={(event) => {
@@ -286,7 +304,7 @@ export default function Write() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            await getInfo(sourcePath)
+                            await getInfo(sourcePath, byteswap)
                         }}
                     />
                 </Grid>
@@ -303,6 +321,21 @@ export default function Write() {
                         medias={medias || []}
                         path={get(destinationMedia, 'path') || ''}
                         onChange={(media) => setDestinationMedia(media)}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="byteswap"
+                        label="Byteswap source sectors"
+                        value={byteswap}
+                        onChange={async (checked) => {
+                            setByteswap(checked)
+                            if (sourceMedia) {
+                                await getInfo(sourceMedia.path, byteswap)
+                            }
+                        }}
                     />
                 </Grid>
             </Grid>

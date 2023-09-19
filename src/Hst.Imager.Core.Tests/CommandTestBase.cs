@@ -11,7 +11,7 @@
         
         protected async Task<byte[]> ReadMediaBytes(ICommandHelper commandHelper, string path, long size)
         {
-            var mediaResult = commandHelper.GetReadableFileMedia(path);
+            var mediaResult = await commandHelper.GetReadableFileMedia(path);
             using var media = mediaResult.Value;
             var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
             var bytes = new byte[size];

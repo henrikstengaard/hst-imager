@@ -1,6 +1,6 @@
 ﻿namespace Hst.Imager.Core.Tests
 {
-    using Hst.Imager.Core.Helpers;
+    using Helpers;
     using Xunit;
 
     public class GivenElevateHelper

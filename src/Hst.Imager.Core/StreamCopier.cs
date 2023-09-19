@@ -50,7 +50,11 @@
             {
                 source.Seek(sourceOffset, SeekOrigin.Begin);
             }
-            destination.Seek(destinationOffset, SeekOrigin.Begin);
+
+            if (destination.CanSeek)
+            {
+                destination.Seek(destinationOffset, SeekOrigin.Begin);
+            }
 
             sendDataProcessed = true;
             OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
@@ -127,7 +131,11 @@
                     {
                         try
                         {
-                            destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
+                            if (destination.CanSeek)
+                            {
+                                destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
+                            }
+                            
                             await destination.WriteAsync(sectorData, 0, sectorData.Length, token);
                             destWriteFailed = false;
                                 

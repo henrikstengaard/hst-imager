@@ -1,4 +1,9 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using System.IO.Compression;
+using Hst.Imager.Core.Extensions;
+using SharpCompress.Archives.Rar;
+using GZipStream = SharpCompress.Compressors.Deflate.GZipStream;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -18,7 +23,7 @@
     public class CommandHelper : ICommandHelper
     {
         private readonly bool isAdministrator;
-        
+
         /// <summary>
         /// Active medias contains opened medias and is used to get reuse medias without opening same media twice
         /// </summary>
@@ -31,7 +36,7 @@
             DiscUtils.Containers.SetupHelper.SetupContainers();
             DiscUtils.FileSystems.SetupHelper.SetupFileSystems();
         }
-        
+
         /// <summary>
         /// Clear active medias to avoid source and destination being reused between commands
         /// </summary>
@@ -41,6 +46,7 @@
             {
                 activeMedia.Dispose();
             }
+
             this.activeMedias.Clear();
         }
 
@@ -56,10 +62,12 @@
             {
                 if (diskMedia.IsDisposed)
                 {
-                    var vhdDisk = VirtualDisk.OpenDisk(path, media.IsWriteable ? FileAccess.ReadWrite : FileAccess.Read);
+                    var vhdDisk =
+                        VirtualDisk.OpenDisk(path, media.IsWriteable ? FileAccess.ReadWrite : FileAccess.Read);
                     vhdDisk.Content.Position = 0;
                     diskMedia.SetDisk(vhdDisk);
                 }
+
                 return diskMedia;
             }
 
@@ -71,8 +79,8 @@
 
             return media;
         }
-        
-        public virtual Result<Media> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path)
+
+        public virtual Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path)
         {
             return GetPhysicalDriveMedia(physicalDrives, path).Then(() => GetReadableFileMedia(path));
         }
@@ -93,7 +101,8 @@
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
 
-        public virtual Result<Media> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+        public virtual async Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives,
+            string path,
             bool writeable = false)
         {
             var modifiersResult = ResolveModifiers(path);
@@ -103,8 +112,9 @@
                 path = modifiersResult.Path;
                 modifiers = modifiersResult.Modifiers;
             }
-            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
-            
+
+            var byteSwap = !writeable && modifiers.HasFlag(ModifierEnum.ByteSwap);
+
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
@@ -114,7 +124,7 @@
             var media = GetActiveMedia(physicalDrivePath);
             if (media != null)
             {
-                return !isAdministrator 
+                return !isAdministrator
                     ? new Result<Media>(new Error($"Path '{path}' requires administrator privileges"))
                     : new Result<Media>(media);
             }
@@ -136,8 +146,7 @@
             physicalDrive.SetWritable(writeable);
             physicalDrive.SetByteSwap(byteSwap);
             var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
-                Media.MediaType.Raw,
-                true, physicalDrive.Open());
+                Media.MediaType.Raw, true, physicalDrive.Open(), byteSwap);
             this.activeMedias.Add(physicalDriveMedia);
             return new Result<Media>(physicalDriveMedia);
         }
@@ -163,7 +172,7 @@
             return null;
         }
 
-        public virtual Result<Media> GetReadableFileMedia(string path)
+        public virtual async Task<Result<Media>> GetReadableFileMedia(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -177,7 +186,9 @@
                 path = modifiersResult.Path;
                 modifiers = modifiersResult.Modifiers;
             }
-            
+
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+
             path = PathHelper.GetFullPath(path);
             if (!File.Exists(path))
             {
@@ -194,7 +205,7 @@
             if (!IsVhd(path))
             {
                 var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
-                var fileMedia = ResolveFileMedia(path, name, fileStream, modifiers);
+                var fileMedia = await ResolveFileMedia(path, name, fileStream, modifiers);
                 this.activeMedias.Add(fileMedia);
                 return new Result<Media>(fileMedia);
             }
@@ -202,40 +213,215 @@
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
             var vhdMedia = new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                new SectorStream(vhdDisk.Content, modifiers.HasFlag(ModifierEnum.ByteSwap), leaveOpen:true));
+                byteSwap, new SectorStream(vhdDisk.Content, byteSwap, leaveOpen: true));
             this.activeMedias.Add(vhdMedia);
             return new Result<Media>(vhdMedia);
         }
 
-        private Media ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
+        private async Task<Media> ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
         {
-            if (SharpCompress.Compressors.Xz.XZStream.IsXZStream(stream))
+            stream.Position = 0;
+            var headerBytes = new byte[512];
+            var bytesRead = await stream.ReadAsync(headerBytes, 0, headerBytes.Length);
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+
+            // rar media
+            var rarMedia = headerBytes.HasMagicNumber(MagicBytes.RarMagicNumber150) ||
+                           headerBytes.HasMagicNumber(MagicBytes.RarMagicNumber500)
+                ? await ResolveRarMedia(path, name, stream, byteSwap)
+                : null;
+            if (rarMedia != null)
             {
-                stream.Position = 0;
-                var zxStream = new CloseStream(new SharpCompress.Compressors.Xz.XZStream(stream), stream);
-                return new Media(path, name, 0, Media.MediaType.Raw, false, zxStream);
+                return rarMedia;
             }
 
+            // zip media
+            var zipMedia = headerBytes.HasMagicNumber(MagicBytes.ZipMagicNumber1) ||
+                           headerBytes.HasMagicNumber(MagicBytes.ZipMagicNumber2) ||
+                           headerBytes.HasMagicNumber(MagicBytes.ZipMagicNumber3)
+                ? await ResolveZipMedia(path, name, stream, byteSwap)
+                : null;
+            if (zipMedia != null)
+            {
+                return zipMedia;
+            }
+
+            // zx media
+            var zxMedia = headerBytes.HasMagicNumber(MagicBytes.ZxHeader)
+                ? await ResolveZxMedia(path, name, stream, byteSwap)
+                : null;
+            if (zxMedia != null)
+            {
+                return zxMedia;
+            }
+
+            // gzip stream
+            var gzMedia = headerBytes.HasMagicNumber(MagicBytes.GzHeader)
+                ? await ResolveGzMedia(path, name, stream, byteSwap)
+                : null;
+            if (gzMedia != null)
+            {
+                return gzMedia;
+            }
+
+            // raw stream
             stream.Position = 0;
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, 
-                modifiers.HasFlag(ModifierEnum.ByteSwap) ? new SectorStream(stream, byteSwap: true) : stream);
+            return new Media(path, name, stream.Length, Media.MediaType.Raw, false,
+                new SectorStream(stream, byteSwap: byteSwap, leaveOpen: false), byteSwap);
         }
 
-        public virtual Result<Media> GetWritableFileMedia(string path, long? size = null, bool create = false)
+        private async Task<Media> ResolveRarMedia(string path, string name, Stream stream, bool byteSwap)
+        {
+            stream.Position = 0;
+            var rarArchive = RarArchive.Open(stream);
+            var rarEntry =
+                rarArchive.Entries.FirstOrDefault(x =>
+                    x.Key.EndsWith(".img", StringComparison.OrdinalIgnoreCase) ||
+                    x.Key.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase));
+            if (rarEntry == null)
+            {
+                return null;
+            }
+            
+            var headerBytes = new byte[512];
+            stream.Position = 0;
+            Stream rarEntryStream;
+            await using (rarEntryStream = rarEntry.OpenEntryStream())
+            {
+                if (await rarEntryStream.ReadAsync(headerBytes, 0, headerBytes.Length) == 0)
+                {
+                    return null;
+                }
+            }
+
+            rarEntryStream = rarEntry.OpenEntryStream();
+            return new Media(path, Path.GetFileName(rarEntry.Key), rarEntry.Size,
+                MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
+                    ? Media.MediaType.CompressedVhd
+                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(
+                    new SectorStream(rarEntryStream, leaveOpen: true, byteSwap: byteSwap), length: rarEntry.Size,
+                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                        rarEntryStream.Fill(buffer, offset, count)), byteSwap);
+        }
+        
+        private async Task<Media> ResolveZipMedia(string path, string name, Stream stream, bool byteSwap)
+        {
+            stream.Position = 0;
+            var zipArchive = new ZipArchive(stream);
+            var zipEntry =
+                zipArchive.Entries.FirstOrDefault(x =>
+                    x.Name.EndsWith(".img", StringComparison.OrdinalIgnoreCase) ||
+                    x.Name.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase));
+            if (zipEntry == null)
+            {
+                return null;
+            }
+
+            var headerBytes = new byte[512];
+            stream.Position = 0;
+            Stream zipEntryStream;
+            await using (zipEntryStream = zipEntry.Open())
+            {
+                if (await zipEntryStream.ReadAsync(headerBytes, 0, headerBytes.Length) == 0)
+                {
+                    return null;
+                }
+            }
+
+            zipEntryStream = zipEntry.Open();
+            return new Media(path, Path.GetFileName(zipEntry.Name), zipEntry.Length,
+                MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
+                    ? Media.MediaType.CompressedVhd
+                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(
+                    new SectorStream(zipEntryStream, leaveOpen: true, byteSwap: byteSwap), length: zipEntry.Length,
+                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                        zipEntryStream.Fill(buffer, offset, count)), byteSwap);
+        }
+
+        private async Task<Media> ResolveZxMedia(string path, string name, Stream stream, bool byteSwap)
+        {
+            stream.Position = 0;
+            var sizeAndHeader = await GetStreamLength(new SharpCompress.Compressors.Xz.XZStream(stream));
+
+            stream.Position = 0;
+            var zxStream = new SharpCompress.Compressors.Xz.XZStream(stream);
+            return new Media(path, name, sizeAndHeader.Item1,
+                MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
+                    ? Media.MediaType.CompressedVhd
+                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(
+                    new SectorStream(zxStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                        zxStream.Fill(buffer, offset, count)), byteSwap);
+        }
+
+        private async Task<Media> ResolveGzMedia(string path, string name, Stream stream, bool byteSwap)
+        {
+            stream.Position = 0;
+            var sizeAndHeader =
+                await GetStreamLength(new System.IO.Compression.GZipStream(stream, CompressionMode.Decompress));
+
+            stream.Position = 0;
+            var gZipStream = new System.IO.Compression.GZipStream(stream, CompressionMode.Decompress);
+            return new Media(path, name, sizeAndHeader.Item1,
+                MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
+                    ? Media.MediaType.CompressedVhd
+                    : Media.MediaType.CompressedRaw, false,
+                new InterceptorStream(
+                    new SectorStream(gZipStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                        gZipStream.Fill(buffer, offset, count)), byteSwap);
+        }
+
+        private async Task<Tuple<long, byte[]>> GetStreamLength(Stream stream)
+        {
+            var headerBytes = new byte[512];
+
+            var size = 0L;
+            var bytesRead = 0;
+            var buffer = new byte[1024 * 1024];
+            var count = 0;
+
+            do
+            {
+                bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                size += bytesRead;
+
+                if (count == 0)
+                {
+                    Array.Copy(buffer, 0, headerBytes, 0, headerBytes.Length);
+                }
+
+                count++;
+            } while (bytesRead > 0);
+
+            return new Tuple<long, byte[]>(size, headerBytes);
+        }
+
+        public virtual Task<Result<Media>> GetWritableFileMedia(string path, long? size = null, bool create = false)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
                 throw new ArgumentNullException(path);
             }
 
+            var modifiersResult = ResolveModifiers(path);
+            var modifiers = ModifierEnum.None;
+            if (modifiersResult.HasModifiers)
+            {
+                path = modifiersResult.Path;
+                modifiers = modifiersResult.Modifiers;
+            }
+
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+
             path = PathHelper.GetFullPath(path);
-            
+
             var media = GetActiveMedia(path);
             if (media != null)
             {
-                return new Result<Media>(media);
+                return Task.FromResult(new Result<Media>(media));
             }
-            
+
             var destDir = Path.GetDirectoryName(path);
 
             if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
@@ -250,10 +436,9 @@
                 if (!IsVhd(path))
                 {
                     var fileStream = CreateWriteableStream(path, true);
-                    var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
-                        fileStream);
+                    var fileMedia = ResolveWritableFileMedia(path, name, fileStream);
                     this.activeMedias.Add(fileMedia);
-                    return new Result<Media>(fileMedia);
+                    return Task.FromResult(new Result<Media>(fileMedia));
                 }
 
                 if (size == null || size.Value == 0)
@@ -267,27 +452,58 @@
 
             if (!File.Exists(path))
             {
-                return new Result<Media>(new PathNotFoundError($"Path '{path}' not found", nameof(path)));
+                return Task.FromResult(
+                    new Result<Media>(new PathNotFoundError($"Path '{path}' not found", nameof(path))));
             }
 
             if (!IsVhd(path))
             {
                 var fileStream = CreateWriteableStream(path, false);
                 var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
-                    fileStream);
+                    new SectorStream(fileStream, leaveOpen: false, byteSwap: byteSwap), byteSwap);
                 this.activeMedias.Add(fileMedia);
-                return new Result<Media>(fileMedia);
+                return Task.FromResult(new Result<Media>(fileMedia));
             }
 
             var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
             disk.Content.Position = 0;
             var vhdMedia = new DiskMedia(path, name, disk.Capacity, Media.MediaType.Vhd, false,
-                disk, new SectorStream(disk.Content, leaveOpen:true));
+                disk, byteSwap, new SectorStream(disk.Content, leaveOpen: true, byteSwap: byteSwap));
             this.activeMedias.Add(vhdMedia);
-            return new Result<Media>(vhdMedia);
+            return Task.FromResult(new Result<Media>(vhdMedia));
         }
 
-        public virtual Result<Media> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+        private Media ResolveWritableFileMedia(string path, string name, Stream stream)
+        {
+            if (IsZip(path))
+            {
+                var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create);
+                var filename = Path.GetFileNameWithoutExtension(path);
+                if (!filename.EndsWith(".img", StringComparison.OrdinalIgnoreCase))
+                {
+                    filename += ".img";
+                }
+                var zipEntry = zipArchive.CreateEntry(filename);
+                var zipEntryStream = zipEntry.Open();
+                var interceptorStream = new InterceptorStream(zipEntryStream, seekHandler: (l, _) => l, 
+                    setLengthHandler: _ => { }, closeHandler: () => zipArchive.Dispose());
+                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                    interceptorStream, false);
+            }
+
+            if (IsGZip(path))
+            {
+                var gZipStream = new GZipStream(stream, SharpCompress.Compressors.CompressionMode.Compress);
+                var interceptorStream = new InterceptorStream(gZipStream, seekHandler: (l, _) => l, 
+                    setLengthHandler: _ => { });
+                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                    interceptorStream, false);
+            }
+
+            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, stream, false);
+        }
+
+        public virtual Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             long? size = null, bool create = false)
         {
             return GetPhysicalDriveMedia(physicalDrives, path, true)
@@ -300,6 +516,16 @@
             return size % 512 != 0 ? size + (512 - size % 512) : size;
         }
 
+        public bool IsZip(string path)
+        {
+            return path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public bool IsGZip(string path)
+        {
+            return path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
+        }
+
         public bool IsVhd(string path)
         {
             return path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
@@ -309,15 +535,161 @@
         {
             return await RigidDiskBlockReader.Read(stream);
         }
-        
+
+        private async Task<VirtualDisk> ResolveVirtualDisk(Media media)
+        {
+            if (media.Type == Media.MediaType.Raw)
+            {
+                return new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            }
+
+            if (media is DiskMedia diskMedia)
+            {
+                return diskMedia.Disk;
+            }
+
+            if (media.Type != Media.MediaType.CompressedRaw && media.Type != Media.MediaType.CompressedVhd)
+            {
+                throw new NotSupportedException($"Unable to resolve disk media type '{media.Type}'");
+            }
+
+            // read first chunk from compressed stream
+            var firstChunk = new byte[1024 * 1024];
+            await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
+
+            // return compressed vhd, if vhd magic number is present in first chunk
+            if (MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0))
+            {
+                return await CompressedVhd(media.Stream, firstChunk);
+            }
+
+            return await CompressedImg(media.Stream, firstChunk);
+        }
+
+        private async Task<VirtualDisk> CompressedVhd(Stream stream, byte[] firstChunk)
+        {
+            // open vhd disk from first chunk
+            var vhdDisk = new Disk(new MemoryStream(firstChunk), Ownership.None);
+            var firstRdbChunk = new byte[(1024 * 1024) / 2];
+            vhdDisk.Content.Position = 0;
+            var bytesRead = await vhdDisk.Content.ReadAsync(firstRdbChunk, 0, firstRdbChunk.Length);
+
+            // return vhd disk as is, if no bytes read
+            if (bytesRead == 0)
+            {
+                return vhdDisk;
+            }
+
+            // read rdb from first rdb chunk
+            var rigidDiskBlock = await ParseRigidDiskBlock(firstRdbChunk);
+            if (rigidDiskBlock == null)
+            {
+                return vhdDisk;
+            }
+
+            // return disk as is, if rdb size is less than bytes read
+            var rdbSize = rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize;
+            if (rdbSize < bytesRead)
+            {
+                return vhdDisk;
+            }
+
+            // dispose vhd disk with first chunk
+            vhdDisk.Dispose();
+
+            // read second chunk
+            var secondChunkSize = Convert.ToInt32(Math.Floor(((double)rdbSize - bytesRead) / firstChunk.Length) + 1) *
+                                  firstChunk.Length;
+            var secondChunk = new byte[secondChunkSize];
+            await stream.FillAsync(secondChunk, 0, secondChunk.Length);
+
+            // return first and second chunk as vhd disk
+            return new Disk(new MemoryStream(firstChunk.Concat(secondChunk).ToArray()), Ownership.None);
+        }
+
+        private async Task<VirtualDisk> CompressedImg(Stream stream, byte[] firstChunk)
+        {
+            var rigidDiskBlock = await ReadRigidDiskBlock(firstChunk);
+
+            // return first chunk as raw disk, if no rigid disk block present in first chunk
+            if (rigidDiskBlock == null)
+            {
+                return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
+            }
+
+            var rdbSize = rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize;
+
+            // return raw disk with first chunk, if rdb size is less than first chunk size
+            if (rdbSize < firstChunk.Length)
+            {
+                return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
+            }
+
+            // read second chunk
+            var secondChunkSize =
+                Convert.ToInt32(Math.Floor(((double)rdbSize - firstChunk.Length) / firstChunk.Length) + 1) *
+                firstChunk.Length;
+            var secondChunk = new byte[secondChunkSize];
+            await stream.FillAsync(secondChunk, 0, secondChunk.Length);
+
+            // return first and second chunk as raw disk
+            return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk.Concat(secondChunk).ToArray()), Ownership.None);
+        }
+
+        private async Task<RigidDiskBlock> ReadRigidDiskBlock(byte[] firstChunk)
+        {
+            // read rigid disk block from first chunk, if first chunk doesn't contain vhd magic number
+            if (!MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0))
+            {
+                return await ParseRigidDiskBlock(firstChunk);
+            }
+
+            // open vhd disk from first chunk
+            using var disk = new Disk(new MemoryStream(firstChunk), Ownership.Dispose);
+            var rdbChunk = new byte[512 * 16];
+            disk.Content.Position = 0;
+            var bytesRead = await disk.Content.ReadAsync(rdbChunk, 0, rdbChunk.Length);
+            if (bytesRead != rdbChunk.Length)
+            {
+                return null;
+            }
+
+            // read rdb from rdb chunk
+            return await ParseRigidDiskBlock(rdbChunk);
+        }
+
+        private async Task<RigidDiskBlock> ParseRigidDiskBlock(byte[] buffer)
+        {
+            var sector = 0;
+            var rdbLocationLimit = 16;
+            RigidDiskBlock rigidDiskBlock = null;
+            var blockBytes = new byte[512];
+            do
+            {
+                //var blockBytes = new Span<byte>(buffer, sector * 512, 512);
+                Array.Copy(buffer, sector * 512, blockBytes, 0, 512);
+
+                // skip, if identifier doesn't match rigid disk block
+                var identifier = BitConverter.ToUInt32(blockBytes, 0);
+                if (!identifier.Equals(BlockIdentifiers.RigidDiskBlock))
+                {
+                    sector++;
+                    continue;
+                }
+
+                // read rigid disk block
+                rigidDiskBlock = await RigidDiskBlockReader.Parse(blockBytes, false);
+            } while (sector < rdbLocationLimit && rigidDiskBlock == null);
+
+            return rigidDiskBlock;
+        }
+
         public virtual async Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None)
         {
             var partitionTables = new List<PartitionTableInfo>();
-            
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+            var disk = await ResolveVirtualDisk(media);
 
             try
             {
@@ -419,7 +791,7 @@
             RigidDiskBlock rigidDiskBlock = null;
             try
             {
-                rigidDiskBlock = await GetRigidDiskBlock(media.Stream);
+                rigidDiskBlock = await GetRigidDiskBlock(disk.Content);
                 if (rigidDiskBlock != null)
                 {
                     var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
@@ -478,7 +850,7 @@
             {
                 Path = media.Path,
                 Name = media.Model,
-                Size = media.Size,
+                Size = GetDiskSize(media, disk),
                 PartitionTables = partitionTables,
                 StartOffset = 0,
                 EndOffset = media.Size > 0 ? media.Size - 1 : 0,
@@ -492,6 +864,16 @@
 
             return diskInfo;
         }
+
+        private static long GetDiskSize(Media media, VirtualDisk disk)
+        {
+            return media.Type switch
+            {
+                Media.MediaType.CompressedVhd => disk.Capacity,
+                _ => media.Size
+            };
+        }
+
 
         private static IEnumerable<PartInfo> CreateDiskParts(DiskInfo diskInfo,
             PartitionTableType partitionTableTypeContext)
@@ -521,7 +903,7 @@
                 allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
             }
 
-            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0, 
+            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0,
                 partitionTableTypeContext, allocatedParts, true, false);
         }
 
@@ -576,12 +958,13 @@
                 Size = gptPartitionTable.Size,
                 Sectors = gptPartitionTable.Sectors,
                 Cylinders = 0,
-                Parts = CreateUnallocatedParts(gptPartitionTable.Size, gptPartitionTable.Sectors, 0, 
+                Parts = CreateUnallocatedParts(gptPartitionTable.Size, gptPartitionTable.Sectors, 0,
                     partitionTableTypeContext, parts, true, false)
             };
         }
 
-        private static PartitionTablePart CreateMbrParts(DiskInfo diskInfo, PartitionTableType partitionTableTypeContext)
+        private static PartitionTablePart CreateMbrParts(DiskInfo diskInfo,
+            PartitionTableType partitionTableTypeContext)
         {
             var mbrPartitionTable =
                 diskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.MasterBootRecord);
@@ -636,7 +1019,8 @@
             };
         }
 
-        private static PartitionTablePart CreateRdbParts(DiskInfo diskInfo, PartitionTableType partitionTableTypeContext)
+        private static PartitionTablePart CreateRdbParts(DiskInfo diskInfo,
+            PartitionTableType partitionTableTypeContext)
         {
             var parts = new List<PartInfo>();
             if (diskInfo.RigidDiskBlock == null)
@@ -705,7 +1089,8 @@
         }
 
         private static IEnumerable<PartInfo> CreateUnallocatedParts(long diskSize, long sectors, long cylinders,
-            PartitionTableType partitionTableTypeContext, IEnumerable<PartInfo> parts, bool useSectors, bool useCylinders)
+            PartitionTableType partitionTableTypeContext, IEnumerable<PartInfo> parts, bool useSectors,
+            bool useCylinders)
         {
             if (diskSize <= 0)
             {
@@ -775,7 +1160,7 @@
         private static IEnumerable<PartInfo> MergeOverlappingParts(IEnumerable<PartInfo> parts)
         {
             var mergedParts = new List<PartInfo>();
-            
+
             PartInfo currentPart = null;
             foreach (var part in parts)
             {
@@ -785,14 +1170,14 @@
                     continue;
                 }
 
-                if (!IsOverlapping(part.StartOffset, part.EndOffset, currentPart.StartOffset, 
+                if (!IsOverlapping(part.StartOffset, part.EndOffset, currentPart.StartOffset,
                         currentPart.EndOffset))
                 {
                     mergedParts.Add(currentPart);
                     currentPart = part;
                     continue;
                 }
-                
+
                 currentPart = new PartInfo
                 {
                     StartOffset = Math.Min(part.StartOffset, currentPart.StartOffset),
@@ -812,7 +1197,7 @@
 
             return mergedParts;
         }
-        
+
         private static bool IsOverlapping(long start1, long end1, long start2, long end2)
         {
             return (start1 <= end2) && (start2 <= end1);
@@ -824,7 +1209,7 @@
 
             return left == 0 ? value : value - left + size;
         }
-        
+
         public virtual Result<MediaResult> ResolveMedia(string path)
         {
             var modifiersResult = ResolveModifiers(path);
@@ -834,11 +1219,13 @@
                 path = modifiersResult.Path;
                 modifiers = modifiersResult.Modifiers;
             }
+
             var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
-            
+
             var diskPathMatch = Regexs.DiskPathRegex.Match(path);
             var physicalDrivePath = diskPathMatch.Success
-                ? string.Concat($"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}", path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
+                ? string.Concat($"\\\\.\\PhysicalDrive{diskPathMatch.Groups[2].Value}",
+                    path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
                 : path;
 
             var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
@@ -857,22 +1244,24 @@
             if (physicalDrivePathMatch.Success)
             {
                 var physicalDriveMediaPath = physicalDrivePathMatch.Value;
-                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar, physicalDriveMediaPath.Length, StringComparison.Ordinal);
+                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar,
+                    physicalDriveMediaPath.Length, StringComparison.Ordinal);
 
                 return new Result<MediaResult>(new MediaResult
                 {
-                    FullPath = physicalDrivePath,
+                    FullPath = path,
                     MediaPath = string.Concat(physicalDriveMediaPath, modifiersResult.Raw),
                     FileSystemPath = firstSeparatorIndex >= 0
-                        ? physicalDrivePath.Substring(firstSeparatorIndex + 1, physicalDrivePath.Length - (firstSeparatorIndex + 1))
+                        ? physicalDrivePath.Substring(firstSeparatorIndex + 1,
+                            physicalDrivePath.Length - (firstSeparatorIndex + 1))
                         : string.Empty,
                     DirectorySeparatorChar = directorySeparatorChar,
                     ByteSwap = byteSwap
                 });
             }
-            
+
             path = PathHelper.GetFullPath(path);
-            
+
             // media file
             var next = 0;
             do
@@ -906,10 +1295,10 @@
         public ModifierResult ResolveModifiers(string path)
         {
             var modifiersResult = ModifierEnum.None;
-            
+
             //
             var modifierMatch = Regexs.ModifiersRegex.Match(path.ToLower());
-            
+
             if (!modifierMatch.Success)
             {
                 return new ModifierResult
@@ -933,7 +1322,7 @@
                         break;
                 }
             }
-            
+
             return new ModifierResult
             {
                 Raw = modifierMatch.Groups[1].Value,

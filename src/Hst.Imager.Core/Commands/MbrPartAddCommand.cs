@@ -57,7 +57,7 @@
             OnDebugMessage($"Opening '{path}' for read/write");
 
             var physicalDrivesList = physicalDrives.ToList();
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            var mediaResult = await commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);

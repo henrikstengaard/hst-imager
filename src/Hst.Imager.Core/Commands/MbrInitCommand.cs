@@ -36,7 +36,7 @@ namespace Hst.Imager.Core.Commands
             OnDebugMessage($"Opening '{path}' as writable");
 
             var physicalDrivesList = physicalDrives.ToList();
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            var mediaResult = await commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);

@@ -42,11 +42,12 @@
                 return BadRequest(ModelState);
             }
 
-            if (!this.workerService.IsRunning() && request.SourceType == InfoRequest.SourceTypeEnum.ImageFile)
+            if (!workerService.IsRunning() && request.SourceType == InfoRequest.SourceTypeEnum.ImageFile)
             {
                 var task = new ImageFileInfoBackgroundTask
                 {
-                    Path = request.Path
+                    Path = request.Path,
+                    Byteswap = request.Byteswap
                 };
                 var handler =
                     new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext, appState);
@@ -59,7 +60,8 @@
             {
                 new InfoBackgroundTask
                 {
-                    Path = request.Path
+                    Path = request.Path,
+                    Byteswap = request.Byteswap
                 }
             });
 

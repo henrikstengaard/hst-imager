@@ -36,17 +36,17 @@ namespace Hst.Imager.Core.Commands
             this.name = name;
         }
 
-        public override Task<Result> Execute(CancellationToken token)
+        public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Formatting partition in Master Boot Record at '{path}'");
 
             OnDebugMessage($"Opening '{path}' as writable");
 
             var physicalDrivesList = physicalDrives.ToList();
-            var mediaResult = commandHelper.GetWritableMedia(physicalDrivesList, path);
+            var mediaResult = await commandHelper.GetWritableMedia(physicalDrivesList, path);
             if (mediaResult.IsFaulted)
             {
-                return Task.FromResult(new Result(mediaResult.Error));
+                return new Result(mediaResult.Error);
             }
             using var media = mediaResult.Value;
             
@@ -63,14 +63,14 @@ namespace Hst.Imager.Core.Commands
             }
             catch (Exception)
             {
-                return Task.FromResult(new Result(new Error("Master Boot Record not found")));
+                return new Result(new Error("Master Boot Record not found"));
             }
 
             OnInformationMessage($"- Partition number '{partitionNumber}'");
 
             if (partitionNumber < 1 || partitionNumber > biosPartitionTable.Partitions.Count)
             {
-                return Task.FromResult(new Result(new Error($"Invalid partition number '{partitionNumber}'")));
+                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
             }
 
             var partitionInfo = biosPartitionTable.Partitions[partitionNumber - 1];
@@ -95,10 +95,10 @@ namespace Hst.Imager.Core.Commands
                         partition.FirstSector, partition.SectorCount);
                     break;
                 default:
-                    return Task.FromResult(new Result(new Error("Unsupported partition type")));
+                    return new Result(new Error("Unsupported partition type"));
             }
             
-            return Task.FromResult(new Result());
+            return new Result();
         }
     }
 }

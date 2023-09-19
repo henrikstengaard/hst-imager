@@ -8,6 +8,8 @@
         public string Title { get; set; }
         public string SourcePath { get; set; }
         public string DestinationPath { get; set; }
+        public bool Byteswap { get; set; }
+        
         [JsonIgnore]
         public CancellationToken Token { get; set; }
     }

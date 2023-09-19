@@ -39,7 +39,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(result.IsSuccess);
 
         // assert - read disk info
-        var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);
@@ -81,7 +81,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(result.IsSuccess);
 
         // assert - read disk info
-        var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);
@@ -133,7 +133,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(result.IsSuccess);
 
         // assert - read disk info
-        var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);
@@ -177,7 +177,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(rdbPartAddResult.IsSuccess);
 
         // arrange - create mbr at sector 0
-        CreateMbrDisk(testCommandHelper, imgPath);
+        await CreateMbrDisk(testCommandHelper, imgPath);
 
         // arrange - mbr partition add command with type FAT32 and size 0
         cancellationTokenSource = new CancellationTokenSource();
@@ -189,7 +189,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(mbrPartAddResult.IsSuccess);
 
         // assert - read disk info
-        var mediaResult = testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
         Assert.True(mediaResult.IsSuccess);
         using var media = mediaResult.Value;
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);

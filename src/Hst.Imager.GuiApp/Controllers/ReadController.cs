@@ -33,7 +33,8 @@
                 Size = request.Size,
                 Verify = request.Verify,
                 Force = request.Force,
-                Retries = request.Retries
+                Retries = request.Retries,
+                Byteswap = request.Byteswap
             };
 
             await workerService.EnqueueAsync(new[] { readBackgroundTask });

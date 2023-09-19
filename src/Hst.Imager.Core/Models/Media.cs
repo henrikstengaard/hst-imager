@@ -10,7 +10,9 @@
         public enum MediaType
         {
             Raw,
-            Vhd
+            Vhd,
+            CompressedRaw,
+            CompressedVhd
         }
 
         public string Path;
@@ -18,11 +20,12 @@
         public long Size;
         public bool IsPhysicalDrive;
         public MediaType Type;
+        public bool Byteswap;
         public bool IsWriteable { get; }
 
         public Stream Stream { get; private set; }
 
-        public Media(string path, string name, long size, MediaType type, bool isPhysicalDrive, Stream stream)
+        public Media(string path, string name, long size, MediaType type, bool isPhysicalDrive, Stream stream, bool byteswap)
         {
             Path = path;
             Model = name;
@@ -31,6 +34,7 @@
             IsPhysicalDrive = isPhysicalDrive; 
             Stream = stream;
             IsWriteable = stream?.CanWrite ?? false;
+            Byteswap = byteswap;
         }
 
         protected virtual void Dispose(bool disposing)

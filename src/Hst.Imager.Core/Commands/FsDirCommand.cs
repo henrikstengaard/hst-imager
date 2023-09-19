@@ -88,7 +88,7 @@ public class FsDirCommand : FsCommandBase
         }
         
         // disk
-        var readableMediaResult = commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath);
+        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath);
         if (readableMediaResult.IsFaulted)
         {
             return new Result(readableMediaResult.Error);

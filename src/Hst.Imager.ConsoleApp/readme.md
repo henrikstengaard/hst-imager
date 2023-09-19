@@ -130,11 +130,16 @@ hst.imager info 4gb.vhd
 
 ### Read physical drive to image file
 
-Reads physical drive to an image file. Requires administrator privileges.
+Reads physical drive to an image file. Physical drives requires administrator privileges. Supports reading to compressed gzip and zip image files using extensions: .gz and .zip.
 
 Example of displaying usage for reading a physical drive to an image file:
 ```
-hst.imager read \disk2 4gb.vhd
+hst.imager read \disk2 4gb.img
+```
+
+Example of displaying usage for reading a physical drive to an gzip compressed image file:
+```
+hst.imager read \disk2 4gb.img.gz
 ```
 
 Example of reading Windows physical drive to 4gb.vhd image file:
@@ -149,16 +154,21 @@ hst.imager read /dev/sdb 4gb.vhd
 
 ### Write image file to physical drive
 
-Writes an image file to physical drive. Requires administrator privileges.
+Writes an image file to physical drive. Physical drives requires administrator privileges. Supports writing from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
 
 Example of displaying usage for writing an image file to a physical drive:
 ```
 hst.imager write
 ```
 
+Example of writing 4GB xz compressed image file to Windows physical drive disk 2:
+```
+hst.imager write 4gb.img.xz \disk2
+```
+
 Example of writing 4GB vhd image file to Windows physical drive disk 2:
 ```
-hst.imager write 4gb.vhd disk2
+hst.imager write 4gb.vhd \disk2
 ```
 
 Example of writing 4GB vhd image file to Linux physical drive /dev/sdb:
@@ -168,7 +178,7 @@ hst.imager write 4gb.vhd /dev/sdb
 
 ### Compare physical drive and image file
 
-Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges.
+Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges. Supports comparing from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
 
 Example of displaying usage for writing an image file to a physical drive:
 ```
@@ -190,9 +200,14 @@ Example of comparing 4GB vhd image file and 4GB img image file:
 hst.imager compare 4gb.vhd 4gb.img
 ```
 
+Example of comparing 4GB vhd image file and 4GB gzip compressed img image file:
+```
+hst.imager compare 4gb.vhd 4gb.img.gz
+```
+
 ### Convert an image file
 
-Converts an image file from one format to another.
+Converts an image file from one format to another. Supports converting from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
 
 Example of displaying usage for converting an image file:
 ```
@@ -207,6 +222,11 @@ hst.imager convert 4gb.img 4gb.vhd
 Example of converting 4GB vhd image file to img image file:
 ```
 hst.imager convert 4gb.vhd 4gb.img
+```
+
+Example of converting 4GB gzip compressed image file to img image file:
+```
+hst.imager convert 4gb.img.gz 4gb.img
 ```
 
 ### Create a blank image file

@@ -44,7 +44,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get media
-            var mediaResult = testCommandHelper.GetReadableFileMedia(destPath);
+            var mediaResult = await testCommandHelper.GetReadableFileMedia(destPath);
             if (mediaResult.IsFaulted)
             {
                 throw new IOException(mediaResult.Error.ToString());
@@ -116,7 +116,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             testCommandHelper.ClearActiveMedias();
             
             // assert - get media
-            var mediaResult = testCommandHelper.GetReadableFileMedia(imagePath);
+            var mediaResult = await testCommandHelper.GetReadableFileMedia(imagePath);
             if (mediaResult.IsFaulted)
             {
                 throw new IOException(mediaResult.Error.ToString());
@@ -202,7 +202,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
     
     private async Task CreatePfs3Directories(TestCommandHelper testCommandHelper, string path)
     {
-        var mediaResult = testCommandHelper.GetWritableFileMedia(path);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         if (mediaResult.IsFaulted)
         {
             throw new IOException(mediaResult.Error.ToString());

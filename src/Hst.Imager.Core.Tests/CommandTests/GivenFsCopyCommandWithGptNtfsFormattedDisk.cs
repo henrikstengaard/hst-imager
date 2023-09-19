@@ -4,19 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Commands;
-using DiscUtils;
-using DiscUtils.Ntfs;
-using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Models;
 using Xunit;
-using PartitionInfo = DiscUtils.Partitions.PartitionInfo;
 
 public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
 {
@@ -34,8 +27,8 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            CreateGptNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
-            using (var media = DiskFileSystemHelper.GetDiskMedia(testCommandHelper, srcPath))
+            await CreateGptNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
+            using (var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, srcPath))
             {
                 DiskFileSystemHelper.CreateGptNtfsDirectoriesAndFiles(DiskFileSystemHelper.ToDisk(media));
             }
@@ -95,7 +88,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             DiskFileSystemHelper.CreateLocalDirectoriesAndFiles(srcPath);
             
             // arrange - destination disk image
-            CreateGptNtfsFormattedDisk(testCommandHelper, destPath, 10.MB());
+            await CreateGptNtfsFormattedDisk(testCommandHelper, destPath, 10.MB());
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -108,7 +101,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get media
-            using var media = DiskFileSystemHelper.GetDiskMedia(testCommandHelper, destPath);
+            using var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, destPath);
 
             // arrange - get ntfs file system
             var fileSystem = DiskFileSystemHelper.GetGptNtfsFileSystem(DiskFileSystemHelper.ToDisk(media));

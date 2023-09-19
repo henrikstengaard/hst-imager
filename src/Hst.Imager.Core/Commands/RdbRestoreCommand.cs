@@ -64,7 +64,7 @@ public class RdbRestoreCommand : CommandBase
             
         OnDebugMessage($"Opening '{diskPath}' as writable");
 
-        var mediaResult = commandHelper.GetWritableMedia(physicalDrives, diskPath);
+        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, diskPath);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);

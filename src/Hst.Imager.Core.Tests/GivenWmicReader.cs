@@ -3,8 +3,8 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Hst.Imager.Core.Models;
-    using Hst.Imager.Core.PhysicalDrives;
+    using Models;
+    using PhysicalDrives;
     using Xunit;
 
     public class GivenWmicReader
