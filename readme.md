@@ -42,10 +42,10 @@ See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for 
 
 Hst Imager comes with following features:
 - List physical drives.
-- Read information from physical drive or image file.
-- Read physical drive to image file.
-- Write image file to physical drive.
-- Convert image file between .img/.hdf and .vhd.
+- Read information from physical drive or image file (supports writing .rar, .zip, .gz, .xz compressed image files).
+- Read physical drive to image file (supports writing to .zip, .gz, compressed image files).
+- Write image file to physical drive (supports reading from .rar, .zip, .gz, .xz compressed image files).
+- Convert image file between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
 
