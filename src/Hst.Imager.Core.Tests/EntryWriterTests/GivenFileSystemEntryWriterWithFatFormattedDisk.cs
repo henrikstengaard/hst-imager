@@ -22,7 +22,7 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
 
         // arrange - test command helper
         var testCommandHelper = new TestCommandHelper();
-        testCommandHelper.AddTestMedia(path);
+        await testCommandHelper.AddTestMedia(path);
 
         // arrange - source disk image file with directories
         await CreateMbrFatFormattedDisk(testCommandHelper, path, 10.MB());

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Core.Extensions;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -18,12 +20,13 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - path, size and test command helper
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
-        // arrange - create mbr
-        await CreateMbrDisk(testCommandHelper, imgPath);
+        // arrange - create mbr disk
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
 
         // arrange - mbr partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
@@ -59,12 +62,13 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - path, size and test command helper
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
-        // arrange - create mbr
-        CreateMbrDisk(testCommandHelper, imgPath);
+        // arrange - create mbr disk
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
 
         // arrange - mbr partition add command with type FAT32 and size 50% of rdb disk size
         var cancellationTokenSource = new CancellationTokenSource();
@@ -83,7 +87,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         Assert.NotNull(diskInfo?.MbrPartitionTablePart);
 
         // assert - added mbr partition size is equal to 50% of rdb disk size with an allowed margin of 5kb
-        var expectedPartitionSize = diskInfo.MbrPartitionTablePart.Size * 0.5;
+        var expectedPartitionSize = diskInfo.Size * 0.5;
         var margin = 5000;
         var partInfo =
             diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>

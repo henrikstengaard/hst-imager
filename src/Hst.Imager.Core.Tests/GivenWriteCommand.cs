@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using System.Linq;
+using Hst.Core.Extensions;
 using Hst.Imager.Core.Extensions;
 
 namespace Hst.Imager.Core.Tests
@@ -26,10 +27,10 @@ namespace Hst.Imager.Core.Tests
             var testCommandHelper = new TestCommandHelper();
             
             // arrange - create source img media
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
             // arrange - create destination physical drive
-            testCommandHelper.AddTestMedia(destinationPath);
+            testCommandHelper.AddTestMedia(destinationPath, 1.MB());
 
             // act - write img media to physical drive
             var cancellationTokenSource = new CancellationTokenSource();
@@ -48,9 +49,9 @@ namespace Hst.Imager.Core.Tests
             Assert.NotEqual(0, dataProcessedEventArgs.BytesTotal);
 
             // assert data is identical
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
-            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
-            Assert.Equal(sourceBytes, destinationBytes);
+            var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
+            var destinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
+            Assert.True(sourceBytes.SequenceEqual(destinationBytes.Take(ImageSize)));
         }
 
         [Fact]
@@ -68,7 +69,7 @@ namespace Hst.Imager.Core.Tests
                 await testCommandHelper.WriteMediaData(sourcePath, data);
                 
                 // arrange - create destination physical drive
-                testCommandHelper.AddTestMedia(destinationPath);
+                testCommandHelper.AddTestMedia(destinationPath, 1.MB());
 
                 // act - write vhd media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -100,7 +101,7 @@ namespace Hst.Imager.Core.Tests
                 File.Copy(Path.Combine("TestData", "Xz", "test.txt.xz"), sourcePath);
                 
                 // arrange - create destination physical drive
-                testCommandHelper.AddTestMedia(destinationPath);
+                testCommandHelper.AddTestMedia(destinationPath, 1.MB());
 
                 // act - write img media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -123,7 +124,9 @@ namespace Hst.Imager.Core.Tests
                 Assert.Equal(sourceBytes.Length, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written is identical to uncompressed source bytes
-                var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
+                var destinationStream = testCommandHelper.GetTestMedia(destinationPath).Stream;
+                destinationStream.Position = 0;
+                var destinationBytes = await destinationStream.ReadBytes(sourceBytes.Length);
                 Assert.Equal(sourceBytes, destinationBytes);
             }
             finally
@@ -148,8 +151,8 @@ namespace Hst.Imager.Core.Tests
                 // arrange - create source img rar compressed media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.rar"), sourcePath);
                 
-                // arrange - create destination physical drive as empty file
-                await File.WriteAllBytesAsync(TestCommandHelper.PhysicalDrivePath, Array.Empty<byte>());
+                // arrange - create destination physical drive of 16gb
+                testCommandHelper.AddTestMedia(destinationPath, 16.GB());
 
                 // act - write img media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -169,7 +172,8 @@ namespace Hst.Imager.Core.Tests
                 Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written to physical drive file is identical to uncompressed img
-                await AssertPathIsIdenticalToUncompressedImg(destinationPath);
+                var destMedia = testCommandHelper.GetTestMedia(destinationPath);
+                await AssertTestMediaIsIdenticalToUncompressedImg(destMedia);
             }
             finally
             {
@@ -197,8 +201,8 @@ namespace Hst.Imager.Core.Tests
                 // arrange - create source zip compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.zip"), sourcePath);
                 
-                // arrange - create destination physical drive as empty file
-                await File.WriteAllBytesAsync(TestCommandHelper.PhysicalDrivePath, Array.Empty<byte>());
+                // arrange - create destination physical drive of 16gb
+                testCommandHelper.AddTestMedia(destinationPath, 16.GB());
 
                 // act - write zip compressed img media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -218,7 +222,8 @@ namespace Hst.Imager.Core.Tests
                 Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written to physical drive file is identical to uncompressed img
-                await AssertPathIsIdenticalToUncompressedImg(destinationPath);
+                var destMedia = testCommandHelper.GetTestMedia(destinationPath);
+                await AssertTestMediaIsIdenticalToUncompressedImg(destMedia);
             }
             finally
             {
@@ -246,8 +251,8 @@ namespace Hst.Imager.Core.Tests
                 // arrange - create source gzip compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.gz"), sourcePath);
                 
-                // arrange - create destination physical drive as empty file
-                await File.WriteAllBytesAsync(TestCommandHelper.PhysicalDrivePath, Array.Empty<byte>());
+                // arrange - create destination physical drive of 16gb
+                testCommandHelper.AddTestMedia(destinationPath, 16.GB());
 
                 // act - write gzip compressed img media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -267,7 +272,8 @@ namespace Hst.Imager.Core.Tests
                 Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written to physical drive file is identical to uncompressed img
-                await AssertPathIsIdenticalToUncompressedImg(destinationPath);
+                var destMedia = testCommandHelper.GetTestMedia(destinationPath);
+                await AssertTestMediaIsIdenticalToUncompressedImg(destMedia);
             }
             finally
             {
@@ -295,8 +301,8 @@ namespace Hst.Imager.Core.Tests
                 // arrange - create source xz compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.xz"), sourcePath);
                 
-                // arrange - create destination physical drive as empty file
-                await File.WriteAllBytesAsync(TestCommandHelper.PhysicalDrivePath, Array.Empty<byte>());
+                // arrange - create destination physical drive of 16gb
+                testCommandHelper.AddTestMedia(destinationPath, 16.GB());
 
                 // act - write xz compressed img media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -316,7 +322,8 @@ namespace Hst.Imager.Core.Tests
                 Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written to physical drive file is identical to uncompressed img
-                await AssertPathIsIdenticalToUncompressedImg(destinationPath);
+                var destMedia = testCommandHelper.GetTestMedia(destinationPath);
+                await AssertTestMediaIsIdenticalToUncompressedImg(destMedia);
             }
             finally
             {
@@ -331,7 +338,7 @@ namespace Hst.Imager.Core.Tests
             }
         }
         
-        private static async Task AssertPathIsIdenticalToUncompressedImg(string path)
+        private static async Task AssertTestMediaIsIdenticalToUncompressedImg(TestMedia testMedia)
         {
             // open zip compressed img path as source stream
             var zipCompressedImgPath = Path.Combine("TestData", "compressed-images", "1gb.img.zip");
@@ -345,23 +352,51 @@ namespace Hst.Imager.Core.Tests
             await using var srcStream = zipEntry.Open();
             
             // open path as destination stream
-            await using var destStream = File.OpenRead(path);
+            await using var destStream = testMedia.Stream;
+            destStream.Position = 0;
 
             var srcBuffer = new byte[1024 * 1024];
             var destBuffer = new byte[1024 * 1024];
             int srcBytesRead;
-            int destBytesRead;
             do
             {
                 srcBytesRead = await srcStream.FillAsync(srcBuffer, 0, srcBuffer.Length);
-                destBytesRead = await destStream.ReadAsync(destBuffer, 0, destBuffer.Length);
+                var destBytesRead = await destStream.ReadAsync(destBuffer, 0, destBuffer.Length);
 
                 // assert - source bytes read is equal destination bytes read
-                Assert.Equal(srcBytesRead, destBytesRead);
-                
-                // assert - source buffer is equal to destination buffer
-                Assert.True(srcBuffer.SequenceEqual(destBuffer));
-            } while (srcBytesRead > 0 && srcBytesRead == destBytesRead);
+                if (srcBytesRead == destBytesRead)
+                {
+                    Assert.True(srcBuffer.SequenceEqual(destBuffer));
+                    continue;
+                }
+                Assert.True(srcBuffer.Take(srcBytesRead).SequenceEqual(destBuffer.Take(srcBytesRead)));
+            } while (srcBytesRead > 0);
+        }
+
+        [Fact]
+        public async Task WhenWriteSizeIsLargerThanPhysicalDriveThenErrorIsReturned()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
+            var testCommandHelper = new TestCommandHelper();
+            
+            // arrange - create source img media
+            testCommandHelper.AddTestMediaWithData(sourcePath, 10.MB());
+
+            // arrange - create destination physical drive
+            testCommandHelper.AddTestMediaWithData(destinationPath, 1.MB());
+
+            // act - write img media to physical drive
+            var cancellationTokenSource = new CancellationTokenSource();
+            var writeCommand =
+                new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                    sourcePath, destinationPath, new Size(), 0, false, false);
+            var result = await writeCommand.Execute(cancellationTokenSource.Token);
+            
+            // assert - write failed and returned write size too large error
+            Assert.False(result.IsSuccess);
+            Assert.IsType<WriteSizeTooLargeError>(result.Error);
         }
     }
 }

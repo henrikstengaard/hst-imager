@@ -23,7 +23,7 @@ public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
         {
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(srcPath);
+            await testCommandHelper.AddTestMedia(srcPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
@@ -81,7 +81,7 @@ public class GivenFsCopyCommandWithGptFatFormattedDisk : FsCommandTestBase
         {
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(srcPath);
+            await testCommandHelper.AddTestMedia(srcPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source directories and files

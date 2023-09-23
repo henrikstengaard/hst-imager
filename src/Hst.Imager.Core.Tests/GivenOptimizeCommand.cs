@@ -20,7 +20,7 @@
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create img media
-            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(imgPath, ImageSize);
             
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
@@ -44,7 +44,7 @@
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create img media
-            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(imgPath, ImageSize);
 
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
@@ -67,7 +67,7 @@
             var testCommandHelper = new TestCommandHelper();
             
             // arrange - create img media
-            testCommandHelper.AddTestMedia(imgPath, data: await File.ReadAllBytesAsync(
+            await testCommandHelper.AddTestMedia(imgPath, data: await File.ReadAllBytesAsync(
                 Path.Combine("TestData", "rigid-disk-block.img")));
 
             // arrange - optimize command
@@ -81,7 +81,7 @@
 
             // assert media contains optimized rigid disk block size
             var optimizedBytes = testCommandHelper.GetTestMedia(imgPath);
-            Assert.Equal(rigidDiskBlockSize, optimizedBytes.Data.Length);
+            Assert.Equal(rigidDiskBlockSize, (await optimizedBytes.ReadData()).Length);
         }
     }
 }

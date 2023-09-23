@@ -20,7 +20,7 @@
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create img media
-            testCommandHelper.AddTestMedia(imgPath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(imgPath, ImageSize);
 
             // arrange - info command
             var cancellationTokenSource = new CancellationTokenSource();
@@ -47,7 +47,7 @@
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create img media
-            testCommandHelper.AddTestMedia(imgPath);
+            testCommandHelper.AddTestMedia(imgPath, ImageSize);
             await testCommandHelper.WriteMediaData(imgPath,
                 await File.ReadAllBytesAsync(Path.Combine("TestData", "rigid-disk-block.img")));
 

@@ -23,7 +23,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
         {
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(srcPath);
+            await testCommandHelper.AddTestMedia(srcPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
@@ -81,7 +81,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
         {
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(srcPath);
+            await testCommandHelper.AddTestMedia(srcPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source directories and files
@@ -116,7 +116,6 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             Assert.Equal("file1.txt", files.FirstOrDefault(x => x.Equals("file1.txt", StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
             
             // assert - file2.txt file exists
-            var file2 = Path.Combine(destPath, "file2.txt");
             Assert.Equal("file2.txt", files.FirstOrDefault(x => x.Equals("file2.txt", StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
 
             // arrange - get directories in root directory

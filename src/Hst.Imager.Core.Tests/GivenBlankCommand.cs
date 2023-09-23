@@ -19,7 +19,7 @@
             var path = $"{Guid.NewGuid()}.img";
             var size = new Size(512 * 512, Unit.Bytes);
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(path);
+            await testCommandHelper.AddTestMedia(path);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - create blank
@@ -29,7 +29,7 @@
 
             // assert data is zero filled
             var sourceBytes = new byte[Convert.ToInt64(size.Value)];
-            var destinationBytes = testCommandHelper.GetTestMedia(path).Data;
+            var destinationBytes = await testCommandHelper.GetTestMedia(path).ReadData();
             Assert.Equal(sourceBytes, destinationBytes);
         }
 

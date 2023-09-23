@@ -1,29 +1,41 @@
-﻿namespace Hst.Imager.Core.Tests;
+﻿using System;
+using System.IO;
+using System.Threading.Tasks;
+using Hst.Core.Extensions;
+using Hst.Core.IO;
 
-using System;
+namespace Hst.Imager.Core.Tests;
 
 public class TestMedia
 {
     public readonly string Path;
     public readonly string Name;
     public long Size { get; private set; }
-    public byte[] Data { get; private set; }
+    public readonly BlockMemoryStream Stream;
 
-    public TestMedia(string path, string name, long size, byte[] data = null)
+    public TestMedia(string path, string name, long size)
     {
         Path = path;
         Name = name;
         Size = size;
-        Data = data ?? Array.Empty<byte>();
+        Stream = new BlockMemoryStream();
+        Stream.SetLength(size);
     }
 
-    public void SetSize(long size)
+    public async Task WriteData(byte[] data)
     {
-        this.Size = size;
+        Stream.Seek(0, SeekOrigin.Begin);
+        await Stream.WriteBytes(data);
     }
-    
-    public void SetData(byte[] data)
+
+    public async Task<byte[]> ReadData()
     {
-        this.Data = data;
+        if (Stream.Length > 10.MB())
+        {
+            throw new InvalidOperationException("Use stream property to read large amount of data");
+        }
+        
+        Stream.Position = 0;
+        return await Stream.ReadBytes((int)Stream.Length);
     }
 }

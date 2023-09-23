@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.GptCommands;
 using Hst.Imager.Core.Models;
@@ -19,12 +20,13 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // arrange - path, size and test command helper
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create gpt
-        await CreateGptDisk(testCommandHelper, imgPath);
+        await CreateGptDisk(testCommandHelper, imgPath, size);
 
         // arrange - gpt partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
@@ -62,12 +64,13 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // arrange - path, size and test command helper
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create gpt
-        CreateGptDisk(testCommandHelper, imgPath);
+        await CreateGptDisk(testCommandHelper, imgPath, size);
 
         // arrange - gpt partition add command with type FAT32 and size 50% of disk size
         var cancellationTokenSource = new CancellationTokenSource();

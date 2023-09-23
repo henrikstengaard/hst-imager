@@ -21,8 +21,8 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            testCommandHelper.AddTestMedia(destinationPath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(destinationPath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - compare source img to destination img
@@ -41,8 +41,8 @@
             Assert.NotEqual(0, dataProcessedEventArgs.BytesTotal);
 
             // assert data is identical
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
-            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
+            var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
+            var destinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -53,7 +53,7 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange destination vhd has copy of source img data
@@ -78,21 +78,25 @@
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            testCommandHelper.AddTestMedia(destinationPath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(destinationPath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - compare source img to destination img
             var compareCommand = new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(), sourcePath,
                 destinationPath, new Size(size, Unit.Bytes), 0, false);
+            DataProcessedEventArgs dataProcessedEventArgs = null;
+            compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
-            // assert data is identical
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
-            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
-            Assert.Equal(sourceBytes, destinationBytes);
+            // assert - data processed is 100 percent complete and has processed size
+            Assert.NotNull(dataProcessedEventArgs);
+            Assert.Equal(100, dataProcessedEventArgs.PercentComplete);
+            Assert.Equal(size, dataProcessedEventArgs.BytesProcessed);
+            Assert.Equal(0, dataProcessedEventArgs.BytesRemaining);
+            Assert.Equal(size, dataProcessedEventArgs.BytesTotal);
         }
 
         [Fact]
@@ -110,12 +114,12 @@
             // create source
             var sourceBytes = testCommandHelper.CreateTestData(ImageSize);
             sourceBytes[offsetWithError] = sourceByte;
-            testCommandHelper.AddTestMedia(sourcePath, data: sourceBytes);
+            await testCommandHelper.AddTestMedia(sourcePath, data: sourceBytes);
 
             // create destination
             var destinationBytesWithError = testCommandHelper.CreateTestData(ImageSize);
             destinationBytesWithError[offsetWithError] = destinationByte;
-            testCommandHelper.AddTestMedia(destinationPath, data: destinationBytesWithError);
+            await testCommandHelper.AddTestMedia(destinationPath, data: destinationBytesWithError);
 
             // act - compare source img to destination img
             var compareCommand =
@@ -141,10 +145,10 @@
             var testDataBytes = testCommandHelper.CreateTestData(ImageSize);
 
             // create source
-            testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes);
+            await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes);
 
             // create destination
-            testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes.Concat(testDataBytes).ToArray());
+            await testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes.Concat(testDataBytes).ToArray());
 
             // act - compare source img to destination img
             var compareCommand =
@@ -166,10 +170,10 @@
             var destinationSize = testDataBytes.Length;
 
             // create source
-            testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
+            await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
 
             // create destination
-            testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes);
+            await testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes);
 
             // act - compare source img to destination img
             var compareCommand =
@@ -191,10 +195,10 @@
             var destinationSize = testDataBytes.Length;
 
             // create source
-            testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
+            await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
 
             // create destination
-            testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes);
+            await testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes);
 
             // act - compare source img to destination img
             var compareCommand =

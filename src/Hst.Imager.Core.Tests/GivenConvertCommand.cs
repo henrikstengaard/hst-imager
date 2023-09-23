@@ -21,8 +21,8 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.img";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            testCommandHelper.AddTestMedia(destinationPath);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
+            await testCommandHelper.AddTestMedia(destinationPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - convert source img to destination img
@@ -40,8 +40,8 @@
             Assert.NotEqual(0, dataProcessedEventArgs.BytesTotal);
 
             // assert data is identical
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
-            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
+            var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
+            var destinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -53,8 +53,8 @@
             var destinationPath = $"{Guid.NewGuid()}.img";
             var size = 16 * 512;
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
-            testCommandHelper.AddTestMedia(destinationPath);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
+            await testCommandHelper.AddTestMedia(destinationPath);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - convert source img to destination img
@@ -64,8 +64,8 @@
             Assert.True(result.IsSuccess);
 
             // assert data is identical within defined size
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data.Take(size).ToArray();
-            var destinationBytes = testCommandHelper.GetTestMedia(destinationPath).Data;
+            var sourceBytes = (await testCommandHelper.GetTestMedia(sourcePath).ReadData()).Take(size).ToArray();
+            var destinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
             Assert.Equal(sourceBytes, destinationBytes);
         }
 
@@ -76,7 +76,7 @@
             var sourcePath = $"{Guid.NewGuid()}.img";
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
@@ -86,7 +86,7 @@
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data;
+            var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
 
             // get destination bytes from vhd
             var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);
@@ -108,7 +108,7 @@
             var destinationPath = $"{Guid.NewGuid()}.vhd";
             var size = 16 * 512;
             var testCommandHelper = new TestCommandHelper();
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - read source img to destination vhd
@@ -118,7 +118,7 @@
             Assert.True(result.IsSuccess);
 
             // get source bytes
-            var sourceBytes = testCommandHelper.GetTestMedia(sourcePath).Data.Take(size).ToArray();
+            var sourceBytes = (await testCommandHelper.GetTestMedia(sourcePath).ReadData()).Take(size).ToArray();
 
             // get destination bytes from vhd
             var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);

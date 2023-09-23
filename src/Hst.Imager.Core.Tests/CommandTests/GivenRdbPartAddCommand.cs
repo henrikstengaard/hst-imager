@@ -20,12 +20,13 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var fileSystemBlockSize = 512;
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create rdb with pfs3 file system
-        await CreateRdbWithPfs3(testCommandHelper, imgPath);
+        await CreateRdbWithPfs3(testCommandHelper, imgPath, size);
 
         // arrange - rdb partition add command with partition name DH0 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
@@ -62,12 +63,13 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var fileSystemBlockSize = 512;
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create rdb with pfs3 file system
-        await CreateRdbWithPfs3(testCommandHelper, imgPath);
+        await CreateRdbWithPfs3(testCommandHelper, imgPath, size);
 
         // arrange - rdb partition add command with partition name DH0 and size 50% of rdb disk size
         var cancellationTokenSource = new CancellationTokenSource();
@@ -104,12 +106,13 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var fileSystemBlockSize = 512;
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create rdb with pfs3 file system
-        await CreateRdbWithPfs3(testCommandHelper, imgPath);
+        await CreateRdbWithPfs3(testCommandHelper, imgPath, size);
 
         // arrange - rdb partition add command with partition name DH0 and size 2mb
         var cancellationTokenSource = new CancellationTokenSource();
@@ -158,9 +161,10 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var fileSystemBlockSize = 512;
         var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // act - create rdb of size 5mb with pfs3 file system at sector 2 (rdb block lo) 
         await CreateRdbWithPfs3(testCommandHelper, imgPath, rdbSize: 5.MB(), rdbBlockLo: 2);
@@ -177,7 +181,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         Assert.True(rdbPartAddResult.IsSuccess);
 
         // arrange - create mbr at sector 0
-        await CreateMbrDisk(testCommandHelper, imgPath);
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
 
         // arrange - mbr partition add command with type FAT32 and size 0
         cancellationTokenSource = new CancellationTokenSource();

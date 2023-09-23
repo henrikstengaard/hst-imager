@@ -21,7 +21,7 @@ public class GivenRdbInitCommand : FsCommandTestBase
         var testCommandHelper = new TestCommandHelper();
 
         // arrange - create img media
-        testCommandHelper.AddTestMedia(imgPath, imgPath, new byte[10.MB()]);
+        await testCommandHelper.AddTestMedia(imgPath, imgPath, new byte[10.MB()]);
 
         // arrange - rdb init command
         var cancellationTokenSource = new CancellationTokenSource();

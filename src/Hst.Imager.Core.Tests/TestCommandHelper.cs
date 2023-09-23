@@ -16,12 +16,12 @@
     public class TestCommandHelper : CommandHelper
     {
         public readonly List<TestMedia> TestMedias;
-        public readonly RigidDiskBlock rigidDiskBlock;
-        public static string PhysicalDrivePath = "physical-drive";
+        public readonly RigidDiskBlock RigidDiskBlock;
+        public static readonly string PhysicalDrivePath = "physical-drive";
 
         public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null) : base(true)
         {
-            this.rigidDiskBlock = rigidDiskBlock;
+            this.RigidDiskBlock = rigidDiskBlock;
             this.TestMedias = new List<TestMedia>();
         }
 
@@ -30,7 +30,7 @@
             var testMedia = GetTestMedia(path);
             if (testMedia != null)
             {
-                return testMedia.Data;
+                return await testMedia.ReadData();
             }
 
             var mediaResult = await GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
@@ -44,7 +44,7 @@
             var testMedia = GetTestMedia(path);
             if (testMedia != null)
             {
-                testMedia.SetData(testMedia.Data.Concat(data).ToArray());
+                await testMedia.WriteData(data);
                 return;
             }
 
@@ -59,15 +59,27 @@
             return TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
         }
 
-        public void AddTestMedia(string path, string name = null, byte[] data = null)
+        public async Task AddTestMedia(string path, string name = null, byte[] data = null)
         {
-            TestMedias.Add(new TestMedia(path, name ?? Path.GetFileNameWithoutExtension(path), 0,
-                data ?? Array.Empty<byte>()));
+            var testMedia = new TestMedia(path, name ?? Path.GetFileNameWithoutExtension(path), data?.Length ?? 0);
+            if (data != null)
+            {
+                await testMedia.WriteData(data);
+            }
+            TestMedias.Add(testMedia);
         }
 
         public void AddTestMedia(string path, long size)
         {
-            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size, CreateTestData(size)));
+            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size));
+        }
+        
+        public void AddTestMediaWithData(string path, long size)
+        {
+            var testMedia = new TestMedia(path, Path.GetFileNameWithoutExtension(path), size);
+            var data = CreateTestData(size);
+            testMedia.Stream.Write(data, 0, data.Length);
+            TestMedias.Add(testMedia);
         }
 
         public byte[] CreateTestData(long size)
@@ -102,10 +114,10 @@
                 return await base.GetReadableFileMedia(path);
             }
 
-            var stream = new MemoryStream(testMedia.Data);
+            var stream = testMedia.Stream;
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
+                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
                     Media.MediaType.Raw, false, stream, false));
             }
             
@@ -129,8 +141,8 @@
 
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Data.Length,
-                    Media.MediaType.Raw, false, new TestMediaStream(testMedia), false)));
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
+                    Media.MediaType.Raw, false, testMedia.Stream, false)));
             }
 
             if (size.HasValue)
@@ -143,14 +155,9 @@
                 return Task.FromResult(new Result<Media>(new Error("Vhd requires size")));
             }
 
-            if (create || testMedia.Data.Length == 0)
-            {
-                testMedia.SetSize(size ?? 0);
-            }
-
-            var stream = new TestMediaStream(testMedia);
-            var disk = create || testMedia.Data.Length == 0
-                ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
+            var stream = testMedia.Stream;
+            var disk = create || testMedia.Stream.Length == 0
+                ? DiscUtils.Vhd.Disk.InitializeDynamic(testMedia.Stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
             return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, 
                 Media.MediaType.Vhd, false, disk, false, stream)));
@@ -160,7 +167,7 @@
         {
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             return testMedia != null
-                ? new MemoryStream(create ? Array.Empty<byte>() : testMedia.Data)
+                ? testMedia.Stream
                 : base.CreateWriteableStream(path, create);
         }
 
@@ -168,9 +175,9 @@
             PartitionTableType partitionTableTypeContext = PartitionTableType.None)
         {
             var diskInfo = await base.ReadDiskInfo(media, partitionTableTypeContext);
-            if (rigidDiskBlock != null)
+            if (RigidDiskBlock != null)
             {
-                diskInfo.RigidDiskBlock = rigidDiskBlock;
+                diskInfo.RigidDiskBlock = RigidDiskBlock;
             }
 
             return diskInfo;
@@ -178,9 +185,9 @@
 
         public override async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
         {
-            if (rigidDiskBlock != null)
+            if (RigidDiskBlock != null)
             {
-                return rigidDiskBlock;
+                return RigidDiskBlock;
             }
 
             return await base.GetRigidDiskBlock(stream);

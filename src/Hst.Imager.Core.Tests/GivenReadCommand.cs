@@ -26,10 +26,10 @@ namespace Hst.Imager.Core.Tests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create source physical drive
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
             // arrange - create destination img
-            testCommandHelper.AddTestMedia(destinationPath);
+            await testCommandHelper.AddTestMedia(destinationPath);
 
             // act - read source physical drive to destination img
             var cancellationTokenSource = new CancellationTokenSource();
@@ -62,10 +62,10 @@ namespace Hst.Imager.Core.Tests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create source physical drive
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
             // arrange - create destination img
-            testCommandHelper.AddTestMedia(destinationPath);
+            await testCommandHelper.AddTestMedia(destinationPath);
 
             // act - read source physical drive to destination img
             var cancellationTokenSource = new CancellationTokenSource();
@@ -93,10 +93,10 @@ namespace Hst.Imager.Core.Tests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create source physical drive
-            testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+            testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
             // arrange - create destination img
-            testCommandHelper.AddTestMedia(destinationPath);
+            await testCommandHelper.AddTestMedia(destinationPath);
 
             // arrange - read command
             var cancellationTokenSource = new CancellationTokenSource();
@@ -142,7 +142,7 @@ namespace Hst.Imager.Core.Tests
             try
             {
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+                testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
                 // arrange - read command read 8192 bytes
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -198,7 +198,7 @@ namespace Hst.Imager.Core.Tests
             try
             {
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+                testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -242,7 +242,7 @@ namespace Hst.Imager.Core.Tests
             try
             {
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(sourcePath, ImageSize);
+                testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -287,7 +287,7 @@ namespace Hst.Imager.Core.Tests
             try
             {
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(srcPath, 10.MB());
+                testCommandHelper.AddTestMediaWithData(srcPath, 10.MB());
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -339,7 +339,7 @@ namespace Hst.Imager.Core.Tests
                 var testCommandHelper = new TestCommandHelper();
 
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
+                await testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
@@ -381,7 +381,7 @@ namespace Hst.Imager.Core.Tests
                 var testCommandHelper = new TestCommandHelper();
 
                 // arrange - create source physical drive
-                testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
+                await testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
 
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
