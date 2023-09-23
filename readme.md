@@ -2,7 +2,7 @@
 
 <img src="assets/hst-imager-icon.png" width="120" alt="Hst Imager icon" />
 
-Hst Imager is an imaging tool to read and write disk images to and from physical drives. 
+Hst Imager is an imaging tool to read and write disk images to and from physical drives. It supports reading from .rar, .zip, .gz, .xz compressed image files when writing to physical drive and writing to .zip, .gz compressed image files when reading from physical drive.
 
 This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives.
 
