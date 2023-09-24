@@ -21,7 +21,7 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          "BUILD_VERSION=1.0.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
+          "BUILD_VERSION=1.1.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
 
       - name: Write version and tag
