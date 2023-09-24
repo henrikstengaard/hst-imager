@@ -124,7 +124,6 @@ export default function Read() {
                 .start()
                 .then(() => {
                     newConnection.on("Info", (media) => {
-                        console.log(media)
                         setSourceMedia(media)
 
                         // default set size and unit to largest comparable size
