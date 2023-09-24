@@ -23,7 +23,7 @@ namespace Hst.Imager.Core.Commands
 
         public event EventHandler<ListReadEventArgs> ListRead;
 
-        public override async Task<Result> Execute(CancellationToken token)
+        public override Task<Result> Execute(CancellationToken token)
         {
             OnListRead(physicalDrives.Select(x => new MediaInfo
             {
@@ -34,7 +34,7 @@ namespace Hst.Imager.Core.Commands
                 DiskSize = x.Size
             }));
             
-            return new Result();
+            return Task.FromResult(new Result());
         }
 
         private void OnListRead(IEnumerable<MediaInfo> mediaInfos)

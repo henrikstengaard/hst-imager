@@ -220,11 +220,8 @@ export default function Info() {
                                         await getInfo(path, sourceType, byteswap)
                                     }}
                                     fileFilters = {[{
-                                        name: 'Compressed hard disk image files',
-                                        extensions: ['xz', 'gz', 'zip', 'rar']
-                                    }, {
                                         name: 'Hard disk image files',
-                                        extensions: ['img', 'hdf', 'vhd']
+                                        extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
                                     }, {
                                         name: 'All files',
                                         extensions: ['*']

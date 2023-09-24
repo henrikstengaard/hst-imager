@@ -275,7 +275,10 @@ export default function Read() {
                         id="source-disk"
                         medias={medias || []}
                         path={get(sourceMedia, 'path') || ''}
-                        onChange={(media) => setSourceMedia(media)}
+                        onChange={async (media) => {
+                            setSourceMedia(media)
+                            await getInfo(media.path, byteswap)
+                        }}
                     />
                 </Grid>
             </Grid>
@@ -295,11 +298,8 @@ export default function Read() {
                                 title="Select destination image"
                                 onChange={(path) => setDestinationPath(path)}
                                 fileFilters = {[{
-                                    name: 'Compressed hard disk image files',
-                                    extensions: ['gz', 'zip']
-                                }, {
                                     name: 'Hard disk image files',
-                                    extensions: ['img', 'hdf', 'vhd']
+                                    extensions: ['img', 'hdf', 'vhd', 'gz', 'zip']
                                 }, {
                                     name: 'All files',
                                     extensions: ['*']

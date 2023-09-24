@@ -143,13 +143,13 @@ export default function Convert() {
                             <BrowseOpenDialog
                                 id="browse-source-path"
                                 title="Select source image file"
-                                onChange={(path) => setSourcePath(path)}
+                                onChange={async (path) => {
+                                    setSourcePath(path)
+                                    await getInfo(path, byteswap)
+                                }}
                                 fileFilters = {[{
-                                    name: 'Compressed hard disk image files',
-                                    extensions: ['xz', 'gz', 'zip', 'rar']
-                                }, {
                                     name: 'Hard disk image files',
-                                    extensions: ['img', 'hdf', 'vhd']
+                                    extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
                                 }, {
                                     name: 'All files',
                                     extensions: ['*']
@@ -186,6 +186,13 @@ export default function Convert() {
                                 id="browse-destination-path"
                                 title="Select destination image file"
                                 onChange={(path) => setDestinationPath(path)}
+                                fileFilters = {[{
+                                    name: 'Hard disk image files',
+                                    extensions: ['img', 'hdf', 'vhd', 'gz', 'zip']
+                                }, {
+                                    name: 'All files',
+                                    extensions: ['*']
+                                }]}
                             />
                         }
                         onChange={(event) => setDestinationPath(get(event, 'target.value'))}

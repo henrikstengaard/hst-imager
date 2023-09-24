@@ -96,7 +96,7 @@ export default function Verify() {
         await getMedias()
     }, [api])
 
-    const getInfo = async (path, sourceType, byteswap) => {
+    const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
         const response = await fetch('api/info', {
             method: 'POST',
             headers: {
@@ -112,7 +112,7 @@ export default function Verify() {
         if (!response.ok) {
             console.error('Failed to get info')
         }
-    }
+    }, [])
 
     React.useEffect(() => {
         if (connection) {
@@ -195,8 +195,8 @@ export default function Verify() {
             }
             connection.stop();
         };
-    }, [byteswap, connection, getInfo, getPath, setMedias, setSourcePath, setSourceMedia, sourcePath, setPrefillSize,
-        setPrefillSizeOptions, setSize, setUnit])
+    }, [byteswap, connection, getInfo, getPath, setMedias, setSourcePath, setSourceMedia, sourcePath, sourceType,
+        setPrefillSize, setPrefillSizeOptions, setSize, setUnit])
 
     const handleSourceTypeChange = async (value) => {
         setSourceType(value)
@@ -333,11 +333,8 @@ export default function Verify() {
                                         await getInfo(path, sourceType, byteswap)
                                     }}
                                     fileFilters = {[{
-                                        name: 'Compressed hard disk image files',
-                                        extensions: ['xz', 'gz', 'zip', 'rar']
-                                    }, {
                                         name: 'Hard disk image files',
-                                        extensions: ['img', 'hdf', 'vhd']
+                                        extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
                                     }, {
                                         name: 'All files',
                                         extensions: ['*']
@@ -392,6 +389,13 @@ export default function Verify() {
                                 id="browse-destination-path"
                                 title="Select destination image file"
                                 onChange={(path) => setDestinationPath(path)}
+                                fileFilters = {[{
+                                    name: 'Hard disk image files',
+                                    extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
+                                }, {
+                                    name: 'All files',
+                                    extensions: ['*']
+                                }]}
                             />
                         }
                         onChange={(event) => setDestinationPath(get(event, 'target.value'))}

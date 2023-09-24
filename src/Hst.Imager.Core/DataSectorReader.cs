@@ -28,18 +28,7 @@ public static class DataSectorReader
         
         for (var start = 0; start < (length ?? data.Length); start += sectorSize)
         {
-            var isZeroFilled = true;
-
-            var offset = start;
-            for (var i = 0; i <= sectorSize - i; i++, offset++)
-            {
-                if (data[offset] == 0 && data[offset + sectorSize - i - 1] == 0)
-                {
-                    continue;
-                }
-                isZeroFilled = false;
-                break;
-            }
+            var isZeroFilled = IsZeroFilled(data, start, sectorSize);
 
             if (isZeroFilled && !includeZeroFilled)
             {
@@ -54,5 +43,21 @@ public static class DataSectorReader
                 IsZeroFilled = isZeroFilled
             };
         }
+    }
+
+    public static bool IsZeroFilled(byte[] data, int offset, int count)
+    {
+        var end = count - 1;
+        for (var start = 0; start < count && start <= end; start++, end--)
+        {
+            if (data[offset + start] == 0 && data[offset + end] == 0)
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
     }
 }

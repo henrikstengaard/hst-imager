@@ -101,7 +101,7 @@ namespace Hst.Imager.Core.Commands
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
 
-        public virtual async Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives,
+        public virtual Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives,
             string path,
             bool writeable = false)
         {
@@ -118,15 +118,15 @@ namespace Hst.Imager.Core.Commands
             var physicalDrivePath = GetPhysicalDrivePath(path);
             if (string.IsNullOrEmpty(physicalDrivePath))
             {
-                return new Result<Media>((Media)null);
+                return Task.FromResult(new Result<Media>((Media)null));
             }
 
             var media = GetActiveMedia(physicalDrivePath);
             if (media != null)
             {
-                return !isAdministrator
+                return Task.FromResult(!isAdministrator
                     ? new Result<Media>(new Error($"Path '{path}' requires administrator privileges"))
-                    : new Result<Media>(media);
+                    : new Result<Media>(media));
             }
 
             var physicalDrive =
@@ -135,12 +135,12 @@ namespace Hst.Imager.Core.Commands
 
             if (physicalDrive == null)
             {
-                return new Result<Media>(new Error($"Physical drive '{path}' not found"));
+                return Task.FromResult(new Result<Media>(new Error($"Physical drive '{path}' not found")));
             }
 
             if (!isAdministrator)
             {
-                return new Result<Media>(new Error($"Path '{path}' requires administrator privileges"));
+                return Task.FromResult(new Result<Media>(new Error($"Path '{path}' requires administrator privileges")));
             }
 
             physicalDrive.SetWritable(writeable);
@@ -148,7 +148,7 @@ namespace Hst.Imager.Core.Commands
             var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
                 Media.MediaType.Raw, true, physicalDrive.Open(), byteSwap);
             this.activeMedias.Add(physicalDriveMedia);
-            return new Result<Media>(physicalDriveMedia);
+            return Task.FromResult(new Result<Media>(physicalDriveMedia));
         }
 
         private static string GetPhysicalDrivePath(string path)

@@ -67,5 +67,24 @@
             Assert.Equal(6 * SectorSize - 1, sector.End);
             Assert.False(sector.IsZeroFilled);
         }
+        
+        [Fact]
+        public void WhenByteIsNotZeroAtAnyOffsetInSectorThenSectorIsNotZeroFilled()
+        {
+            const int sectorSize = 512;
+            
+            for (var i = 0; i < sectorSize; i++)
+            {
+                // arrange - sector bytes with value 1 at offset i
+                var sectorBytes = new byte[sectorSize];
+                sectorBytes[i] = 1;
+                
+                // act - check if sector bytes are zero filled
+                var isZeroFilled = DataSectorReader.IsZeroFilled(sectorBytes, 0, sectorSize);
+                
+                // assert - sector is not zero filled
+                Assert.False(isZeroFilled);
+            }
+        }
     }
 }
