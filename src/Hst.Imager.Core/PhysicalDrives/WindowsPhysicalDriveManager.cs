@@ -50,26 +50,38 @@
             var drives = DriveInfo.GetDrives().ToList();
             foreach (var drive in drives)
             {
-                var driveName = drive.Name[..2];
-                var drivePath = $"\\\\.\\{driveName}";
-                logger.LogDebug($"Opening win32 raw disk access to drive letter '{driveName}'");
-
-                using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
-                if (win32RawDisk.IsInvalid())
+                if (drive.DriveType == DriveType.CDRom)
                 {
                     continue;
                 }
-
-                var diskExtendsResult = win32RawDisk.DiskExtends();
-                logger.LogDebug(
-                    $"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
-
-                if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
+                
+                try
                 {
-                    physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
-                }
+                    var driveName = drive.Name[..2];
+                    var drivePath = $"\\\\.\\{driveName}";
+                    logger.LogDebug($"Opening win32 raw disk access to drive letter '{driveName}'");
 
-                physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
+                    using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
+                    if (win32RawDisk.IsInvalid())
+                    {
+                        continue;
+                    }
+
+                    var diskExtendsResult = win32RawDisk.DiskExtends();
+                    logger.LogDebug(
+                        $"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
+
+                    if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
+                    {
+                        physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
+                    }
+
+                    physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
+                }
+                catch (Exception)
+                {
+                    // ignore
+                }
             }
 
             // iterate physical drives, get media type from geometry, get name from storage property query and size 

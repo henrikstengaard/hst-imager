@@ -15,6 +15,7 @@ public class FileSystemEntryWriter : IEntryWriter
     private readonly Media media;
     private readonly string[] pathComponents;
     private readonly IFileSystem fileSystem;
+    private string[] currentPathComponents;
     private bool disposed;
 
     public FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] pathComponents)
@@ -23,6 +24,7 @@ public class FileSystemEntryWriter : IEntryWriter
         this.media = media;
         this.pathComponents = pathComponents;
         this.fileSystem = fileSystem;
+        this.currentPathComponents = Array.Empty<string>();
     }
 
     public string MediaPath => this.media.Path;
@@ -49,7 +51,7 @@ public class FileSystemEntryWriter : IEntryWriter
     }
 
     public void Dispose() => Dispose(true);
-
+    
     public Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
@@ -59,12 +61,26 @@ public class FileSystemEntryWriter : IEntryWriter
             fileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
         }
 
+        currentPathComponents = fullPathComponents;
+
         return Task.CompletedTask;
     }
 
     public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        
+        var directoryChanged = currentPathComponents.Length != fullPathComponents.Length - 1;
+        if (directoryChanged && fullPathComponents.Length > 1)
+        {
+            for (var i = 1; i < fullPathComponents.Length; i++)
+            {
+                fileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
+            }
+            
+            currentPathComponents = fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
+        }
+
         var fullPath = string.Join("\\", fullPathComponents);
 
         await using var entryStream = fileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);

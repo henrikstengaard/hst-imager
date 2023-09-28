@@ -316,7 +316,7 @@ namespace Hst.Imager.Core.Tests
                 // assert - source bytes are equal to destination bytes
                 destinationBytes = destinationBytes.Take(size).ToArray();
                 Assert.Equal(sourceBytes.Length, destinationBytes.Length);
-                Assert.Equal(sourceBytes, destinationBytes);
+                Assert.True(sourceBytes.SequenceEqual(destinationBytes));
             }
             finally
             {

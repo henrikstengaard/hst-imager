@@ -76,9 +76,9 @@ public class GptPartAddCommand : CommandBase
             
         OnDebugMessage("Reading Guid Partition Table");
             
-        using var disk = media is DiskMedia diskMedia
+        var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
-            : new Disk(media.Stream, Ownership.Dispose);
+            : new Disk(media.Stream, Ownership.None);
 
         GuidPartitionTable guidPartitionTable;
         try

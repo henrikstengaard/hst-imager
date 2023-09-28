@@ -104,13 +104,23 @@
                 new[] { "--name", "-n" },
                 description: "Name of file system.");
 
+            var versionOption = new Option<int?>(
+                new[] { "--version", "-v" },
+                description: "Version of file system (number before . in version).");
+
+            var revisionOption = new Option<int?>(
+                new[] { "--revision", "-r" },
+                description: "Revision of file system (number after . in version).");
+            
             var rdbFsAddCommand = new Command("add", "Add file system.");
-            rdbFsAddCommand.SetHandler(CommandHandler.RdbFsAdd, pathArgument, fileSystemPathArgument, dosTypeArgument,
-                fileSystemNameOption);
+            rdbFsAddCommand.SetHandler(CommandHandler.RdbFsAdd, pathArgument, fileSystemPathArgument, 
+                dosTypeArgument, fileSystemNameOption, versionOption, revisionOption);
             rdbFsAddCommand.AddArgument(pathArgument);
             rdbFsAddCommand.AddArgument(fileSystemPathArgument);
             rdbFsAddCommand.AddArgument(dosTypeArgument);
             rdbFsAddCommand.AddOption(fileSystemNameOption);
+            rdbFsAddCommand.AddOption(versionOption);
+            rdbFsAddCommand.AddOption(revisionOption);
 
             return rdbFsAddCommand;
         }

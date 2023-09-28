@@ -75,9 +75,9 @@
             
             OnDebugMessage("Reading Master Boot Record");
             
-            using var disk = media is DiskMedia diskMedia
+            var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.Dispose);
+                : new Disk(media.Stream, Ownership.None);
 
             BiosPartitionTable biosPartitionTable;
             try

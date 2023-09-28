@@ -26,6 +26,7 @@ public class TestMedia
     {
         Stream.Seek(0, SeekOrigin.Begin);
         await Stream.WriteBytes(data);
+        Stream.Seek(0, SeekOrigin.Begin);
     }
 
     public async Task<byte[]> ReadData()

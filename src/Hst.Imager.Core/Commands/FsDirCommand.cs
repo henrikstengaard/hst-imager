@@ -208,7 +208,9 @@ public class FsDirCommand : FsCommandBase
     {
         OnDebugMessage("Reading Master Boot Record");
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         BiosPartitionTable biosPartitionTable;
         try
@@ -250,7 +252,7 @@ public class FsDirCommand : FsCommandBase
     
     private async Task<Result> ListMbrPartitionEntries(Media media, string[] parts)
     {
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[0]);
         if (mbrFileSystemResult.IsFaulted)
@@ -268,7 +270,7 @@ public class FsDirCommand : FsCommandBase
     
     private async Task<Result> ListGptPartitionEntries(Media media, string[] parts)
     {
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         var gptFileSystemResult = await MountGptFileSystem(disk, parts[0]);
         if (gptFileSystemResult.IsFaulted)
@@ -288,7 +290,7 @@ public class FsDirCommand : FsCommandBase
     {
         OnDebugMessage("Reading Guid Partition Table");
 
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         GuidPartitionTable guidPartitionTable;
         try

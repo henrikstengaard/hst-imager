@@ -22,16 +22,21 @@
         private readonly string path;
         private readonly string dosType;
         private readonly string fileSystemPath;
+        private readonly int? version;
+        private readonly int? revision;
         private readonly string fileSystemName;
 
         public RdbFsAddCommand(ILogger<RdbFsAddCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path, string fileSystemPath, string dosType, string fileSystemName)
+            IEnumerable<IPhysicalDrive> physicalDrives, string path, string fileSystemPath, string dosType, 
+            string fileSystemName, int? version, int? revision)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.physicalDrives = physicalDrives;
             this.path = path;
             this.fileSystemPath = fileSystemPath;
+            this.version = version;
+            this.revision = revision;
             this.dosType = string.IsNullOrWhiteSpace(dosType) ? "DOS3" : dosType.ToUpper();
             this.fileSystemName = string.IsNullOrWhiteSpace(fileSystemName) ? "FastFileSystem" : fileSystemName;
         }
@@ -67,7 +72,14 @@
 
             OnDebugMessage($"Opening path '{fileSystemPath}' for reading file system");
 
-            await using var fileSystemStream = File.OpenRead(fileSystemPath);
+            var fileSystemMediaResult = await commandHelper.GetReadableFileMedia(fileSystemPath);
+            if (fileSystemMediaResult.IsFaulted)
+            {
+                return new Result(fileSystemMediaResult.Error);
+            }
+
+            using var fileSystemMedia = fileSystemMediaResult.Value;
+            var fileSystemStream = fileSystemMedia.Stream;
             
             OnDebugMessage("Read file system from file");
 
@@ -79,16 +91,31 @@
 
             var fileSystemBytes = await fileSystemStream.ReadBytes((int)fileSystemStream.Length);
 
-            var version = await VersionStringReader.Read(new MemoryStream(fileSystemBytes));
-            if (string.IsNullOrWhiteSpace(version))
+            var versionString = await VersionStringReader.Read(new MemoryStream(fileSystemBytes));
+            AmigaVersion fileVersion = null;
+            if (!string.IsNullOrWhiteSpace(versionString))
             {
-                return new Result(new Error("Version string is empty"));
+                fileVersion = VersionStringReader.Parse(versionString);
             }
 
-            var fileVersion = VersionStringReader.Parse(version);
             if (fileVersion == null)
             {
-                return new Result(new Error($"Parse version failed"));
+                if (!version.HasValue)
+                {
+                    return new Result(new VersionNotFoundError($"Version string not found in file system file. Required version must be set manually"));
+                }
+
+                if (!revision.HasValue)
+                {
+                    return new Result(new VersionNotFoundError($"Version string not found in file system file. Required revision must be set manually"));
+                }
+
+                fileVersion = new AmigaVersion
+                {
+                    Name = Path.GetFileName(fileSystemPath),
+                    Revision = revision.Value,
+                    Version = version.Value
+                };
             }
             
             var fileSystemHeaderBlock = BlockHelper.CreateFileSystemHeaderBlock(DosTypeHelper.FormatDosType(dosType),

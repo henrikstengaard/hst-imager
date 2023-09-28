@@ -84,7 +84,9 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
         using var media = mediaResult.Value;
         var stream = media.Stream;
         
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = new BiosPartitionTable(disk);
         var partition = biosPartitionTable.Partitions.FirstOrDefault();
 

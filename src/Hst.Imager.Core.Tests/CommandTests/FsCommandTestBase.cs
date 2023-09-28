@@ -42,7 +42,7 @@ public class FsCommandTestBase : CommandTestBase
 
         var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         BiosPartitionTable.Initialize(disk);
     }
@@ -60,7 +60,7 @@ public class FsCommandTestBase : CommandTestBase
             
         var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         GuidPartitionTable.Initialize(disk.Content, Geometry.FromCapacity(disk.Capacity));
     }

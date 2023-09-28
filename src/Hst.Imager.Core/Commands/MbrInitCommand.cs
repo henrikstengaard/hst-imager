@@ -43,9 +43,9 @@ namespace Hst.Imager.Core.Commands
             }
             using var media = mediaResult.Value;
             
-            using var disk = media is DiskMedia diskMedia
+            var disk = media is DiskMedia diskMedia
                 ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.Dispose);
+                : new Disk(media.Stream, Ownership.None);
 
             var deleteSectorCount = 0L;
 

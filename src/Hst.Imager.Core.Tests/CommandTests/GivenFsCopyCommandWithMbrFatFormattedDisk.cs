@@ -53,19 +53,23 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
 
             // assert - file1.txt file was extracted
             var file1 = Path.Combine(destPath, "file1.txt");
-            Assert.Equal(file1, files.FirstOrDefault(x => x.Equals(file1, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            Assert.Equal(file1,
+                files.FirstOrDefault(x => x.Equals(file1, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
 
             // assert - file2.txt file was extracted
             var file2 = Path.Combine(destPath, "file2.txt");
-            Assert.Equal(file2, files.FirstOrDefault(x => x.Equals(file2, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            Assert.Equal(file2,
+                files.FirstOrDefault(x => x.Equals(file2, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
 
             // assert - file3.txt file was extracted
             var file3 = Path.Combine(destPath, "dir1", "file3.txt");
-            Assert.Equal(file3, files.FirstOrDefault(x => x.Equals(file3, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            Assert.Equal(file3,
+                files.FirstOrDefault(x => x.Equals(file3, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
 
             // assert - test.txt file was extracted
             var test = Path.Combine(destPath, "dir1", "test.txt");
-            Assert.Equal(test, files.FirstOrDefault(x => x.Equals(test, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            Assert.Equal(test,
+                files.FirstOrDefault(x => x.Equals(test, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
         }
         finally
         {
@@ -83,8 +87,8 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
 
         using var media = mediaResult.Value;
         var stream = media.Stream;
-        
-        using var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = new BiosPartitionTable(disk);
         var partition = biosPartitionTable.Partitions.FirstOrDefault();
 
@@ -115,6 +119,95 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
 
         using (fatFileSystem.OpenFile("dir1\\test.txt", FileMode.Create))
         {
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyFromLocalSubDirectoryToDiskSubDirectory_Then_DirectoryIsCreatedAndFilesCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}";
+        var destPath = $"{Guid.NewGuid()}.img";
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - source local directory and files
+            var dir1Path = Path.Combine(srcPath, "src");
+            Directory.CreateDirectory(dir1Path);
+            var file1Path = Path.Combine(dir1Path, "file1.bin");
+            await File.WriteAllBytesAsync(file1Path, new byte[50000]);
+            var file2Path = Path.Combine(dir1Path, "file2.bin");
+            await File.WriteAllBytesAsync(file2Path, new byte[250000]);
+
+            // arrange - destination mbr fat formatted disk
+            testCommandHelper.AddTestMedia(destPath, 10.MB());
+            await CreateMbrFatFormattedDisk(testCommandHelper, destPath, 4.GB());
+
+            // arrange - create fs copy command
+            var cancellationTokenSource = new CancellationTokenSource();
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "src"), Path.Combine(destPath, "mbr", "1", "dest"), true, false, true);
+
+            // act - copy directories and files
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.Equal(string.Empty, result.Error?.ToString() ?? string.Empty);
+            Assert.True(result.IsSuccess);
+
+            // arrange - get fat file system
+            var mediaResult = await testCommandHelper.GetReadableMedia(
+                Enumerable.Empty<IPhysicalDrive>(), destPath);
+            using var media = mediaResult.Value;
+            media.Stream.Position = 0;
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(media.Stream,
+                    Ownership.None);
+            var biosPartitionTable = new BiosPartitionTable(disk);
+            var partitionStream = biosPartitionTable.Partitions[0].Open();
+            var fatFileSystem = new FatFileSystem(partitionStream);
+
+            // assert - 1 directory in root directory
+            var dirs = fatFileSystem.GetDirectories("").ToList();
+            Assert.Single(dirs);
+
+            // assert - "dest" exists in root directory
+            var destDirPath = "dest";
+            Assert.Equal(destDirPath,
+                dirs.FirstOrDefault(x => x.Equals(destDirPath, StringComparison.OrdinalIgnoreCase))
+                    ?.ToLowerInvariant());
+
+            // assert - 0 files in root directory
+            var files = fatFileSystem.GetFiles("").ToList();
+            Assert.Empty(files);
+
+            // assert - 0 directories in "dest" directory
+            dirs = fatFileSystem.GetDirectories(destDirPath).ToList();
+            Assert.Empty(dirs);
+
+            // assert - 2 files in root directory
+            files = fatFileSystem.GetFiles(destDirPath).ToList();
+            Assert.Equal(2, files.Count);
+
+            // assert - file1.bin file was copied and has size 50000 bytes
+            file1Path = Path.Combine(destDirPath, "file1.bin");
+            Assert.Equal(file1Path,
+                files.FirstOrDefault(x => x.Equals(file1Path, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            var file1Info = fatFileSystem.GetFileInfo(file1Path);
+            Assert.Equal(50000, file1Info.Length);
+
+            // assert - file2.bin file was copied and has size 250000 bytes
+            file2Path = Path.Combine(destDirPath, "file2.bin");
+            Assert.Equal(file2Path,
+                files.FirstOrDefault(x => x.Equals(file2Path, StringComparison.OrdinalIgnoreCase))?.ToLowerInvariant());
+            var file2Info = fatFileSystem.GetFileInfo(file2Path);
+            Assert.Equal(250000, file2Info.Length);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
         }
     }
 }

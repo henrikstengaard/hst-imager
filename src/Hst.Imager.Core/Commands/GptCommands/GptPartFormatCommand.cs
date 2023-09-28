@@ -51,7 +51,7 @@ public class GptPartFormatCommand : CommandBase
         }
         using var media = mediaResult.Value;
             
-        using var disk = media is DiskMedia diskMedia
+        var disk = media is DiskMedia diskMedia
             ? diskMedia.Disk
             : new Disk(media.Stream, Ownership.None);
             

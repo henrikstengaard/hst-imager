@@ -364,10 +364,11 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), backupPath, path));
         }
 
-        public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName)
+        public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName,
+            int? version, int? revision)
         {
             await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName));
+                await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName, version, revision));
         }
 
         public static async Task RdbFsDel(string path, int fileSystemNumber)
