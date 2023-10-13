@@ -1,0 +1,346 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <style data-merge-styles="true"></style><style data-merge-styles="true"></style><style data-merge-styles="true"></style>
+	<title>Operating Systems - Filesystems - FATFS - Appendix 2: Described structures in C</title>
+	<style>
+        BODY, P, H1, H2, H3, H4, H5, H6, ADDRESS, DIV, TR, TD, UL, OL, BLOCKQUOTE, SPAN, DT, DD, TH, TABLE, CAPTION {
+            color: black;
+            font-family: Verdana, Arial, Helvetica, sans-serif;
+            font-size: 10pt;
+        }
+        PRE {
+            font-family: monospace;
+        }
+
+        CAPTION {
+            text-decoration: italic;
+        }
+
+        BODY {
+            /*background: url("http://hjem.get2net.dk/rune_moeller_barnkob/background.jpg") #f0f0f0;*/
+            margin-left: 40pt;
+            margin-right: 10pt;
+        }
+
+        H1 {
+            font-size: 24pt;
+            font-weight: bold;
+            margin-left: -30pt;
+            margin-bottom: 0.2em;
+        }
+
+
+        H2 {
+            font-size: 18pt;
+            font-weight: bold;
+            margin-top: 0.1em;
+            margin-bottom: 0.05em;
+        }
+
+        H3 {
+            font-size: 16pt;
+            font-weight: bold;
+            margin-top: 0.1em;
+            margin-bottom: 0;
+        }
+
+        H3.subsub {
+            margin-left: 30pt;
+        }
+
+
+        H4 {
+            font-size: 12pt;
+            text-decoration: underline;
+            margin-bottom: 0.1em;
+        }
+
+        DIV.ulinebox {
+            margin-left: -30pt;
+            margin-bottom: 0.1em;
+            border: solid black;
+            border-bottom-width: 1px;
+            border-top-width: 0;
+            border-left-width: 0;
+            border-right-width: 0;
+        }
+
+
+        ADDRESS {
+            font-size: 10pt;
+            text-align: center;
+            text-decoration: italic;
+        }
+
+
+
+        A:link {
+            color: blue;
+            text-decoration: none;
+        }
+
+        A:hover {
+            color: red;
+            text-decoration: underline;
+        }
+
+        BODY > HR.startp {
+            align: left;
+            margin-left: -30pt;
+            margin-right: 30pt;
+
+        }
+
+        BODY > HR.endp {
+            align: left;
+            margin-top: 30pt;
+            margin-left: -30pt;
+            margin-right: 30pt;
+
+        }
+
+        TR, TD {
+            align: top;
+        }
+
+        TR.ev {
+            background: #f0f0f0;
+        }
+        TR.od {
+            background: #ffffff;
+        }
+        TR.total {
+            background: #e7e7e7;
+        }
+        TR.head {
+            background: #e0e0e0;
+        }
+
+        TABLE.boxed  {
+            border: solid black 1pt;
+        }
+
+        TD {
+            font-size: 10pt;
+        }
+
+        TH {
+            font-weight: bold;
+            text-align: left;
+        }
+
+        DT {
+            font-weight: bold;
+        }
+
+        DD {
+            margin-left: 30pt;
+            margin-bottom: 0.5em;
+        }
+    </style>
+</head>
+
+<body>
+<h1>Operating Systems</h1>
+<h2>Filesystems</h2>
+<h3 class="subsub">FATFS Appendix 2: Descibed stuctures in C</h3>
+<hr class="startp">
+<pre>/* these typedefs and their sizes MUST comply to Intels standards ! */
+typedef unsigned char      byte;  /* 1 byte */
+typedef unsigned int       word;  /* 2 bytes */
+typedef unsigned long int  dword; /* 4 bytes */
+
+/* Partion Table Entry [16 bytes] */
+struct s_PartionEntry
+{
+ byte                   Bootflag;
+ byte                   StartingSide;
+ /* problem : lsb is lowest: SSSSSSHH,CCCCCCCC, but cyl=CCCCCCCCHH ,
+    call fix_pt with a s_PartionTable */
+ unsigned               StartingSector:6;
+ unsigned               StartingCylinder:10;
+ byte                   SystemIndicator;
+ byte                   EndingSide;
+ unsigned               EndingSector:6;
+ unsigned               EndingCylinder:10;
+ dword                  RelativeSectors;
+ dword                  NumberOfSectors;
+};
+
+/* Partion Table / Master Boot Record [512 bytes] */
+struct s_PartionTable
+{
+ byte                   LoadInstruction[446];
+ struct s_PartionEntry  Partions[4];
+ word                   Signature; /*=AA55*/
+};
+
+/* Dos Boot Record [512 byte] */
+struct s_DosBootRecord
+{
+ byte                   JumpInstruction[3];
+ byte                   OEMID[8];
+ word                   BytesPerSector;
+ byte                   SectorsPerCluster;
+ word                   ReservedSectors;
+ byte                   FATs;
+ word                   RootEntries;
+ word                   SmallSectors;
+ byte                   Media;
+ word                   FATSize;
+ word                   TrackSize;
+ word                   Heads;
+ dword                  HiddenSectors;
+ dword                  LargeSectors;
+ byte                   DriveNumber;
+ byte                   CurrentHead;
+ byte                   Signature;
+ dword                  ID;
+ byte                   VolumeLabel[11];
+ byte                   SystemID[8];
+ byte                   LoadInstructions[512-64];
+ word                   BR_Signature; /*=AA55h*/
+};
+
+/* Time-field in DirEntry [4 byte] */
+struct s_DosTime
+{
+ unsigned Sec    :5;
+ unsigned Min    :6;
+ unsigned Hour   :5;
+ unsigned Day    :5;
+ unsigned Month  :4;
+ unsigned Year   :7;
+};
+
+/* standard DOS Attributes in a DirectoryEntry [1 byte] */
+struct s_DosAttributes
+{
+ unsigned ReadOnly  :1;
+ unsigned Hidden    :1;
+ unsigned System    :1;
+
+ unsigned VolumeID  :1;
+ unsigned Directory :1;
+ unsigned Archive   :1;
+ unsigned reserved  :2;
+};
+
+/* Directory entry [32 byte] */
+struct s_DirEntry
+{
+ char                   Name[8];
+ char                   Ext[3];
+ struct s_DosAttributes Attributes;
+ byte                   reserved[8];
+ word                   EA_Index;
+ struct  s_DosTime      Time;
+ int                    EntryCluster;
+ dword                  Size;
+};
+
+
+/* And now some sample code to print the structures */
+
+/* Print a partion table on stdout */
+void write_partiontable(struct s_PartionTable PT)
+{
+ int lp1;
+ printf("Bt SI | Side    Cyl   Sect -&gt; Side    Cyl   Sect |  StartSec       Size\n");
+ for (lp1=0; lp1&lt;4; lp1++)
+  printf("%c  %02hX |  %3hu %6u %6u -&gt;  %3hu %6u %6u | %9ld  %9ld = %5ld\n",
+         ( (PT.Partions[lp1].Bootflag==0x080) ? 'Y' : 'N'),
+         PT.Partions[lp1].SystemIndicator,
+         PT.Partions[lp1].StartingSide,
+         PT.Partions[lp1].StartingCylinder,
+         PT.Partions[lp1].StartingSector,
+         PT.Partions[lp1].EndingSide,
+         PT.Partions[lp1].EndingCylinder,
+         PT.Partions[lp1].EndingSector,
+         PT.Partions[lp1].RelativeSectors,
+         PT.Partions[lp1].NumberOfSectors,
+         PT.Partions[lp1].NumberOfSectors/2048);
+ if (!(PT.Signature==0xAA55)) printf("MBR does not conform to standards!\n");
+};
+
+/* Print a boot record on stdout */
+void write_bootrec(struct s_DosBootRecord BR)
+{
+ printf("\nOEM ID\t\t\t\t%.8s",BR.OEMID);
+ printf("\nBytes Per Sector\t\t%u",BR.BytesPerSector);
+ printf("\nSectors per cluster\t\t%hu",BR.SectorsPerCluster);
+ printf("\nReserved Sectors\t\t%u",BR.ReservedSectors);
+ printf("\nNumber of FATs\t\t\t%hu",BR.FATs);
+ printf("\nEntries in root-directory\t%u",BR.RootEntries);
+ printf("\nSectors (small)\t\t\t%u",BR.SmallSectors);
+ printf("\nMedia Descriptor\t\t%hXh",BR.Media);
+ printf("\nSize of FAT in sectors\t\t%u",BR.FATSize);
+ printf("\nLength of track, in sectors\t%u",BR.TrackSize);
+ printf("\nHeads\t\t\t\t%u",BR.Heads);
+ printf("\nHidden sectors\t\t\t%lu",BR.HiddenSectors);
+ printf("\nLarge sector count\t\t%lu",BR.LargeSectors);
+ printf("\nDrive number\t\t\t%hXh",BR.DriveNumber);
+ printf("\nCurrent Head\t\t\t%hd",BR.CurrentHead);
+ printf("\nSignature\t\t\t%hXh",BR.Signature);
+ printf("\nID\t\t\t\t%08lXh",BR.ID);
+ printf("\nVolume Label\t\t\t%.11s",BR.VolumeLabel);
+ printf("\nSystem ID\t\t\t%.8s",BR.SystemID);
+ printf("\n");
+ if (!(BR.BR_Signature==0xAA55)) printf("BootRecord does not conform to standards!\n");
+};
+
+/* Print a DE on stdout */
+void write_dir(struct s_DirEntry Entry)
+{
+ if ( (Entry.Name[0]&gt;32) &amp;&amp; (Entry.Name[0]&lt;180) )
+  printf("%.8s %.3s  %9lu  %4d-%02d-%02d  %02d.%02d.%02d %c %c %c %c %c %c -&gt;  %4Xh = %d \n",
+         Entry.Name,
+         Entry.Ext,
+         Entry.Size,
+         Entry.Time.Year+1980,
+         Entry.Time.Month,
+         Entry.Time.Day,
+         Entry.Time.Hour,
+         Entry.Time.Min,
+         Entry.Time.Sec*2,
+         (Entry.Attributes.Archive ? 'A' : ' '),
+         (Entry.Attributes.ReadOnly ? 'R' : ' '),
+         (Entry.Attributes.Hidden ? 'H' : ' '),
+         (Entry.Attributes.System ? 'S' : ' '),
+         (Entry.Attributes.Directory ? 'D' : ' '),
+         (Entry.Attributes.VolumeID ? 'V' : ' '),
+         Entry.EntryCluster,
+         Entry.EntryCluster);
+};
+
+/* small function to fix a partion table, use 0 to fix and 1 to unfix */
+void fix_pt(struct s_PartionTable *PT, int unfix)
+{
+ int lp1;
+ byte tmp;
+ for (lp1=0; lp1&lt;4; lp1++)
+  if (!unfix)
+  {
+   tmp = PT-&gt;Partions[lp1].StartingCylinder &amp; 0x03 &lt;&lt; 8;
+   PT-&gt;Partions[lp1].StartingCylinder &gt;&gt;= 2;
+   PT-&gt;Partions[lp1].StartingCylinder += tmp;
+   tmp = PT-&gt;Partions[lp1].EndingCylinder &amp; 0x03 &lt;&lt; 8;
+   PT-&gt;Partions[lp1].EndingCylinder &gt;&gt;= 2;
+   PT-&gt;Partions[lp1].EndingCylinder += tmp;
+  } else
+  {
+   tmp = PT-&gt;Partions[lp1].StartingCylinder &amp; 0x300 &gt;&gt; 8;
+   PT-&gt;Partions[lp1].StartingCylinder &lt;&lt;= 2;
+   PT-&gt;Partions[lp1].StartingCylinder += tmp;
+   tmp = PT-&gt;Partions[lp1].EndingCylinder &amp; 0x300 &gt;&gt; 8;
+   PT-&gt;Partions[lp1].EndingCylinder &lt;&lt;= 2;
+   PT-&gt;Partions[lp1].EndingCylinder += tmp;
+  };
+};
+</pre>
+
+<hr class="endp">
+<address>Last updated 2001-11-24 <a href="mailto:fs@proglang.cjb.net">FlushedSector</a><br>fs@proglang.cjb.net<br><a href="http://hjem.get2net.dk/rune_moeller_barnkob/disclaimer.html">Standard Disclaimer</a></address>
+
+</body>
+</html>

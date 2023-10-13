@@ -1,0 +1,461 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><style data-merge-styles="true"></style><style data-merge-styles="true"></style><style data-merge-styles="true"></style>
+
+	
+	<title>Operating Systems - Filesystems - FAT32</title>
+	<style>
+BODY, P, H1, H2, H3, H4, H5, H6, ADDRESS, DIV, TR, TD, UL, OL, BLOCKQUOTE, SPAN, DT, DD, TH, TABLE, CAPTION {
+	color: black;
+	font-family: Verdana, Arial, Helvetica, sans-serif; 
+	font-size: 10pt;
+}
+PRE {
+	font-family: monospace;
+}
+	
+CAPTION {
+	text-decoration: italic;
+}
+
+BODY { 
+	/*background: url("http://hjem.get2net.dk/rune_moeller_barnkob/background.jpg") #f0f0f0;*/
+	margin-left: 40pt;
+	margin-right: 10pt;
+}
+
+H1 {
+	font-size: 24pt;
+	font-weight: bold;
+	margin-left: -30pt;
+	margin-bottom: 0.2em;
+}
+
+
+H2 {
+	font-size: 18pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0.05em;
+}
+
+H3 {
+	font-size: 16pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0;
+}
+
+H3.subsub {
+	margin-left: 30pt;
+}
+
+
+H4 {
+	font-size: 12pt;
+	text-decoration: underline;
+	margin-bottom: 0.1em;
+}
+
+DIV.ulinebox {
+	margin-left: -30pt;
+	margin-bottom: 0.1em;
+	border: solid black;
+	border-bottom-width: 1px;
+	border-top-width: 0;
+	border-left-width: 0;
+	border-right-width: 0;
+}
+
+
+ADDRESS {
+	font-size: 10pt;
+	text-align: center;
+	text-decoration: italic;
+}
+
+
+
+A:link { 
+	color: blue; 
+	text-decoration: none;
+}
+
+A:hover { 
+	color: red; 
+	text-decoration: underline;
+}
+
+BODY > HR.startp {
+	align: left;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+BODY > HR.endp {
+	align: left;
+	margin-top: 30pt;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+TR, TD {
+	align: top;
+}
+
+TR.ev {
+	background: #f0f0f0;
+}
+TR.od {
+	background: #ffffff;
+}
+TR.total {
+	background: #e7e7e7;
+}
+TR.head {
+	background: #e0e0e0;
+}
+
+TABLE.boxed  {
+	border: solid black 1pt;
+}
+
+TD {
+	font-size: 10pt;
+}
+
+TH {
+	font-weight: bold;
+	text-align: left;
+}
+
+DT {
+	font-weight: bold;
+}
+
+DD {
+	margin-left: 30pt;
+	margin-bottom: 0.5em;
+}
+</style>
+</head>
+
+<body>
+<h1>Operating Systems</h1>
+<h2>Filesystems</h2>
+<h3 class="subsub">FAT32</h3>
+<p align="right"><i>Co-author: <a href="http://solohome.cjb.net/">Solo</a></i></p>
+<hr class="startp">
+
+<h3>FAT32 Boot Record(s)</h3>
+<p>As with all other FAT-systems, the first sector on the partition is the Boot Record. The boot record contains fields, that makes it possible to correctly identify the way the volume is composed, and it contains the code to load the boot-strap of the operating system (therefore also known as the boot-sector). The following layout applies to all FAT32 volumes.</p>
+
+<table class="boxed">
+	<caption>Boot Record</caption>
+	<colgroup><col></colgroup><colgroup align="center"><col><col></colgroup><colgroup>
+	
+	</colgroup><tbody><tr class="head">
+		<th>Title</th>
+		<th>Offset</th>
+		<th>Size</th>
+		<th>Example<br>(2 GB partition)</th>
+		<th>Description</th>
+	</tr>
+
+	<tr class="od">
+		<td>Jump</td>
+		<td>0</td>
+		<td>3</td>
+		<td>eb 3c 90<br>(JMPS 3e, NOP)</td>
+		<td>A jump instruction to skip the record and reach the code to execute.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>OEM ID</td>
+		<td>3</td>
+		<td>8</td>
+		<td>MSWIN4.1</td>
+		<td>String with ID of OS creating disk. I previously said both MSWIN4.0 and MSWIN4.1 was valid here, I was later informed that only MSWIN4.1 used by Win95B, Win98 and later can be present here on a FAT32 volume.</td>
+	</tr>
+
+	<tr class="od">
+		<td>Bytes per sector</td>
+		<td>11</td>
+		<td>2</td>
+		<td>512</td>
+		<td>The number of bytes in each sector, useful to determin buffer sizes.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Sectors per cluster</td>
+		<td>13</td>
+		<td>1</td>
+		<td>8</td>
+		<td>The number of sectors used for each allocation unit (cluster).</td>
+	</tr>
+
+	<tr class="od">
+		<td>Reserved sectors at beginning</td>
+		<td>14</td>
+		<td>2</td>
+		<td>32</td>
+		<td>The number of sectors in the beginning of the volume that are reserved.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>FAT Copies</td>
+		<td>16</td>
+		<td>1</td>
+		<td>2</td>
+		<td>The number of copies of the FAT. To my knowledge, it is possible to create a volume with just one FAT (Solo did this).</td>
+	</tr>
+
+	<tr class="od">
+		<td>Root Entries</td>
+		<td>17</td>
+		<td>2</td>
+		<td>0</td>
+		<td>(unused now since root is a cluster-chain)</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Total Sectors</td>
+		<td>19</td>
+		<td>2</td>
+		<td>0</td>
+		<td>Number of sectors on the volume. Zero if more than 64k sectors (use Big Total Sectors instead).</td>
+	</tr>
+
+	<tr class="od">
+		<td>Media descriptor byte</td>
+		<td>21</td>
+		<td>1</td>
+		<td>F8h</td>
+		<td>See <a href="fatfs.html">media descriptors in FAT16</a></td>
+	</tr>
+
+	<tr class="ev">
+		<td>Sectors per FAT</td>
+		<td>22</td>
+		<td>2</td>
+		<td>0</td>
+		<td>The number of sectors used to store each FAT.</td>
+	</tr>
+
+	<tr class="od">
+		<td>Sectors per track</td>
+		<td>24</td>
+		<td>2</td>
+		<td>63</td>
+		<td>Sectors per cylinder. Used to translate geometry of disk.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Sides/Heads</td>
+		<td>26</td>
+		<td>2</td>
+		<td>255</td>
+		<td>Sometimes referred to as heads. Used to translate geometry of disk.</td>
+	</tr>
+
+	<tr class="od">
+		<td>Special hidden sectors</td>
+		<td>28</td>
+		<td>4</td>
+		<td>63</td>
+		<td>Additional reserved sectors at the beginning of the disk</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Big total number of sectors</td>
+		<td>32</td>
+		<td>4</td>
+		<td>(Unused)</td>
+		<td>The total number of sectors in the volume. Used if "Total Sectors" are incapable of holding the count (more than 64k sectors).</td>
+	</tr>
+
+	<tr class="od">
+		<td>Big Sectors per FAT</td>
+		<td>36</td>
+		<td>4</td>
+		<td>4024</td>
+		<td>If the number of sectors required by the FAT is larger than can be held in "Sectors per FAT", this field is used.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Extended Flags</td>
+		<td>40</td>
+		<td>2</td>
+		<td>0</td>
+		<td>Upper byte of this word is reserved and equal to 0. Lower byte: MSB indicates whether all FAT's should be updated when the master FAT is updated (set if no mirroring, cleared if update all). The 4 least significant bit indicates the master FAT, counted from 0 and up (only meaningful if MSB is set). The upper byte of this field was previously known as "File System Ver (major)".</td>
+	</tr>
+
+	<tr class="od">
+		<td>File System Version</td>
+		<td>42</td>
+		<td>2</td>
+		<td>0</td>
+		<td>High byte represents major version, lower byte minor version.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>First Cluster of Root Directory</td>
+		<td>44</td>
+		<td>4</td>
+		<td>2</td>
+		<td>This must, unlike in FAT16, be taken seriously, since the root-directory may be relocated on a FAT32 disk.</td>
+	</tr>
+
+	<tr class="od">
+		<td>File-System-Info Sector number</td>
+		<td>48</td>
+		<td>2</td>
+		<td>1</td>
+		<td>Points to the sector containing the file system info sector. If it is unused, it is set to 0FFFFh, otherwise it must be less than the reserved sector count.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>(hotlink) Backup Boot Sector</td>
+		<td>50</td>
+		<td>2</td>
+		<td>6</td>
+		<td>If not equal to 0FFFFh, it points to a sector containing a copy of the boot record. Must be less than the reserved sector count.</td>
+	</tr>
+
+	<tr class="od">
+		<td>Reserved</td>
+		<td>52</td>
+		<td>12</td>
+		<td>(Unused)</td>
+		<td></td>
+	</tr>
+
+	<tr class="ev">
+		<td>Physical drive number</td>
+		<td>64</td>
+		<td>1</td>
+		<td>128</td>
+		<td>The physical number assigned by the BIOS to this disk. (&gt;=80h)</td>
+	</tr>
+
+	<tr class="od">
+		<td>Reserved</td>
+		<td>65</td>
+		<td>1</td>
+		<td>(Unused)</td>
+		<td></td>
+	</tr>
+
+	<tr class="ev">
+		<td>Extended Boot Record Signature</td>
+		<td>66</td>
+		<td>1</td>
+		<td>29h</td>
+		<td></td>
+	</tr>
+
+	<tr class="od">
+		<td>Volume Serial Number</td>
+		<td>67</td>
+		<td>4</td>
+		<td>253796A6h</td>
+		<td>Serial number of volume. Stored as a binary number.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Volume Label</td>
+		<td>71</td>
+		<td>11</td>
+		<td>BIG HD 2</td>
+		<td>Name of the volume.</td>
+	</tr>
+
+	<tr class="od">
+		<td>File System ID</td>
+		<td>82</td>
+		<td>8</td>
+		<td>FAT32</td>
+		<td>The ID of the filesystem used on this volume.</td>
+	</tr>
+
+	<tr class="ev">
+		<td>Signature</td>
+		<td>508</td>
+		<td>4</td>
+		<td>0AA550000h</td>
+		<td>Signature to verify sector contents.</td>
+	</tr>
+</tbody></table>
+
+<p>Unlike FAT16, the FAT32 defines an additional information sector, known as the FSINFO sector. This sector is located in sector 1 and contains the following:</p>
+<table class="boxed">
+<caption>Sector 1</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col></colgroup><colgroup>
+</colgroup><tbody><tr class="head"><th>Title</th><th>Offset</th><th>Size</th><th>Example (2 GB partition)</th><th>Description</th></tr>
+<tr class="od"><td>Extended Boot Signature</td><td>0</td><td>4</td><td>41615252h</td><td>&nbsp;</td></tr>
+<tr class="ev"><td>Reserved</td><td>4</td><td>480</td><td>(Unused)</td><td>&nbsp;</td></tr>
+<tr class="od"><td>FSINFO Signature</td><td>484</td><td>4</td><td>61417272h</td><td>Must equal 61417272h.</td></tr>
+<tr class="ev"><td>Free Cluster Count</td><td>488</td><td>4</td><td>11850</td><td>set to -1 if unknown.</td></tr>
+<tr class="od"><td>Next Free Cluster</td><td>492</td><td>4</td><td>2</td><td>The number of the cluster that was most recently allocated. Allows improved performance.</td></tr>
+<tr class="ev"><td>Reserved</td><td>496</td><td>12</td><td>(unused)</td><td>&nbsp;</td></tr>
+<tr class="od"><td>FSINFO Ending Signature</td><td>508</td><td>4</td><td>AA550000h</td><td></td></tr>
+</tbody></table>
+
+<p>The third sector on the drive is reserved. It contains a major part of the bootstrap (for more in-depth info about the bootstrap, visit <a href="http://www.geocities.com/thestarman3/asm/mbr/MSWIN41.htm" target="_blank">The Starman's home page</a>, which contains a dis-assembly of the entire bootstrap.</p>
+
+<h3>FAT32 Table</h3>
+<p>Just like FAT16, the first FAT starts rigth after the reserved sectors. Each FAT entry occupies 4 bytes. The high byte is reserved and is always 0 (in my [Solo] FAT32 partition) except in End Of File markers.</p>
+<p>The first 8 bytes of the FAT are reserved. The first byte contains the media descriptor (=F8h for a HDD). The fourth bit of the eighth byte determines whether the system has written to the partition (=07h if volume has been updated, 0Fh if Windows was properly shut down). (This is specified by Microsoft, but doesn't seem to be true on my [solo] FAT32 partition)</p>
+<p>In FAT32, the following values have special meaning:</p>
+
+<table class="boxed">
+<caption>Special values in the FAT</caption>
+<tbody><tr class="head"><th>Value</th><th>Description</th></tr>
+<tr class="od"><td>0</td><td>Empty</td></tr>
+<tr class="ev"><td>1</td><td>Bad?</td></tr>
+<tr class="od"><td>2 - number of clusters</td><td>Pointer to the cluster containing the next part of the file/directory</td></tr>
+<tr class="ev"><td>0FFFFFFFh</td><td>End Of File marker</td></tr>
+<tr class="od"><td>0FFFFFF8h</td><td>End Of File marker (in my [solo] FAT32 partition only 7 files (6 directories and 1 file) ends with this marker</td></tr>
+</tbody></table>
+<p>The first cluster (cluster 2) is after the second FAT. This is the start of the data area on the volume.</p>
+
+<h3>Directory entries</h3>
+<p>The directory entries have not changed much from FAT16. As with VFAT (FAT32 supplies allocation, VFAT supplies files), two entirely different directory entries exist. This is the standard entry:</p>
+
+<table class="boxed">
+<caption>Standard FAT directory entry</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col></colgroup><colgroup>
+</colgroup><tbody><tr class="head"><th>Field name</th><th>Offset</th><th>Size</th><th>Description</th></tr>
+<tr class="od"><td>Name</td><td>0</td><td>8</td><td>Even though it does not seem to be a demand, this field usually only contain ASCII uppercase letters.</td></tr>
+<tr class="ev"><td>Extension</td><td>8</td><td>3</td><td>Even though it does not seem to be a demand, this field usually only contain ASCII uppercase letters.</td></tr>
+<tr class="od"><td>Attributes</td><td>11</td><td>1</td><td>Field coded same way as <a href="fatfs.html">FAT16</a></td></tr>
+<tr class="ev"><td>NT</td><td>12</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="od"><td>Create time</td><td>14</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="ev"><td>Create date</td><td>16</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="od"><td>Accessed date</td><td>18</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="ev"><td>Cluster high</td><td>20</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="od"><td>Time/Date</td><td>22</td><td>4</td><td>Date-Time field coded same way as <a href="fatfs.html">FAT16</a></td></tr>
+<tr class="ev"><td>Cluster low</td><td>26</td><td>2</td><td>&nbsp;</td></tr>
+<tr class="od"><td>Size</td><td>28</td><td>4</td><td>Total number of bytes in this file. (This limits largest file to be 2GB)</td></tr>
+<tr class="total"><td>Total</td><td>&nbsp;</td><td>32 Bytes</td><td>&nbsp;</td></tr>
+</tbody></table>
+
+<p>For the extended long-file-name entry see <a href="vfat.html">VFAT explanation</a>.</p>
+
+<h3>Conclusion</h3>
+<p>The FAT32 has proven to be a viable solution (primarily due to the fact that Win95/98 still does not support NTFS/HPFS), but not nescesarily the best solution. In my humble opinion, I feel that the FAT32 still does not fix the basic inefficiency in the file system. The LFN support is, as in VFAT, only a quick and dirty solution, and the file system still does not support the extended attributes, that could be used to implement practically whatever you want - file security and an independence of extensions. The FAT's have grown larger, resulting in the fact that you could not cache the entire FAT, as one could easily do with FAT16 and achive an even higher performance. The system still allocates space in cluster, and not sectors - as NTFS/HPFS.</p>
+
+<h3>SeeAlso</h3>
+<p>"Technical Notes on Disk Device Support" in Windows 98 Ressource Kit Book.</p>
+
+<p><i>Please note that this page still needs some work, but I'm low on time due to studies...8).</i></p>
+
+<hr>
+<p>Large thanks go to <a href="http://solohome.cjb.net/">Solo</a>, who made most of the tables used on this page. Thanks!. Reed Darsey was also kind enough to point out some errors on this page, which has been fixed.</p> 
+
+<hr class="endp">
+<address>Last updated 2002-02-01 <a href="mailto:fs@proglang.cjb.net">FlushedSector</a><br>fs@proglang.cjb.net<br><a href="http://hjem.get2net.dk/rune_moeller_barnkob/disclaimer.html">Standard Disclaimer</a></address>
+
+</body>
+</html>

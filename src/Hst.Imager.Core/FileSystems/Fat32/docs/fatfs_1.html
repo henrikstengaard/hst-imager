@@ -1,0 +1,168 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><style data-merge-styles="true"></style><style data-merge-styles="true"></style><style data-merge-styles="true"></style>
+
+	<title>Operating Systems - Filesystems - FATFS Appendix 1: Get Disk Geometry</title>
+	<style>
+BODY, P, H1, H2, H3, H4, H5, H6, ADDRESS, DIV, TR, TD, UL, OL, BLOCKQUOTE, SPAN, DT, DD, TH, TABLE, CAPTION {
+	color: black;
+	font-family: Verdana, Arial, Helvetica, sans-serif; 
+	font-size: 10pt;
+}
+PRE {
+	font-family: monospace;
+}
+	
+CAPTION {
+	text-decoration: italic;
+}
+
+BODY { 
+	/* background: url("http://hjem.get2net.dk/rune_moeller_barnkob/background.jpg") #f0f0f0; */
+	margin-left: 40pt;
+	margin-right: 10pt;
+}
+
+H1 {
+	font-size: 24pt;
+	font-weight: bold;
+	margin-left: -30pt;
+	margin-bottom: 0.2em;
+}
+
+
+H2 {
+	font-size: 18pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0.05em;
+}
+
+H3 {
+	font-size: 16pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0;
+}
+
+H3.subsub {
+	margin-left: 30pt;
+}
+
+
+H4 {
+	font-size: 12pt;
+	text-decoration: underline;
+	margin-bottom: 0.1em;
+}
+
+DIV.ulinebox {
+	margin-left: -30pt;
+	margin-bottom: 0.1em;
+	border: solid black;
+	border-bottom-width: 1px;
+	border-top-width: 0;
+	border-left-width: 0;
+	border-right-width: 0;
+}
+
+
+ADDRESS {
+	font-size: 10pt;
+	text-align: center;
+	text-decoration: italic;
+}
+
+
+
+A:link { 
+	color: blue; 
+	text-decoration: none;
+}
+
+A:hover { 
+	color: red; 
+	text-decoration: underline;
+}
+
+BODY > HR.startp {
+	align: left;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+BODY > HR.endp {
+	align: left;
+	margin-top: 30pt;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+TR, TD {
+	align: top;
+}
+
+TR.ev {
+	background: #f0f0f0;
+}
+TR.od {
+	background: #ffffff;
+}
+TR.total {
+	background: #e7e7e7;
+}
+TR.head {
+	background: #e0e0e0;
+}
+
+TABLE.boxed  {
+	border: solid black 1pt;
+}
+
+TD {
+	font-size: 10pt;
+}
+
+TH {
+	font-weight: bold;
+	text-align: left;
+}
+
+DT {
+	font-weight: bold;
+}
+
+DD {
+	margin-left: 30pt;
+	margin-bottom: 0.5em;
+}
+</style>
+</head>
+<body>
+<h1>Operating Systems</h1>
+<h2>Filesystems</h2>
+<h3 class="subsub">FATFS Appendix 1: Get Disk Geometry</h3>
+<hr class="startp">
+
+<pre>INT 13h, service 08h:
+Input:  AH=08h
+        DL=physical disk number,
+           00..79h is diskettes, 80h..FFh is HD's starting from 80h.
+Return: CF (carry flag) is set if error
+        AH = status code, see a interrupt list or ignore...:)
+        DL = number of disks responding to system
+        CH = max cylinder, add 1 for number of, get 2 upper bits from CL and insert as MSBs
+        CL = max sectors, add 1 for sectors/track, only lower 6 bits
+        CX: lsb left: SSSSSSHH:CCCCCCCC
+            max cyl = CCCCCCCCHH (lsb left)
+            max sec = SSSSSS (lsb left)
+</pre>
+
+Taken almost directly from Ralph Brown interruptlist.
+
+<hr class="endp">
+<address>Last updated 2001-11-24 <a href="mailto:fs@proglang.cjb.net">FlushedSector</a><br>fs@proglang.cjb.net<br><a href="http://hjem.get2net.dk/rune_moeller_barnkob/disclaimer.html">Standard Disclaimer</a></address>
+
+</body>
+</html>

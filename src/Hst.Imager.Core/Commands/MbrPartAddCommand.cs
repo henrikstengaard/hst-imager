@@ -21,7 +21,7 @@
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
-        private readonly string type;
+        private readonly MbrPartType type;
         private readonly Size size;
         private readonly long? startSector;
         private readonly long? endSector;
@@ -29,7 +29,7 @@
         private const int RdbMbrGap = 512 * 1024;
 
         public MbrPartAddCommand(ILogger<MbrPartAddCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path, string type, Size size,
+            IEnumerable<IPhysicalDrive> physicalDrives, string path, MbrPartType type, Size size,
             long? startSector, long? endSector, bool active = false)
         {
             this.logger = logger;
@@ -179,7 +179,7 @@
             }
             
             OnInformationMessage($"- Partition number '{biosPartitionTable.Partitions.Count + 1}'");
-            OnInformationMessage($"- Type '{type.ToUpper()}'");
+            OnInformationMessage($"- Type '{type.ToString().ToUpper()}'");
             OnInformationMessage($"- Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
             OnInformationMessage($"- Start sector '{start}'");
             OnInformationMessage($"- End sector '{end}'");
@@ -193,15 +193,15 @@
 
         private Result<byte> GetBiosPartitionType()
         {
-            return type.ToLower() switch
+            return type switch
             {
-                "fat12" => new Result<byte>(BiosPartitionTypes.Fat12),
-                "fat16" => new Result<byte>(BiosPartitionTypes.Fat16),
-                "fat32" => new Result<byte>(BiosPartitionTypes.Fat32),
-                "fat16small" => new Result<byte>(BiosPartitionTypes.Fat16Small),
-                "fat16lba" => new Result<byte>(BiosPartitionTypes.Fat16Lba),
-                "fat32lba" => new Result<byte>(BiosPartitionTypes.Fat32Lba),
-                "ntfs" => new Result<byte>(BiosPartitionTypes.Ntfs),
+                MbrPartType.Fat12 => new Result<byte>(BiosPartitionTypes.Fat12),
+                MbrPartType.Fat16 => new Result<byte>(BiosPartitionTypes.Fat16),
+                MbrPartType.Fat16Small => new Result<byte>(BiosPartitionTypes.Fat16Small),
+                MbrPartType.Fat16Lba => new Result<byte>(BiosPartitionTypes.Fat16Lba),
+                MbrPartType.Fat32 => new Result<byte>(BiosPartitionTypes.Fat32),
+                MbrPartType.Fat32Lba => new Result<byte>(BiosPartitionTypes.Fat32Lba),
+                MbrPartType.Ntfs => new Result<byte>(BiosPartitionTypes.Ntfs),
                 _ => new Result<byte>(new Error($"Unsupported partition type '{type}'"))
             };
         }

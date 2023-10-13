@@ -1,0 +1,453 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=windows-1252"><style data-merge-styles="true"></style><style data-merge-styles="true"></style><style data-merge-styles="true">
+	<title>Operating Systems - Filesystems - FATFS</title>
+	<style>
+BODY, P, H1, H2, H3, H4, H5, H6, ADDRESS, DIV, TR, TD, UL, OL, BLOCKQUOTE, SPAN, DT, DD, TH, TABLE, CAPTION {
+	color: black;
+	font-family: Verdana, Arial, Helvetica, sans-serif; 
+	font-size: 10pt;
+}
+PRE {
+	font-family: monospace;
+}
+	
+CAPTION {
+	text-decoration: italic;
+}
+
+BODY { 
+	/*background: url("http://hjem.get2net.dk/rune_moeller_barnkob/background.jpg") #f0f0f0;*/
+	margin-left: 40pt;
+	margin-right: 10pt;
+}
+
+H1 {
+	font-size: 24pt;
+	font-weight: bold;
+	margin-left: -30pt;
+	margin-bottom: 0.2em;
+}
+
+
+H2 {
+	font-size: 18pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0.05em;
+}
+
+H3 {
+	font-size: 16pt;
+	font-weight: bold;
+	margin-top: 0.1em;
+	margin-bottom: 0;
+}
+
+H3.subsub {
+	margin-left: 30pt;
+}
+
+
+H4 {
+	font-size: 12pt;
+	text-decoration: underline;
+	margin-bottom: 0.1em;
+}
+
+DIV.ulinebox {
+	margin-left: -30pt;
+	margin-bottom: 0.1em;
+	border: solid black;
+	border-bottom-width: 1px;
+	border-top-width: 0;
+	border-left-width: 0;
+	border-right-width: 0;
+}
+
+
+ADDRESS {
+	font-size: 10pt;
+	text-align: center;
+	text-decoration: italic;
+}
+
+
+
+A:link { 
+	color: blue; 
+	text-decoration: none;
+}
+
+A:hover { 
+	color: red; 
+	text-decoration: underline;
+}
+
+BODY > HR.startp {
+	align: left;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+BODY > HR.endp {
+	align: left;
+	margin-top: 30pt;
+	margin-left: -30pt;
+	margin-right: 30pt;
+	
+}
+
+TR, TD {
+	align: top;
+}
+
+TR.ev {
+	background: #f0f0f0;
+}
+TR.od {
+	background: #ffffff;
+}
+TR.total {
+	background: #e7e7e7;
+}
+TR.head {
+	background: #e0e0e0;
+}
+
+TABLE.boxed  {
+	border: solid black 1pt;
+}
+
+TD {
+	font-size: 10pt;
+}
+
+TH {
+	font-weight: bold;
+	text-align: left;
+}
+
+DT {
+	font-weight: bold;
+}
+
+DD {
+	margin-left: 30pt;
+	margin-bottom: 0.5em;
+}
+</style>
+</head>
+<body>
+<h1>Operating Systems</h1>
+<h2>Filesystems</h2>
+<h3 class="subsub">FATFS</h3>
+<hr class="startp">
+
+<h3>The boot record</h3>
+<p>After the partition table, the boot-record is the second most important information on your hard drive. Most commercial applications for disc-recovery are capable of regenerating destroyed boot-records, but perhaps you want to try your luck (don't!). If that is the case the structure is like this:</p>
+<p>The first three bytes contain a JUMP instruction to skip the information and make extensions possible (because the MBR loads this sector into memory and transfers execution to it). Following the jump is the record itself:</p>
+
+<table class="boxed">
+<caption>Boot record of FAT16</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col></colgroup><colgroup><col>
+</colgroup><tbody><tr class="head"><th>Field</th><th>Offset</th><th>Size</th><th>Default</th></tr>
+
+<tr class="od">
+	<td>Jump</td><td>0</td><td>3</td><td>&nbsp;</td></tr>
+
+<tr class="ev">
+	<td>OEM ID</td><td>3</td><td>8</td><td>MSWIN4.0</td></tr>
+
+<tr class="od">
+	<td>Bytes Per Sector</td><td>11</td><td>2</td><td>512</td></tr>
+
+<tr class="ev">
+	<td>Sectors Per Cluster</td><td>13</td><td>1</td><td>See cluster sizes</td></tr>
+
+<tr class="od">
+	<td>Reserved Sectors</td><td>14</td><td>2</td><td>1</td></tr>
+
+<tr class="ev">
+	<td>FAT's</td><td>16</td><td>1</td><td>2</td></tr>
+
+<tr class="od">
+	<td>Root Entries</td><td>17</td><td>2</td><td>512/544</td></tr>
+
+<tr class="ev">
+	<td>Sectors (small, for FDD)</td><td>19</td><td>2</td><td>0</td></tr>
+
+<tr class="od">
+	<td>Media Descriptor</td><td>21</td><td>1</td><td>See Media Descriptors</td></tr>
+
+<tr class="ev">
+	<td>Sectors Per FAT</td><td>22</td><td>2</td><td>Must be calculated</td></tr>
+
+<tr class="od">
+	<td>Sectors Per Track</td><td>24</td><td>2</td><td>Depends on your HDD, see Appendix</td></tr>
+
+<tr class="ev">
+	<td>Heads</td><td>26</td><td>2</td><td>See above</td></tr>
+
+<tr class="od">
+	<td>Hidden Sectors</td><td>28</td><td>4</td><td>&nbsp;</td></tr>
+
+<tr class="ev">
+	<td>Sectors (large, for HDD)</td><td>32</td><td>4</td><td>Size of the partition, see Boot Process</td></tr>
+
+<tr class="od">
+	<td>Physical Drive No.</td><td>36</td><td>1</td><td>80h</td></tr>
+
+<tr class="ev">
+	<td>Current Head</td><td>37</td><td>1</td><td>0</td></tr>
+
+<tr class="od">
+	<td>Signature</td><td>38</td><td>1</td><td>for WinNT: 28h or 29h</td></tr>
+
+<tr class="ev">
+	<td>Serial number (ID)</td><td>39</td><td>4</td><td>Random</td></tr>
+
+<tr class="od">
+	<td>Volume Label</td><td>43</td><td>11</td><td>&nbsp;</td></tr>
+
+<tr class="ev">
+	<td>System ID (filesystem)</td><td>54</td><td>8</td><td>FAT12, FAT16, FAT, FAT32</td></tr>
+
+<tr class="total">
+	<td>Total</td><td>&nbsp;</td><td>62</td><td>&nbsp;</td></tr>
+</tbody></table>
+
+<blockquote><p>(By "Default" is meant values, that do apply to most setups - at least, that's a good guess).</p></blockquote>
+
+<p>The OEM ID describes the program, that created the boot record. This is often "MSWIN4.0" (Win95), "IBM 20.0" (OS/2), "MSDOS5.0" (MS-DOS later than 4)</p>
+<p>Bytes per sector is almost always 512.</p>
+<p>Sectors per cluster is a bit more difficult. Clusters are in the FATFS the basic allocation unit, meaning that all files occupy at least one cluster (size up to 32KB). The lost space is called slack-space. To determine the size of each cluster Microsoft published this table:</p>
+
+
+<table class="boxed">
+<caption>Cluster sizes for drives</caption>
+<colgroup align="center"><col></colgroup><colgroup><col><col></colgroup><colgroup align="center"><col><col></colgroup><colgroup>
+</colgroup><tbody><tr class="head"><th>Disk type</th><th>Drive size</th><th>FAT type</th><th>Sectors pr. cluster *</th><th>Cluster size</th></tr>
+<tr class="od"><td>Floppy</td><td>360 KB</td><td>12-bit</td><td>2</td><td>1 KB</td></tr>
+<tr class="ev"><td>"</td><td>720 KB</td><td>12-bit</td><td>2</td><td>1 KB</td></tr>
+<tr class="od"><td>"</td><td>1.2 MB</td><td>12-bit</td><td>1</td><td>512 bytes</td></tr>
+<tr class="ev"><td>"</td><td>1.44 MB</td><td>12-bit</td><td>1</td><td>512 bytes</td></tr>
+<tr class="od"><td>"</td><td>2.88 MB</td><td>12-bit</td><td>2</td><td>1 KB</td></tr>
+<tr class="ev"><td>Fixed</td><td>0 MB - 15 MB</td><td>12-bit</td><td>8</td><td>4 KB</td></tr>
+<tr class="od"><td>"</td><td>16 MB - 127 MB</td><td>16-bit</td><td>4</td><td>2 KB</td></tr>
+<tr class="ev"><td>"</td><td>128 MB - 255 MB</td><td>16-bit</td><td>8</td><td>4 KB</td></tr>
+<tr class="od"><td>"</td><td>256 MB - 511 MB</td><td>16-bit</td><td>16</td><td>8 KB</td></tr>
+<tr class="ev"><td>"</td><td>512 MB - 1023 MB</td><td>16-bit</td><td>32</td><td>16 KB</td></tr>
+<tr class="od"><td>"</td><td>1024 MB - 2047 MB</td><td>16-bit</td><td>64</td><td>32 KB</td></tr>
+<tr class="foot"><td colspan="5">*Valid values are 1,2,4,8,16,32,64 and 128 (only 1 to 64 supported)
+</td></tr></tbody></table>
+
+<p>Reserved sectors is the sectors before the FAT's. The value is at least 1 (the boot-record).</p>
+<p>FAT's is the number of FAT's on the drive. Usually, this is 2.</p>
+<p>Root Entries is the number of files/directories available in the root directory. As far as I know, this is often 512, but DOS uses 1 for the volume-label, meaning you actually only can have 511 files in your root directory. (my OS/2-bootdrive has 544 entries).</p>
+<p>Sectors (small) is the size of the partition in sectors. If the number is too large to fit in this field, the size will be placed in "sectors (large)" and this field is 0.</p>
+<p>Media Descriptor tells us which kind of disk we are dealing with. The following numbers are defined:</p>
+
+<table class="boxed">
+<caption>Media Descriptors</caption>
+<colgroup align="center"><col><col></colgroup><colgroup>
+</colgroup><tbody><tr class="head"><th>Type</th><th>Capacity</th><th>Size and type</th></tr>
+<tr class="od"><td>F0h</td><td>2.88 MB</td><td>3.5", 2-sided, 36-sectors per track</td></tr>
+<tr class="ev"><td>F0h</td><td>1.44 MB</td><td>3.5", 2-sided, 18-sectors per track</td></tr>
+<tr class="od"><td>F9h</td><td>720 KB</td><td>3.5", 2-sided,  9-sectors per track</td></tr>
+<tr class="ev"><td>F9h</td><td>1.2 MB</td><td>5.25", 2-sided, 15-sectors per track</td></tr>
+<tr class="od"><td>FDh</td><td>360 KB</td><td>5.25", 2-sided, 9-sectors per track</td></tr>
+<tr class="ev"><td>FFh</td><td>320 KB</td><td>5.25", 2-sided, 8-sectors per track</td></tr>
+<tr class="od"><td>FCh</td><td>180 KB</td><td>5.25", 1-sided, 9-sectors per track</td></tr>
+<tr class="ev"><td>FEh</td><td>160 KB</td><td>5.25", 1-sided, 8-sectors per track</td></tr>
+<tr class="od"><td>F8h</td><td>-</td><td>fixed disk
+</td></tr></tbody></table>
+
+<p>Sectors per FAT. Now, this is where it gets complicated - I used good old math to solve this one, even though I have a feeling it is completely unnecessary.</p>
+<p>Assume:<br>
+To is the total amount of sectors,<br>
+Fo is the amount of free sectors for data<br>
+Fs is the size of one FAT in sectors<br>
+Cs is the cluster size<br>
+Ss is the sector size<br>
+Rs is the reserved sectors before the FAT's<br>
+Re is the entries in the root-directory<br>
+Ds is the size of a entry (=32 bytes)<br>
+The size of the FAT must equal the free amount of sectors divided by the cluster size in sectors multiplied by two (because FAT-16 uses 2 bytes to  describe 1 cluster, but FAT-12 only uses 1  byte for each cluster) divided by the sector size (of course rounded up, but we'll overlook that for now)</p>
+<blockquote><pre>     2 *  Fo
+Fs = -------
+     Cs * Ss
+</pre></blockquote>
+
+<p>The free amount of sectors must be the total amount minus the FAT's, the Root Directory and the Reserved Sectors</p>
+<blockquote><pre>Fo = To - 2 * Fs - Rs - Re*Ds/Ss
+</pre></blockquote>
+
+<p>Lets solve that:</p>
+<blockquote><pre>     2 *  ( To - 2 * Fs - Rs - Re*Ds/Ss)               2 ( To - Rs - Re*Ds/Ss )
+Fs = -----------------------------------   ==&gt;   Fs =  ------------------------
+               Cs * Ss                                        Cs * Ss + 4
+</pre></blockquote>
+
+<p>And then you just put in your values (remember to round the result up (131.02=132) ). And then verify the result by calculating how many cluster you got on your drive and how many the FAT can handle.</p>
+<p>An alternative and a lot simpler way is to take the total amount of sectors in the partition, divide it by the number of clusters per sector and divide it by the amount of FAT-entries per sector. The calculation seems simpler, explains why you cannot make a partition larger than 509MB with a clustersize of 16 sectors, is a lot simpler to program, but it is not such a mathematically optimal approach as the previously described method - therefore it is probably the way DOS calculates it.</p>
+<p>Sectors Per Track and Heads you got to get from some kind of information program, e.g. INT 13h, service 08h - see <a href="fatfs_1.html">appendix 1</a>.</p>
+<p>Hidden sectors is the number of sectors <b>before</b> the boot-record on the physical disk (often equal to the RelativeSectors-field in the partition table). It is necessary to boot correctly.</p>
+<p>Sectors (large) contains the number of sectors on the partition if "sectors (small)" could not handle the amount.</p>
+<p>Now for all the starred entries. The starred entries are part of the so-called extended BIOS parameter block, which, as far as I know is used on all FAT drives.</p>
+<p>The physical drive number contains the number which the drive is assigned. It seems that this number is either 80h for hard disks or 00h for floppy drives, and is actually assigned at run-time except if the drive is to be used as a boot-drive. If you have two partitions on a drive they'll be numbered 80h and 81h and your floppy drives is 00h and 01h.</p>
+<p>Current Head should be without importance except for users of Windows NT, please refer to Microsoft Knowledge Base for more info.</p>
+<p>Signature must be either 28h or 29h for Windows NT to recognize the drive.</p>
+<p>ID should just be a random number different from other drives, but has no valuable meaning.</p>
+<p>Volume Label you should be able to figure out without my help :)</p>
+<p>System ID defines which file-system is in use on the disk. This is either FAT12 ("FAT") or "FAT16" depending on the size and media (for HDD 16-bit is most common, except for disk with less than 15MB capacity).</p>
+<p>And here follows the executable code which makes the system load an operating system and start executing it.</p>
+<p><i>And by the way, if you want to track a boot-record, the last two bytes in the boot-record are always 55h AAh.</i></p>
+
+
+
+<h3>The FAT</h3>
+<p>When using the FATFS you actually have a quite simple point of view on the drive (which supports the claim that Gates designed it during a 5-days stay at a hotel). Just think of the drive as a series of cells (clusters). When a file is allocated, you have a number, that points to the first cluster. In the FAT you have a list of all the clusters on the disk and on a clusters entry the number of the next cluster in the chain is written. So, if you have a file, MYFILE.TXT, which starts at cluster 3 and continues in cluster 5, 6, 7 and finally 9, the FAT would look like this:</p>
+<p>
+[2] ?<br>
+[3] 5<br>
+[4] ?<br>
+[5] 6<br>
+[6] 7<br>
+[7] 9<br>
+[8] ?<br>
+[9] &lt;EOF&gt;
+</p>
+<p>As far as I know, it is illegal to do backwards references, meaning entry 5 could never contain a number less than 6.</p>
+<p>This means that the FAT is a very important tool in recreating the contents of a file, and therefore a drive with a destroyed FAT is quite badly hit. The developers of the FATFS saw this flaw and made two copies of the chain, but placed right after each other instead of placing them far from each other to protect them from corruption if a disk-crash happened (of course this would have caused performance loss and never protected them from misbehaving applications).</p> 
+<p>The size of each field in the FAT is either 16-bit or 12-bit giving respectively 65535 and 4096 clusters as the max. size of a media. The 12-bit version is only used on diskettes and drives with a size of less than 16MB.</p>
+<p>A series of numbers are reserved for internal use. Depending on the size of each entry in the FAT (12- or 16-bit), the numbers are as follows:</p>
+
+<table class="boxed">
+<caption>Media Descriptors</caption>
+<tbody><tr class="head"><th>Number</th><th>Description</th></tr>
+<tr class="od"><td>0</td><td>Free cluster</td></tr>
+<tr class="ev"><td>????</td><td>Cluster in use, next cluster in chain</td></tr>
+<tr class="od"><td>FF0-FF6 / FFF0-FFF6</td><td>Cluster is reserved</td></tr>
+<tr class="ev"><td>FF7 /FFF7</td><td>Cluster contains bad sectors</td></tr>
+<tr class="od"><td>FF8-FFF / FFF8-FFFF</td><td>End of file</td></tr>
+</tbody></table>
+
+<p>To establish the position of the first cluster on your drive, you just add up the reserved sectors, the two FATs and the size of the root directory. To verify it you could track the first directory entry and compare it to the cluster-boundary.</p>
+<p><i>Since cluster 0 and 1 are reserved they contain [EOF] [EOF] (on HDD) or [reserved] [EOF] (on FDD). In hex it becomes (on HDD) F8 FF FF FF ... or (on FDD) F0 FF FF.</i></p>
+
+
+
+<h3>The Directory Entries</h3>
+<p>Directory entries(DE) contains the entry into the chain of clusters and the filename. The perhaps most important DE is the root directory, because it contains cluster indexes that points to all sub-dirs. The location of the root-dir can easily be established, as it is positioned following the FAT's, so just add up the values from the boot record. But a knock-out of the root-dir is actually not very bad, because as you probably noticed, all directories contain two entries "." and "..", and we can track those ones, since they always will be positioned in the beginning of a cluster if the cluster contains a directory.</p>
+<p>MS-DOS always allocate one cluster to contain DE's whenever you create a directory. This is probably the case because directories are nothing more than files that DOS can interpret as directories, and therefore the same mechanism used to tie files together is used to tie large directories with sizes larger than one cluster together (on 8K clusters this is rarely used since a directory can contain 254 files, at least for DOS, because Win95 uses additional DE to store long  filenames).</p>
+<p>A simple example of a tree</p>
+<pre>             root-dir                     root-dir
+            /   |    \                    +--mydir1
+          /     |      \                  |  +-myfile1
+        /       |        \                |  +-myfile2
+      /         |          \              +--mydir2
+   mydir1     mydir2      mydir3          |  +-myfile3
+  /     |    /     |        |             |  +-myfile4
+/       | myfile3  |        myfile5       +--mydir3
+myfile1 |          |                         +-myfile5
+        |      myfile4
+     myfile2
+
+'
+C:\&gt;dir
+...
+MYDIR1             -DIR-    ??????
+MYDIR2             -DIR-    ??????
+MYDIR3             -DIR-    ??????
+C:\&gt;cd mydir1
+C:\MYDIR1&gt;dir
+...
+MYFILE1        ??? ????
+MYFILE2        ??? ????
+C:\MYDIR1&gt;
+</pre>
+<p>Now, the key to controlling such a tree is of course the structure of a DE:</p>
+<table class="boxed">
+<caption>Directory Entry</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col>
+</colgroup><tbody><tr class="head"><th>&nbsp;</th><th>Offset</th><th>Size (bytes)</th></tr>
+<tr class="od"><td>Name</td><td>0</td><td>8</td></tr>
+<tr class="ev"><td>Extension</td><td>8</td><td>3</td></tr>
+<tr class="od"><td>Attributes</td><td>11</td><td>1</td></tr>
+<tr class="ev"><td>Reserved =00h</td><td>12</td><td>8</td></tr>
+<tr class="od"><td>Index in EA DATA. SF (*)</td><td>20</td><td>2</td></tr>
+<tr class="ev"><td>Date</td><td>22</td><td>4</td></tr>
+<tr class="od"><td>Entry Cluster in chain</td><td>26</td><td>2</td></tr>
+<tr class="ev"><td>Size of file in bytes</td><td>28</td><td>4</td></tr>
+<tr class="total"><td>Total</td><td>&nbsp;</td><td>32</td></tr>
+</tbody></table>
+<p>(*) this only applies to users of OS/2, since OS/2 uses a file in the root-directory called EA DATA. SF, which contains the extended attributes for files (like long names and file types or icon positions in folders). I don't know if any scaling-factor is involved or if it is only a index to a record in the EA-file. In non-OS/2 systems this field should be zeroed out. Be aware that Win95
+uses the reserved area for extra data storage and uses directory entries
+for storage of long filenames, that do not correspond to the table showed
+above - more about that in <a href="vfat.html">Win95 LFN</a>.</p>
+<p>Name contains the name, in uppercase, of the file. Blank spaces = #32 (space) "&nbsp;"</p>
+<p>Extension contains the extension, in uppercase.</p>
+<p>Attributes is a binary coded field with this content:</p>
+<table class="boxed">
+<caption>Attribute bits</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col><col>
+</colgroup><tbody><tr class="head"><th>Attribute</th><th>Bit</th><th>Binary</th><th>Hex</th></tr>
+<tr class="od"><td>Read Only</td><td>1</td><td>.......?</td><td>01h</td></tr>
+<tr class="ev"><td>Hidden</td><td>2</td><td>......?.</td><td>02h</td></tr>
+<tr class="od"><td>System File</td><td>3</td><td>.....?..</td><td>04h</td></tr>
+<tr class="ev"><td>Volume ID</td><td>4</td><td>....?...</td><td>08h</td></tr>
+<tr class="od"><td>Directory</td><td>5</td><td>...?....</td><td>10h</td></tr>
+<tr class="ev"><td>Archive</td><td>6</td><td>..?.....</td><td>20h</td></tr>
+</tbody></table>
+
+<p>Date is a specially coded field of 32-bits composed like this (From Most Significant Bit (MSB) and down):</p>
+<table class="boxed">
+<caption>The DOS Date-Time format</caption>
+<colgroup><col></colgroup><colgroup align="center"><col><col>
+</colgroup><tbody><tr class="head"><th>Name</th><th>Size (bits)</th><th>Value</th></tr>
+<tr class="od"><td>Year (from 1980 - meaning year=1980+value)</td><td>7</td><td>0..128</td></tr>
+<tr class="ev"><td>Month</td><td>4</td><td>1..12</td></tr>
+<tr class="od"><td>Day</td><td>5</td><td>1..31</td></tr>
+<tr class="ev"><td>Hour (24-hour)</td><td>5</td><td>0..23</td></tr>
+<tr class="od"><td>Minute</td><td>6</td><td>0..59</td></tr>
+<tr class="ev"><td>Seconds (times 2!)</td><td>5</td><td>0..30</td></tr>
+<tr class="total"><td>Total size</td><td>32</td><td>&nbsp;</td></tr>
+</tbody></table>
+
+<p>Entry Cluster in chain is the first cluster, that makes up the file. If the attributes.directory flag is set, this field points to a new directory  entry.</p>
+<p>Size of file in bytes, I believe, needs no explanation except the fact it can  be a valuable resource in recovering damaged files since we can calculate how many clusters the file is supposed to consist of.</p>
+<p>Lets learn by example, we have a file, MYFILE.TXT, with a size of 9948 bytes dated 1997-03-21:17.48.22 and ReadOnly plus Archive active starting in cluster 34656, lets analyze...</p>
+<p>The DE for this file would look like this:</p>
+<pre>"MYFILE  TXT" 21 00 00 00 00 00 00 00 00 00 00 -- -- -- -- 60 87 DC 26 00 00
+ -name---ext  at -------------zeros----------- ----date--- clus. ---size----
+</pre>
+<h3>Tips</h3>
+<ul>
+<li>Run Norton SpeedDisk / Microsoft Defrag or a similar program to defragment the filestructure often (you can guess how much the FATFS must fragment files on disk unless it has a very good algorithm for finding free-space). This will make a recovery from a seriously messed-up disk a lot easier, since you can count on files being positioned so as the clusters will follow each other.</li>
+<li>Use Microsoft ScanDisk / Norton DiskDoctor to trap small damages before they grow large</li>
+<li>Back-up your important information just once in a while... (I know its hard - but your going to
+be be glad!)</li>
+<li>Don't mess with these sectors</li>
+</ul>
+
+<h3><a href="fatfs_1.html">Appendix 1 - INT 13h Get Disk Geometry</a></h3>
+<br>
+
+<h3><a href="fatfs_2.html">Appendix 2 - Described structures in C</a></h3>
+<br>
+
+<h3>Links/Sources</h3>
+<ul>
+<li><a href="http://www.microsoft.com/kb/articles/Q114/8/41.htm">Windows NT Boot Process and Hard Disk Constraints</a></li>
+<li><a href="http://www.microsoft.com/kb/articles/q140/4/18.htm">Detailed Explanation of FAT Boot Sector</a></li>
+<li><a href="http://www.microsoft.com/kb/articles/q75/1/31.htm">Standard Floppy Disk Formats Supported by MS-DOS</a></li>
+<li><a href="http://www.microsoft.com/kb/articles/q67/3/21.htm">FAT Type and Cluster Size Depends on Logical Drive Size</a></li>
+<li><a href="http://www.hptech.com/education.html">HighPoint Learning Center</a></li>
+</ul>
+
+<hr class="endp">
+<address>Last updated 2001-11-24 <a href="mailto:fs@proglang.cjb.net">FlushedSector</a><br>fs@proglang.cjb.net<br><a href="http://hjem.get2net.dk/rune_moeller_barnkob/disclaimer.html">Standard Disclaimer</a></address>
+
+</body>
+</html>

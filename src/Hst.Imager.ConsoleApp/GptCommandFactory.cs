@@ -68,11 +68,11 @@ public static class GptCommandFactory
 
         var typeArgument = new Argument<GptPartType>(
             name: "Type",
-            description: "Type of partition to create.");
+            description: "Type of the partition (e.g. NTFS).");
 
         var nameArgument = new Argument<string>(
             name: "Name",
-            description: "Name of partition to create.");
+            description: "Name of the partition.");
 
         var sizeArgument = new Argument<string>(
             name: "Size",

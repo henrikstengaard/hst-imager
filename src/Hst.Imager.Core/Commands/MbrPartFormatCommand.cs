@@ -1,5 +1,6 @@
 ﻿using DiscUtils;
 using DiscUtils.Ntfs;
+using Hst.Imager.Core.FileSystems.Fat32;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
@@ -83,11 +84,17 @@ namespace Hst.Imager.Core.Commands
             {
                 case BiosPartitionTypes.Fat12:
                 case BiosPartitionTypes.Fat16:
-                case BiosPartitionTypes.Fat32:
                 case BiosPartitionTypes.Fat16Small:
                 case BiosPartitionTypes.Fat16Lba:
-                case BiosPartitionTypes.Fat32Lba:
                     FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
+                    break;
+                case BiosPartitionTypes.Fat32:
+                case BiosPartitionTypes.Fat32Lba:
+                    var partitionOffset = partitionInfo.FirstSector * disk.Geometry.BytesPerSector;
+                    await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
+                        partitionInfo.SectorCount * disk.Geometry.BytesPerSector,
+                        disk.Geometry.BytesPerSector, disk.Geometry.SectorsPerTrack, disk.Geometry.HeadsPerCylinder, 
+                        name);
                     break;
                 case BiosPartitionTypes.Ntfs:
                     var partition = disk.Partitions.Partitions[partitionNumber - 1];
@@ -97,7 +104,10 @@ namespace Hst.Imager.Core.Commands
                 default:
                     return new Result(new Error("Unsupported partition type"));
             }
-            
+
+            // flush disk content
+            await disk.Content.FlushAsync(token);
+
             return new Result();
         }
     }

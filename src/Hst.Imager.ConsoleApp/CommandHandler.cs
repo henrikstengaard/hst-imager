@@ -310,7 +310,7 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path));
         }
 
-        public static async Task MbrPartAdd(string path, string type, string size, long? startSector, bool active)
+        public static async Task MbrPartAdd(string path, MbrPartType type, string size, long? startSector, bool active)
         {
             await Execute(new MbrPartAddCommand(GetLogger<MbrPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, type, ParseSize(size), startSector, null, active));

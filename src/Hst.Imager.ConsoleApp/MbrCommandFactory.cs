@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.ConsoleApp
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.ConsoleApp
 {
     using System.CommandLine;
 
@@ -65,9 +67,9 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var typeArgument = new Argument<string>(
+            var typeArgument = new Argument<MbrPartType>(
                 name: "Type",
-                description: "Type for the partition to use (e.g. FAT32).");
+                description: "Type of the partition (e.g. FAT32).");
 
             var sizeArgument = new Argument<string>(
                 name: "Size",

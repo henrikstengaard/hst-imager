@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils;
-using DiscUtils.Fat;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
 using DiscUtils.Raw;
 using DiscUtils.Streams;
 using Hst.Core;
+using Hst.Imager.Core.FileSystems.Fat32;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -83,7 +83,11 @@ public class GptPartFormatCommand : CommandBase
         switch (type)
         {
             case GptPartType.Fat32:
-                FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
+                var partitionOffset = partitionInfo.FirstSector * disk.Geometry.BytesPerSector;
+                await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
+                    partitionInfo.SectorCount * disk.Geometry.BytesPerSector,
+                    disk.Geometry.BytesPerSector, disk.Geometry.SectorsPerTrack, disk.Geometry.HeadsPerCylinder, 
+                    name);
                 break;
             case GptPartType.Ntfs:
                 var partition = disk.Partitions.Partitions[partitionNumber - 1];

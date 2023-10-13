@@ -31,7 +31,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - mbr partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, "FAT32", new Size(0, Unit.Bytes), null, null);
+            new List<IPhysicalDrive>(), imgPath, MbrPartType.Fat32, new Size(0, Unit.Bytes), null, null);
 
         // act - execute mbr partition add
         var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -73,7 +73,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - mbr partition add command with type FAT32 and size 50% of rdb disk size
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, "FAT32", new Size(50, Unit.Percent), null, null);
+            new List<IPhysicalDrive>(), imgPath, MbrPartType.Fat32, new Size(50, Unit.Percent), null, null);
 
         // act - execute mbr partition add
         var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
