@@ -4,7 +4,9 @@ namespace Hst.Imager.GuiApp
     using System.IO;
     using System.Threading.Tasks;
     using Bootstrappers;
+#if (BACKEND == false)
     using ElectronNET.API;
+#endif
     using Helpers;
     using Hst.Imager.Core.Helpers;
     using Hst.Imager.Core.Models;
@@ -64,7 +66,7 @@ namespace Hst.Imager.GuiApp
 
             try
             {
-                CreateHostBuilder(args).Build().Run();
+                await CreateHostBuilder(args).Build().RunAsync();
             }
             catch (Exception e)
             {
@@ -77,13 +79,37 @@ namespace Hst.Imager.GuiApp
             }
         }
 
+        private static string GetArgument(string[] args, string name)
+        {
+            for (var i = 0; i < args.Length; i++)
+            {
+                if (!args[i].Equals(name, StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
+                {
+                    continue;
+                }
+
+                return args[i + 1];
+            }
+
+            return null;
+        }
+
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .UseSerilog()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+#if (BACKEND == false)
+                    Log.Information("Electron");
                     webBuilder.UseElectron(args);
+#endif
                     webBuilder.UseStartup<Startup>();
+
+                    var portArg = GetArgument(args, "--port");
+                    if (!string.IsNullOrWhiteSpace(portArg) && int.TryParse(portArg, out var port))
+                    {
+                        webBuilder.UseUrls($"http://localhost:{port}/");
+                    }
                 });
 
         private static void SetupReleaseLogging(bool hasDebugEnabled)

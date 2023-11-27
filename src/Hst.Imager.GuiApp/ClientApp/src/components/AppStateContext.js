@@ -1,16 +1,10 @@
 import React from 'react'
+import {BackendApiStateContext} from "./BackendApiContext";
+import {NeutralinoHost} from "../hosts/NeutralinoHost";
+import {ElectronHost} from "../hosts/ElectronHost";
 
 export const AppStateContext = React.createContext(null)
 export const AppStateDispatchContext = React.createContext(null)
-
-function initialState() {
-    return {
-        isLicenseAgreed: false,
-        isAdministrator: false,
-        isElectronActive: false,
-        useFake: false
-    }
-}
 
 function appStateReducer(state, action) {
     switch (action.type) {
@@ -26,21 +20,47 @@ function appStateReducer(state, action) {
     }
 }
 
+function resolveHostIpc({ os, host, backendBaseUrl }) {
+    switch(host) {
+        case 'electron':
+            return new ElectronHost({ backendBaseUrl });
+        case 'neutralinojs':
+            return new NeutralinoHost({ os, backendBaseUrl });
+        default:
+            return null;
+    }  
+}
+
 export function AppStateProvider(props) {
     const {
+        os,
+        host,
         children
     } = props
 
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
+
+    const hostIpc = resolveHostIpc({ os, host, backendBaseUrl })
+    
     const [state, dispatch] = React.useReducer(appStateReducer, {}, () => null)
 
     const handleAppState = React.useCallback(() => {
         async function fetchAppState() {
-            const response = await fetch('api/app-state');
-            const appState = response.ok ? await response.json() : initialState();
+            const appState = await backendApi.getAppState();
+
+            const hasTitleBar = host !== 'neutralinojs';
             
             dispatch({
                 type: 'updateAppState',
-                appState: {...appState}
+                appState: {
+                    host,
+                    hostIpc,
+                    hasTitleBar,
+                    ...appState
+                }
             })
         }
         
@@ -49,7 +69,7 @@ export function AppStateProvider(props) {
         }
 
         fetchAppState()
-    }, [state, dispatch])
+    }, [backendApi, host, hostIpc, state, dispatch])
     
     React.useEffect(() => {
         handleAppState()

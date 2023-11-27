@@ -6,13 +6,17 @@ import SelectField from "../components/SelectField"
 import {AppStateContext} from "../components/AppStateContext"
 import {AppStateDispatchContext} from "../components/AppStateContext"
 import CheckboxField from "../components/CheckboxField";
-import {ElectronIpc} from "../utils/ElectronIpc";
 import Button from "../components/Button";
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 export default function Settings() {
-    const electronIpc = new ElectronIpc()
     const appState = React.useContext(AppStateContext)
+    const host = get(appState, 'host') || 'default'
+    
     const appStateDispatch = React.useContext(AppStateDispatchContext)
+    const {
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     const isMacOs = get(appState, 'isMacOs') || false
     const logsPath = get(appState, 'logsPath')
@@ -20,34 +24,13 @@ export default function Settings() {
 
     const openUrl = async (event, url) => {
         event.preventDefault()
-        if (!url) {
-            console.error('Url is null')
-            return
-        }
-        if (!appState || !appState.isElectronActive)
-        {
-            console.error('Open url is only available with Electron')
-            return
-        }
-        await electronIpc.openExternal({
-            url
-        })
+        await appState.hostIpc.openExternal({ url })
     }
     
     const saveSettings = async ({ name, value } = {}) => {
         set(settings, name, value)
         
-        const response = await fetch('api/settings', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({...settings})
-        });
-        if (!response.ok) {
-            console.error('Failed to save settings')
-        }
+        await backendApi.updateSettings({...settings});
 
         appStateDispatch({
             type: 'updateAppState',
@@ -88,16 +71,18 @@ export default function Settings() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    <CheckboxField
-                        id="debug-mode"
-                        label="Debug mode (applied after restart of app)"
-                        value={debugMode}
-                        onChange={async (checked) => await saveSettings({ name: 'debugMode', value: checked })}
-                    />
+            {host !== 'neo' && (
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                    <Grid item xs={12} lg={6}>
+                        <CheckboxField
+                            id="debug-mode"
+                            label="Debug mode (applied after restart of app)"
+                            value={debugMode}
+                            onChange={async (checked) => await saveSettings({ name: 'debugMode', value: checked })}
+                        />
+                    </Grid>
                 </Grid>
-            </Grid>
+            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <Button

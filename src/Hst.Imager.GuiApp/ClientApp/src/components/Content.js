@@ -12,10 +12,15 @@ import Optimize from "../pages/Optimize";
 import Partition from "../pages/Partition";
 import About from "../pages/About";
 import Settings from "../pages/Settings";
+import {AppStateContext} from "./AppStateContext";
+import {get} from "lodash";
 
 export default function Content() {
+    const appState = React.useContext(AppStateContext)
+    const hasTitleBar = get(appState, 'hasTitleBar') || false
+    
     return (
-        <Box component="main" sx={{flexGrow: 1, marginTop: '32px', p: 3}}>
+        <Box component="main" sx={{flexGrow: 1, marginTop: hasTitleBar ? '32px' : '0', p: 3}}>
             <Route exact path='/' component={Start}/>
             <Route path='/read' component={Read}/>
             <Route path='/write' component={Write}/>

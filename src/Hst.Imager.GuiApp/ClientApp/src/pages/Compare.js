@@ -16,12 +16,12 @@ import Stack from "@mui/material/Stack";
 import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import ConfirmDialog from "../components/ConfirmDialog";
-import {Api} from "../utils/Api";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Typography from "@mui/material/Typography";
 import Media from "../components/Media";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 const unitOptions = [{
     title: 'GB',
@@ -55,7 +55,7 @@ const formatPartitionTableType = (partitionTableType) => {
 }
 
 export default function Verify() {
-    const [confirmOpen, setConfirmOpen] = React.useState(false);
+    const [openConfirm, setOpenConfirm] = React.useState(false);
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [sourcePath, setSourcePath] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false);
@@ -70,49 +70,37 @@ export default function Verify() {
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
-
-    const api = React.useMemo(() => new Api(), []);
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
-    
-    const getPath = React.useCallback(({medias, path}) => {
+
+    const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
 
         if (path === null || path === undefined) {
-            return medias[0].path
+            return medias[0]
         }
 
         const media = medias.find(x => x.path === path)
-        return media === null ? medias[0].path : media.path
+        return media === null ? medias[0] : media
     }, [])
 
     const getMedias = React.useCallback(async () => {
         async function getMedias() {
-            await api.list()
+            await backendApi.updateList()
         }
         await getMedias()
-    }, [api])
+    }, [backendApi])
 
     const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
-        const response = await fetch('api/info', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sourceType,
-                path,
-                byteswap
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to get info')
-        }
-    }, [])
+        await backendApi.updateInfo({ path, sourceType, byteswap });
+    }, [backendApi])
 
     React.useEffect(() => {
         if (connection) {
@@ -120,83 +108,74 @@ export default function Verify() {
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
+            .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on("Info", (media) => {
-                        setSourceMedia(media)
+        newConnection.on("Info", (media) => {
+            setSourceMedia(media)
 
-                        // default set size and unit to largest comparable size
-                        setCompareAll(true)
-                        setSize(0)
-                        setUnit('bytes')
+            // default set size and unit to largest comparable size
+            setCompareAll(true)
+            setSize(0)
+            setUnit('bytes')
 
-                        // no media, reset
-                        if (isNil(media)) {
-                            setPrefillSize(null)
-                            setPrefillSizeOptions([])
-                            return
-                        }
+            // no media, reset
+            if (isNil(media)) {
+                setPrefillSize(null)
+                setPrefillSizeOptions([])
+                return
+            }
 
-                        // get and sort partition tables
-                        const partitionTables = get(media, 'diskInfo.partitionTables') || []
+            // get and sort partition tables
+            const partitionTables = get(media, 'diskInfo.partitionTables') || []
 
-                        // add select prefill option, if any partition tables are present                        
-                        const newPrefillSizeOptions = [{
-                            title: 'Select size to prefill',
-                            value: 'prefill'
-                        },{
-                            title: `Disk (${media.diskSize} bytes)`,
-                            value: media.diskSize
-                        }]
+            // add select prefill option, if any partition tables are present                        
+            const newPrefillSizeOptions = [{
+                title: 'Select size to prefill',
+                value: 'prefill'
+            },{
+                title: `Disk (${media.diskSize} bytes)`,
+                value: media.diskSize
+            }]
 
-                        // add partition tables as prefill size options
-                        for (let i = 0; i < partitionTables.length; i++) {
-                            const partitionTableSize = get(partitionTables[i], 'size') || 0
-                            newPrefillSizeOptions.push({
-                                title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                                value: partitionTableSize
-                            })
-                        }
-
-                        setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-                        setPrefillSizeOptions(newPrefillSizeOptions)
-                    });
-
-                    newConnection.on('List', async (medias) => {
-                        const newPath = getPath({medias: medias, path: sourcePath})
-                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
-
-                        setMedias(medias || [])
-                        if (newMedia) {
-                            setSourcePath(newPath)
-                            setSourceMedia(newMedia)
-                            await getInfo(newPath, sourceType, byteswap)
-                        }
-                    })
+            // add partition tables as prefill size options
+            for (let i = 0; i < partitionTables.length; i++) {
+                const partitionTableSize = get(partitionTables[i], 'size') || 0
+                newPrefillSizeOptions.push({
+                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
+                    value: partitionTableSize
                 })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+            }
 
-        setConnection(newConnection)
+            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
+            setPrefillSizeOptions(newPrefillSizeOptions)
+        });
+
+        newConnection.on('List', async (medias) => {
+            const newMedia = getMedia({medias: medias, path: sourcePath});
+            const newPath = get(newMedia, 'path');
+
+            setMedias(medias || [])
+            if (newMedia) {
+                setSourcePath(newPath)
+                setSourceMedia(newMedia)
+                await getInfo(newPath, sourceType, byteswap)
+            }
+        })
+
+        newConnection.start();
+
+        setConnection(newConnection);
 
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [byteswap, connection, getInfo, getPath, setMedias, setSourcePath, setSourceMedia, sourcePath, sourceType,
-        setPrefillSize, setPrefillSizeOptions, setSize, setUnit])
+    }, [backendBaseUrl, byteswap, connection, getInfo, getMedia, setConnection, sourcePath, sourceType])
 
     const handleSourceTypeChange = async (value) => {
         setSourceType(value)
@@ -209,8 +188,8 @@ export default function Verify() {
                     return
                 }
 
-                const newPath = getPath({medias: medias, path: null})
-                const newMedia = newPath ? medias.find(x => x.path === newPath) : null
+                const newMedia = getMedia({medias: medias, path: sourcePath});
+                const newPath = get(newMedia, 'path');
 
                 setSourcePath(newPath)
                 setSourceMedia(newMedia)
@@ -227,30 +206,20 @@ export default function Verify() {
     }
     
     const handleCompare = async () => {
-        const response = await fetch('api/compare', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}'${formattedSize}`,
-                sourceType,
-                sourcePath,
-                destinationPath,
-                size: (size * unitOption.size),
-                retries,
-                force,
-                byteswap
-            })
+        await backendApi.startCompare({
+            title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}'${formattedSize}`,
+            sourceType,
+            sourcePath,
+            destinationPath,
+            size: (size * unitOption.size),
+            retries,
+            force,
+            byteswap
         });
-        if (!response.ok) {
-            console.error('Failed to compare')
-        }
     }
 
     const handleConfirm = async (confirmed) => {
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         if (!confirmed) {
             return
         }
@@ -261,7 +230,7 @@ export default function Verify() {
         if (connection) {
             connection.stop()
         }
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         setSourceMedia(null)
         setSourcePath(null)
         setByteswap(false)
@@ -278,7 +247,7 @@ export default function Verify() {
     }
     
     const handleUpdate = async () => {
-        await api.list()
+        await backendApi.updateList()
     }
 
     const compareDisabled = isNil(sourcePath) || isNil(destinationPath)
@@ -287,7 +256,7 @@ export default function Verify() {
         <Box>
             <ConfirmDialog
                 id="confirm-compare"
-                open={confirmOpen}
+                open={openConfirm}
                 title="Compare"
                 description={`Do you want to compare '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and '${destinationPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
@@ -403,7 +372,7 @@ export default function Verify() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            setConfirmOpen(true)
+                            setOpenConfirm(true)
                         }}                    
                     />
                 </Grid>
@@ -467,7 +436,7 @@ export default function Verify() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            setConfirmOpen(true)
+                            setOpenConfirm(true)
                         }}
                     />
                 </Grid>
@@ -522,7 +491,7 @@ export default function Verify() {
                             <Button
                                 disabled={compareDisabled}
                                 icon="check"
-                                onClick={async () => setConfirmOpen(true)}
+                                onClick={async () => setOpenConfirm(true)}
                             >
                                 Start compare
                             </Button>

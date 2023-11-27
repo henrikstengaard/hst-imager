@@ -44,8 +44,10 @@
 
             logger.LogDebug($"Connecting to base url '{baseUrl}'");
 
+            var baseUri = new Uri(baseUrl);
+            
             var progressHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/progress")
+                .WithUrl(new Uri(baseUri, "hubs/progress"))
                 .WithAutomaticReconnect()
                 .ConfigureLogging(logging =>
                 {
@@ -59,7 +61,7 @@
                 .Build();
 
             var errorHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/error")
+                .WithUrl(new Uri(baseUri, "hubs/error"))
                 .WithAutomaticReconnect()
                 .ConfigureLogging(logging =>
                 {
@@ -73,7 +75,7 @@
                 .Build();
 
             var workerHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/worker")
+                .WithUrl(new Uri(baseUri, "hubs/worker"))
                 .WithAutomaticReconnect()
                 .ConfigureLogging(logging =>
                 {
@@ -87,7 +89,7 @@
                 .Build();
 
             var resultHubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/result")
+                .WithUrl(new Uri(baseUri, "hubs/result"))
                 .WithAutomaticReconnect()
                 .ConfigureLogging(logging =>
                 {

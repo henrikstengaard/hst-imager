@@ -7,10 +7,14 @@ import {AppStateContext, AppStateDispatchContext} from "./AppStateContext";
 import Container from "@mui/material/Container";
 import Title from "./Title";
 import Stack from "@mui/material/Stack";
+import {BackendApiStateContext} from "./BackendApiContext";
 
 export default function License(props) {
     const appState = React.useContext(AppStateContext)
     const appStateDispatch = React.useContext(AppStateDispatchContext)
+    const {
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     const {
         children
@@ -29,19 +33,7 @@ export default function License(props) {
     }
     
     const handleAgree = async (agree) => {
-        const response = await fetch('api/license', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                licenseAgreed: agree,
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to send license')
-        }
+        await backendApi.updateLicense({ agree });
         appStateDispatch({
             type: 'updateAppState',
             appState: {

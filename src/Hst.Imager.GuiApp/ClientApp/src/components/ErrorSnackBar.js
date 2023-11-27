@@ -4,6 +4,7 @@ import IconButton from '@mui/material/IconButton';
 import {Alert} from "@mui/material";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import {HubConnectionBuilder} from "@microsoft/signalr";
+import {BackendApiStateContext} from "./BackendApiContext";
 
 const initialState = {
     open: false,
@@ -11,8 +12,11 @@ const initialState = {
 }
 
 export default function ErrorSnackBar() {
-    const [state, setState] = React.useState({...initialState});
     const [connection, setConnection] = React.useState(null);
+    const [state, setState] = React.useState({...initialState});
+    const {
+        backendBaseUrl
+    } = React.useContext(BackendApiStateContext)
 
     React.useEffect(() => {
         if (connection) {
@@ -20,38 +24,30 @@ export default function ErrorSnackBar() {
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/error')
+            .withUrl(`${backendBaseUrl}hubs/error`)
             .withAutomaticReconnect()
             .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on('UpdateError', error => {
-                        setState({
-                            ...state,
-                            open: true,
-                            errorMessage: error.message
-                        })
-                    });
-                })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+        newConnection.on("UpdateError", error => {
+            setState({
+                ...state,
+                open: true,
+                errorMessage: error.message
+            })
+        })
 
-        setConnection(newConnection)
+        newConnection.start();
 
+        setConnection(newConnection);
+        
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [connection, setState, state])
+    }, [backendBaseUrl, connection, setConnection, state])
     
     const handleClose = (event, reason) => {
         if (reason === 'clickaway') {

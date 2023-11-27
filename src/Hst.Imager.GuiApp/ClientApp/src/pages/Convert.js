@@ -15,99 +15,70 @@ import Typography from "@mui/material/Typography";
 import Media from "../components/Media";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import CheckboxField from "../components/CheckboxField";
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 export default function Convert() {
-    const [confirmOpen, setConfirmOpen] = React.useState(false)
+    const [openConfirm, setOpenConfirm] = React.useState(false)
     const [media, setMedia] = React.useState(null)
     const [sourcePath, setSourcePath] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false);
     const [destinationPath, setDestinationPath] = React.useState(null)
-    const [connection, setConnection] = React.useState(null)
+    const [connection, setConnection] = React.useState(null);
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     const handleCancel = () => {
-        setConfirmOpen(false)
+        setOpenConfirm(false);
         setMedia(null)
         setSourcePath(null)
         setByteswap(false)
         setDestinationPath(null)
-        setConnection(null)
     }
 
-    // setup signalr connection and listeners
     React.useEffect(() => {
         if (connection) {
             return
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
+            .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on("Info", (media) => {
-                        setMedia(media)
-                    });
-                })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+        newConnection.on("Info", (media) => {
+            setMedia(media)
+        });
 
-        setConnection(newConnection)
+        newConnection.start();
+
+        setConnection(newConnection);
 
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [connection, setMedia])
+    }, [backendBaseUrl, connection, setConnection])
     
-    const getInfo = async (path, byteswap) => {
-        const response = await fetch('api/info', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sourceType: 'ImageFile',
-                path,
-                byteswap
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to get info')
-        }
-    }
+    const getInfo = React.useCallback(async (path, byteswap) => {
+        await backendApi.updateInfo({ path, sourceType: 'ImageFile', byteswap });
+    }, [backendApi])
     
     const handleConvert = async () => {
-        const response = await fetch('api/convert', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: `Converting file '${sourcePath}' to file '${destinationPath}'`,
-                sourcePath,
-                destinationPath,
-                byteswap
-            })
+        await backendApi.startConvert({
+            title: `Converting file '${sourcePath}' to file '${destinationPath}'`,
+            sourcePath,
+            destinationPath,
+            byteswap
         });
-        if (!response.ok) {
-            console.error('Failed to convert')
-        }
     }
     
     const handleConfirm = async (confirmed) => {
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         if (!confirmed) {
             return
         }
@@ -120,7 +91,7 @@ export default function Convert() {
         <Box>
             <ConfirmDialog
                 id="confirm-convert"
-                open={confirmOpen}
+                open={openConfirm}
                 title="Convert"
                 description={`Do you want to convert file '${sourcePath}' to file '${destinationPath}'?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
@@ -200,7 +171,7 @@ export default function Convert() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            setConfirmOpen(true)
+                            setOpenConfirm(true)
                         }}
                     />
                 </Grid>
@@ -234,7 +205,7 @@ export default function Convert() {
                             <Button
                                 disabled={convertDisabled}
                                 icon="exchange-alt"
-                                onClick={async () => setConfirmOpen(true)}
+                                onClick={async () => setOpenConfirm(true)}
                             >
                                 Start convert
                             </Button>

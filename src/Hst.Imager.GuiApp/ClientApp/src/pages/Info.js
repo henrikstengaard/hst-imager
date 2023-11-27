@@ -4,7 +4,7 @@ import Grid from "@mui/material/Grid";
 import Box from "@mui/material/Box";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import TextField from "../components/TextField";
-import {get, isNil, set} from "lodash";
+import {get, isNil} from "lodash";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import Media from "../components/Media";
 import Stack from "@mui/material/Stack";
@@ -17,161 +17,101 @@ import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import MediaSelectField from "../components/MediaSelectField";
 import {HubConnectionBuilder} from "@microsoft/signalr";
-import {Api} from "../utils/Api";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
-
-const initialState = {
-    loading: true,
-    sourceType: 'ImageFile',
-    byteswap: false
-}
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 export default function Info() {
-    const [loadMedias, setLoadMedias] = React.useState(false);
-    const [initialized, setInitialized] = React.useState(false);
+    const [loading, setLoading] = React.useState(false)
     const [media, setMedia] = React.useState(null)
-    const [medias, setMedias] = React.useState([])
+    const [medias, setMedias] = React.useState(null)
     const [path, setPath] = React.useState(null)
-    const [state, setState] = React.useState({ ...initialState })
+    const [sourceType, setSourceType] = React.useState('ImageFile')
+    const [byteswap, setByteswap] = React.useState(false)
     const [connection, setConnection] = React.useState(null);
-
     const {
-        loading,
-        sourceType,
-        byteswap
-    } = state
-
-    const api = React.useMemo(() => new Api(), []);
-
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
+    
     const getMedias = React.useCallback(async () => {
         async function getMedias() {
-            await api.list()
+            setLoading(true);
+            await backendApi.updateList();
         }
         await getMedias()
-    }, [api])
+    }, [backendApi])
     
-    const getPath = React.useCallback(({medias, path}) => {
+    const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
 
         if (path === null || path === undefined) {
-            return medias[0].path
+            return medias[0]
         }
 
         const media = medias.find(x => x.path === path)
-        return media === null ? medias[0].path : media.path
+        return media === null ? medias[0] : media
     }, [])
 
     const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
-        const response = await fetch('api/info', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sourceType,
-                path,
-                byteswap
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to get info')
-        }
-    }, [])
-
-    // initialize
-    React.useEffect(() => {
-        if (!loadMedias || initialized) {
-            return
-        }
-        setInitialized(true)
-        getMedias()
-    }, [getMedias, initialized, loadMedias, setInitialized])
-
-    // setup signalr connection and listeners
+        await backendApi.updateInfo({ path, sourceType, byteswap });
+    }, [backendApi])
+    
     React.useEffect(() => {
         if (connection) {
             return
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
+            .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
-        
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on("Info", (media) => {
-                        setMedia(media)
-                    });
 
-                    newConnection.on('List', async (medias) => {
-                        const newPath = getPath({medias: medias, path: path})
-                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
+        newConnection.on("Info", (media) => {
+            setMedia(media)
+        });
 
-                        setMedias(medias || [])
-                        if (newMedia) {
-                            setPath(newPath)
-                            await getInfo(newPath, sourceType, byteswap)
-                        }
-                    })
-                })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+        newConnection.on('List', async (medias) => {
+            setLoading(false)
+            setMedias(medias || [])
 
-        setConnection(newConnection)
-        
+            const newMedia = getMedia({medias: medias, path: path});
+            const newPath = get(newMedia, 'path');
+
+            if (newMedia) {
+                setPath(newPath)
+                await getInfo(newPath, sourceType, byteswap)
+            }
+        })
+
+        newConnection.start();
+
+        setConnection(newConnection);
+
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [byteswap, connection, getInfo, getPath, path, setMedia, setMedias, setPath, sourceType])
+    }, [backendBaseUrl, byteswap, connection, getInfo, getMedia, path, setConnection, sourceType])
     
     const getInfoDisabled = isNil(path)
 
-    const handleChange = async ({name, value}) => {
-        if (name === 'sourceType') {
-            if (value === 'PhysicalDisk' && (medias === null || medias.length === 0)) {
-                await getMedias()
-            }
-            const newPath = value === 'PhysicalDisk' && medias.length > 0 ? medias[0].path : null
-            const newMedia = value === 'PhysicalDisk' && newPath !== null ? medias.find(x => x.path === newPath) : null
-            setPath(newPath)
-            setMedia(newMedia)
-            if (newMedia) {
-                await getInfo(newPath, sourceType, byteswap)
-            }
-        }
-        set(state, name, value)
-        setState({...state})
-    }
-    
     const handleCancel = () => {
-        if (connection) {
-            connection.stop()
-        }
-        setLoadMedias(false)
-        setInitialized(false)
+        setLoading(false)
         setMedia(null)
-        setMedias([])
+        setMedias(null)
         setPath(null)
-        setState({ ...initialState })
-        setConnection(null)
+        setSourceType(null)
+        setByteswap(false)
     }
     
     const handleUpdate = async () => {
-        await api.list()
+        await backendApi.updateList()
     }
     
     return (
@@ -189,10 +129,17 @@ export default function Info() {
                             aria-labelledby="source-type-label"
                             name="source-type"
                             value={sourceType || ''}
-                            onChange={async (event) => await handleChange({
-                                name: 'sourceType',
-                                value: get(event, 'target.value')
-                            })}
+                            onChange={async (event) => {
+                                const value = get(event, 'target.value')
+                                
+                                setSourceType(value)
+                                setPath(null)
+                                setMedia(null)
+
+                                if (value === 'PhysicalDisk') {
+                                    getMedias();
+                                }
+                            }}
                         >
                             <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
                             <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
@@ -268,10 +215,7 @@ export default function Info() {
                         label="Byteswap sectors"
                         value={byteswap}
                         onChange={async (checked) => {
-                            await handleChange({
-                                name: 'byteswap',
-                                value: checked
-                            })
+                            setByteswap(checked)
                             if (media) {
                                 await getInfo(path, sourceType, checked)
                             }

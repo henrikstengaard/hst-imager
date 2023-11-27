@@ -1,0 +1,84 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "hst.imager.guiapp",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 0,
+  "documentRoot": "/resources",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": true
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "window.*",
+    "debug.log"
+  ],
+  "globalVariables": {
+    "TEST1": "Hello",
+    "TEST2": [
+      2,
+      4,
+      5
+    ],
+    "TEST3": {
+      "value1": 10,
+      "value2": {}
+    }
+  },
+  "modes": {
+    "window": {
+      "title": "Hst Imager",
+      "width": 1200,
+      "height": 800,
+      "minWidth": 1200,
+      "minHeight": 800,
+      "center": true,
+      "fullScreen": false,
+      "alwaysOnTop": false,
+      "icon": "/resources/icons/icon-192x192.png",
+      "enableInspector": false,
+      "borderless": false,
+      "maximize": false,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": false
+    },
+    "browser": {
+      "globalVariables": {
+        "TEST": "Test value browser"
+      },
+      "nativeBlockList": [
+        "filesystem.*"
+      ]
+    },
+    "cloud": {
+      "url": "/resources/#cloud",
+      "nativeAllowList": [
+        "app.*"
+      ]
+    },
+    "chrome": {
+      "width": 1200,
+      "height": 800,
+      "args": "--user-agent=\"Neutralinojs chrome mode\"",
+      "nativeBlockList": [
+        "filesystem.*",
+        "os.*"
+      ]
+    }
+  },
+  "cli": {
+    "binaryName": "hst.imager",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/js/neutralino.js",
+    "binaryVersion": "4.14.1",
+    "clientVersion": "3.12.0"
+  }
+}

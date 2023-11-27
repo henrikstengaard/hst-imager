@@ -17,6 +17,8 @@ import ListItemText from '@mui/material/ListItemText';
 // import InboxIcon from '@mui/icons-material/MoveToInbox';
 // import MailIcon from '@mui/icons-material/Mail';
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
+import {AppStateContext} from "./AppStateContext";
+import {get} from "lodash";
 
 const drawerOpenWidth = 180;
 const drawerClosedWidth = 62;
@@ -62,7 +64,10 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 export default function Navigation() {
     const history = useHistory()
     const [open, setOpen] = React.useState(false);
+    const appState = React.useContext(AppStateContext)
     
+    const hasTitleBar = get(appState, 'hasTitleBar') || false
+
     const items = [
         {
             text: 'Start',
@@ -135,7 +140,7 @@ export default function Navigation() {
                     overflowX: 'hidden',
                     [`& .MuiDrawer-paper`]: { width, boxSizing: 'border-box' },
                 }}>
-            <List sx={{marginTop: '32px'}}>
+            <List sx={{marginTop: hasTitleBar ? '32px' : '0'}}>
                 {items.map((item, index) => (
                     <ListItem button key={index} onClick={() => handleRedirect(item.path)}>
                         <ListItemIcon>

@@ -41,6 +41,8 @@ import Content from "./components/Content";
 import {ProgressProvider} from "./components/ProgressContext";
 import ErrorSnackBar from "./components/ErrorSnackBar";
 import License from "./components/License";
+import {AppStateContext} from "./components/AppStateContext";
+import {get} from "lodash";
 
 library.add(
     faCog,
@@ -64,10 +66,15 @@ library.add(
     faChartLine)
 
 export default function App() {
+    const appState = React.useContext(AppStateContext)
+    const hasTitleBar = get(appState, 'hasTitleBar') || false
+    
     return (
         <Box sx={{ display: 'flex' }}>
             <CssBaseline />
-            <Titlebar />
+            {hasTitleBar && (
+                <Titlebar />
+            )}
             <License>
                 <ProgressProvider>
                     <ProgressBackdrop>

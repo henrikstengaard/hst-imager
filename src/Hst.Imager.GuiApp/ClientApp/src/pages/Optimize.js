@@ -15,6 +15,7 @@ import {HubConnectionBuilder} from "@microsoft/signalr";
 import Media from "../components/Media";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 const unitOptions = [{
     title: 'GB',
@@ -48,7 +49,7 @@ const formatPartitionTableType = (partitionTableType) => {
 }
 
 export default function Optimize() {
-    const [confirmOpen, setConfirmOpen] = React.useState(false);
+    const [openConfirm, setOpenConfirm] = React.useState(false)
     const [media, setMedia] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
@@ -57,122 +58,93 @@ export default function Optimize() {
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
-
-    // setup signalr connection and listeners
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
+    
     React.useEffect(() => {
         if (connection) {
             return
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
+            .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on("Info", (media) => {
-                        setMedia(media)
-                        
-                        // no media, reset
-                        if (isNil(media)) {
-                            setSize(0)
-                            setUnit('bytes')
-                            setPrefillSize(null)
-                            setPrefillSizeOptions(null)
-                            return
-                        }
-                        
-                        // default set media disk size
-                        setSize(media.diskSize)
-                        setUnit('bytes')
-                        
-                        // get and sort partition tables
-                        const partitionTables = get(media, 'diskInfo.partitionTables') || []
+        newConnection.on("Info", (media) => {
+            setMedia(media)
 
-                        // add select prefill option, if any partition tables are present                        
-                        const newPrefillSizeOptions = []
-                        if (partitionTables.length > 0) {
-                            newPrefillSizeOptions.push({
-                                title: 'Select size to prefill',
-                                value: 'prefill'
-                            })
-                        }
-                        
-                        // add partition tables as prefill size options
-                        for (let i = 0; i < partitionTables.length; i++) {
-                            const partitionTableSize = get(partitionTables[i], 'size') || 0
-                            newPrefillSizeOptions.push({
-                                title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                                value: partitionTableSize
-                            })
-                        }
+            // no media, reset
+            if (isNil(media)) {
+                setSize(0)
+                setUnit('bytes')
+                setPrefillSize(null)
+                setPrefillSizeOptions(null)
+                return
+            }
 
-                        setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-                        setPrefillSizeOptions(newPrefillSizeOptions)
-                    });
+            // default set media disk size
+            setSize(media.diskSize)
+            setUnit('bytes')
+
+            // get and sort partition tables
+            const partitionTables = get(media, 'diskInfo.partitionTables') || []
+
+            // add select prefill option, if any partition tables are present                        
+            const newPrefillSizeOptions = []
+            if (partitionTables.length > 0) {
+                newPrefillSizeOptions.push({
+                    title: 'Select size to prefill',
+                    value: 'prefill'
                 })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+            }
 
-        setConnection(newConnection)
+            // add partition tables as prefill size options
+            for (let i = 0; i < partitionTables.length; i++) {
+                const partitionTableSize = get(partitionTables[i], 'size') || 0
+                newPrefillSizeOptions.push({
+                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
+                    value: partitionTableSize
+                })
+            }
+
+            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
+            setPrefillSizeOptions(newPrefillSizeOptions)
+        });
+
+        newConnection.start();
+
+        setConnection(newConnection);
 
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [connection, setMedia, setPrefillSize, setPrefillSizeOptions, setUnit, setSize])
+    }, [backendBaseUrl, connection, setConnection])
     
-    const getInfo = async (path, byteswap) => {
-        const response = await fetch('api/info', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sourceType: 'ImageFile',
-                path,
-                byteswap
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to get info')
-        }
-    }
-    
+    const getInfo = React.useCallback(async (path, byteswap) => {
+        await backendApi.updateInfo({ path, sourceType: 'ImageFile', byteswap });
+    }, [backendApi])
+
     const handleOptimize = async () => {
         const unitOption = unitOptions.find(x => x.value === unit)
-        const response = await fetch('api/optimize', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: `Optimizing image file '${path}'`,
-                path,
-                size: (size * unitOption.size)
-            })
+        await backendApi.startOptimize({
+            title: `Optimizing image file '${path}'`,
+            path,
+            size: (size * unitOption.size)
         });
-        if (!response.ok) {
-            console.error('Failed to optimize image')
-        }
     }
 
     const handleCancel = () => {
         if (connection) {
             connection.stop()
         }
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         setMedia(null)
         setByteswap(false)
         setSize(0)
@@ -183,7 +155,7 @@ export default function Optimize() {
     }
 
     const handleConfirm = async (confirmed) => {
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         if (!confirmed) {
             return
         }
@@ -202,7 +174,7 @@ export default function Optimize() {
         <Box>
             <ConfirmDialog
                 id="confirm-optimize"
-                open={confirmOpen}
+                open={openConfirm}
                 title="Optimize"
                 description={`Do you want to optimize image file '${path}' to size ${size} ${get(unitOption, 'title')}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
@@ -289,7 +261,7 @@ export default function Optimize() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            setConfirmOpen(true)
+                            setOpenConfirm(true)
                         }}
                     />
                 </Grid>
@@ -324,7 +296,7 @@ export default function Optimize() {
                             <Button
                                 disabled={optimizeDisabled}
                                 icon="magic"
-                                onClick={async () => setConfirmOpen(true)}
+                                onClick={async () => setOpenConfirm(true)}
                             >
                                 Optimize image
                             </Button>

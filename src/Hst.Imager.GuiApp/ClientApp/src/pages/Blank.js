@@ -5,21 +5,14 @@ import Grid from "@mui/material/Grid";
 import TextField from "../components/TextField";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import BrowseSaveDialog from "../components/BrowseSaveDialog";
-import {get, isNil, set} from "lodash";
+import {get, isNil} from "lodash";
 import Stack from "@mui/material/Stack";
 import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import SelectField from "../components/SelectField";
 import CheckboxField from "../components/CheckboxField";
 import ConfirmDialog from "../components/ConfirmDialog";
-
-const initialState = {
-    confirmOpen: false,
-    path: null,
-    size: 16,
-    unit: 'gb',
-    compatibleSize: true
-}
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 const unitOptions = [{
     title: 'GB',
@@ -40,50 +33,35 @@ const unitOptions = [{
 }]
 
 export default function Blank() {
-    const [state, setState] = React.useState({ ...initialState })
-
+    const [openConfirm, setOpenConfirm] = React.useState(false)
+    const [path, setPath] = React.useState(null)
+    const [size, setSize] = React.useState(16)
+    const [unit, setUnit] = React.useState('gb')
+    const [compatibleSize, setCompatibleSize] = React.useState(true)
     const {
-        confirmOpen,
-        path,
-        size,
-        unit,
-        compatibleSize
-    } = state
-    
+        backendApi
+    } = React.useContext(BackendApiStateContext)
+
     const handleBlank = async () => {
         const unitOption = unitOptions.find(x => x.value === unit)
-        const response = await fetch('api/blank', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: `Creating ${size} ${unitOption.title} blank image '${path}'`,
-                path,
-                size: (size * unitOption.size),
-                compatibleSize
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to create blank')
-        }
+        await backendApi.startBlank({
+            title: `Creating ${size} ${unitOption.title} blank image '${path}'`,
+            path,
+            size: (size * unitOption.size),
+            compatibleSize
+        })
     }
     
-    const handleChange = ({name, value}) => {
-        set(state, name, value)
-        setState({...state})
-    }
-
     const handleCancel = () => {
-        setState({ ...initialState })
+        setOpenConfirm(false);
+        setPath(null);
+        setSize(16);
+        setUnit('gb');
+        setCompatibleSize(true);
     }
 
     const handleConfirm = async (confirmed) => {
-        setState({
-            ...state,
-            confirmOpen: false
-        })
+        setOpenConfirm(false)
         if (!confirmed) {
             return
         }
@@ -96,7 +74,7 @@ export default function Blank() {
         <Box>
             <ConfirmDialog
                 id="confirm-blank"
-                open={confirmOpen}
+                open={openConfirm}
                 title="Blank"
                 description={`Do you want to create blank image file file '${path}' with size '${size} ${unit.toUpperCase()}'?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
@@ -119,17 +97,10 @@ export default function Blank() {
                             <BrowseSaveDialog
                                 id="browse-image-path"
                                 title="Select image file to create"
-                                onChange={(path) => handleChange({
-                                    name: 'path',
-                                    value: path
-                                })}
+                                onChange={(path) => setPath(path)}
                             />
                         }
-                        onChange={(event) => handleChange({
-                            name: 'path',
-                            value: get(event, 'target.value'
-                            )}
-                        )}
+                        onChange={(event) => setPath(get(event, 'target.value'))}
                         onKeyDown={async (event) => {
                             if (event.key !== 'Enter') {
                                 return
@@ -147,10 +118,7 @@ export default function Blank() {
                         type="number"
                         value={size}
                         inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => handleChange({
-                            name: 'size',
-                            value: event.target.value
-                        })}
+                        onChange={(event) => setSize(event.target.value)}
                         onKeyDown={async (event) => {
                             if (event.key !== 'Enter') {
                                 return
@@ -165,10 +133,7 @@ export default function Blank() {
                         id="unit"
                         value={unit || ''}
                         options={unitOptions}
-                        onChange={(value) => handleChange({
-                            name: 'unit',
-                            value: value
-                        })}
+                        onChange={(value) => setUnit(value)}
                     />
                 </Grid>
             </Grid>
@@ -178,10 +143,7 @@ export default function Blank() {
                         id="compatible-size"
                         label="Size compatible with various SD/CF-cards, SSD and hard-disk brands"
                         value={compatibleSize}
-                        onChange={(checked) => handleChange({
-                            name: 'compatibleSize',
-                            value: checked
-                        })}
+                        onChange={(checked) => setCompatibleSize(checked)}
                     />
                 </Grid>
             </Grid>
@@ -199,10 +161,7 @@ export default function Blank() {
                             <Button
                                 disabled={blankDisabled}
                                 icon="plus"
-                                onClick={async () => handleChange({
-                                    name: 'confirmOpen',
-                                    value: true
-                                })}
+                                onClick={async () => setOpenConfirm(true)}
                             >
                                 Create blank image
                             </Button>

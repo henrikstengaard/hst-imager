@@ -3,7 +3,6 @@ import {Alert} from "@mui/material";
 import Box from "@mui/material/Box";
 import Title from "../components/Title";
 import Link from '@mui/material/Link'
-import {ElectronIpc} from "../utils/ElectronIpc"
 import {AppStateContext} from "../components/AppStateContext";
 import Typography from "@mui/material/Typography";
 import {HST_IMAGER_VERSION} from '../Constants'
@@ -13,19 +12,11 @@ const gitHubReleasesUrl = 'https://github.com/henrikstengaard/hst-imager/release
 const gitHubIssuesUrl = 'https://github.com/henrikstengaard/hst-imager/issues'
 
 export default function About() {
-    const electronIpc = new ElectronIpc()
     const appState = React.useContext(AppStateContext)
 
     const openUrl = async (event, url) => {
         event.preventDefault()
-        if (!appState || !appState.isElectronActive)
-        {
-            console.error('Open url is only available with Electron')
-            return
-        }
-        await electronIpc.openExternal({
-            url
-        })
+        await appState.hostIpc.openExternal({ url })
     }
     
     return (
@@ -36,6 +27,9 @@ export default function About() {
             <Typography sx={{ mt: 1 }}>
                 Hst Imager v{HST_IMAGER_VERSION}.
             </Typography>
+
+            <img src="icons/hst-imager.svg" height="80px" alt="Hst Imager app icon"
+                 style={{paddingLeft: '2px', paddingRight: '2px'}}/>
 
             <Typography sx={{ mt: 1 }}>
                 Hst Imager is an imaging tool to read and write disk images to and from physical drives.
