@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>Hst Imager</id>
+        <version>1.1.0.0</version>
+        <description>Hst Imager is an imaging tool to read and write disk images to and from physical drives.
+        </description>
+        <authors>Henrik Nørfjand Stengaard</authors>
+        <license type="expression">MIT</license>
+        <icon>icon.png</icon>
+        <readme>readme.md</readme>
+    </metadata>
+    <files>
+        <file src="..\..\hst.imager.png" target="icon.png"/>
+        <file src="readme.md" target="readme.md"/>
+        <file src="..\windows-tools\hst.imager-win_x64.exe" target="lib\net45\Hst.Imager.exe"/>
+        <file src="..\neutralinojs\Hst.Imager.Backend.exe" target="lib\net45"/>
+        <file src="..\neutralinojs\dist\hst.imager\resources.neu" target="lib\net45"/>
+        <file src="hst.imager.manifest" target="lib\net45\Hst.Imager.Backend.exe.manifest"/>
+    </files>
+</package>

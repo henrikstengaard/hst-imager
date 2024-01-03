@@ -190,10 +190,10 @@ namespace Hst.Imager.GuiApp
                 browserWindow.WebContents.OpenDevTools();
             }
             
-            Electron.IpcMain.On("minimize-window", _ => browserWindow.Minimize());
-            Electron.IpcMain.On("maximize-window", _ => browserWindow.Maximize());
-            Electron.IpcMain.On("unmaximize-window", _ => browserWindow.Unmaximize());
-            Electron.IpcMain.On("close-window", _ => browserWindow.Close());
+            await Electron.IpcMain.On("minimize-window", _ => browserWindow.Minimize());
+            await Electron.IpcMain.On("maximize-window", _ => browserWindow.Maximize());
+            await Electron.IpcMain.On("unmaximize-window", _ => browserWindow.Unmaximize());
+            await Electron.IpcMain.On("close-window", _ => browserWindow.Close());
         }
     }
 }

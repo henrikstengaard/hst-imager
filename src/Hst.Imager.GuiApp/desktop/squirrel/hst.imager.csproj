@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>net6.0</OutputType>
+	    <NoBuild>true</NoBuild>
+	    <IncludeBuildOutput>false</IncludeBuildOutput>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Clowd.Squirrel" Version="2.11.1" />
+    </ItemGroup>
+
+</Project>

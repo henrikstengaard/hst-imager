@@ -16,17 +16,41 @@ namespace Hst.Imager.GuiApp
     using Serilog;
     using Serilog.Events;
     using OperatingSystem = Hst.Core.OperatingSystem;
+#if WINDOWS
+    using Squirrel;
+    using Squirrel.Sources;
+#endif
 
     public class Program
     {
         public static async Task Main(string[] args)
         {
+#if WINDOWS
+            using (var mgr = new UpdateManager(new GithubSource(
+                       "https://github.com/henrikstengaard/hst-imager",
+                       string.Empty,
+                       false)))
+            {
+                SquirrelAwareApp.HandleEvents(
+                    onInitialInstall: (_, _) => CreateShortcutsForExecutable(mgr),
+                    onAppUpdate: (_, _) => CreateShortcutsForExecutable(mgr),
+                    onAppUninstall: (_, _) => RemoveShortcutsForExecutable(mgr));
+            }
+#endif
             var worker = false;
             var baseUrl = string.Empty;
             int processId = 0;
             
             for (var i = 0; i < args.Length; i++)
             {
+#if WINDOWS
+                // stop application, if any argument starts with "--squirrel"
+                if (args[i].IndexOf("--squirrel", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return;
+                }
+#endif
+
                 if (args[i].Equals("--worker", StringComparison.OrdinalIgnoreCase))
                 {
                     worker = true;
@@ -81,7 +105,7 @@ namespace Hst.Imager.GuiApp
 
         private static string GetArgument(string[] args, string name)
         {
-            for (var i = 0; i < args.Length; i++)
+            for (var i = 0; i < args.Length - 1; i++)
             {
                 if (!args[i].Equals(name, StringComparison.OrdinalIgnoreCase) && i + 1 < args.Length)
                 {
@@ -156,5 +180,23 @@ namespace Hst.Imager.GuiApp
                     "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level}] ({SourceContext}) {Message}{NewLine}{Exception}")
                 .CreateLogger();
         }
+#if WINDOWS
+        private static void CreateShortcutsForExecutable(UpdateManager manager)
+        {
+            var exeName = "Hst.Imager.exe";
+            var location = ShortcutLocation.StartMenu | ShortcutLocation.Desktop;
+            var updateOnly = !Environment.CommandLine.Contains("squirrel-install");
+            
+            manager.CreateShortcutsForExecutable(exeName, location, updateOnly);
+        }
+
+        private static void RemoveShortcutsForExecutable(UpdateManager manager)
+        {
+            var exeName = "Hst.Imager.exe";
+            var location = ShortcutLocation.StartMenu | ShortcutLocation.Desktop;
+            
+            manager.RemoveShortcutsForExecutable(exeName, location);
+        }
+#endif
     }
 }

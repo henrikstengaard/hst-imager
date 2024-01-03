@@ -27,7 +27,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{F50E0629-60B0-4B24-AD41-C3F4F27CA364}"
 	ProjectSection(SolutionItems) = preProject
 		build-neutralinojs-app.ps1 = build-neutralinojs-app.ps1
-		publish-neutralinojs-app.ps1 = publish-neutralinojs-app.ps1
+		publish-windows-neutralinojs-app.ps1 = publish-windows-neutralinojs-app.ps1
 		run-neutralinojs-app.ps1 = run-neutralinojs-app.ps1
 	EndProjectSection
 EndProject
