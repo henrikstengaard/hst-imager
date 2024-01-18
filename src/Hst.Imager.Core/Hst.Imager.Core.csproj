@@ -14,6 +14,11 @@
       <PackageReference Include="SharpZipLib" Version="1.4.2" />
     </ItemGroup>
 
+    <ItemGroup>
+      <None Remove="Data\guid-partition-types.csv" />
+      <EmbeddedResource Include="Data\guid-partition-types.csv" />
+    </ItemGroup>
+
     <PropertyGroup>
         <IsWindows Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))' == 'true'">true</IsWindows>
         <IsOSX Condition="'$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::OSX)))' == 'true'">true</IsOSX>

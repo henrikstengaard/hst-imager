@@ -26,19 +26,18 @@ public class GptInfoCommand : CommandBase
         
     public override async Task<Result> Execute(CancellationToken token)
     {
-        OnInformationMessage($"Reading Master Boot Record information from '{path}'");
+        OnInformationMessage($"Reading Guid Partition Table information from '{path}'");
             
         OnDebugMessage($"Opening '{path}' as readable");
 
-        var physicalDrivesList = physicalDrives.ToList();
-        var mediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, path);
+        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, path);
         if (mediaResult.IsFaulted)
         {
             return new Result(mediaResult.Error);
         }
         using var media = mediaResult.Value;
             
-        OnDebugMessage($"Reading Master Boot Record from path '{path}'");
+        OnDebugMessage($"Reading Guid Partition Table from path '{path}'");
 
         var diskInfo = await commandHelper.ReadDiskInfo(media);
             
@@ -49,7 +48,8 @@ public class GptInfoCommand : CommandBase
             IsPhysicalDrive = media.IsPhysicalDrive,
             Type = media.Type,
             DiskSize = diskInfo.Size,
-            DiskInfo = diskInfo
+            DiskInfo = diskInfo,
+            Byteswap = media.Byteswap
         });
 
         return new Result();
