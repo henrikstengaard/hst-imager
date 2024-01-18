@@ -11,12 +11,12 @@ import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import ConfirmDialog from "../components/ConfirmDialog";
-import {Api} from "../utils/Api";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import Media from "../components/Media";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
+import {BackendApiStateContext} from "../components/BackendApiContext";
 
 const unitOptions = [{
     title: 'GB',
@@ -50,7 +50,7 @@ const formatPartitionTableType = (partitionTableType) => {
 }
 
 export default function Write() {
-    const [confirmOpen, setConfirmOpen] = React.useState(false);
+    const [openConfirm, setOpenConfirm] = React.useState(false);
     const [sourceMedia, setSourceMedia] = React.useState(null)
     const [destinationMedia, setDestinationMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
@@ -65,160 +65,127 @@ export default function Write() {
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
-
-    const api = React.useMemo(() => new Api(), []);
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
-    
-    const getPath = React.useCallback(({medias, path}) => {
+
+    const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
             return null
         }
 
         if (path === null || path === undefined) {
-            return medias[0].path
+            return medias[0]
         }
 
         const media = medias.find(x => x.path === path)
-        return media === null ? medias[0].path : media.path
+        return media === null ? medias[0] : media
     }, [])
 
     const getMedias = React.useCallback(async () => {
         async function getMedias() {
-            await api.list()
+            await backendApi.updateList()
         }
         await getMedias()
-    }, [api])
+    }, [backendApi])
 
-    const getInfo = async (path, byteswap) => {
-        const response = await fetch('api/info', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                sourceType: 'ImageFile',
-                path,
-                byteswap
-            })
-        });
-        if (!response.ok) {
-            console.error('Failed to get info')
-        }
-    }
-    
-    // setup signalr connection and listeners
+    const getInfo = React.useCallback(async (path, byteswap) => {
+        await backendApi.updateInfo({ path, sourceType: 'ImageFile', byteswap });
+    }, [backendApi])
+
     React.useEffect(() => {
         if (connection) {
             return
         }
 
+        getMedias()
+        
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/result')
+            .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on("Info", (media) => {
-                        setSourceMedia(media)
-                        
-                        // default set size and unit to largest comparable size
-                        setWriteAll(true)
-                        setSize(0)
-                        setUnit('bytes')
+        newConnection.on("Info", (media) => {
+            setSourceMedia(media)
 
-                        // no media, reset
-                        if (isNil(media)) {
-                            setPrefillSize(null)
-                            setPrefillSizeOptions([])
-                            return
-                        }
+            // default set size and unit to largest comparable size
+            setWriteAll(true)
+            setSize(0)
+            setUnit('bytes')
 
-                        // get and sort partition tables
-                        const partitionTables = get(media, 'diskInfo.partitionTables') || []
+            // no media, reset
+            if (isNil(media)) {
+                setPrefillSize(null)
+                setPrefillSizeOptions([])
+                return
+            }
 
-                        // add select prefill option, if any partition tables are present                        
-                        const newPrefillSizeOptions = [{
-                            title: 'Select size to prefill',
-                            value: 'prefill'
-                        },{
-                            title: `Disk (${media.diskSize} bytes)`,
-                            value: media.diskSize
-                        }]
+            // get and sort partition tables
+            const partitionTables = get(media, 'diskInfo.partitionTables') || []
 
-                        // add partition tables as prefill size options
-                        for (let i = 0; i < partitionTables.length; i++) {
-                            const partitionTableSize = get(partitionTables[i], 'size') || 0
-                            newPrefillSizeOptions.push({
-                                title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                                value: partitionTableSize
-                            })
-                        }
+            // add select prefill option, if any partition tables are present                        
+            const newPrefillSizeOptions = [{
+                title: 'Select size to prefill',
+                value: 'prefill'
+            },{
+                title: `Disk (${media.diskSize} bytes)`,
+                value: media.diskSize
+            }]
 
-                        setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-                        setPrefillSizeOptions(newPrefillSizeOptions)
-                    });
-
-                    newConnection.on('List', async (medias) => {
-                        const newPath = getPath({medias: medias, path: get(destinationMedia, 'path')})
-                        const newMedia = newPath ? medias.find(x => x.path === newPath) : null
-
-                        setMedias(medias || [])
-                        if (newMedia) {
-                            setDestinationMedia(newMedia)
-                        }
-                    })
-
-                    getMedias()                    
+            // add partition tables as prefill size options
+            for (let i = 0; i < partitionTables.length; i++) {
+                const partitionTableSize = get(partitionTables[i], 'size') || 0
+                newPrefillSizeOptions.push({
+                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
+                    value: partitionTableSize
                 })
-                .catch((err) => {
-                    console.error(`Error: ${err}`)
-                })
-        } catch (error) {
-            console.error(error)
-        }
+            }
 
-        setConnection(newConnection)
+            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
+            setPrefillSizeOptions(newPrefillSizeOptions)
+        });
+
+        newConnection.on('List', async (medias) => {
+            const newMedia = getMedia({medias: medias, path: get(destinationMedia, 'path')});
+
+            setMedias(medias || [])
+            if (newMedia) {
+                setDestinationMedia(newMedia)
+            }
+        })
+
+        newConnection.start();
+
+        setConnection(newConnection);
 
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [connection, setConnection, getMedias, destinationMedia, getPath, setMedias, setDestinationMedia, setSourceMedia, 
-        setPrefillSize, setPrefillSizeOptions, setUnit, setSize])
+    }, [backendBaseUrl, connection, destinationMedia, getMedia, getMedias, setConnection])
     
     const handleWrite = async () => {
-        const response = await fetch('api/write', {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}`,
-                sourcePath,
-                destinationPath: destinationMedia.path,
-                size: (size * unitOption.size),
-                retries,
-                verify,
-                force,
-                byteswap
-            })
+        await backendApi.startWrite({
+            title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}`,
+            sourcePath,
+            destinationPath: destinationMedia.path,
+            size: (size * unitOption.size),
+            retries,
+            verify,
+            force,
+            byteswap
         });
-        if (!response.ok) {
-            console.error('Failed to read')
-        }
     }
 
     const handleConfirm = async (confirmed) => {
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         if (!confirmed) {
             return
         }
@@ -226,14 +193,14 @@ export default function Write() {
     }
 
     const handleUpdate = async () => {
-        await api.list()
+        await backendApi.updateList()
     }
 
     const handleCancel = () => {
         if (connection) {
             connection.stop()
         }
-        setConfirmOpen(false)
+        setOpenConfirm(false)
         setSourceMedia(null)
         setDestinationMedia(null)
         setMedias([])
@@ -255,7 +222,7 @@ export default function Write() {
         <Box>
             <ConfirmDialog
                 id="confirm-write"
-                open={confirmOpen}
+                open={openConfirm}
                 title="Write"
                 description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
@@ -330,7 +297,7 @@ export default function Write() {
                         onChange={async (checked) => {
                             setByteswap(checked)
                             if (sourceMedia) {
-                                await getInfo(sourceMedia.path, byteswap)
+                                await getInfo(sourceMedia.path, checked)
                             }
                         }}
                     />
@@ -380,7 +347,7 @@ export default function Write() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            setConfirmOpen(true)
+                            setOpenConfirm(true)
                         }}
                     />
                 </Grid>
@@ -443,7 +410,7 @@ export default function Write() {
                             <Button
                                 disabled={writeDisabled}
                                 icon="download"
-                                onClick={async () => setConfirmOpen(true)}
+                                onClick={async () => setOpenConfirm(true)}
                             >
                                 Start write
                             </Button>

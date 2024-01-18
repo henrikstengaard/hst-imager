@@ -1,0 +1,1 @@
+dotnet publish -p:DefineConstants=BACKEND -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=win-x64 -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish

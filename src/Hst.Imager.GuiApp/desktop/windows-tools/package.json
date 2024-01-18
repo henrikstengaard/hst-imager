@@ -1,0 +1,16 @@
+{
+  "name": "windows-tools",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "update-exe": "cross-env-shell \"resedit --in hst.imager-win_x64.exe --out hst.imager-win_x64.exe --icon hst.imager.ico --product-name \"\"Hst Imager\"\" --product-version $HST_IMAGER_VERSION --file-version $HST_IMAGER_VERSION --company-name \"\"Henrik Nørfjand Stengaard\"\"\""
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "resedit-cli": "^2.0.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
+}

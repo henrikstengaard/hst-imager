@@ -9,7 +9,7 @@ namespace Hst.Imager.GuiApp
     using ElectronNET.API;
     using ElectronNET.API.Entities;
     using Helpers;
-    using Hst.Imager.Core;
+    using Core;
     using Hst.Imager.Core.Helpers;
     using Hst.Imager.Core.Models;
     using Hubs;
@@ -38,6 +38,18 @@ namespace Hst.Imager.GuiApp
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+#if BACKEND
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowLocalhost", builder =>
+                {
+                    builder.SetIsOriginAllowed(origin => new Uri(origin).Host == "localhost")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowCredentials();;
+                });
+            });
+#endif
             services.AddSignalR(o =>
             {
                 o.EnableDetailedErrors = ApplicationDataHelper.HasDebugEnabled(Constants.AppName);
@@ -88,6 +100,11 @@ namespace Hst.Imager.GuiApp
             logger.LogDebug($"Addresses = '{string.Join(",", addresses)}'");
             appState.BaseUrl = addresses.FirstOrDefault(x => x.StartsWith("https")) ?? addresses.FirstOrDefault();
             logger.LogDebug($"Base url = '{appState.BaseUrl}'");
+            logger.LogDebug($"AppPath = '{appState.AppPath}'");
+
+#if BACKEND
+            app.UseCors("AllowLocalhost");
+#endif
             
             app.UseMiddleware<ExceptionMiddleware>();
             
@@ -104,8 +121,9 @@ namespace Hst.Imager.GuiApp
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+#if (BACKEND == false)
             app.UseSpaStaticFiles();
-
+#endif
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>
@@ -120,6 +138,7 @@ namespace Hst.Imager.GuiApp
                     pattern: "{controller}/{action=Index}/{id?}");
             });
 
+#if (BACKEND == false)
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";
@@ -130,8 +149,8 @@ namespace Hst.Imager.GuiApp
                 }
             });
 
-            logger.LogDebug($"AppPath = '{appState.AppPath}'");            
             Task.Run(() => ElectronBootstrap(appState.AppPath));
+#endif
         }
 
         private async Task ElectronBootstrap(string appPath)
@@ -171,10 +190,10 @@ namespace Hst.Imager.GuiApp
                 browserWindow.WebContents.OpenDevTools();
             }
             
-            Electron.IpcMain.On("minimize-window", _ => browserWindow.Minimize());
-            Electron.IpcMain.On("maximize-window", _ => browserWindow.Maximize());
-            Electron.IpcMain.On("unmaximize-window", _ => browserWindow.Unmaximize());
-            Electron.IpcMain.On("close-window", _ => browserWindow.Close());
+            await Electron.IpcMain.On("minimize-window", _ => browserWindow.Minimize());
+            await Electron.IpcMain.On("maximize-window", _ => browserWindow.Maximize());
+            await Electron.IpcMain.On("unmaximize-window", _ => browserWindow.Unmaximize());
+            await Electron.IpcMain.On("close-window", _ => browserWindow.Close());
         }
     }
 }

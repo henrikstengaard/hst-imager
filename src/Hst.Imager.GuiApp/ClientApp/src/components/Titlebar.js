@@ -5,34 +5,32 @@ import Toolbar from '@mui/material/Toolbar'
 import Typography from '@mui/material/Typography'
 import IconButton from '@mui/material/IconButton'
 import {FontAwesomeIcon} from '@fortawesome/react-fontawesome'
-import {ElectronIpc} from "../utils/ElectronIpc"
 import {HST_IMAGER_VERSION} from '../Constants'
+import {AppStateContext} from "./AppStateContext";
 
 export default function Titlebar() {
-    const [maximized, setMaximized] = React.useState(false)
-    const electronIpc = new ElectronIpc()
+    const appState = React.useContext(AppStateContext)
+    const [maximized] = React.useState(false)
 
     const handleMinimizeWindow = () => {
-        electronIpc.send({message: 'minimize-window'})
+        appState.hostIpc.minimizeWindow()
     }
 
     const handleMaximizeWindow = () => {
-        electronIpc.send({message: 'maximize-window'})
+        appState.hostIpc.maximizeWindow()
     }
 
     const handleRestoreWindow = () => {
-        electronIpc.send({message: 'unmaximize-window'})
+        appState.hostIpc.restoreWindow()
     }
 
     const handleCloseWindow = () => {
-        electronIpc.send({message: 'close-window'})
+        appState.hostIpc.closeWindow()
     }
-
-    electronIpc.on({event: 'window-maximized', callback: () => setMaximized(true)})
-    electronIpc.on({event: 'window-unmaximized', callback: () => setMaximized(false)})
 
     return (
         <AppBar
+            id="titlebar"
             position="fixed"
             sx={{
                 zIndex: (theme) => theme.zIndex.drawer + 10000,

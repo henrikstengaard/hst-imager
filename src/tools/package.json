@@ -1,0 +1,13 @@
+{
+  "name": "tools",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "update-exe": "resedit --in ../build/neutralinojs/dist/hst.imager/hst.imager-win_x64.exe --out ../build/neutralinojs/dist/hst.imager/hst.imager-win_x64.exe --product-name \"Hst Imager\" --product-version 1.1.0.0 --file-version 1.1.0.0 --icon ../Hst.Imager.GuiApp/hst.imager.ico"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "resedit-cli": "^2.0.0"
+  }
+}

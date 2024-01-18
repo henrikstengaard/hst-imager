@@ -13,6 +13,7 @@ import Typography from "@mui/material/Typography"
 import {HubConnectionBuilder} from '@microsoft/signalr'
 import Stack from "@mui/material/Stack";
 import {formatBytes, formatMilliseconds} from "../utils/Format";
+import {BackendApiStateContext} from "./BackendApiContext";
 
 const initialState = {
     title: '',
@@ -41,8 +42,12 @@ export default function ProgressBackdrop(props) {
         children
     } = props
 
-    const [state, setState] = React.useState({...initialState});
     const [connection, setConnection] = React.useState(null);
+    const [state, setState] = React.useState({...initialState});
+    const {
+        backendBaseUrl,
+        backendApi
+    } = React.useContext(BackendApiStateContext)
 
     React.useEffect(() => {
         if (connection) {
@@ -50,47 +55,41 @@ export default function ProgressBackdrop(props) {
         }
 
         const newConnection = new HubConnectionBuilder()
-            .withUrl('/hubs/progress')
+            .withUrl(`${backendBaseUrl}hubs/progress`)
             .withAutomaticReconnect()
-            .build()
+            .build();
 
-        try {
-            newConnection
-                .start()
-                .then(() => {
-                    newConnection.on('UpdateProgress', progress => {
-                        const isComplete = get(progress, 'isComplete') || false
-                        const hasError = get(progress, 'hasError') || false
-                        state.title = progress.title
-                        state.isComplete = isComplete
-                        state.show = true
-                        state.hasError = hasError
-                        state.errorMessage = progress.errorMessage
-                        state.percentComplete = progress.percentComplete
-                        state.bytesPerSecond = isComplete ? null : progress.bytesPerSecond
-                        state.bytesProcessed = isComplete ? null : progress.bytesProcessed
-                        state.bytesRemaining = isComplete ? null : progress.bytesRemaining
-                        state.bytesTotal = isComplete ? null : progress.bytesTotal
-                        state.millisecondsElapsed = isComplete ? null : progress.millisecondsElapsed
-                        state.millisecondsRemaining = isComplete ? null : progress.millisecondsRemaining
-                        state.millisecondsTotal = isComplete ? null : progress.millisecondsTotal
-                        setState({...state})
-                    });
-                })
-                .catch(e => console.log('Connection failed: ', e));
-        } catch (error) {
-            console.error(error)
-        }
+        newConnection.on("UpdateProgress", progress => {
+            const isComplete = get(progress, 'isComplete') || false
+            const hasError = get(progress, 'hasError') || false
+            state.title = progress.title
+            state.isComplete = isComplete
+            state.show = true
+            state.hasError = hasError
+            state.errorMessage = progress.errorMessage
+            state.percentComplete = progress.percentComplete
+            state.bytesPerSecond = isComplete ? null : progress.bytesPerSecond
+            state.bytesProcessed = isComplete ? null : progress.bytesProcessed
+            state.bytesRemaining = isComplete ? null : progress.bytesRemaining
+            state.bytesTotal = isComplete ? null : progress.bytesTotal
+            state.millisecondsElapsed = isComplete ? null : progress.millisecondsElapsed
+            state.millisecondsRemaining = isComplete ? null : progress.millisecondsRemaining
+            state.millisecondsTotal = isComplete ? null : progress.millisecondsTotal
+            setState({...state})
+        })
 
-        setConnection(newConnection)
+        newConnection.start();
+
+        setConnection(newConnection);
 
         return () => {
             if (!connection) {
                 return
             }
+
             connection.stop();
         };
-    }, [connection, setState, state]);
+    }, [backendBaseUrl, connection, setConnection, state])
 
     const {
         title,
@@ -108,14 +107,10 @@ export default function ProgressBackdrop(props) {
         millisecondsTotal
     } = state
 
-    const handleCancel = async () => {
-        const response = await fetch('api/cancel', {method: 'POST'});
-        if (!response.ok) {
-            console.error("Failed to cancel")
-        }
-
+    const handleCancel = React.useCallback(async () => {
+        await backendApi.cancelTask();
         setState({...initialState})
-    }
+    }, [backendApi])
 
     const handleOk = async () => {
         setState({...initialState})

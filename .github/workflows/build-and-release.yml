@@ -151,7 +151,7 @@ jobs:
         shell: pwsh
         run: |
           cd Hst.Imager.GuiApp
-          dotnet electronize build /target win
+          dotnet electronize build /target win /p:DefineConstants=ELECTRON
         if: matrix.os == 'windows-latest'
 
       - name: Build gui app for macOS
@@ -159,7 +159,7 @@ jobs:
         shell: pwsh
         run: |
           cd Hst.Imager.GuiApp
-          dotnet electronize build /target osx
+          dotnet electronize build /target osx /p:DefineConstants=ELECTRON
         if: matrix.os == 'macos-latest'
 
       - name: Build gui app for Linux
@@ -167,7 +167,7 @@ jobs:
         shell: pwsh
         run: |
           cd Hst.Imager.GuiApp
-          dotnet electronize build /target linux
+          dotnet electronize build /target linux /p:DefineConstants=ELECTRON
         if: matrix.os == 'ubuntu-latest'
       
       - name: List gui app output
