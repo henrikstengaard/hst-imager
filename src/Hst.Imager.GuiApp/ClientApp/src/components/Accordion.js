@@ -4,11 +4,16 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';
 import Typography from '@mui/material/Typography';
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
+import {styled} from "@mui/material/styles";
+
+const StyledAccordionSummary = styled(AccordionSummary)(({theme}) => ({
+    color: theme.palette.primary.main
+}));
 
 export default function Accordion(props) {
     const {
         children,
-        expanded: initialExpanded = false,
+        expanded: initialExpanded = true,
         id,
         title
     } = props
@@ -20,8 +25,8 @@ export default function Accordion(props) {
     }
     
     return (
-        <MuiAccordion expanded={expanded} onChange={() => handleChange()}>
-            <AccordionSummary
+        <MuiAccordion expanded={expanded} disableGutters={true} onChange={() => handleChange()}>
+            <StyledAccordionSummary
                 expandIcon={<FontAwesomeIcon icon="chevron-down"/>}
                 aria-controls={`${id}-content`}
                 id={`${id}-header`}
@@ -29,7 +34,7 @@ export default function Accordion(props) {
                 <Typography>
                     {title}
                 </Typography>
-            </AccordionSummary>
+            </StyledAccordionSummary>
             <AccordionDetails>
                 {children}
             </AccordionDetails>

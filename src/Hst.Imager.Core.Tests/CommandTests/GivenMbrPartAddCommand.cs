@@ -1,4 +1,5 @@
-﻿using Hst.Core.Extensions;
+﻿using DiscUtils.Partitions;
+using Hst.Core.Extensions;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 
@@ -53,7 +54,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
                 x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        Assert.Equal("FAT32 (non-LBA)", partInfo.FileSystem);
+        Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partInfo.BiosType);
     }
 
     [Fact]
@@ -94,6 +95,6 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
                 x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        Assert.Equal("FAT32 (non-LBA)", partInfo.FileSystem);
+        Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partInfo.BiosType);
     }
 }

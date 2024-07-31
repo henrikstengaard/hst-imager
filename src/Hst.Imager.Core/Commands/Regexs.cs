@@ -8,7 +8,8 @@ public static class Regexs
         new("^(\\\\disk)(\\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static readonly Regex PhysicalDrivePathRegex =
-        new("^(\\\\\\\\\\.\\\\PHYSICALDRIVE|//\\./PHYSICALDRIVE)(\\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        new("^(\\\\\\\\\\.\\\\PHYSICALDRIVE|//\\./PHYSICALDRIVE)(\\d+)", 
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     public static readonly Regex DevicePathRegex =
         new("^/dev", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -23,4 +24,7 @@ public static class Regexs
     
     public static readonly Regex ModifiersRegex = 
         new(".+(\\+.+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    
+    public static readonly Regex NetworkPathRegex = new Regex(@"^(\\\\[^\\]+\\[^\\]+)", 
+        RegexOptions.Compiled | RegexOptions.IgnoreCase);
 }

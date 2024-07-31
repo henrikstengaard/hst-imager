@@ -48,20 +48,22 @@ public static class GuidPartitionTablePresenter
         {
             Columns = new[]
             {
-                new Column { Name = "File System" },
-                new Column { Name = "Type" },
                 new Column { Name = "#" },
+                new Column { Name = "Guid" },
+                new Column { Name = "Type" },
+                new Column { Name = "File System" },
                 new Column { Name = "Size", Alignment = ColumnAlignment.Right },
                 new Column { Name = "Start Sec", Alignment = ColumnAlignment.Right },
                 new Column { Name = "End Sec", Alignment = ColumnAlignment.Right }
             },
-            Rows = gptPartitionTablePart.Parts.Select(x => new Row
+            Rows = gptPartitionTablePart.Parts.Where(x => x.PartType == PartType.Partition).Select(x => new Row
                 {
                     Columns = new[]
                     {
-                        x.FileSystem,
-                        x.PartType.ToString(),
                         x.PartitionNumber.HasValue ? x.PartitionNumber.ToString() : string.Empty,
+                        x.GuidType,
+                        x.PartitionType,
+                        x.FileSystem,
                         x.Size.FormatBytes(),
                         x.StartSector.ToString(),
                         x.EndSector.ToString()
@@ -69,7 +71,6 @@ public static class GuidPartitionTablePresenter
                 })
                 .ToList()
         };
-
         outputBuilder.AppendLine();
         outputBuilder.Append(TablePresenter.Present(partitionTable));
 

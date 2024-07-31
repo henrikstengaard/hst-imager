@@ -9,5 +9,6 @@ public class PartitionTablePart
     public long Size { get; set; }
     public long Sectors { get; set; }
     public long Cylinders { get; set; }
+    public DiskGeometry DiskGeometry { get; set; }
     public IEnumerable<PartInfo> Parts { get; set; }
 }

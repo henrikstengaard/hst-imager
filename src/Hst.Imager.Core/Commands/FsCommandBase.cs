@@ -334,6 +334,11 @@ public abstract class FsCommandBase : CommandBase
 
         var parts = mediaResult.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
+        if (media.Value.Type == Media.MediaType.Floppy)
+        {
+            return await GetFloppyFileSystemEntryIterator(media.Value, parts, recursive);
+        }
+        
         if (parts.Length == 0)
         {
             return new Result<IEntryIterator>(new Error($"No partition table in path"));
@@ -380,6 +385,18 @@ public abstract class FsCommandBase : CommandBase
         var rootPath = string.Join("/", parts.Skip(2));
         return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media.Stream, rootPath,
             fileSystemVolumeResult.Value, recursive));
+    }
+
+    private async Task<Result<IEntryIterator>> GetFloppyFileSystemEntryIterator(Media media, string[] parts, bool recursive)
+    {
+        var fileSystemResult = await MountFileSystem(media.Stream);
+        if (fileSystemResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(fileSystemResult.Error);
+        }
+
+        var rootPath = string.Join("\\", parts);
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, fileSystemResult.Value, rootPath, recursive));
     }
 
     private async Task<Result<IEntryIterator>> GetMbrFileSystemEntryIterator(Media media, string[] parts, bool recursive)
@@ -540,9 +557,9 @@ public abstract class FsCommandBase : CommandBase
         {
             return new Result<IFileSystem>(new Error($"Invalid partition number '{partitionNumber}'"));
         }
-        
+
         OnDebugMessage("Reading Master Boot Record");
-        
+
         BiosPartitionTable biosPartitionTable;
         try
         {
@@ -557,16 +574,21 @@ public abstract class FsCommandBase : CommandBase
 
         if (partitionNumberIntValue < 0 || partitionNumberIntValue - 1 > biosPartitionTable.Partitions.Count)
         {
-            return new Result<IFileSystem>(new Error($"Invalid partition number {partitionNumber}, expected to between 1-{biosPartitionTable.Partitions.Count}"));
+            return new Result<IFileSystem>(new Error(
+                $"Invalid partition number {partitionNumber}, expected to between 1-{biosPartitionTable.Partitions.Count}"));
         }
 
         var partitionInfo = biosPartitionTable.Partitions[partitionNumberIntValue - 1];
-        
+
         OnDebugMessage($"Mounting file system");
 
         var stream = partitionInfo.Open();
-        var partitionOffset = stream.Position;
 
+        return await MountFileSystem(stream);
+    }
+    
+    protected static async Task<Result<IFileSystem>> MountFileSystem(Stream stream)
+    {
         // read first 64kb block bytes of partition
         var blockBytes = await stream.ReadBytes(512 * 128);
 

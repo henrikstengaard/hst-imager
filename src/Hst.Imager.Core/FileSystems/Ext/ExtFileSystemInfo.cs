@@ -136,6 +136,10 @@ public class ExtFileSystemInfo
     public ExtVersion Version { get; set; }
 
     public IEnumerable<ExtFeature> Features { get; set; }
+    
     public ulong Size { get; set; }
+
     public ulong Free { get; set; }
+
+    public string VolumeName { get; set; }
 }

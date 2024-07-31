@@ -79,8 +79,9 @@ export default function App() {
                 <ProgressProvider>
                     <ProgressBackdrop>
                         <ErrorSnackBar />
-                        <Navigation />
-                        <Content />
+                        <Navigation>
+                            <Content />
+                        </Navigation>
                     </ProgressBackdrop>
                 </ProgressProvider>
             </License>

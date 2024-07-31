@@ -12,7 +12,8 @@
             Raw,
             Vhd,
             CompressedRaw,
-            CompressedVhd
+            CompressedVhd,
+            Floppy
         }
 
         public string Path;

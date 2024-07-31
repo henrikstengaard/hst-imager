@@ -1,0 +1,11 @@
+﻿namespace Hst.Imager.GuiApp.Dialogs;
+
+public enum OpenFileNameFlags
+{
+    OFN_HIDEREADONLY = 0x4,
+    OFN_FORCESHOWHIDDEN = 0x10000000,
+    OFN_ALLOWMULTISELECT = 0x200,
+    OFN_EXPLORER = 0x80000,
+    OFN_FILEMUSTEXIST = 0x1000,
+    OFN_PATHMUSTEXIST = 0x800
+}

@@ -9,6 +9,8 @@
         public uint Sectors { get; set; }
         public uint Heads { get; set; }
         public uint ParkingZone { get; set; }
+        public uint Flags { get; set; }
+        public uint HostId { get; set; }
         public uint RdbBlockLo { get; set; }
         public uint RdbBlockHi { get; set; }
         public uint LoCylinder { get; set; }

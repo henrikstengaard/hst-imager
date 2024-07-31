@@ -117,14 +117,11 @@ export default function DiskOverview(props) {
                                 marginRight: '5px'
                             }}>
                             </div>
-                            {part.fileSystem}
+                            {part.partType === 'PartitionTable' ? formatPartitionTableType(part.partitionTableType) : part.partitionType}
                         </Stack>
                     </TableCell>
                     <TableCell>
-                        {formatPartitionTableType(part.partitionTableType)}
-                    </TableCell>
-                    <TableCell>
-                        {formatPartType(part.partType)}
+                        {part.fileSystem || ''}
                     </TableCell>
                     <TableCell align="right">
                         {part.partitionNumber || ''}
@@ -161,13 +158,10 @@ export default function DiskOverview(props) {
                     <TableHead>
                         <TableRow>
                             <TableCell>
-                                File system
-                            </TableCell>
-                            <TableCell>
-                                Partition table
-                            </TableCell>
-                            <TableCell>
                                 Type
+                            </TableCell>
+                            <TableCell>
+                                File system
                             </TableCell>
                             <TableCell align="right">
                                 Number

@@ -6,6 +6,7 @@ using Core.Commands;
 public class PartitionTablePartViewModel
 {
     public string Path { get; set; }
+    public DiskGeometryViewModel DiskGeometry { get; set; }
     public PartitionTableType PartitionTableType { get; set; }
     public long Size { get; set; }
     public long Sectors { get; set; }

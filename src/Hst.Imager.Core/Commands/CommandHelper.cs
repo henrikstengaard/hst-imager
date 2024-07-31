@@ -1,5 +1,6 @@
 ﻿using System.IO.Compression;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.PartitionTables;
 using SharpCompress.Archives.Rar;
 using GZipStream = SharpCompress.Compressors.Deflate.GZipStream;
 
@@ -213,17 +214,26 @@ namespace Hst.Imager.Core.Commands
             var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
             vhdDisk.Content.Position = 0;
             var vhdMedia = new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                byteSwap, new SectorStream(vhdDisk.Content, byteSwap, leaveOpen: true));
+                byteSwap, new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true));
             this.activeMedias.Add(vhdMedia);
             return new Result<Media>(vhdMedia);
         }
 
         private async Task<Media> ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
         {
+            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
+
             stream.Position = 0;
+            
+            // floppy image
+            if (stream.Length == 1474560)
+            {
+                return new Media(path, name, stream.Length, Media.MediaType.Floppy, false,
+                    stream, false);
+            }
+            
             var headerBytes = new byte[512];
             var bytesRead = await stream.ReadAsync(headerBytes, 0, headerBytes.Length);
-            var byteSwap = modifiers.HasFlag(ModifierEnum.ByteSwap);
 
             // rar media
             var rarMedia = headerBytes.HasMagicNumber(MagicBytes.RarMagicNumber150) ||
@@ -558,131 +568,16 @@ namespace Hst.Imager.Core.Commands
             await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
 
             // return compressed vhd, if vhd magic number is present in first chunk
-            if (MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0))
-            {
-                return await CompressedVhd(media.Stream, firstChunk);
-            }
-
-            return await CompressedImg(media.Stream, firstChunk);
+            return MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0)
+                ? CompressedVhd(media.Stream, firstChunk)
+                : CompressedImg(media.Stream, firstChunk);
         }
 
-        private async Task<VirtualDisk> CompressedVhd(Stream stream, byte[] firstChunk)
-        {
-            // open vhd disk from first chunk
-            var vhdDisk = new Disk(new MemoryStream(firstChunk), Ownership.None);
-            var firstRdbChunk = new byte[(1024 * 1024) / 2];
-            vhdDisk.Content.Position = 0;
-            var bytesRead = await vhdDisk.Content.ReadAsync(firstRdbChunk, 0, firstRdbChunk.Length);
+        private VirtualDisk CompressedVhd(Stream stream, byte[] firstChunk) => 
+            new Disk(new MemoryStream(firstChunk), Ownership.None);
 
-            // return vhd disk as is, if no bytes read
-            if (bytesRead == 0)
-            {
-                return vhdDisk;
-            }
-
-            // read rdb from first rdb chunk
-            var rigidDiskBlock = await ParseRigidDiskBlock(firstRdbChunk);
-            if (rigidDiskBlock == null)
-            {
-                return vhdDisk;
-            }
-
-            // return disk as is, if rdb size is less than bytes read
-            var rdbSize = rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize;
-            if (rdbSize < bytesRead)
-            {
-                return vhdDisk;
-            }
-
-            // dispose vhd disk with first chunk
-            vhdDisk.Dispose();
-
-            // read second chunk
-            var secondChunkSize = Convert.ToInt32(Math.Floor(((double)rdbSize - bytesRead) / firstChunk.Length) + 1) *
-                                  firstChunk.Length;
-            var secondChunk = new byte[secondChunkSize];
-            await stream.FillAsync(secondChunk, 0, secondChunk.Length);
-
-            // return first and second chunk as vhd disk
-            return new Disk(new MemoryStream(firstChunk.Concat(secondChunk).ToArray()), Ownership.None);
-        }
-
-        private async Task<VirtualDisk> CompressedImg(Stream stream, byte[] firstChunk)
-        {
-            var rigidDiskBlock = await ReadRigidDiskBlock(firstChunk);
-
-            // return first chunk as raw disk, if no rigid disk block present in first chunk
-            if (rigidDiskBlock == null)
-            {
-                return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
-            }
-
-            var rdbSize = rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize;
-
-            // return raw disk with first chunk, if rdb size is less than first chunk size
-            if (rdbSize < firstChunk.Length)
-            {
-                return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
-            }
-
-            // read second chunk
-            var secondChunkSize =
-                Convert.ToInt32(Math.Floor(((double)rdbSize - firstChunk.Length) / firstChunk.Length) + 1) *
-                firstChunk.Length;
-            var secondChunk = new byte[secondChunkSize];
-            await stream.FillAsync(secondChunk, 0, secondChunk.Length);
-
-            // return first and second chunk as raw disk
-            return new DiscUtils.Raw.Disk(new MemoryStream(firstChunk.Concat(secondChunk).ToArray()), Ownership.None);
-        }
-
-        private async Task<RigidDiskBlock> ReadRigidDiskBlock(byte[] firstChunk)
-        {
-            // read rigid disk block from first chunk, if first chunk doesn't contain vhd magic number
-            if (!MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0))
-            {
-                return await ParseRigidDiskBlock(firstChunk);
-            }
-
-            // open vhd disk from first chunk
-            using var disk = new Disk(new MemoryStream(firstChunk), Ownership.Dispose);
-            var rdbChunk = new byte[512 * 16];
-            disk.Content.Position = 0;
-            var bytesRead = await disk.Content.ReadAsync(rdbChunk, 0, rdbChunk.Length);
-            if (bytesRead != rdbChunk.Length)
-            {
-                return null;
-            }
-
-            // read rdb from rdb chunk
-            return await ParseRigidDiskBlock(rdbChunk);
-        }
-
-        private async Task<RigidDiskBlock> ParseRigidDiskBlock(byte[] buffer)
-        {
-            var sector = 0;
-            var rdbLocationLimit = 16;
-            RigidDiskBlock rigidDiskBlock = null;
-            var blockBytes = new byte[512];
-            do
-            {
-                //var blockBytes = new Span<byte>(buffer, sector * 512, 512);
-                Array.Copy(buffer, sector * 512, blockBytes, 0, 512);
-
-                // skip, if identifier doesn't match rigid disk block
-                var identifier = BitConverter.ToUInt32(blockBytes, 0);
-                if (!identifier.Equals(BlockIdentifiers.RigidDiskBlock))
-                {
-                    sector++;
-                    continue;
-                }
-
-                // read rigid disk block
-                rigidDiskBlock = await RigidDiskBlockReader.Parse(blockBytes, false);
-            } while (sector < rdbLocationLimit && rigidDiskBlock == null);
-
-            return rigidDiskBlock;
-        }
+        private VirtualDisk CompressedImg(Stream stream, byte[] firstChunk) => 
+            new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
 
         public virtual async Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None)
@@ -691,102 +586,25 @@ namespace Hst.Imager.Core.Commands
 
             var disk = await ResolveVirtualDisk(media);
 
-            try
+            PartitionTableInfo mbrPartitionTableInfo = null;
+            
+            var biosPartitionTable = MbrPartitionTableReader.Read(disk);
+            if (biosPartitionTable != null)
             {
-                var biosPartitionTable = new BiosPartitionTable(disk);
-
-                var mbrPartitionNumber = 0;
-
-                partitionTables.Add(new PartitionTableInfo
-                {
-                    Type = PartitionTableType.MasterBootRecord,
-                    Size = disk.Geometry.Capacity,
-                    Sectors = disk.Geometry.TotalSectorsLong,
-                    Cylinders = 0,
-                    Partitions = biosPartitionTable.Partitions.Select(x => new PartitionInfo
-                    {
-                        PartitionNumber = ++mbrPartitionNumber,
-                        FileSystem = x.TypeAsString,
-                        BiosType = x.BiosType,
-                        Size = x.SectorCount * disk.BlockSize,
-                        StartOffset = x.FirstSector * disk.BlockSize,
-                        EndOffset = ((x.LastSector + 1) * disk.BlockSize) - 1,
-                        StartSector = x.FirstSector,
-                        EndSector = x.LastSector,
-                        StartCylinder = 0,
-                        EndCylinder = 0
-                    }).ToList(),
-                    Reserved = new PartitionTableReservedInfo
-                    {
-                        StartOffset = 0,
-                        EndOffset = 511,
-                        StartSector = 0,
-                        EndSector = 0,
-                        StartCylinder = 0,
-                        EndCylinder = 0,
-                        Size = 512
-                    },
-                    StartOffset = 0,
-                    EndOffset = disk.Geometry.Capacity - 1,
-                    StartSector = 0,
-                    EndSector = disk.Geometry.TotalSectorsLong - 1
-                });
-            }
-            catch (Exception)
-            {
-                // ignored, if read bios partition table fails
+                mbrPartitionTableInfo = await MbrPartitionTableReader.Read(disk, biosPartitionTable);
+                partitionTables.Add(mbrPartitionTableInfo);
             }
 
-            try
+            PartitionTableInfo guidPartitionTableInfo = null;
+            
+            var guidPartitionTable = GuidPartitionTableReader.Read(disk);
+            if (guidPartitionTable != null)
             {
-                var guidPartitionTable = new GuidPartitionTable(disk);
-
-                var guidPartitionNumber = 0;
-
-                var guidReservedSize = guidPartitionTable.FirstUsableSector * disk.BlockSize;
-                partitionTables.Add(new PartitionTableInfo
-                {
-                    Type = PartitionTableType.GuidPartitionTable,
-                    Size = disk.Capacity,
-                    Sectors = guidPartitionTable.LastUsableSector + 1,
-                    Cylinders = 0,
-                    Partitions = guidPartitionTable.Partitions.Select(x => new PartitionInfo
-                    {
-                        PartitionNumber = ++guidPartitionNumber,
-                        FileSystem = x.TypeAsString,
-                        BiosType = x.BiosType,
-                        Size = x.SectorCount * disk.BlockSize,
-                        StartOffset = x.FirstSector * disk.BlockSize,
-                        EndOffset = ((x.LastSector + 1) * disk.BlockSize) - 1,
-                        StartSector = x.FirstSector,
-                        EndSector = x.LastSector,
-                        StartCylinder = 0,
-                        EndCylinder = 0
-                    }).ToList(),
-                    Reserved = new PartitionTableReservedInfo
-                    {
-                        StartOffset = 0,
-                        EndOffset = guidReservedSize - 1,
-                        StartSector = 0,
-                        EndSector = guidPartitionTable.FirstUsableSector > 0
-                            ? guidPartitionTable.FirstUsableSector - 1
-                            : 0,
-                        StartCylinder = 0,
-                        EndCylinder = 0,
-                        Size = guidReservedSize
-                    },
-                    StartOffset = 0,
-                    EndOffset = disk.Capacity - 1,
-                    StartSector = guidPartitionTable.FirstUsableSector,
-                    EndSector = guidPartitionTable.LastUsableSector,
-                    StartCylinder = 0,
-                    EndCylinder = 0
-                });
+                guidPartitionTableInfo = await GuidPartitionTableReader.Read(disk, guidPartitionTable);
+                partitionTables.Add(guidPartitionTableInfo);
             }
-            catch (Exception)
-            {
-                // ignored, if read guid partition table fails
-            }
+
+            PartitionTableInfo rdbPartitionTableInfo = null;
 
             RigidDiskBlock rigidDiskBlock = null;
             try
@@ -794,51 +612,8 @@ namespace Hst.Imager.Core.Commands
                 rigidDiskBlock = await GetRigidDiskBlock(disk.Content);
                 if (rigidDiskBlock != null)
                 {
-                    var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
-                    var rdbPartitionNumber = 0;
-
-                    var rdbStartCyl = 0;
-                    var rdbEndCyl =
-                        Convert.ToInt32(Math.Ceiling((double)rigidDiskBlock.RdbBlockHi * rigidDiskBlock.BlockSize /
-                                                     cylinderSize)) - 1;
-
-                    var rdbStartOffset = rigidDiskBlock.RdbBlockLo * rigidDiskBlock.BlockSize;
-                    var rdbEndOffset = ((rigidDiskBlock.RdbBlockHi + 1) * rigidDiskBlock.BlockSize) - 1;
-                    partitionTables.Add(new PartitionTableInfo
-                    {
-                        Type = PartitionTableType.RigidDiskBlock,
-                        Size = rigidDiskBlock.DiskSize,
-                        Sectors = rigidDiskBlock.DiskSize / rigidDiskBlock.BlockSize,
-                        Cylinders = rigidDiskBlock.Cylinders,
-                        Partitions = rigidDiskBlock.PartitionBlocks.Select(x => new PartitionInfo
-                        {
-                            PartitionNumber = ++rdbPartitionNumber,
-                            FileSystem = x.DosTypeFormatted,
-                            Size = x.PartitionSize,
-                            StartOffset = (long)x.LowCyl * cylinderSize,
-                            EndOffset = ((long)x.HighCyl + 1) * cylinderSize - 1,
-                            StartSector = (long)x.LowCyl * rigidDiskBlock.Heads * rigidDiskBlock.Sectors,
-                            EndSector = (long)x.HighCyl * rigidDiskBlock.Heads * rigidDiskBlock.Sectors,
-                            StartCylinder = x.LowCyl,
-                            EndCylinder = x.HighCyl,
-                        }).ToList(),
-                        Reserved = new PartitionTableReservedInfo
-                        {
-                            StartOffset = rdbStartOffset,
-                            EndOffset = rdbEndOffset,
-                            StartSector = rigidDiskBlock.RdbBlockLo,
-                            EndSector = rigidDiskBlock.RdbBlockHi,
-                            StartCylinder = rdbStartCyl,
-                            EndCylinder = rdbEndCyl,
-                            Size = rdbEndOffset - rdbStartOffset + 1
-                        },
-                        StartOffset = rdbStartOffset,
-                        EndOffset = rdbStartOffset + rigidDiskBlock.DiskSize - 1,
-                        StartCylinder = 0,
-                        EndCylinder = rigidDiskBlock.HiCylinder,
-                        StartSector = rigidDiskBlock.RdbBlockLo,
-                        EndSector = rigidDiskBlock.DiskSize / rigidDiskBlock.BlockSize,
-                    });
+                    rdbPartitionTableInfo = PartitionTables.RigidDiskBlockReader.Read(disk, rigidDiskBlock);
+                    partitionTables.Add(rdbPartitionTableInfo);
                 }
             }
             catch (Exception)
@@ -857,10 +632,13 @@ namespace Hst.Imager.Core.Commands
                 RigidDiskBlock = rigidDiskBlock,
             };
 
-            diskInfo.GptPartitionTablePart = CreateGptParts(diskInfo, partitionTableTypeContext);
-            diskInfo.MbrPartitionTablePart = CreateMbrParts(diskInfo, partitionTableTypeContext);
-            diskInfo.RdbPartitionTablePart = CreateRdbParts(diskInfo, partitionTableTypeContext);
-            diskInfo.DiskParts = CreateDiskParts(diskInfo, partitionTableTypeContext);
+            diskInfo.GptPartitionTablePart = CreatePartitionTablePart(diskInfo, guidPartitionTableInfo,
+                partitionTableTypeContext);
+            diskInfo.MbrPartitionTablePart = CreatePartitionTablePart(diskInfo, mbrPartitionTableInfo,
+                partitionTableTypeContext);
+            diskInfo.RdbPartitionTablePart = CreatePartitionTablePart(diskInfo, rdbPartitionTableInfo,
+                partitionTableTypeContext);
+            diskInfo.DiskParts = CreateDiskParts(diskInfo, partitionTableTypeContext).ToList();
 
             return diskInfo;
         }
@@ -874,7 +652,6 @@ namespace Hst.Imager.Core.Commands
             };
         }
 
-
         private static IEnumerable<PartInfo> CreateDiskParts(DiskInfo diskInfo,
             PartitionTableType partitionTableTypeContext)
         {
@@ -887,8 +664,13 @@ namespace Hst.Imager.Core.Commands
 
             if (diskInfo.MbrPartitionTablePart != null)
             {
-                allocatedParts.AddRange(
-                    diskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated));
+                var mbrParts = diskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated)
+                    .ToList();
+
+                if (diskInfo.GptPartitionTablePart != null && mbrParts.All(x => x.BiosType != BiosPartitionTypes.GptProtective.ToString()))
+                {
+                    allocatedParts.AddRange(mbrParts);
+                }
             }
 
             if (diskInfo.RdbPartitionTablePart != null)
@@ -903,17 +685,16 @@ namespace Hst.Imager.Core.Commands
                 allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
             }
 
-            return CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0,
-                partitionTableTypeContext, allocatedParts, true, false);
+            return allocatedParts.Concat(CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0,
+                partitionTableTypeContext, allocatedParts, true, false)).OrderBy(x => x.StartOffset).ToList();
         }
 
-        private static PartitionTablePart CreateGptParts(DiskInfo diskInfo,
+        private static PartitionTablePart CreatePartitionTablePart(
+            DiskInfo diskInfo,
+            PartitionTableInfo partitionTableInfo,
             PartitionTableType partitionTableTypeContext)
         {
-            var gptPartitionTable =
-                diskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.GuidPartitionTable);
-
-            if (gptPartitionTable == null)
+            if (partitionTableInfo == null)
             {
                 return null;
             }
@@ -922,25 +703,30 @@ namespace Hst.Imager.Core.Commands
             {
                 new()
                 {
-                    FileSystem = "Reserved",
-                    PartitionTableType = PartitionTableType.GuidPartitionTable,
+                    PartitionType = partitionTableInfo.Type.ToString(),
+                    FileSystem = string.Empty,
+                    PartitionTableType = partitionTableInfo.Type,
                     PartType = PartType.PartitionTable,
-                    Size = gptPartitionTable.Reserved.Size,
-                    StartOffset = gptPartitionTable.Reserved.StartOffset,
-                    EndOffset = gptPartitionTable.Reserved.EndOffset,
-                    StartSector = gptPartitionTable.Reserved.StartSector,
-                    EndSector = gptPartitionTable.Reserved.EndSector,
-                    StartCylinder = gptPartitionTable.Reserved.StartCylinder,
-                    EndCylinder = gptPartitionTable.Reserved.EndCylinder,
-                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * gptPartitionTable.Reserved.Size)
+                    Size = partitionTableInfo.Reserved.Size,
+                    StartOffset = partitionTableInfo.Reserved.StartOffset,
+                    EndOffset = partitionTableInfo.Reserved.EndOffset,
+                    StartSector = partitionTableInfo.Reserved.StartSector,
+                    EndSector = partitionTableInfo.Reserved.EndSector,
+                    StartCylinder = partitionTableInfo.Reserved.StartCylinder,
+                    EndCylinder = partitionTableInfo.Reserved.EndCylinder,
+                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * partitionTableInfo.Reserved.Size)
                 }
-            }.Concat(gptPartitionTable.Partitions.Select(x => new PartInfo
+            }.Concat(partitionTableInfo.Partitions.Select(x => new PartInfo
             {
+                PartitionType = x.PartitionType,
                 FileSystem = x.FileSystem,
                 Size = x.Size,
-                PartitionTableType = gptPartitionTable.Type,
+                VolumeSize = x.VolumeSize,
+                VolumeFree = x.VolumeFree,
+                PartitionTableType = partitionTableInfo.Type,
                 PartType = PartType.Partition,
-                BiosType = x.BiosType,
+                BiosType = x.BiosType?.ToString() ?? string.Empty,
+                GuidType = x.GuidType?.ToString() ?? string.Empty,
                 PartitionNumber = x.PartitionNumber,
                 StartOffset = x.StartOffset,
                 EndOffset = x.EndOffset,
@@ -948,143 +734,41 @@ namespace Hst.Imager.Core.Commands
                 EndSector = x.EndSector,
                 StartCylinder = x.StartCylinder,
                 EndCylinder = x.EndCylinder,
-                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size)
-            }));
-
-            return new PartitionTablePart
-            {
-                Path = diskInfo.Path,
-                PartitionTableType = gptPartitionTable.Type,
-                Size = gptPartitionTable.Size,
-                Sectors = gptPartitionTable.Sectors,
-                Cylinders = 0,
-                Parts = CreateUnallocatedParts(gptPartitionTable.Size, gptPartitionTable.Sectors, 0,
-                    partitionTableTypeContext, parts, true, false)
-            };
-        }
-
-        private static PartitionTablePart CreateMbrParts(DiskInfo diskInfo,
-            PartitionTableType partitionTableTypeContext)
-        {
-            var mbrPartitionTable =
-                diskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.MasterBootRecord);
-
-            if (mbrPartitionTable == null)
-            {
-                return null;
-            }
-
-            var parts = new List<PartInfo>
-            {
-                new()
+                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size),
+                IsActive = x.IsActive,
+                IsPrimary = x.IsPrimary,
+                StartChs = x.StartChs != null ? new ChsAddress
                 {
-                    FileSystem = "Reserved",
-                    PartitionTableType = PartitionTableType.MasterBootRecord,
-                    PartType = PartType.PartitionTable,
-                    Size = mbrPartitionTable.Reserved.Size,
-                    StartOffset = mbrPartitionTable.Reserved.StartOffset,
-                    EndOffset = mbrPartitionTable.Reserved.EndOffset,
-                    StartSector = mbrPartitionTable.Reserved.StartSector,
-                    EndSector = mbrPartitionTable.Reserved.EndSector,
-                    StartCylinder = mbrPartitionTable.Reserved.StartCylinder,
-                    EndCylinder = mbrPartitionTable.Reserved.EndCylinder,
-                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * mbrPartitionTable.Reserved.Size)
-                }
-            }.Concat(mbrPartitionTable.Partitions.Select(x => new PartInfo
-            {
-                FileSystem = x.FileSystem,
-                Size = x.Size,
-                PartitionTableType = mbrPartitionTable.Type,
-                PartType = PartType.Partition,
-                BiosType = x.BiosType,
-                PartitionNumber = x.PartitionNumber,
-                StartOffset = x.StartOffset,
-                EndOffset = x.EndOffset,
-                StartSector = x.StartSector,
-                EndSector = x.EndSector,
-                StartCylinder = x.StartCylinder,
-                EndCylinder = x.EndCylinder,
-                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size)
-            }));
-
-            return new PartitionTablePart
-            {
-                Path = diskInfo.Path,
-                PartitionTableType = mbrPartitionTable.Type,
-                Size = mbrPartitionTable.Size,
-                Sectors = mbrPartitionTable.Sectors,
-                Cylinders = 0,
-                Parts = CreateUnallocatedParts(mbrPartitionTable.Size, mbrPartitionTable.Sectors, 0,
-                    partitionTableTypeContext, parts, true, false)
-            };
-        }
-
-        private static PartitionTablePart CreateRdbParts(DiskInfo diskInfo,
-            PartitionTableType partitionTableTypeContext)
-        {
-            var parts = new List<PartInfo>();
-            if (diskInfo.RigidDiskBlock == null)
-            {
-                return null;
-            }
-
-            var cylinderSize = diskInfo.RigidDiskBlock.Heads * diskInfo.RigidDiskBlock.Sectors *
-                               diskInfo.RigidDiskBlock.BlockSize;
-
-            var rdbStartCyl = 0;
-            var rdbEndCyl = (Next(diskInfo.RigidDiskBlock.RdbBlockHi * diskInfo.RigidDiskBlock.BlockSize,
-                (int)cylinderSize) / cylinderSize) - 1;
-            var rdbSize = (diskInfo.RigidDiskBlock.RdbBlockHi - diskInfo.RigidDiskBlock.RdbBlockLo + 1) *
-                          diskInfo.RigidDiskBlock.BlockSize;
-
-            parts.Add(new PartInfo
-            {
-                FileSystem = "Reserved",
-                PartitionTableType = PartitionTableType.RigidDiskBlock,
-                PartType = PartType.PartitionTable,
-                Size = rdbSize,
-                StartOffset = diskInfo.RigidDiskBlock.RdbBlockLo * diskInfo.RigidDiskBlock.BlockSize,
-                EndOffset = ((diskInfo.RigidDiskBlock.RdbBlockHi + 1) * diskInfo.RigidDiskBlock.BlockSize) - 1,
-                StartSector = diskInfo.RigidDiskBlock.RdbBlockLo,
-                EndSector = diskInfo.RigidDiskBlock.RdbBlockHi,
-                StartCylinder = rdbStartCyl,
-                EndCylinder = rdbEndCyl,
-                PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) * rdbSize)
-            });
-
-            var partitionNumber = 0;
-            foreach (var partitionBlock in diskInfo.RigidDiskBlock.PartitionBlocks.OrderBy(x => x.LowCyl).ToList())
-            {
-                parts.Add(new PartInfo
+                    Cylinder = x.StartChs.Cylinder,
+                    Head = x.StartChs.Head,
+                    Sector = x.StartChs.Sector
+                } : null,
+                EndChs = x.EndChs != null ? new ChsAddress
                 {
-                    FileSystem = partitionBlock.DosTypeFormatted,
-                    PartitionTableType = PartitionTableType.RigidDiskBlock,
-                    PartType = PartType.Partition,
-                    PartitionNumber = ++partitionNumber,
-                    Size = partitionBlock.PartitionSize,
-                    StartOffset = (long)partitionBlock.LowCyl * cylinderSize,
-                    EndOffset = ((long)partitionBlock.HighCyl + 1) * cylinderSize - 1,
-                    StartSector = (long)partitionBlock.LowCyl * diskInfo.RigidDiskBlock.Heads *
-                                  diskInfo.RigidDiskBlock.Sectors,
-                    EndSector = (((long)partitionBlock.HighCyl + 1) * diskInfo.RigidDiskBlock.Heads *
-                                 diskInfo.RigidDiskBlock.Sectors) - 1,
-                    StartCylinder = partitionBlock.LowCyl,
-                    EndCylinder = partitionBlock.HighCyl,
-                    PercentSize = Math.Round(((double)100 / diskInfo.RigidDiskBlock.DiskSize) *
-                                             partitionBlock.PartitionSize)
-                });
-            }
+                    Cylinder = x.EndChs.Cylinder,
+                    Head = x.EndChs.Head,
+                    Sector = x.EndChs.Sector
+                } : null
+            })).ToList();
 
             return new PartitionTablePart
             {
                 Path = diskInfo.Path,
-                PartitionTableType = PartitionTableType.RigidDiskBlock,
-                Size = diskInfo.RigidDiskBlock.DiskSize,
-                Sectors = diskInfo.RigidDiskBlock.Sectors,
-                Cylinders = diskInfo.RigidDiskBlock.Cylinders,
-                Parts = CreateUnallocatedParts(diskInfo.RigidDiskBlock.DiskSize,
-                    diskInfo.RigidDiskBlock.DiskSize / diskInfo.RigidDiskBlock.BlockSize, 0,
-                    partitionTableTypeContext, parts, true, true)
+                PartitionTableType = partitionTableInfo.Type,
+                DiskGeometry = partitionTableInfo.DiskGeometry != null ? new DiskGeometry
+                {
+                    Capacity = partitionTableInfo.DiskGeometry.Capacity,
+                    TotalSectors = partitionTableInfo.DiskGeometry.TotalSectors,
+                    BytesPerSector = partitionTableInfo.DiskGeometry.BytesPerSector,
+                    HeadsPerCylinder = partitionTableInfo.DiskGeometry.HeadsPerCylinder,
+                    Cylinders = partitionTableInfo.DiskGeometry.Cylinders,
+                    SectorsPerTrack = partitionTableInfo.DiskGeometry.SectorsPerTrack
+                } : null,
+                Size = partitionTableInfo.Size,
+                Sectors = partitionTableInfo.Sectors,
+                Cylinders = 0,
+                Parts = parts.Concat(CreateUnallocatedParts(partitionTableInfo.Size, partitionTableInfo.Sectors, 0,
+                    partitionTableTypeContext, parts, true, false)).OrderBy(x => x.StartOffset).ToList()
             };
         }
 
@@ -1099,40 +783,41 @@ namespace Hst.Imager.Core.Commands
 
             if (partitionTableTypeContext == PartitionTableType.GuidPartitionTable)
             {
-                parts = parts.Where(x => x.BiosType != BiosPartitionTypes.GptProtective);
+                parts = parts.Where(x => x.BiosType != BiosPartitionTypes.GptProtective.ToString());
             }
 
-            parts = parts.OrderBy(x => x.StartOffset);
-            var partsList = MergeOverlappingParts(parts).ToList();
+            var orderedParts = parts.OrderBy(x => x.StartOffset);
+            var overlappingParts = MergeOverlappingParts(orderedParts).ToList();
             var unallocatedParts = new List<PartInfo>();
 
             var offset = 0L;
             var sector = 0L;
             var cylinder = 0L;
-            foreach (var part in partsList)
+            foreach (var overlappingPart in overlappingParts)
             {
-                if (part.StartOffset > offset)
+                if (overlappingPart.StartOffset > offset)
                 {
-                    var unallocatedSize = part.StartOffset - offset;
+                    var unallocatedSize = overlappingPart.StartOffset - offset;
                     unallocatedParts.Add(new PartInfo
                     {
-                        FileSystem = "Unallocated",
+                        PartitionType = PartType.Unallocated.ToString(),
+                        FileSystem = string.Empty,
                         PartitionTableType = PartitionTableType.None,
                         PartType = PartType.Unallocated,
                         Size = unallocatedSize,
                         StartOffset = offset,
-                        EndOffset = part.StartOffset - 1,
-                        StartSector = part.StartSector == 0 ? 0 : sector,
-                        EndSector = part.StartSector == 0 ? 0 : part.StartSector - 1,
-                        StartCylinder = part.StartCylinder == 0 ? 0 : cylinder,
-                        EndCylinder = part.StartCylinder == 0 ? 0 : part.StartCylinder - 1,
+                        EndOffset = overlappingPart.StartOffset - 1,
+                        StartSector = overlappingPart.StartSector == 0 ? 0 : sector,
+                        EndSector = overlappingPart.StartSector == 0 ? 0 : overlappingPart.StartSector - 1,
+                        StartCylinder = overlappingPart.StartCylinder == 0 ? 0 : cylinder,
+                        EndCylinder = overlappingPart.StartCylinder == 0 ? 0 : overlappingPart.StartCylinder - 1,
                         PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
                     });
                 }
 
-                offset = part.EndOffset + 1;
-                sector = useSectors ? part.EndSector + 1 : 0;
-                cylinder = useCylinders ? part.EndCylinder + 1 : 0;
+                offset = overlappingPart.EndOffset + 1;
+                sector = useSectors ? overlappingPart.EndSector + 1 : 0;
+                cylinder = useCylinders ? overlappingPart.EndCylinder + 1 : 0;
             }
 
             if (offset < diskSize)
@@ -1140,7 +825,8 @@ namespace Hst.Imager.Core.Commands
                 var unallocatedSize = diskSize - offset;
                 unallocatedParts.Add(new PartInfo
                 {
-                    FileSystem = "Unallocated",
+                    PartitionType = PartType.Unallocated.ToString(),
+                    FileSystem = string.Empty,
                     PartitionTableType = PartitionTableType.None,
                     PartType = PartType.Unallocated,
                     Size = unallocatedSize,
@@ -1154,7 +840,7 @@ namespace Hst.Imager.Core.Commands
                 });
             }
 
-            return partsList.Concat(unallocatedParts).OrderBy(x => x.StartOffset).ToList();
+            return unallocatedParts;
         }
 
         private static IEnumerable<PartInfo> MergeOverlappingParts(IEnumerable<PartInfo> parts)
@@ -1263,7 +949,8 @@ namespace Hst.Imager.Core.Commands
             path = PathHelper.GetFullPath(path);
 
             // media file
-            var next = 0;
+            var networkPath = GetNetworkPath(path);
+            var next = string.IsNullOrWhiteSpace(networkPath) ? 0 : networkPath.Length;
             do
             {
                 next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
@@ -1290,6 +977,12 @@ namespace Hst.Imager.Core.Commands
             } while (next != -1);
 
             return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
+        }
+        
+        private static string GetNetworkPath(string path)
+        {
+            var networkPathMatch = Regexs.NetworkPathRegex.Match(path);
+            return networkPathMatch.Success ? networkPathMatch.Groups[1].Value : null;
         }
 
         public ModifierResult ResolveModifiers(string path)

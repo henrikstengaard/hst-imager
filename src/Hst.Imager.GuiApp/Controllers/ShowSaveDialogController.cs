@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.GuiApp.Controllers
+﻿using Hst.Imager.GuiApp.Dialogs;
+
+namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Linq;
     using System.Threading.Tasks;
@@ -9,7 +11,6 @@
     using Microsoft.AspNetCore.SignalR;
     using Models;
     using Services;
-    using FileFilter = ElectronNET.API.Entities.FileFilter;
 
     [ApiController]
     [Route("api/show-save-dialog")]
@@ -24,7 +25,6 @@
             this.showDialogResultContext = showDialogResultContext;
         }
 
-
         [HttpPost]
         public async Task<IActionResult> Post(DialogViewModel model)
         {
@@ -38,7 +38,7 @@
                 Id = model.Id,
                 Title = model.Title,
                 Path = model.Path,
-                FileFilters = model.FileFilters.Select(x => new Hst.Imager.Core.Models.BackgroundTasks.FileFilter
+                FileFilters = model.FileFilters.Select(x => new FileFilter
                 {
                     Name = x.Name,
                     Extensions = x.Extensions
@@ -50,32 +50,14 @@
 
         private async ValueTask ShowSaveDialogWorkItem(IBackgroundTaskContext context)
         {
-            if (!HybridSupport.IsElectronActive)
-            {
-                return;
-            }
-            
             if (context.BackgroundTask is not ShowDialogBackgroundTask showDialogBackgroundTask)
             {
                 return;
             }
 
-            var browserWindow = Electron.WindowManager.BrowserWindows.FirstOrDefault();
-            if (browserWindow == null)
-            {
-                return;
-            }
-
-            var path = await Electron.Dialog.ShowSaveDialogAsync(browserWindow, new SaveDialogOptions
-            {
-                Title = showDialogBackgroundTask.Title,
-                Filters = showDialogBackgroundTask.FileFilters.Select(x => new FileFilter
-                {
-                    Name = x.Name,
-                    Extensions = x.Extensions.ToArray()
-                }).ToArray(),
-                DefaultPath = showDialogBackgroundTask.Path
-            });
+            var path = HybridSupport.IsElectronActive
+                ? await ElectronDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path)
+                : OperatingSystemDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path);
             
             await showDialogResultContext.Clients.All.SendAsync("ShowDialogResult", new ShowDialogResult
             {

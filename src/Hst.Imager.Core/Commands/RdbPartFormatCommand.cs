@@ -43,7 +43,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            DiskGeometry nonRdbDiskGeometry = new DiskGeometry
+            var nonRdbDiskGeometry = new RdbDiskGeometry
             {
                 Heads = 16,
                 Sectors = 63
@@ -69,7 +69,7 @@
                     return new Result(new Error($"Invalid cylinders, heads and sectors value '{chs}'"));
                 }
 
-                nonRdbDiskGeometry = new DiskGeometry
+                nonRdbDiskGeometry = new RdbDiskGeometry
                 {
                     DiskSize = (long)cylinders * heads * sectors * 512,
                     Cylinders = cylinders,

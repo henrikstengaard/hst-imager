@@ -8,6 +8,7 @@
 
     public class GivenSectorStream
     {
+        private const int BufferSize = 512;
         private readonly byte[] bytes;
 
         public GivenSectorStream()
@@ -15,7 +16,7 @@
             bytes = new byte[1024 * 1024];
             for (var i = 0; i < bytes.Length; i++)
             {
-                bytes[i] = (byte)(i % 255);
+                bytes[i] = (byte)(i % 256);
             }
         }
         
@@ -25,22 +26,33 @@
         [InlineData(1024 * 1024)]
         public void WhenReadCountThenBufferIsRead(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes));
+            var sectorStream = new SectorStream(new MemoryStream(bytes), bufferSize: BufferSize);
 
             var buffer = new byte[count];
             var bytesRead = sectorStream.Read(buffer, 0, count);
-            
+
+            var expectedBytes = bytes.Take(count);
             Assert.Equal(count, bytesRead);
+            Assert.Equal(bytes.Take(count), buffer);
         }
-        
-        [Fact]
-        public void WhenReadOffsetNotZeroThenExceptionIsThrown()
+
+        [Theory]
+        [InlineData(0, 200)]
+        [InlineData(400, 700)]
+        [InlineData(1023, 1024)]
+        public void WhenReadCountThenBufferIsReadStreamOffset(int streamOffset, int readLength)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes));
+            // arrange
+            var buffer = new byte[readLength];
+            var sectorStream = new SectorStream(new MemoryStream(bytes), bufferSize: BufferSize);
 
-            var buffer = new byte[512];
+            // act
+            sectorStream.Seek(streamOffset, SeekOrigin.Begin);
+            var bytesRead = sectorStream.Read(buffer, 0, readLength);
 
-            Assert.Throws<ArgumentOutOfRangeException>(() => sectorStream.Read(buffer, 1, buffer.Length));
+            var expectedBytes = bytes.Skip(streamOffset).Take(readLength).ToArray();
+            Assert.Equal(readLength, bytesRead);
+            Assert.Equal(expectedBytes, buffer);
         }
         
         [Theory]
@@ -48,7 +60,7 @@
         [InlineData(940)]
         public void WhenReadCountNotDividableBySectorSizeTrueThenBufferIsRead(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes));
+            var sectorStream = new SectorStream(new MemoryStream(bytes), bufferSize: BufferSize);
 
             var buffer = new byte[count];
             var bytesRead = sectorStream.Read(buffer, 0, count);
@@ -63,7 +75,7 @@
         [InlineData(1024 * 1024)]
         public void WhenWriteCountThenBufferIsWritten(int count)
         {
-            var sectorStream = new SectorStream(new MemoryStream());
+            var sectorStream = new SectorStream(new MemoryStream(), bufferSize: BufferSize);
 
             var buffer = new byte[count];
             sectorStream.Write(buffer, 0, count);
@@ -78,7 +90,7 @@
         public void WhenWriteBytesLessThanSectorSizeThenSectorsAreWrittenAndRemainingDataIsBuffered(int chunkSize,
             int expectedSize)
         {
-            var sectorStream = new SectorStream(new MemoryStream());
+            var sectorStream = new SectorStream(new MemoryStream(), bufferSize: BufferSize);
 
             var buffer = new byte[chunkSize];
             sectorStream.Write(buffer, 0, chunkSize);
@@ -93,28 +105,18 @@
         [InlineData(1024 * 1024)]
         public void WhenSeekOffsetThenOffsetMatches(int offset)
         {
-            var sectorStream = new SectorStream(new MemoryStream(bytes));
+            var sectorStream = new SectorStream(new MemoryStream(bytes), bufferSize: BufferSize);
 
             var actualOffset = sectorStream.Seek(offset, SeekOrigin.Begin);
             
             Assert.Equal(offset, actualOffset);
         }
 
-        [Theory]
-        [InlineData(500)]
-        [InlineData(940)]
-        public void WhenSeekNotDividableBySectorSizeThenExceptionIsThrown(int offset)
-        {
-            var sectorStream = new SectorStream(new MemoryStream());
-
-            Assert.Throws<ArgumentOutOfRangeException>(() => sectorStream.Seek(offset, SeekOrigin.Begin));
-        }
-        
         [Fact]
         public void WhenWriteLessThanSectorSizeAndFlushThenSectorBufferIsZeroFilledAndWritten()
         {
             var baseStream = new MemoryStream(bytes);
-            var sectorStream = new SectorStream(baseStream);
+            var sectorStream = new SectorStream(baseStream, bufferSize: BufferSize);
             baseStream.Position = 0;
 
             // arrange - create chunk: 10 bytes of value 1
@@ -135,17 +137,7 @@
             
             // assert - base stream length is 512 as sector buffer is written to base stream
             Assert.Equal(512, baseStream.Position);
-            Assert.Equal(0, sectorStream.SectorBufferPosition);
-            
-            // // assert - chunks written are equal with base stream
-            // var zeroFillBytes = new byte[512 - chunkBytes.Length % 512];
-            // var expectedData = chunkBytes.Concat(zeroFillBytes).ToArray();
-            // var actualData = baseStream.ToArray();
-            // Assert.Equal(expectedData.Length, actualData.Length);
-            // Assert.Equal(expectedData, actualData);
-            
-            
-            
+            Assert.Equal(10, sectorStream.SectorBufferPosition);
             
             // arrange - create expected sector bytes containing chunk bytes and zero filled to sector size
             var expectedSectorBytes = new byte[512];
@@ -163,7 +155,7 @@
         public void WhenWriteBytesLessThanSectorSizeMultipleTimesThenIncompleteSectorIsBufferedUntilItsFull()
         {
             var baseStream = new MemoryStream();
-            var sectorStream = new SectorStream(baseStream);
+            var sectorStream = new SectorStream(baseStream, bufferSize: BufferSize);
 
             // arrange - create chunk 1: 400 bytes of value 1
             var chunk1Bytes = new byte[400];
@@ -213,7 +205,7 @@
         public void WhenWriteBytesLessThanSectorSizeAndWriteBytesLargerThanSectorSizeThenIncompleteSectorIsBufferedUntilItsFull()
         {
             var baseStream = new MemoryStream();
-            var sectorStream = new SectorStream(baseStream);
+            var sectorStream = new SectorStream(baseStream, bufferSize: BufferSize);
 
             // arrange - create chunk 1: 400 bytes of value 1
             var chunk1Bytes = new byte[400];
@@ -246,7 +238,7 @@
             
             // assert - base stream length is 2560 as sector buffer is written to base stream
             Assert.Equal(2560, baseStream.Length);
-            Assert.Equal(0, sectorStream.SectorBufferPosition);
+            Assert.Equal(400, sectorStream.SectorBufferPosition);
             
             // assert - chunks written are equal with base stream
             var zeroFillBytes = new byte[512 - (chunk1Bytes.Length + chunk2Bytes.Length) % 512];
@@ -260,7 +252,7 @@
         public void WhenWriteBytesLargerThanSectorSizeAndWriteBytesLessThanSectorSizeAndThenIncompleteSectorIsBufferedUntilItsFull()
         {
             var baseStream = new MemoryStream();
-            var sectorStream = new SectorStream(baseStream);
+            var sectorStream = new SectorStream(baseStream, bufferSize: BufferSize);
 
             // arrange - create chunk 1: 2000 bytes of value 1
             var chunk1Bytes = new byte[2000];
@@ -294,7 +286,7 @@
             
             // assert - base stream length is 2560 as sector buffer is written to base stream
             Assert.Equal(2560, baseStream.Length);
-            Assert.Equal(0, sectorStream.SectorBufferPosition);
+            Assert.Equal(352, sectorStream.SectorBufferPosition);
             
             // assert - chunks written are equal with base stream
             var zeroFillBytes = new byte[512 - (chunk1Bytes.Length + chunk2Bytes.Length) % 512];
@@ -313,7 +305,7 @@
                 
             // act - write chunk and close, dispose sector stream
             var baseStream = new MemoryStream();
-            using (var sectorStream = new SectorStream(baseStream))
+            using (var sectorStream = new SectorStream(baseStream, bufferSize: BufferSize))
             {
                 sectorStream.Write(chunkBytes, 0, chunkBytes.Length);
             }

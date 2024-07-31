@@ -13,4 +13,12 @@ public static class TestDataHelper
 
         return data;
     }
+
+    public static void ByteSwapData(byte[] data)
+    {
+        for (var i = 0; i < data.Length - (data.Length % 2); i += 2)
+        {
+            (data[i], data[i + 1]) = (data[i + 1], data[i]);
+        }
+    }
 }

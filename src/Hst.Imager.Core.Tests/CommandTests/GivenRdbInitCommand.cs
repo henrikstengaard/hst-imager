@@ -5,9 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using Size = Hst.Imager.Core.Models.Size;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 

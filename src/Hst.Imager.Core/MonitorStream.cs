@@ -6,12 +6,14 @@ using System.IO;
 public class MonitorStream : Stream
 {
     private readonly Stream stream;
+    public readonly IList<long> Seeks;
     public readonly IList<long> Reads;
     public readonly IList<long> Writes;
 
     public MonitorStream(Stream stream)
     {
         this.stream = stream;
+        this.Seeks = new List<long>();
         this.Reads = new List<long>();
         this.Writes = new List<long>();
     }
@@ -29,6 +31,7 @@ public class MonitorStream : Stream
 
     public override long Seek(long offset, SeekOrigin origin)
     {
+        Seeks.Add(offset);
         return stream.Seek(offset, origin);
     }
 

@@ -4,6 +4,7 @@
 
     public class PartitionTableInfo
     {
+        public DiskGeometryInfo DiskGeometry { get; set; }
         public long Size { get; set; }
         public long Sectors { get; set; }
         public long Cylinders { get; set; }

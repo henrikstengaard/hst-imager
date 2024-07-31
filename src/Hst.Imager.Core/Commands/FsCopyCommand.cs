@@ -184,7 +184,7 @@ public class FsCopyCommand : FsCommandBase
                 recursive));
         }
 
-        // disk entry iterator
+        // floppy or disk entry iterator
         var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
         if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
         {

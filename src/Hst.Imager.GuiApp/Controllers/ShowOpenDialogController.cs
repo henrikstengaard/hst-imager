@@ -1,16 +1,16 @@
-﻿namespace Hst.Imager.GuiApp.Controllers
+﻿using Hst.Imager.GuiApp.Dialogs;
+
+namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Linq;
     using System.Threading.Tasks;
     using ElectronNET.API;
-    using ElectronNET.API.Entities;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Hubs;
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.AspNetCore.SignalR;
     using Models;
     using Services;
-    using FileFilter = ElectronNET.API.Entities.FileFilter;
 
     [ApiController]
     [Route("api/show-open-dialog")]
@@ -39,7 +39,7 @@
                 Id = model.Id,
                 Title = model.Title,
                 Path = model.Path,
-                FileFilters = model.FileFilters.Select(x => new Hst.Imager.Core.Models.BackgroundTasks.FileFilter
+                FileFilters = model.FileFilters.Select(x => new FileFilter
                 {
                     Name = x.Name,
                     Extensions = x.Extensions
@@ -51,38 +51,20 @@
 
         private async ValueTask ShowOpenDialogWorkItem(IBackgroundTaskContext context)
         {
-            if (!HybridSupport.IsElectronActive)
-            {
-                return;
-            }
-
             if (context.BackgroundTask is not ShowDialogBackgroundTask showDialogBackgroundTask)
             {
                 return;
             }
 
-            var browserWindow = Electron.WindowManager.BrowserWindows.FirstOrDefault();
-            if (browserWindow == null)
-            {
-                return;
-            }
-
-            var paths = await Electron.Dialog.ShowOpenDialogAsync(browserWindow, new OpenDialogOptions
-            {
-                Title = showDialogBackgroundTask.Title,
-                Filters = showDialogBackgroundTask.FileFilters.Select(x => new FileFilter
-                {
-                    Name = x.Name,
-                    Extensions = x.Extensions.ToArray()
-                }).ToArray(),
-                DefaultPath = showDialogBackgroundTask.Path
-            });
+            var path = HybridSupport.IsElectronActive
+                ? await ElectronDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path)
+                : OperatingSystemDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path);
 
             await showDialogResultContext.Clients.All.SendAsync("ShowDialogResult", new ShowDialogResult
             {
                 Id = showDialogBackgroundTask.Id,
-                IsSuccess = paths != null && paths.Any(),
-                Paths = paths
+                IsSuccess = path != null,
+                Paths = new []{ path }
             }, context.Token);
         }
     }

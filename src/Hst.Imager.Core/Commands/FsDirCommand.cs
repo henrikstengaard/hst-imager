@@ -87,7 +87,7 @@ public class FsDirCommand : FsCommandBase
             return new Result();
         }
         
-        // disk
+        // floppy or disk
         var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath);
         if (readableMediaResult.IsFaulted)
         {
@@ -99,6 +99,12 @@ public class FsDirCommand : FsCommandBase
 
         var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
+        if (media.Type == Media.MediaType.Floppy)
+        {
+            var listFloppyEntriesResult = await ListFloppyEntries(media, parts);
+            return listFloppyEntriesResult.IsFaulted ? new Result(listFloppyEntriesResult.Error) : new Result();
+        }
+        
         if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
         {
             await ListPartitionTables(media, stream);
@@ -153,6 +159,22 @@ public class FsDirCommand : FsCommandBase
                     return new Result(new Error($"Unsupported partition table '{parts[0]}'"));
             }
         }
+
+        return new Result();
+    }
+
+    private async Task<Result> ListFloppyEntries(Media media, string[] parts)
+    {
+        var mbrFileSystemResult = await MountFileSystem(media.Stream);
+        if (mbrFileSystemResult.IsFaulted)
+        {
+            return new Result(mbrFileSystemResult.Error);
+        }
+
+        var fileSystemPath = string.Join("/", parts);
+        var entryIterator = new FileSystemEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
+
+        await ListEntries(entryIterator, fileSystemPath);
 
         return new Result();
     }

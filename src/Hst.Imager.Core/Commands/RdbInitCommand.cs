@@ -38,7 +38,7 @@
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            DiskGeometry diskGeometry = null;
+            RdbDiskGeometry rdbDiskGeometry = null;
 
             if (!string.IsNullOrWhiteSpace(chs))
             {
@@ -55,7 +55,7 @@
                     return new Result(new Error($"Invalid cylinders, heads and sectors value '{chs}'"));
                 }
 
-                diskGeometry = new DiskGeometry
+                rdbDiskGeometry = new RdbDiskGeometry
                 {
                     DiskSize = (long)cylinders * heads * sectors * 512,
                     Cylinders = cylinders,
@@ -86,8 +86,8 @@
 
             OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
 
-            var rigidDiskBlock = diskGeometry != null
-                ? CreateFromDiskGeometry(diskGeometry)
+            var rigidDiskBlock = rdbDiskGeometry != null
+                ? CreateFromDiskGeometry(rdbDiskGeometry)
                 : RigidDiskBlock.Create(rigidDiskBlockSize);
 
             if (rigidDiskBlock.DiskSize > stream.Length)
@@ -116,16 +116,16 @@
             return new Result();
         }
 
-        private RigidDiskBlock CreateFromDiskGeometry(DiskGeometry diskGeometry)
+        private RigidDiskBlock CreateFromDiskGeometry(RdbDiskGeometry rdbDiskGeometry)
         {
-            var cylinders = (uint)diskGeometry.Cylinders;
+            var cylinders = (uint)rdbDiskGeometry.Cylinders;
             return new RigidDiskBlock
             {
-                DiskSize = diskGeometry.DiskSize,
-                CylBlocks = (uint)(diskGeometry.Heads * diskGeometry.Sectors),
+                DiskSize = rdbDiskGeometry.DiskSize,
+                CylBlocks = (uint)(rdbDiskGeometry.Heads * rdbDiskGeometry.Sectors),
                 Cylinders = cylinders,
-                Heads = (uint)diskGeometry.Heads,
-                Sectors = (uint)diskGeometry.Sectors,
+                Heads = (uint)rdbDiskGeometry.Heads,
+                Sectors = (uint)rdbDiskGeometry.Sectors,
                 LoCylinder = 2,
                 HiCylinder = cylinders - 1,
                 ParkingZone = cylinders - 1,

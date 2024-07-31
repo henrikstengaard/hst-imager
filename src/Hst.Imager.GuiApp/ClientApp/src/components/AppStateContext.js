@@ -2,6 +2,7 @@ import React from 'react'
 import {BackendApiStateContext} from "./BackendApiContext";
 import {NeutralinoHost} from "../hosts/NeutralinoHost";
 import {ElectronHost} from "../hosts/ElectronHost";
+import {NativeHost} from "../hosts/NativeHost";
 
 export const AppStateContext = React.createContext(null)
 export const AppStateDispatchContext = React.createContext(null)
@@ -22,6 +23,8 @@ function appStateReducer(state, action) {
 
 function resolveHostIpc({ os, host, backendBaseUrl }) {
     switch(host) {
+        case 'native':
+            return new NativeHost({ backendBaseUrl });
         case 'electron':
             return new ElectronHost({ backendBaseUrl });
         case 'neutralinojs':
@@ -52,6 +55,7 @@ export function AppStateProvider(props) {
             const appState = await backendApi.getAppState();
 
             const hasTitleBar = host !== 'neutralinojs';
+            const hasControlButtons = host !== 'native';
             
             dispatch({
                 type: 'updateAppState',
@@ -59,6 +63,7 @@ export function AppStateProvider(props) {
                     host,
                     hostIpc,
                     hasTitleBar,
+                    hasControlButtons,
                     ...appState
                 }
             })

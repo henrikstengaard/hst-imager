@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils;
-using DiscUtils.Partitions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models;
 using PartitionInfo = Hst.Imager.Core.Commands.PartitionInfo;
@@ -21,12 +20,23 @@ public static class GuidPartitionTableReader
                 return register;
             }, LazyThreadSafetyMode.None);
 
-    public static async Task<PartitionTableInfo> Read(VirtualDisk disk)
+    public static DiscUtils.Partitions.GuidPartitionTable Read(VirtualDisk disk)
     {
         try
         {
-            var guidPartitionTable = new GuidPartitionTable(disk);
+            disk.Content.Position = 0;
+            return new DiscUtils.Partitions.GuidPartitionTable(disk);
+        }
+        catch (Exception)
+        {
+            // ignored, if read guid partition table fails
+        }
 
+        return null;
+    }
+
+    public static async Task<PartitionTableInfo> Read(VirtualDisk disk, DiscUtils.Partitions.GuidPartitionTable guidPartitionTable)
+    {
             var guidPartitionNumber = 0;
             var gptPartitions = new List<PartitionInfo>();
             foreach (var partition in guidPartitionTable.Partitions)
@@ -38,6 +48,15 @@ public static class GuidPartitionTableReader
             return new PartitionTableInfo
             {
                 Type = PartitionTableType.GuidPartitionTable,
+                DiskGeometry = new DiskGeometryInfo
+                {
+                    BytesPerSector = disk.Geometry.BytesPerSector,
+                    Cylinders = disk.Geometry.Cylinders,
+                    Capacity = disk.Geometry.Capacity,
+                    HeadsPerCylinder = disk.Geometry.HeadsPerCylinder,
+                    SectorsPerTrack = disk.Geometry.SectorsPerTrack,
+                    TotalSectors = disk.Geometry.TotalSectorsLong,
+                },
                 Size = disk.Capacity,
                 Sectors = guidPartitionTable.LastUsableSector + 1,
                 Cylinders = 0,
@@ -61,13 +80,6 @@ public static class GuidPartitionTableReader
                 StartCylinder = 0,
                 EndCylinder = 0
             };
-        }
-        catch (Exception)
-        {
-            // ignored, if read guid partition table fails
-        }
-
-        return null;
     }
 
     private static async Task<PartitionInfo> ReadGptPartitionInfo(int guidPartitionNumber,
@@ -77,20 +89,23 @@ public static class GuidPartitionTableReader
             ? guidPartitionType.PartitionType
             : partitionInfo.TypeAsString;
 
+        var fileSystemInfo = await FileSystemReader.ReadFileSystem(partitionInfo);
+        
         return new PartitionInfo
         {
             PartitionNumber = guidPartitionNumber,
             PartitionType = partitionType,
-            FileSystem = (await FileSystemReader.ReadFileSystem(partitionInfo)),
-            BiosType = partitionInfo.BiosType.ToString(),
-            GuidType = partitionInfo.GuidType.ToString(),
+            FileSystem = fileSystemInfo?.FileSystemType,
             Size = partitionInfo.SectorCount * blockSize,
             StartOffset = partitionInfo.FirstSector * blockSize,
             EndOffset = ((partitionInfo.LastSector + 1) * blockSize) - 1,
             StartSector = partitionInfo.FirstSector,
             EndSector = partitionInfo.LastSector,
             StartCylinder = 0,
-            EndCylinder = 0
+            EndCylinder = 0,
+            VolumeSize = fileSystemInfo?.VolumeSize,
+            VolumeFree = fileSystemInfo?.VolumeFree,
+            GuidType = partitionInfo.GuidType,
         };
     }
 }

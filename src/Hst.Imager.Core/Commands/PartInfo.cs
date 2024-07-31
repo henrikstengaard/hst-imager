@@ -5,6 +5,7 @@
 /// </summary>
 public class PartInfo
 {
+    public string PartitionType { get; set; }
     public string FileSystem { get; set; }
     public int? PartitionNumber { get; set; }
     public PartitionTableType PartitionTableType { get; set; }
@@ -19,4 +20,10 @@ public class PartInfo
     public long StartCylinder { get; set; }
     public long EndCylinder { get; set; }
     public double PercentSize { get; set; }
+    public long? VolumeSize { get; set; }
+    public long? VolumeFree { get; set; }
+    public bool IsActive { get; set; }
+    public bool IsPrimary { get; set; }
+    public ChsAddress StartChs { get; set; }
+    public ChsAddress EndChs { get; set; }
 }

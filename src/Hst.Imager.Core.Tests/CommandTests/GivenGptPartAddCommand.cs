@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DiscUtils.Partitions;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.GptCommands;
@@ -55,7 +56,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
                 x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        Assert.Equal("Windows Basic Data", partInfo.FileSystem);
+        Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partInfo.GuidType);
     }
 
     [Fact]
@@ -97,6 +98,6 @@ public class GivenGptPartAddCommand : FsCommandTestBase
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
                 x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
-        Assert.Equal("Windows Basic Data", partInfo.FileSystem);
+        Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partInfo.GuidType);
     }
 }

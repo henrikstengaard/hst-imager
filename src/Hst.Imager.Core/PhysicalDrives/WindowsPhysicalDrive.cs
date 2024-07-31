@@ -43,7 +43,7 @@
                 dismountedDrives.Add(win32RawDisk);
             }
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), byteSwap: ByteSwap, leaveOpen:true);
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), byteSwap: ByteSwap, leaveOpen: true);
         }
     }
 }

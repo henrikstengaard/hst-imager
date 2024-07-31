@@ -9,13 +9,11 @@
     {
         public static string Present(MediaInfo mediaInfo, bool showUnallocated)
         {
-            if (mediaInfo == null || mediaInfo.DiskInfo == null || mediaInfo.DiskInfo.MbrPartitionTablePart == null)
+            if (mediaInfo?.DiskInfo?.MbrPartitionTablePart?.DiskGeometry == null)
             {
                 return "No Master Boot Record present";
             }
 
-            var mbrPartitionTablePart = mediaInfo.DiskInfo.MbrPartitionTablePart;
-            
             var outputBuilder = new StringBuilder();
             
             outputBuilder.AppendLine($"Master Boot Record info read from '{mediaInfo.Path}':");
@@ -25,15 +23,23 @@
             {
                 Columns = new[]
                 {
-                    new Column { Name = "Size", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Sectors", Alignment = ColumnAlignment.Right }
+                    new Column { Name = "Size" },
+                    new Column { Name = "Sector size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Total sectors", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Cylinders", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Heads per cylinder", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Sectors per track", Alignment = ColumnAlignment.Right }
                 },
                 Rows = new []{ new Row
                     {
                         Columns = new[]
                         {
-                            mbrPartitionTablePart.Size.FormatBytes(),
-                            mbrPartitionTablePart.Sectors.ToString()
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.Capacity.FormatBytes(),
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.BytesPerSector.ToString(),
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.TotalSectors.ToString(),
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.Cylinders.ToString(),
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.HeadsPerCylinder.ToString(),
+                            mediaInfo.DiskInfo.MbrPartitionTablePart.DiskGeometry.SectorsPerTrack.ToString()
                         }
                     }}
                     .ToList()
@@ -48,23 +54,29 @@
             {
                 Columns = new[]
                 {
-                    new Column { Name = "File System" },
-                    new Column { Name = "Type" },
                     new Column { Name = "#" },
+                    new Column { Name = "Id" },
+                    new Column { Name = "Type" },
+                    new Column { Name = "File System" },
                     new Column { Name = "Size", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Start Sec", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "End Sec", Alignment = ColumnAlignment.Right }
+                    new Column { Name = "End Sec", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "Active" },
+                    new Column { Name = "Primary" }
                 },
-                Rows = mbrPartitionTablePart.Parts.Select(x => new Row
+                Rows = mediaInfo.DiskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType == PartType.Partition).Select(x => new Row
                     {
                         Columns = new[]
                         {
-                            x.FileSystem,
-                            x.PartType.ToString(),
                             x.PartitionNumber.HasValue ? x.PartitionNumber.ToString() : string.Empty,
+                            x.BiosType.ToString(),
+                            x.PartitionType,
+                            x.FileSystem,
                             x.Size.FormatBytes(),
                             x.StartSector.ToString(),
-                            x.EndSector.ToString()
+                            x.EndSector.ToString(),
+                            x.IsActive ? "Yes" : "No",
+                            x.IsPrimary ? "Yes" : "No"
                         }
                     })
                     .ToList()
@@ -73,6 +85,8 @@
             outputBuilder.AppendLine();
             outputBuilder.Append(TablePresenter.Present(partitionTable));
 
+            var mbrPartitionTablePart = mediaInfo.DiskInfo.MbrPartitionTablePart;
+            
             outputBuilder.AppendLine();
             outputBuilder.Append(InfoPresenter.PresentInfo(mbrPartitionTablePart, showUnallocated));
             

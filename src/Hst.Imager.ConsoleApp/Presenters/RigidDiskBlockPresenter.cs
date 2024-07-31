@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.ConsoleApp.Presenters
+﻿using Hst.Imager.Core.PartitionTables;
+
+namespace Hst.Imager.ConsoleApp.Presenters
 {
     using System.Linq;
     using System.Text;
@@ -37,8 +39,8 @@
                     new Column { Name = "Block Size", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Flags", Alignment = ColumnAlignment.Right },
                     new Column { Name = "Host Id", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Rdb Block Lo", Alignment = ColumnAlignment.Right },
-                    new Column { Name = "Rdb Block Hi", Alignment = ColumnAlignment.Right }
+                    new Column { Name = "RDB Block Lo", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "RDB Block Hi", Alignment = ColumnAlignment.Right }
                 },
                 Rows = new []{ new Row
                     {
@@ -52,7 +54,7 @@
                             rigidDiskBlock.Heads.ToString(),
                             rigidDiskBlock.Sectors.ToString(),
                             rigidDiskBlock.BlockSize.ToString(),
-                            rigidDiskBlock.Flags.ToString(),
+                            $"{rigidDiskBlock.Flags.ToString()} *",
                             rigidDiskBlock.HostId.ToString(),
                             rigidDiskBlock.RdbBlockLo.ToString(),
                             rigidDiskBlock.RdbBlockHi.ToString()
@@ -61,8 +63,12 @@
                     .ToList()
             };
 
+            var flags = (RigidDiskBlockFlagsEnum)rigidDiskBlock.Flags;
+
             outputBuilder.AppendLine();
             outputBuilder.Append(TablePresenter.Present(rigidDiskBlockTable));
+            outputBuilder.AppendLine();
+            outputBuilder.AppendLine($"* Flags {rigidDiskBlock.Flags} = {flags}");
             
             // file systems
 
@@ -117,7 +123,6 @@
                     new Column { Name = "Buffers", Alignment = ColumnAlignment.Right },
                     new Column { Name = "DOS Type", Alignment = ColumnAlignment.Left },
                     new Column { Name = "Max Transfer", Alignment = ColumnAlignment.Left },
-                    new Column { Name = "Mask", Alignment = ColumnAlignment.Left },
                     new Column { Name = "Bootable", Alignment = ColumnAlignment.Left },
                     new Column { Name = "No Mount", Alignment = ColumnAlignment.Left },
                     new Column { Name = "Priority", Alignment = ColumnAlignment.Right }
@@ -132,8 +137,8 @@
                             x.NumBuffer.ToString(),
                             $"0x{x.DosType.FormatHex().ToUpper()} ({x.DosTypeFormatted})",
                             $"0x{x.MaxTransfer.FormatHex().ToUpper()} ({x.MaxTransfer})",
-                            $"0x{x.Mask.FormatHex().ToUpper()} ({x.Mask})",
-                            x.Bootable.ToString(), x.NoMount.ToString(),
+                            x.Bootable.ToString(),
+                            x.NoMount.ToString(),
                             x.BootPriority.ToString()
                         }
                     })

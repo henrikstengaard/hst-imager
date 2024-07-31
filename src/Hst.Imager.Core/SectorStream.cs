@@ -11,16 +11,47 @@
         private readonly Stream stream;
         private readonly bool byteSwap;
         private readonly bool leaveOpen;
+        private readonly int bufferSize;
         private const int SectorSize = 512;
-        private readonly byte[] sectorBuffer;
+        private readonly byte[] sectorBytes;
+        private int sectorBytesRead;
+        
+        /// <summary>
+        /// offset in the stream
+        /// </summary>
+        private long streamOffset;
+        
+        /// <summary>
+        /// offset for current sector
+        /// </summary>
+        private long sectorOffset;
+        
+        /// <summary>
+        /// indicates if the sector has been read
+        /// </summary>
+        private bool isSectorBytesRead;
 
-        public SectorStream(Stream baseStream, bool byteSwap = false, bool leaveOpen = false)
+        /// <summary>
+        /// indicates if the sector has been updated
+        /// </summary>
+        private bool isSectorBytesUpdated;
+
+        private bool hasSeeked;
+
+        public SectorStream(Stream baseStream, int bufferSize = 1024 * 1024, bool byteSwap = false, bool leaveOpen = false)
         {
             this.stream = baseStream;
+            this.bufferSize = bufferSize;
             this.byteSwap = byteSwap;
             this.leaveOpen = leaveOpen;
-            this.sectorBuffer = new byte[SectorSize];
+            this.sectorBytes = new byte[bufferSize];
+            this.sectorBytesRead = 0;
             this.SectorBufferPosition = 0;
+            this.streamOffset = 0;
+            this.sectorOffset = 0;
+            this.isSectorBytesRead = false;
+            isSectorBytesUpdated = false;
+            hasSeeked = false;
         }
 
         public int SectorBufferPosition { get; private set; }
@@ -55,98 +86,185 @@
         
         public override void Flush()
         {
-            if (SectorBufferPosition > 0)
+            if (isSectorBytesUpdated)
             {
-                stream.Write(sectorBuffer, 0, SectorSize);
-                Array.Fill<byte>(sectorBuffer, 0);
-                SectorBufferPosition = 0;
+                WriteSectorBytes();
             }
             
             stream.Flush();
         }
 
-        private static void ThrowIfNotDividableBySectorSize(string paramName, long value)
+        private void ThrowIfNotDividableBySectorSize(string paramName, long value)
         {
-            if (value % SectorSize == 0)
+            if (value % bufferSize == 0)
             {
                 return;
             }
 
             throw new ArgumentOutOfRangeException(paramName, 
-                $"Sector stream only supports values dividable by {SectorSize} and value is {value}");
+                $"Sector stream only supports values dividable by {bufferSize} and value is {value}");
         }
-
-        public override int Read(byte[] buffer, int offset, int count)
+        
+        private void ClearSectorBytes()
         {
-            if (offset != 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(offset), "Sector stream only supports offset 0");
-            }
-
-            if (SectorBufferPosition > 0)
-            {
-                var sectorBufferCopyLength = Math.Min(count, SectorSize - SectorBufferPosition);
-                Array.Copy(this.sectorBuffer, SectorBufferPosition, buffer, 0, sectorBufferCopyLength);
-                SectorBufferPosition += sectorBufferCopyLength;
-                offset += sectorBufferCopyLength;
-            }
-
-            if (offset == count)
-            {
-                if (byteSwap)
-                {
-                    ByteSwapBuffer(buffer, count);
-                }
-                
-                return offset;
-            }
-
-            var readLength = count - offset;
-            var readBuffer = new byte[readLength % SectorSize == 0
-                ? readLength
-                : readLength - (readLength % SectorSize) + SectorSize];
-            var bytesRead = stream.Read(readBuffer, 0, readBuffer.Length);
-
-            if (bytesRead < readLength)
-            {
-                readLength = bytesRead;
-            }
-
-            // copy read length to buffer
-            Array.Copy(readBuffer, 0, buffer, offset, readLength);
-            offset += readLength;
-
-            if (byteSwap)
-            {
-                ByteSwapBuffer(buffer, readLength);
-            }
-
-            var bytesLeftInReadBuffer = readLength % SectorSize;
-            if (bytesLeftInReadBuffer == 0)
-            {
-                return offset;
-            }
-
-            // copy left to sector buffer
-            Array.Fill<byte>(sectorBuffer, 0);
-            Array.Copy(readBuffer, readLength - bytesLeftInReadBuffer, sectorBuffer, 0, SectorSize);
-            SectorBufferPosition = bytesLeftInReadBuffer;
-            
-            return offset;
+            Array.Fill<byte>(sectorBytes, 0);
+            sectorBytesRead = 0;
+            isSectorBytesRead = false;
+            isSectorBytesUpdated = false;
         }
-
-        private void ByteSwapBuffer(byte[] buffer, int count)
+        
+        private static void ByteSwapBuffer(byte[] buffer, int count)
         {
             for (var i = 0; i < count - count % 2; i += 2)
             {
                 (buffer[i + 1], buffer[i]) = (buffer[i], buffer[i + 1]);
             }
         }
+        
+        private void ReadSectorBytes(int count)
+        {
+            var bytesToRead = count;
+            
+            if (bytesToRead % SectorSize != 0)
+            {
+                bytesToRead += SectorSize - (bytesToRead % SectorSize);
+            }
 
+            if (!hasSeeked)
+            {
+                stream.Seek(sectorOffset, SeekOrigin.Begin);
+            }
+            
+            var sectorBytesToRead = Math.Min(bytesToRead, bufferSize);
+            sectorBytesRead = stream.Read(sectorBytes, 0, sectorBytesToRead);
+            
+            if (byteSwap)
+            {
+                ByteSwapBuffer(sectorBytes, sectorBytesRead);
+            }
+
+            isSectorBytesRead = true;
+            isSectorBytesUpdated = false;
+            hasSeeked = false;
+        }
+
+        /// <summary>
+        /// Write sector bytes that was updated up to nearest sector size
+        /// </summary>
+        private void WriteSectorBytes()
+        {
+            var bytesToWrite = SectorBufferPosition;
+
+            if (SectorBufferPosition % SectorSize != 0)
+            {
+                bytesToWrite += SectorSize - (bytesToWrite % SectorSize);
+            }
+            
+            var sectorBytesToWrite = Math.Min(bytesToWrite, bufferSize);
+
+            if (SectorBufferPosition < sectorBytesToWrite)
+            {
+                Array.Fill<byte>(sectorBytes, 0, SectorBufferPosition, sectorBytesToWrite - SectorBufferPosition);
+            }
+            
+            if (byteSwap)
+            {
+                ByteSwapBuffer(sectorBytes, sectorBytesToWrite);
+            }
+
+            if (!hasSeeked)
+            {
+                stream.Seek(sectorOffset, SeekOrigin.Begin);
+            }
+
+            stream.Write(sectorBytes, 0, sectorBytesToWrite);
+            
+            isSectorBytesUpdated = false;
+            hasSeeked = false;
+        }
+
+        private void MoveToNextSectorOffset()
+        {
+            SectorBufferPosition = 0;
+            isSectorBytesRead = false;
+
+            sectorOffset = streamOffset - (streamOffset % SectorSize);
+            hasSeeked = false;
+            isSectorBytesUpdated = false;
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var bytesRead = 0;
+
+            while (bytesRead < count)
+            {
+                if (!isSectorBytesRead)
+                {
+                    ReadSectorBytes(count);
+                }
+                
+                // stop reading, if sector bytes read is zero
+                if (sectorBytesRead == 0)
+                {
+                    break;
+                }
+
+                var sectorBufferCopyLength = Math.Min(count - bytesRead, sectorBytesRead - SectorBufferPosition);
+                Array.Copy(this.sectorBytes, SectorBufferPosition, buffer, offset, sectorBufferCopyLength);
+                SectorBufferPosition += sectorBufferCopyLength;
+                offset += sectorBufferCopyLength;
+                bytesRead += sectorBufferCopyLength;
+                this.streamOffset += sectorBufferCopyLength;
+
+                if (SectorBufferPosition >= sectorBytesRead)
+                {
+                    MoveToNextSectorOffset();
+                }
+            }
+
+            return bytesRead;
+        }
+
+        /// <summary>
+        /// Sets the position within the current stream the specified value. Internally sector stream will seek to nearest sector start offset.
+        /// </summary>
+        /// <param name="offset"></param>
+        /// <param name="origin"></param>
+        /// <returns></returns>
+        /// <exception cref="NotSupportedException"></exception>
         public override long Seek(long offset, SeekOrigin origin)
         {
-            ThrowIfNotDividableBySectorSize(nameof(offset), offset);
-            return stream.Seek(offset, origin);
+            if (origin == SeekOrigin.End)
+            {
+                throw new NotSupportedException("Sector stream doesn't support seeking to end origin");
+            }
+
+            if (isSectorBytesUpdated)
+            {
+                WriteSectorBytes();
+            }
+
+            streamOffset = origin == SeekOrigin.Begin ? offset : streamOffset + offset;
+            var newSectorBufferOffset = streamOffset % SectorSize;
+            var newSectorOffset = streamOffset - newSectorBufferOffset;
+
+            SectorBufferPosition = Convert.ToInt32(newSectorBufferOffset);
+
+            if (isSectorBytesRead && sectorOffset == newSectorOffset)
+            {
+                return streamOffset;
+            }
+            
+            ClearSectorBytes();
+            sectorOffset = newSectorOffset;
+            isSectorBytesRead = false;
+            isSectorBytesUpdated = false;
+            hasSeeked = true;
+            
+            sectorOffset = stream.Seek(sectorOffset, origin);
+
+            return streamOffset;
         }
 
         public override void SetLength(long value)
@@ -156,41 +274,25 @@
 
         public override void Write(byte[] buffer, int offset, int count)
         {
-            if (SectorBufferPosition > 0)
-            {
-                var fillBytes = SectorBufferPosition + count > SectorSize
-                    ? SectorSize - SectorBufferPosition
-                    : count;
-                Array.Copy(buffer, offset, sectorBuffer, SectorBufferPosition, fillBytes);
-                SectorBufferPosition += fillBytes;
-                offset += fillBytes;
+            var bytesWritten = 0;
 
-                if (SectorBufferPosition < SectorSize)
-                {
-                    return;
-                }
+            while (bytesWritten < count)
+            {
+                var sectorBufferCopyLength = Math.Min(count - bytesWritten, bufferSize - SectorBufferPosition);
+                Array.Copy(buffer, offset, this.sectorBytes, SectorBufferPosition, sectorBufferCopyLength);
+                SectorBufferPosition += sectorBufferCopyLength;
+                offset += sectorBufferCopyLength;
+                bytesWritten += sectorBufferCopyLength;
+                isSectorBytesUpdated = true;
+
+                streamOffset += sectorBufferCopyLength;
                 
-                stream.Write(sectorBuffer, 0, sectorBuffer.Length);
-                Array.Fill<byte>(sectorBuffer, 0);
-                SectorBufferPosition = 0;
+                if (SectorBufferPosition == bufferSize)
+                {
+                    WriteSectorBytes();
+                    MoveToNextSectorOffset();
+                }
             }
-
-            var remainingBytes = count - offset;
-            var sectors = Convert.ToInt32(Math.Floor((double)remainingBytes / SectorSize));
-            var sectorsLength = sectors * SectorSize;
-            if (sectors > 0)
-            {
-                stream.Write(buffer, offset, sectorsLength);
-            }
-
-            var left = (count - offset - sectorsLength) % SectorSize;
-            if (left == 0)
-            {
-                return;
-            }
-            
-            Array.Copy(buffer, offset + sectorsLength, sectorBuffer, SectorBufferPosition, left);
-            SectorBufferPosition += left;
         }
 
         public override bool CanRead => stream.CanRead;
@@ -200,8 +302,8 @@
 
         public override long Position
         {
-            get => stream.Position;
-            set => stream.Position = value;
+            get => streamOffset;
+            set => Seek(value, SeekOrigin.Begin);
         }
     }
 }

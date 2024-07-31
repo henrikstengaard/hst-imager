@@ -1,9 +1,11 @@
-﻿namespace Hst.Imager.Core.Commands;
+namespace Hst.Imager.Core.Commands;
 
 public class DiskGeometry
 {
-    public long DiskSize { get; set; }
+    public long Capacity { get; set; }
+    public long TotalSectors { get; set; }
+    public int BytesPerSector { get; set; }
+    public int HeadsPerCylinder { get; set; }
     public int Cylinders { get; set; }
-    public int Heads { get; set; }
-    public int Sectors { get; set; }
+    public int SectorsPerTrack { get; set; }
 }

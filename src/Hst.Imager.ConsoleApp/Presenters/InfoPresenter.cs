@@ -33,6 +33,27 @@
             return outputBuilder.ToString();
         }
 
+        private static string FormatPartitionTableType(PartitionTableType partitionTableType)
+        {
+            return partitionTableType switch
+            {
+                PartitionTableType.GuidPartitionTable => "GPT",
+                PartitionTableType.MasterBootRecord => "MBR",
+                PartitionTableType.RigidDiskBlock => "RDB",
+                _ => ""
+            };
+        }
+
+        private static string FormatType(PartInfo part)
+        {
+            return part.PartType switch
+            {
+                PartType.PartitionTable => FormatPartitionTableType(part.PartitionTableType),
+                PartType.Unallocated => part.PartType.ToString(),
+                _ => part.FileSystem
+            };
+        }
+
         public static string PresentInfo(PartitionTablePart partitionTablePart, bool showUnallocated)
         {
             var partsList =
@@ -42,27 +63,11 @@
 
             var columns = new[]
             {
-                new Column { Name = "Name" },
-                new Column { Name = "Style" },
-                new Column { Name = "Type" },
                 new Column { Name = "#" },
+                new Column { Name = "Type" },
                 new Column { Name = "Size", Alignment = ColumnAlignment.Right },
                 new Column { Name = "Start Off", Alignment = ColumnAlignment.Right },
                 new Column { Name = "End Off", Alignment = ColumnAlignment.Right },
-                new Column
-                {
-                    Name = partitionTablePart.PartitionTableType == PartitionTableType.RigidDiskBlock
-                        ? "Start Cyl"
-                        : "Start Sec",
-                    Alignment = ColumnAlignment.Right
-                },
-                new Column
-                {
-                    Name = partitionTablePart.PartitionTableType == PartitionTableType.RigidDiskBlock
-                        ? "End Cyl"
-                        : "End Sec",
-                    Alignment = ColumnAlignment.Right
-                },
                 new Column { Name = "Layout" }
             };
 
@@ -75,19 +80,11 @@
                 {
                     Columns = new[]
                     {
-                        $"{part.FileSystem}",
-                        FormatStyle(part.PartitionTableType),
-                        part.PartType.ToString(),
                         part.PartitionNumber.HasValue ? part.PartitionNumber.Value.ToString() : string.Empty,
+                        FormatType(part),
                         part.Size.FormatBytes(),
                         part.StartOffset.ToString(),
                         part.EndOffset.ToString(),
-                        partitionTablePart.PartitionTableType == PartitionTableType.RigidDiskBlock
-                            ? part.StartCylinder.ToString()
-                            : part.StartSector.ToString(),
-                        partitionTablePart.PartitionTableType == PartitionTableType.RigidDiskBlock
-                            ? part.EndCylinder.ToString()
-                            : part.EndSector.ToString(),
                         string.Empty
                     }
                 };
@@ -137,15 +134,16 @@
             var partsList = (showUnallocated
                     ? diskInfo.DiskParts
                     : diskInfo.DiskParts.Where(x => x.PartType != PartType.Unallocated))
+                .OrderBy(x => x.StartOffset)
                 .ToList();
 
             var columns = new[]
             {
-                new Column { Name = "File System" },
                 new Column { Name = "Style" },
-                new Column { Name = "Type" },
+                new Column { Name = "Part Type" },
+                new Column { Name = "File System" },
                 new Column { Name = "#" },
-                new Column { Name = "Size", Alignment = ColumnAlignment.Right },
+                new Column { Name = "Part Size", Alignment = ColumnAlignment.Right },
                 new Column { Name = "Start Off", Alignment = ColumnAlignment.Right },
                 new Column { Name = "End Off", Alignment = ColumnAlignment.Right },
                 new Column { Name = "Layout" }
@@ -160,9 +158,9 @@
                 {
                     Columns = new[]
                     {
-                        $"{part.FileSystem}",
                         FormatStyle(part.PartitionTableType),
-                        part.PartType.ToString(),
+                        part.PartType == PartType.PartitionTable ? "Partition Table" : $"{part.PartitionType}",
+                        $"{part.FileSystem}",
                         part.PartitionNumber.HasValue ? part.PartitionNumber.Value.ToString() : string.Empty,
                         part.Size.FormatBytes(),
                         part.StartOffset.ToString(),

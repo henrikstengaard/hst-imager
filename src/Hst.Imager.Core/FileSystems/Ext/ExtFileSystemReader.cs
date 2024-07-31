@@ -187,7 +187,8 @@ public static class ExtFileSystemReader
             Version = version,
             Features = features,
             Size = sizeBytes,
-            Free = freeBytes
+            Free = freeBytes,
+            VolumeName = superBlock.VolumeName
         };
     }
 }

@@ -13,21 +13,21 @@ console.log(`frontend base url = '${frontendBaseUrl}'`);
 
 let backendBaseUrl =  frontendBaseUrl;
 
-let host = 'default';
+let host = 'native';
 const hostMetaTag = document.querySelector("meta[name='host']")
 if (hostMetaTag) {
-    host = hostMetaTag.getAttribute("content") || 'default';
+    host = hostMetaTag.getAttribute("content") || 'native';
 }
 
 let os = 'default';
 console.log(`host = '${host}'`);
 
 if (host === 'neutralinojs') {
-    os = window.NL_OS;
     if (!window.Neutralino) {
         throw new Error('Neutralino is not present');
     }
-    
+
+    os = window.NL_OS;
     const port = window.NL_PORT + 1;
 
     backendBaseUrl = `http://localhost:${port}/`;

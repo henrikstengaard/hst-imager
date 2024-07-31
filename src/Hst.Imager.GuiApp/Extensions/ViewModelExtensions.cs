@@ -7,9 +7,8 @@
 
     public static class ViewModelExtensions
     {
-        public static MediaInfoViewModel ToViewModel(this MediaInfo mediaInfo)
-        {
-            return new MediaInfoViewModel
+        public static MediaInfoViewModel ToViewModel(this MediaInfo mediaInfo) =>
+            new()
             {
                 Path = mediaInfo.Path,
                 Name = mediaInfo.Name,
@@ -17,29 +16,43 @@
                 IsPhysicalDrive = mediaInfo.IsPhysicalDrive,
                 DiskInfo = mediaInfo.DiskInfo?.ToViewModel()
             };
-        }
 
-        public static PartitionTablePartViewModel ToViewModel(this PartitionTablePart partitionTablePart)
-        {
-            return new PartitionTablePartViewModel
+        public static PartitionTablePartViewModel ToViewModel(this PartitionTablePart partitionTablePart) =>
+            new()
             {
                 Path = partitionTablePart.Path,
+                DiskGeometry = partitionTablePart.DiskGeometry.ToViewModel(),
                 PartitionTableType = partitionTablePart.PartitionTableType,
                 Size = partitionTablePart.Size,
                 Sectors = partitionTablePart.Sectors,
                 Cylinders = partitionTablePart.Cylinders,
                 Parts = partitionTablePart.Parts.Select(x => x.ToViewModel()).ToList()
             };
-        }
+
+        public static DiskGeometryViewModel ToViewModel(this DiskGeometry diskGeometry) =>
+            new()
+            {
+                BytesPerSector = diskGeometry.BytesPerSector,
+                Cylinders = diskGeometry.Cylinders,
+                Capacity = diskGeometry.Capacity,
+                HeadsPerCylinder = diskGeometry.HeadsPerCylinder,
+                SectorsPerTrack = diskGeometry.SectorsPerTrack,
+                TotalSectors = diskGeometry.TotalSectors
+            };
 
         public static PartViewModel ToViewModel(this PartInfo partInfo)
         {
             return new PartViewModel
             {
+                PartitionType = partInfo.PartitionType,
                 FileSystem = partInfo.FileSystem,
                 PartitionNumber = partInfo.PartitionNumber,
                 PartitionTableType = partInfo.PartitionTableType,
                 PartType = partInfo.PartType,
+                BiosType = partInfo.BiosType,
+                GuidType = partInfo.GuidType,
+                IsActive = partInfo.IsActive,
+                IsPrimary = partInfo.IsPrimary,
                 Size = partInfo.Size,
                 StartOffset = partInfo.StartOffset,
                 EndOffset = partInfo.EndOffset,
@@ -47,7 +60,19 @@
                 EndSector = partInfo.EndSector,
                 StartCylinder = partInfo.StartCylinder,
                 EndCylinder = partInfo.EndCylinder,
-                PercentSize = partInfo.PercentSize
+                StartChs = partInfo.StartChs != null ? new ChsAddress
+                {
+                    Cylinder = partInfo.StartChs.Cylinder,
+                    Head = partInfo.StartChs.Head,
+                    Sector = partInfo.StartChs.Sector
+                } : null,
+                EndChs = partInfo.EndChs != null ? new ChsAddress
+                {
+                    Cylinder = partInfo.EndChs.Cylinder,
+                    Head = partInfo.EndChs.Head,
+                    Sector = partInfo.EndChs.Sector
+                } : null,
+                PercentSize = partInfo.PercentSize,
             };
         }
 
@@ -88,6 +113,8 @@
                 HiCylinder = rigidDiskBlock.HiCylinder,
                 LoCylinder = rigidDiskBlock.LoCylinder,
                 ParkingZone = rigidDiskBlock.ParkingZone,
+                Flags = rigidDiskBlock.Flags,
+                HostId = rigidDiskBlock.HostId,
                 RdbBlockHi = rigidDiskBlock.RdbBlockHi,
                 RdbBlockLo = rigidDiskBlock.RdbBlockLo,
                 PartitionBlocks = rigidDiskBlock.PartitionBlocks.Select(x => x.ToViewModel()).ToList(),

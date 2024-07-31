@@ -151,8 +151,6 @@
                 start = firstSector;
             }
 
-            var diskSectors = disk.Geometry.TotalSectorsLong;
-
             // calculate partition sectors
             var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / 512;
 
@@ -160,14 +158,14 @@
             {
                 return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.TotalSectorsLong}'"));
             }
-            
+
             var end = start + partitionSectors - 1;
             partitionSize = partitionSectors * 512;
 
             // set end to last sector, if end is larger than last sector
-            if (end > diskSectors)
+            if (end > disk.Geometry.TotalSectorsLong)
             {
-                end = diskSectors;
+                end = disk.Geometry.TotalSectorsLong;
                 partitionSectors = end - start + 1;
                 partitionSize = partitionSectors * 512;
             }

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 
 namespace Hst.Imager.Core.FileSystems.Ext;
 
@@ -26,6 +27,8 @@ public static class SuperBlockReader
         var featureIncompatible = LittleEndianConverter.ConvertBytesToUInt32(blockBytes, 0x60);
         var featureRoCompatible = LittleEndianConverter.ConvertBytesToUInt32(blockBytes, 0x64);
 
+        var volumeName = Encoding.ASCII.GetString(blockBytes, 0x78, 16);
+        
         var sBlocksCountHi = LittleEndianConverter.ConvertBytesToUInt32(blockBytes, 0x150);
         var srBlocksCountHi = LittleEndianConverter.ConvertBytesToUInt32(blockBytes, 0x154);
         var sFreeBlocksCountHi = LittleEndianConverter.ConvertBytesToUInt32(blockBytes, 0x158);
@@ -45,7 +48,8 @@ public static class SuperBlockReader
             SFeatureRoCompat = featureRoCompatible,
             SBlocksCountHi = sBlocksCountHi,
             SrBlocksCountHi = srBlocksCountHi,
-            SFreeBlocksCountHi = sFreeBlocksCountHi
+            SFreeBlocksCountHi = sFreeBlocksCountHi,
+            VolumeName = volumeName
         };
     }
 }

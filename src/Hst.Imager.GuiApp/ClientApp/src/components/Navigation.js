@@ -61,7 +61,21 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
     }),
 );
 
-export default function Navigation() {
+const Content = styled(Box)(
+    ({ theme, width}) => ({
+        width: `calc(100% - ${width})`,
+        transition: theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+        })
+    }),
+);
+
+export default function Navigation(props) {
+    const {
+        children
+    } = props
+    
     const history = useHistory()
     const [open, setOpen] = React.useState(false);
     const appState = React.useContext(AppStateContext)
@@ -134,36 +148,41 @@ export default function Navigation() {
     const width = `${open ? drawerOpenWidth : drawerClosedWidth}px`
     
     return (
-        <Drawer position="fixed" open={open} variant="permanent"
-                sx={{
-                    width,
-                    overflowX: 'hidden',
-                    [`& .MuiDrawer-paper`]: { width, boxSizing: 'border-box' },
-                }}>
-            <List sx={{marginTop: hasTitleBar ? '32px' : '0'}}>
-                {items.map((item, index) => (
-                    <ListItem button key={index} onClick={() => handleRedirect(item.path)}>
+        <React.Fragment>
+            <Drawer position="fixed" open={open} variant="permanent"
+                    sx={{
+                        width,
+                        overflowX: 'hidden',
+                        [`& .MuiDrawer-paper`]: { width, boxSizing: 'border-box' },
+                    }}>
+                <List sx={{marginTop: hasTitleBar ? '32px' : '0'}}>
+                    {items.map((item, index) => (
+                        <ListItem button key={index} onClick={() => handleRedirect(item.path)}>
+                            <ListItemIcon>
+                                <FontAwesomeIcon
+                                    icon={item.icon}
+                                    style={{ minWidth: '18px' }}
+                                />
+                            </ListItemIcon>
+                            <ListItemText primary={item.text} />
+                        </ListItem>
+                    ))}
+                </List>
+                <Box sx={{flexGrow: 1 }} />
+                <List >
+                    <ListItem button onClick={() => handleOpen()} sx={{ width: '100%' }}>
                         <ListItemIcon>
                             <FontAwesomeIcon
-                                icon={item.icon}
+                                icon={open ? 'chevron-left' : 'chevron-right'}
                                 style={{ minWidth: '18px' }}
                             />
                         </ListItemIcon>
-                        <ListItemText primary={item.text} />
                     </ListItem>
-                ))}
-            </List>
-            <Box sx={{flexGrow: 1 }} />
-            <List >
-                <ListItem button onClick={() => handleOpen()} sx={{ width: '100%' }}>
-                    <ListItemIcon>
-                        <FontAwesomeIcon
-                            icon={open ? 'chevron-left' : 'chevron-right'}
-                            style={{ minWidth: '18px' }}
-                        />
-                    </ListItemIcon>
-                </ListItem>
-            </List>
-        </Drawer>
+                </List>
+            </Drawer>
+            <Content width={width}>
+                {children} 
+            </Content>
+        </React.Fragment>
     )
 }

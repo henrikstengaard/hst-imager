@@ -71,4 +71,9 @@ public class SuperBlock
     /// Free blocks count 64-bit (le32, s_free_blocks_count_hi, 0x158)
     /// </summary>
     public uint SFreeBlocksCountHi { get; set; }
+
+    /// <summary>
+    /// Volume name (0x78)
+    /// </summary>
+    public string VolumeName { get; set; }
 }
