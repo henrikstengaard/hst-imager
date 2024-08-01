@@ -667,7 +667,8 @@ namespace Hst.Imager.Core.Commands
                 var mbrParts = diskInfo.MbrPartitionTablePart.Parts.Where(x => x.PartType != PartType.Unallocated)
                     .ToList();
 
-                if (diskInfo.GptPartitionTablePart != null && mbrParts.All(x => x.BiosType != BiosPartitionTypes.GptProtective.ToString()))
+                if (mbrParts.All(x => x.BiosType != BiosPartitionTypes.GptProtective.ToString()) &&
+                    diskInfo.GptPartitionTablePart == null)
                 {
                     allocatedParts.AddRange(mbrParts);
                 }
