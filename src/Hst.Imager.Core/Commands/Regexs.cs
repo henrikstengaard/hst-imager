@@ -27,4 +27,10 @@ public static class Regexs
     
     public static readonly Regex NetworkPathRegex = new Regex(@"^(\\\\[^\\]+\\[^\\]+)", 
         RegexOptions.Compiled | RegexOptions.IgnoreCase);
+    
+    /// <summary>
+    /// Invalid filename chars: \, /, :, *, ?, ", <, >, |
+    /// </summary>
+    public static readonly Regex InvalidFilenameCharsRegex = new Regex("[\\\\/:\\*\\?\"\\<\\>\\|]",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 }

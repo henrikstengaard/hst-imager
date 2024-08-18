@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using DiscUtils;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -144,11 +146,11 @@ public class FsDirCommand : FsCommandBase
                 case "rdb":
                     if (parts.Length == 1)
                     {
-                        var listPartitionsResult = await ListRdbPartitions(stream);
+                        var listPartitionsResult = await ListRdbPartitions(media);
                         return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
                     }
 
-                    var listRdbEntriesResult = await ListRdbPartitionEntries(stream, parts.Skip(1).ToArray());
+                    var listRdbEntriesResult = await ListRdbPartitionEntries(media, parts.Skip(1).ToArray());
                     if (listRdbEntriesResult.IsFaulted)
                     {
                         return new Result(listRdbEntriesResult.Error);
@@ -352,11 +354,13 @@ public class FsDirCommand : FsCommandBase
         return Task.FromResult(new Result());
     }
     
-    private async Task<Result> ListRdbPartitions(Stream stream)
+    private async Task<Result> ListRdbPartitions(Media media)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(disk.Content);
 
         if (rigidDiskBlock == null)
         {
@@ -372,7 +376,7 @@ public class FsDirCommand : FsCommandBase
                 FormattedName = partitionBlock.DriveName,
                 Type = EntryType.Dir,
                 Size = partitionBlock.PartitionSize,
-                Properties = await GetRdbPartitionProperties(stream, partitionBlock)
+                Properties = await GetRdbPartitionProperties(disk, partitionBlock)
             });
         }
         
@@ -385,13 +389,13 @@ public class FsDirCommand : FsCommandBase
         return new Result();
     }
 
-    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Stream stream,
+    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(VirtualDisk disk,
         PartitionBlock partitionBlock)
     {
         IFileSystemVolume fileSystemVolume = null;
         try
         {
-            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(stream, partitionBlock);
+            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(disk.Content, partitionBlock);
             fileSystemVolume = fileSystemVolumeResult.IsSuccess ? fileSystemVolumeResult.Value : null;
         }
         catch (Exception)
@@ -416,16 +420,20 @@ public class FsDirCommand : FsCommandBase
         return properties;
     }
 
-    private async Task<Result> ListRdbPartitionEntries(Stream stream, string[] parts)
+    private async Task<Result> ListRdbPartitionEntries(Media media, string[] parts)
     {
-        var volumeResult = await MountRdbFileSystemVolume(stream, parts[0]);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        
+        var volumeResult = await MountRdbFileSystemVolume(disk, parts[0]);
         if (volumeResult.IsFaulted)
         {
             return new Result(volumeResult.Error);
         }
 
         var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new AmigaVolumeEntryIterator(stream, fileSystemPath, volumeResult.Value, recursive);
+        var entryIterator = new AmigaVolumeEntryIterator(media.Stream, fileSystemPath, volumeResult.Value, recursive);
 
         await ListEntries(entryIterator, fileSystemPath);
 

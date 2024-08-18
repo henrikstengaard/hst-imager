@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Hst.Imager.Core.UaeMetadatas;
 using Models.FileSystems;
 
 public interface IEntryWriter : IDisposable
@@ -47,4 +48,6 @@ public interface IEntryWriter : IDisposable
     IEnumerable<string> GetLogs();
 
     IEntryIterator CreateEntryIterator(string rootPath, bool recursive);
+    
+    UaeMetadata UaeMetadata { get; set; }
 }

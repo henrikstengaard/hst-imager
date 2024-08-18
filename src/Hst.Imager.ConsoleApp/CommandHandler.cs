@@ -17,6 +17,7 @@ namespace Hst.Imager.ConsoleApp
     using Core.Extensions;
     using Core.Models;
     using Hst.Core;
+    using Hst.Imager.Core.UaeMetadatas;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Presenters;
@@ -484,10 +485,10 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
+        public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet, UaeMetadata uaeMetadata)
         {
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet);
+                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata);
             await Execute(command);
         }
 

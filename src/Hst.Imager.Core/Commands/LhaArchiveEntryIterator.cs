@@ -189,7 +189,11 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
             lhaEntryIndex.Add(entryPath, lhaEntry);
 
-            var properties = new Dictionary<string, string>();
+            var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute);
+            var properties = new Dictionary<string, string>
+            {
+                { "ProtectionBits", lhaEntry.Attribute.ToString() }
+            };
             var comment = GetEntryComment(lhaEntry.Name);
             if (!string.IsNullOrEmpty(comment))
             {
@@ -209,7 +213,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 Size = lhaEntry.OriginalSize,
                 Type = Models.FileSystems.EntryType.File,
                 Attributes =
-                    EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute)),
+                    EntryFormatter.FormatProtectionBits(protectionBits),
                 Properties = properties
             };
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DiscUtils;
+using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
@@ -29,6 +30,7 @@ public class FileSystemEntryWriter : IEntryWriter
 
     public string MediaPath => this.media.Path;
     public string FileSystemPath => string.Empty;
+    public UaeMetadata UaeMetadata { get; set; }
     
     private void Dispose(bool disposing)
     {

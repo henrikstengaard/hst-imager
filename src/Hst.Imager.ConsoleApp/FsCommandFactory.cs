@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.ConsoleApp;
 
 using System.CommandLine;
+using Hst.Imager.Core.UaeMetadatas;
 
 public static class FsCommandFactory
 {
@@ -61,14 +62,20 @@ public static class FsCommandFactory
             description: "Quiet mode.",
             getDefaultValue: () => false);
 
+        var uaeMetadataOption = new Option<UaeMetadata>(
+            new[] { "--uaemetadata", "-uae" },
+            description: "Type of UAE metadata to read and write.",
+            getDefaultValue: () => UaeMetadata.UaeFsDb);
+        
         var command = new Command("copy", "Copy files or subdirectories from source to destination.");
         command.AddAlias("c");
-        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption);
+        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
         command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
+        command.AddOption(uaeMetadataOption);
 
         return command;
     }

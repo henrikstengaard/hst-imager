@@ -373,10 +373,13 @@ public abstract class FsCommandBase : CommandBase
         // }
         
         // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
-        var stream = media.Stream;
+        //var stream = media.Stream;
         //var stream = new CachedBlockStream(media.Value.Stream);
+        var disk = media is DiskMedia diskMedia 
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
-        var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
+        var fileSystemVolumeResult = await MountRdbFileSystemVolume(disk, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
@@ -525,8 +528,7 @@ public abstract class FsCommandBase : CommandBase
                     return new Result<IEntryWriter>(new Error($"No device name in path"));
                 }
 
-                var stream = useCache ? new CachedBlockStream(media.Value.Stream) : media.Value.Stream;
-                var fileSystemVolumeResult = await MountRdbFileSystemVolume(stream, parts[1]);
+                var fileSystemVolumeResult = await MountRdbFileSystemVolume(disk, parts[1]);
                 if (fileSystemVolumeResult.IsFaulted)
                 {
                     return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
@@ -682,11 +684,11 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IFileSystem>(new Error("Unsupported Guid Partition Table file system"));
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Stream stream, string partitionName)
+    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(VirtualDisk disk, string partitionName)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(disk.Content);
 
         if (rigidDiskBlock == null)
         {
@@ -705,7 +707,7 @@ public abstract class FsCommandBase : CommandBase
 
         OnDebugMessage($"Mounting file system");
 
-        var fileSystemVolumeResult = await MountPartitionFileSystemVolume(stream, partitionBlock);
+        var fileSystemVolumeResult = await MountPartitionFileSystemVolume(disk.Content, partitionBlock);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IFileSystemVolume>(fileSystemVolumeResult.Error);

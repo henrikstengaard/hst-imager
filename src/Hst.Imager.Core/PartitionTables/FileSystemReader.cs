@@ -36,7 +36,7 @@ public static class FileSystemReader
                 ClusterSize = fatFileSystem.ClusterSize
             };
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // ignored, if errors occur. not ext file system
         }

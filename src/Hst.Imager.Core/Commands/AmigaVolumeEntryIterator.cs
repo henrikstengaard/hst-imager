@@ -180,7 +180,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                         Type = Models.FileSystems.EntryType.Dir,
                         Properties = new Dictionary<string, string>
                         {
-                            { "Comment", entry.Comment }
+                            { "Comment", entry.Comment },
+                            { "ProtectionBits", ((int)entry.ProtectionBits ^ 0xf).ToString() }
                         },
                         Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
                     });
@@ -206,7 +207,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                         Type = Models.FileSystems.EntryType.File,
                         Properties = new Dictionary<string, string>
                         {
-                            { "Comment", entry.Comment }
+                            { "Comment", entry.Comment },
+                            { "ProtectionBits", ((int)entry.ProtectionBits ^ 0xf).ToString() }
                         },
                         Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
                     });

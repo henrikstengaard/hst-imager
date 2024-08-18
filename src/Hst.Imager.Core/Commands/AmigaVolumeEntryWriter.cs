@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
@@ -201,6 +202,8 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     {
         return new AmigaVolumeEntryIterator(media.Stream, rootPath, fileSystemVolume, recursive);
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 
     public async Task Flush()
     {

@@ -166,7 +166,11 @@ public class LzxArchiveEntryIterator : IEntryIterator
                 }
             }
 
-            var properties = new Dictionary<string, string>();
+            var protectionBits = GetProtectionBits(lzxEntry.Attributes);
+            var properties = new Dictionary<string, string>
+            {
+                { "ProtectionBits", lzxEntry.Attributes.ToString() }
+            };
             if (!string.IsNullOrEmpty(lzxEntry.Comment))
             {
                 properties.Add("Comment", lzxEntry.Comment);
@@ -185,7 +189,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
                 Size = lzxEntry.UnpackedSize,
                 Type = Models.FileSystems.EntryType.File,
                 Attributes =
-                    EntryFormatter.FormatProtectionBits(GetProtectionBits(lzxEntry.Attributes)),
+                    EntryFormatter.FormatProtectionBits(protectionBits),
                 Properties = properties
             };
 

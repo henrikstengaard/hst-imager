@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 using Hst.Core;
+using Hst.Imager.Core.UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
@@ -19,10 +20,11 @@ public class FsCopyCommand : FsCommandBase
     private readonly bool recursive;
     private readonly bool skipAttributes;
     private readonly bool quiet;
+    private readonly UaeMetadata uaeMetadata;
 
     public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive,
-        bool skipAttributes, bool quiet)
+        bool skipAttributes, bool quiet, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
@@ -31,6 +33,27 @@ public class FsCopyCommand : FsCommandBase
         this.recursive = recursive;
         this.skipAttributes = skipAttributes;
         this.quiet = quiet;
+        this.uaeMetadata = uaeMetadata;
+    }
+
+    // src provides uae metadata
+    private static bool SrcRequiresUaeMetadata(IEntryIterator srcEntryIterator)
+    {
+        return srcEntryIterator switch
+        {
+            AmigaVolumeEntryIterator _ or LhaArchiveEntryIterator _ or LzxArchiveEntryIterator _ => true,
+            _ => false,
+        };
+    }
+
+    // dest writes uae metadata 
+    private static bool DestWritesUaeMetadata(IEntryWriter entryWriter)
+    {
+        return entryWriter switch
+        {
+            DirectoryEntryWriter _ => true,
+            _ => false,
+        };
     }
 
     public override async Task<Result> Execute(CancellationToken token)
@@ -52,6 +75,13 @@ public class FsCopyCommand : FsCommandBase
         {
             return new Result(srcEntryIteratorResult.Error);
         }
+
+        var srcRequiresUaeMetadata = SrcRequiresUaeMetadata(srcEntryIteratorResult.Value);
+        var destWritesUaeMetadata = DestWritesUaeMetadata(destEntryWriterResult.Value);
+
+        var destSupportUaeMetadata = srcRequiresUaeMetadata && destWritesUaeMetadata;
+
+        destEntryWriterResult.Value.UaeMetadata = destSupportUaeMetadata ? uaeMetadata : UaeMetadata.None;
 
         // iterate through source entries and write in destination
         var count = 0;
