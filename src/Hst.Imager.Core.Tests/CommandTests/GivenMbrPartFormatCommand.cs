@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DiscUtils.Fat;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models;
@@ -14,59 +18,40 @@ namespace Hst.Imager.Core.Tests.CommandTests;
 public class GivenMbrPartFormatCommand : FsCommandTestBase
 {
     [Fact]
-    public async Task WhenAddMbrPartitionOfSize0ThenPartitionIsAddedWithRemainingDiskSize()
+    public async Task WhenFatFormatMbrPartition_Then_PartitionIsFormattedAndEmpty()
     {
         // arrange - path, size and test command helper
         var imgPath = $"fat16format.img";
         var testCommandHelper = new TestCommandHelper();
-        var size = 256.MB();
+        var size = 100.MB();
 
-        var cancellationTokenSource = new CancellationTokenSource();
-
-        var blank = new BlankCommand(new NullLogger<BlankCommand>(), testCommandHelper, imgPath,
-            new Size(size, Unit.Bytes), false);
-        var br = await blank.Execute(cancellationTokenSource.Token);
-        Assert.True(br.IsSuccess);
-        
         // arrange - create img media
-        //testCommandHelper.AddTestMedia(imgPath, size);
+        testCommandHelper.AddTestMedia(imgPath, size);
 
         // arrange - create mbr disk
-        await CreateMbrDisk(testCommandHelper, imgPath, size);
-        
-        
-        testCommandHelper.ClearActiveMedias();
-        
-        // arrange - mbr partition add command with type FAT32 and size 0
-        var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, MbrPartType.Fat16Small, new Size(0, Unit.Bytes), null, null);
+        await CreateMbrDiskWithPartition(testCommandHelper, imgPath, size, BiosPartitionTypes.Fat16);
 
-        // act - execute mbr partition add
-        var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
-        Assert.True(result.IsSuccess);
-        
-        testCommandHelper.ClearActiveMedias();
-        
+        // arrange - mbr partition format command with type volume name "TEST"
+        var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartFormatCommand = new MbrPartFormatCommand(new NullLogger<MbrPartFormatCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, 1, "CBM");
+            new List<IPhysicalDrive>(), imgPath, 1, "TEST");
 
-        // act - execute mbr partition add
-        var result2 = await mbrPartFormatCommand.Execute(cancellationTokenSource.Token);
-        Assert.True(result2.IsSuccess);
+        // act - execute mbr partition format
+        var result = await mbrPartFormatCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
 
-    }
-
-    [Fact]
-    public void Test()
-    {
-        var memoryStream = new MemoryStream(new byte[1024 * 1024]);
-        var sectorStream = new SectorStream(memoryStream);
-
-        var buffer = new byte[1024 * 512];
-        var read = sectorStream.Read(buffer, 0, 512);
-        Assert.Equal(512, read);
-        
-        read = sectorStream.Read(buffer, 0, 1024);
-        Assert.Equal(1024, read);
+        // assert - partition is fat16 formatted
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        using var media = mediaResult.Value;
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var biosPartitionTable = new BiosPartitionTable(disk);
+        using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
+        Assert.Equal(FatType.Fat16, fatFileSystem.FatVariant);
+        Assert.NotEqual(0, fatFileSystem.Size);
+        Assert.NotEqual(0, fatFileSystem.TotalSectors);
+        Assert.Empty(fatFileSystem.GetDirectories(string.Empty));
+        Assert.Empty(fatFileSystem.GetFiles(string.Empty));
     }
 }

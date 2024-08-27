@@ -62,11 +62,11 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         {
             isFirst = false;
             currentEntry = null;
-            await ResolveRootPath(this.rootPath);
-            await EnqueueDirectory(this.rootPathComponents);
+            await ResolveRootPath(rootPath);
+            await EnqueueDirectory(rootPathComponents);
         }
 
-        if (this.nextEntries.Count <= 0)
+        if (nextEntries.Count <= 0)
         {
             return false;
         }
@@ -74,14 +74,20 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         bool skipEntry;
         do
         {
-            skipEntry = false;
-            currentEntry = this.nextEntries.Pop();
-            if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+            currentEntry = nextEntries.Pop();
+
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
+            {
+                return true;
+            }
+
+            skipEntry = SkipEntry(currentEntry.Name);
+
+            if (recursive)
             {
                 await EnqueueDirectory(currentEntry.FullPathComponents);
-                skipEntry = this.patternMatcher != null && !this.patternMatcher.IsMatch(currentEntry.Name);
             }
-        } while (currentEntry.Type == Models.FileSystems.EntryType.Dir && skipEntry);
+        } while (nextEntries.Count > 0 && skipEntry);
 
         return true;
     }
@@ -168,6 +174,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
             {
                 case EntryType.DirLink:
                 case EntryType.Dir:
+                    // pattern matching is not applied to directories as they need to be interated, if recursive
                     directories.Add(new Entry
                     {
                         Name = entry.Name,
@@ -183,14 +190,13 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                             { "Comment", entry.Comment },
                             { "ProtectionBits", ((int)entry.ProtectionBits ^ 0xf).ToString() }
                         },
-                        Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
+                        Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits),
                     });
                     break;
                 case EntryType.FileLink:
                 case EntryType.File:
                     // skip file entry, if pattern matcher is set and entry name doesn't match
-                    if (this.patternMatcher != null &&
-                        !this.patternMatcher.IsMatch(entry.Name))
+                    if (SkipEntry(entry.Name))
                     {
                         continue;
                     }
@@ -210,7 +216,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                             { "Comment", entry.Comment },
                             { "ProtectionBits", ((int)entry.ProtectionBits ^ 0xf).ToString() }
                         },
-                        Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits)
+                        Attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits),
                     });
                     break;
             }
@@ -225,5 +231,15 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         {
             nextEntries.Push(directories[i]);
         }
+    }
+
+    private bool SkipEntry(string name) 
+    {
+        if (!UsesPattern)
+        {
+            return false;
+        }
+
+        return !patternMatcher.IsMatch(name);
     }
 }

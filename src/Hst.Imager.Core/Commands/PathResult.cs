@@ -19,5 +19,6 @@ public class MediaResult
     
     public string DirectorySeparatorChar { get; set; }
     
+    public ModifierEnum Modifiers { get; set; }
     public bool ByteSwap { get; set; }
 }

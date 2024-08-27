@@ -23,7 +23,7 @@ public static class Regexs
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     public static readonly Regex ModifiersRegex = 
-        new(".+(\\+.+)$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+        new("^(\\+bs)*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
     public static readonly Regex NetworkPathRegex = new Regex(@"^(\\\\[^\\]+\\[^\\]+)", 
         RegexOptions.Compiled | RegexOptions.IgnoreCase);

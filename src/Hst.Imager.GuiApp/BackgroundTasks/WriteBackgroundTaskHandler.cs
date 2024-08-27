@@ -40,10 +40,12 @@
             {
                 var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
 
-                var commandHelper = new CommandHelper(appState.IsAdministrator);
+                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var writeCommand =
                     new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives,
-                        string.Concat(writeBackgroundTask.SourcePath, writeBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                        writeBackgroundTask.Byteswap 
+                            ? System.IO.Path.Combine(writeBackgroundTask.SourcePath, "+bs")
+                            : writeBackgroundTask.SourcePath,
                         writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
                         writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force);
                 writeCommand.DataProcessed += async (_, args) =>

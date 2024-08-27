@@ -100,7 +100,7 @@ public class GivenRdbFsAddCommand : FsCommandTestBase
     
     private static async Task CreateRdbDisk(TestCommandHelper testCommandHelper, string path, long diskSize)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
         

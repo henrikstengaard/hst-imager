@@ -79,25 +79,32 @@
             testCommandHelper.AddTestMediaWithData(sourcePath, ImageSize);
             var cancellationTokenSource = new CancellationTokenSource();
 
-            // act - read source img to destination vhd
-            var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
-                destinationPath, new Size(), false);
-            var result = await convertCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(result.IsSuccess);
+            try
+            {
+                // act - read source img to destination vhd
+                var convertCommand = new ConvertCommand(new NullLogger<ConvertCommand>(), testCommandHelper, sourcePath,
+                    destinationPath, new Size(), false);
+                var result = await convertCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
 
-            // get source bytes
-            var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
+                // get source bytes
+                var sourceBytes = await testCommandHelper.GetTestMedia(sourcePath).ReadData();
 
-            // get destination bytes from vhd
-            var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);
-            var destinationPathSize = new FileInfo(destinationPath).Length;
+                // get destination bytes from vhd
+                var destinationBytes = await ReadMediaBytes(testCommandHelper, destinationPath, sourceBytes.Length);
+                var destinationPathSize = new FileInfo(destinationPath).Length;
 
-            // assert length is not the same (vhd file format different than img) and bytes are the same
-            Assert.NotEqual(sourceBytes.Length, destinationPathSize);
-            Assert.Equal(sourceBytes, destinationBytes);
-
-            // delete destination path vhd
-            File.Delete(destinationPath);
+                // assert length is not the same (vhd file format different than img) and bytes are the same
+                Assert.NotEqual(sourceBytes.Length, destinationPathSize);
+                Assert.Equal(sourceBytes, destinationBytes);
+            }
+            finally
+            {
+                if (File.Exists(destinationPath))
+                {
+                    File.Delete(destinationPath);
+                }
+            }
         }
 
         [Fact]

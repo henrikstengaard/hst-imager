@@ -45,29 +45,23 @@ public class DirectoryEntryIterator : IEntryIterator
             return Task.FromResult(false);
         }
         
-        if (this.pathComponentMatcher.UsesPattern)
-        {
-            do
-            {
-                if (this.nextEntries.Count <= 0)
-                {
-                    return Task.FromResult(false);
-                }
-                currentEntry = this.nextEntries.Pop();
-                if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
-                {
-                    EnqueueDirectory(currentEntry.RawPath);
-                }
-            } while (currentEntry.Type == Models.FileSystems.EntryType.Dir);
-        }
-        else
+        bool skipEntry;
+        do
         {
             currentEntry = this.nextEntries.Pop();
-            if (this.recursive && currentEntry.Type == EntryType.Dir)
+
+            if (currentEntry.Type == EntryType.File)
+            {
+                return Task.FromResult(true);
+            }
+
+            skipEntry = SkipEntry(currentEntry.FullPathComponents);
+
+            if (recursive)
             {
                 EnqueueDirectory(currentEntry.RawPath);
             }
-        }
+        } while (nextEntries.Count > 0 && skipEntry);
 
         return Task.FromResult(true);
     }
@@ -82,7 +76,7 @@ public class DirectoryEntryIterator : IEntryIterator
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesPattern => false;
+    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
     
     public Task Flush()
     {
@@ -98,8 +92,8 @@ public class DirectoryEntryIterator : IEntryIterator
             var fullPathComponents = GetPathComponents(dirInfo.FullName);
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
-            
-            var dirEntry = new Entry
+
+            this.nextEntries.Push(new Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
@@ -110,12 +104,7 @@ public class DirectoryEntryIterator : IEntryIterator
                 Size = 0,
                 Type = EntryType.Dir,
                 Properties = new Dictionary<string, string>()
-            };
-            
-            if (recursive || this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
-            {
-                this.nextEntries.Push(dirEntry);
-            }
+            });
         }
         
         foreach (var fileInfo in currentDir.GetFiles().OrderByDescending(x => x.Name).ToList())
@@ -123,8 +112,13 @@ public class DirectoryEntryIterator : IEntryIterator
             var fullPathComponents = GetPathComponents(fileInfo.FullName);
             var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
             var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
-            
-            var fileEntry = new Entry
+
+            if (SkipEntry(fullPathComponents))
+            {
+                continue;
+            }
+
+            this.nextEntries.Push(new Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
@@ -135,16 +129,21 @@ public class DirectoryEntryIterator : IEntryIterator
                 Size = fileInfo.Length,
                 Type = EntryType.File,
                 Properties = new Dictionary<string, string>()
-            };
-            
-            if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))
-            {
-                this.nextEntries.Push(fileEntry);
-            }
+            });
         }
     }
 
     public void Dispose()
     {
+    }
+
+    private bool SkipEntry(string[] pathComponents)
+    {
+        if (!UsesPattern)
+        {
+            return false;
+        }
+
+        return !pathComponentMatcher.IsMatch(pathComponents);
     }
 }

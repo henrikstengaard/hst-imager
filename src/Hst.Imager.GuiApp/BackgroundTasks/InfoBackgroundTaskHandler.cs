@@ -37,7 +37,7 @@
 
             var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
 
-            var commandHelper = new CommandHelper(appState.IsAdministrator);
+            var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
             var infoCommand = new InfoCommand(logger, commandHelper, physicalDrives,
                 string.Concat(infoBackgroundTask.Path, infoBackgroundTask.Byteswap ? "+bs" : string.Empty));

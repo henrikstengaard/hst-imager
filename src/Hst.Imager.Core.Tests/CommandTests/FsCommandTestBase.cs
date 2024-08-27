@@ -32,7 +32,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateMbrDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
         if (!path.ToLower().EndsWith(".vhd"))
@@ -47,10 +47,30 @@ public class FsCommandTestBase : CommandTestBase
         BiosPartitionTable.Initialize(disk);
     }
 
+    protected async Task CreateMbrDiskWithPartition(TestCommandHelper testCommandHelper, string path,
+    long diskSize = 10 * 1024 * 1024, byte partitionType = BiosPartitionTypes.Fat16)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        if (!path.ToLower().EndsWith(".vhd"))
+        {
+            stream.SetLength(diskSize);
+        }
+
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+
+        biosPartitionTable.CreatePrimaryBySector(1, disk.BiosGeometry.TotalSectorsLong - 1, partitionType, true);
+    }
+
     protected async Task CreateGptDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
         if (!path.ToLower().EndsWith(".vhd"))
@@ -68,7 +88,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateRdbWithPfs3(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024, long rdbSize = 0, uint rdbBlockLo = 0)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
         
@@ -90,7 +110,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateMbrFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
@@ -104,7 +124,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateMbrNtfsFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
@@ -120,7 +140,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateGptFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
@@ -133,7 +153,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateGptNtfsFormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
@@ -148,7 +168,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
 
@@ -165,7 +185,7 @@ public class FsCommandTestBase : CommandTestBase
 
     protected async Task CreateAdfDisk(TestCommandHelper testCommandHelper, string path)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, 0, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: 0, create: true);
         using var media = mediaResult.Value;
         var stream = media.Stream;
 
@@ -180,7 +200,7 @@ public class FsCommandTestBase : CommandTestBase
     protected async Task CreateDos7FormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, diskSize, true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
         var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
 

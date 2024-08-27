@@ -12,6 +12,7 @@
     using DiscUtils.Streams;
     using Hst.Core.Extensions;
     using Models;
+    using Microsoft.Extensions.Logging.Abstractions;
 
     public class TestCommandHelper : CommandHelper
     {
@@ -19,7 +20,7 @@
         public readonly RigidDiskBlock RigidDiskBlock;
         public static readonly string PhysicalDrivePath = "physical-drive";
 
-        public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null) : base(true)
+        public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null) : base(new NullLogger<ICommandHelper>(), true)
         {
             this.RigidDiskBlock = rigidDiskBlock;
             this.TestMedias = new List<TestMedia>();
@@ -48,7 +49,7 @@
                 return;
             }
 
-            var destinationMediaResult = await GetWritableMedia(new List<IPhysicalDrive>(), path, data.Length, true);
+            var destinationMediaResult = await GetWritableMedia(new List<IPhysicalDrive>(), path, size: data.Length, create: true);
             using var destinationMedia = destinationMediaResult.Value;
             var destinationStream = destinationMedia.Stream;
             await destinationStream.WriteAsync(data, 0, data.Length);
@@ -95,13 +96,13 @@
         }
 
         public override Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
-            bool writeable = false)
+            ModifierEnum? modifiers = null, bool writeable = false)
         {
             // return writable file, if path is equal physical drive path. otherwise null
-            return path == PhysicalDrivePath ? GetWritableFileMedia(path) : Task.FromResult(new Result<Media>((Media)null));
+            return path == PhysicalDrivePath ? GetWritableFileMedia(path, modifiers) : Task.FromResult(new Result<Media>((Media)null));
         }
 
-        public override async Task<Result<Media>> GetReadableFileMedia(string path)
+        public override async Task<Result<Media>> GetReadableFileMedia(string path, ModifierEnum? modifiers = null)
         {
             if (path == null)
             {
@@ -111,7 +112,7 @@
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
             {
-                return await base.GetReadableFileMedia(path);
+                return await base.GetReadableFileMedia(path, modifiers);
             }
 
             var stream = testMedia.Stream;
@@ -126,7 +127,7 @@
                 false, disk, false, stream));        
         }
 
-        public override Task<Result<Media>> GetWritableFileMedia(string path, long? size = null, bool create = false)
+        public override Task<Result<Media>> GetWritableFileMedia(string path, ModifierEnum? modifiers = null, long? size = null, bool create = false)
         {
             if (path == null)
             {
@@ -136,7 +137,7 @@
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
             {
-                return base.GetWritableFileMedia(path, size, create);
+                return base.GetWritableFileMedia(path, modifiers, size, create);
             }
 
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
@@ -211,7 +212,9 @@
                 FullPath = path,
                 MediaPath = testMedia.Path,
                 DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "//",
-                FileSystemPath = path.Length > testMedia.Path.Length ? path.Substring(testMedia.Path.Length + 1) : path
+                FileSystemPath = path.Length > testMedia.Path.Length ? path.Substring(testMedia.Path.Length + 1) : path,
+                Modifiers = ModifierEnum.None,
+                ByteSwap = false
             });
         }
     }

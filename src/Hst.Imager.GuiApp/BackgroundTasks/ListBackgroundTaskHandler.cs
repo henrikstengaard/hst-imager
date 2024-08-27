@@ -35,7 +35,7 @@
         {
             var physicalDrives = (await physicalDriveManager.GetPhysicalDrives()).ToList();
 
-            var commandHelper = new CommandHelper(appState.IsAdministrator);
+            var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
             var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives, false);
 

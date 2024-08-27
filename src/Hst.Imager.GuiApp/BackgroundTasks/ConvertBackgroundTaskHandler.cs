@@ -35,10 +35,12 @@
 
             try
             {
-                var commandHelper = new CommandHelper(appState.IsAdministrator);
+                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var convertCommand =
-                    new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper, 
-                        string.Concat(convertBackgroundTask.SourcePath, convertBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                    new ConvertCommand(loggerFactory.CreateLogger<ConvertCommand>(), commandHelper,
+                        convertBackgroundTask.Byteswap
+                            ? System.IO.Path.Combine(convertBackgroundTask.SourcePath, "+bs")
+                            : convertBackgroundTask.SourcePath,
                         convertBackgroundTask.DestinationPath, new Size(), false);
                 convertCommand.DataProcessed += async (_, args) =>
                 {

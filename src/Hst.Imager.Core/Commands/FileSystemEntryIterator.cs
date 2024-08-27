@@ -78,30 +78,49 @@ public class FileSystemEntryIterator : IEntryIterator
             return Task.FromResult(false);
         }
 
-        if (this.pathComponentMatcher.UsesPattern)
-        {
-            do
-            {
-                if (this.nextEntries.Count <= 0)
-                {
-                    return Task.FromResult(false);
-                }
-
-                currentEntry = this.nextEntries.Pop();
-                if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
-                {
-                    EnqueueDirectory(currentEntry.FullPathComponents);
-                }
-            } while (currentEntry.Type == Models.FileSystems.EntryType.Dir);
-        }
-        else
+        bool skipEntry;
+        do
         {
             currentEntry = this.nextEntries.Pop();
-            if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
+            {
+                return Task.FromResult(true);
+            }
+
+            skipEntry = SkipEntry(currentEntry.FullPathComponents);
+
+            if (recursive)
             {
                 EnqueueDirectory(currentEntry.FullPathComponents);
             }
-        }
+        } while (nextEntries.Count > 0 && skipEntry);
+
+
+        //if (this.pathComponentMatcher.UsesPattern)
+        //{
+        //    do
+        //    {
+        //        if (this.nextEntries.Count <= 0)
+        //        {
+        //            return Task.FromResult(false);
+        //        }
+
+        //        currentEntry = this.nextEntries.Pop();
+        //        if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+        //        {
+        //            EnqueueDirectory(currentEntry.FullPathComponents);
+        //        }
+        //    } while (currentEntry.Type == Models.FileSystems.EntryType.Dir);
+        //}
+        //else
+        //{
+        //    currentEntry = this.nextEntries.Pop();
+        //    if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
+        //    {
+        //        EnqueueDirectory(currentEntry.FullPathComponents);
+        //    }
+        //}
 
         return Task.FromResult(true);
     }
@@ -146,7 +165,7 @@ public class FileSystemEntryIterator : IEntryIterator
                     // ignored
                 }
 
-                var dirEntry = new Entry
+                nextEntries.Push(new Entry
                 {
                     Name = relativePath,
                     FormattedName = relativePath,
@@ -158,12 +177,7 @@ public class FileSystemEntryIterator : IEntryIterator
                     Size = 0,
                     Type = Models.FileSystems.EntryType.Dir,
                     Properties = new Dictionary<string, string>()
-                };
-
-                if (recursive || this.pathComponentMatcher.IsMatch(dirEntry.FullPathComponents))
-                {
-                    this.nextEntries.Push(dirEntry);
-                }
+                });
             }
         }
         catch (Exception)
@@ -179,6 +193,11 @@ public class FileSystemEntryIterator : IEntryIterator
                 var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
                 var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
 
+                if (SkipEntry(fullPathComponents))
+                {
+                    continue;
+                }
+
                 DateTime? lastWriteTime = null;
                 long size = 0;
                 try
@@ -191,7 +210,7 @@ public class FileSystemEntryIterator : IEntryIterator
                     // ignored
                 }
 
-                var fileEntry = new Entry
+                nextEntries.Push(new Entry
                 {
                     Name = relativePath,
                     FormattedName = relativePath,
@@ -203,12 +222,7 @@ public class FileSystemEntryIterator : IEntryIterator
                     Size = size,
                     Type = Models.FileSystems.EntryType.File,
                     Properties = new Dictionary<string, string>()
-                };
-
-                if (this.pathComponentMatcher.IsMatch(fileEntry.FullPathComponents))
-                {
-                    this.nextEntries.Push(fileEntry);
-                }
+                });
             }
         }
         catch (Exception)
@@ -335,5 +349,14 @@ public class FileSystemEntryIterator : IEntryIterator
     public Task Flush()
     {
         return Task.CompletedTask;
+    }
+    private bool SkipEntry(string[] pathComponents)
+    {
+        if (!UsesPattern)
+        {
+            return false;
+        }
+
+        return !pathComponentMatcher.IsMatch(pathComponents);
     }
 }

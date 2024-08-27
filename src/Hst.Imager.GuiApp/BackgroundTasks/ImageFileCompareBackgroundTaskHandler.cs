@@ -37,11 +37,13 @@
 
             try
             {
-                var commandHelper = new CommandHelper(appState.IsAdministrator);
+                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var verifyCommand =
                     new CompareCommand(loggerFactory.CreateLogger<CompareCommand>(), commandHelper,
-                        Enumerable.Empty<IPhysicalDrive>(), 
-                        string.Concat(compareBackgroundTask.SourcePath, compareBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                        Enumerable.Empty<IPhysicalDrive>(),
+                        compareBackgroundTask.Byteswap
+                            ? System.IO.Path.Combine(compareBackgroundTask.SourcePath, "+bs")
+                            : compareBackgroundTask.SourcePath,
                         compareBackgroundTask.DestinationPath, new Size(compareBackgroundTask.Size, Unit.Bytes), 
                         compareBackgroundTask.Retries, compareBackgroundTask.Force);
                 verifyCommand.DataProcessed += async (_, args) =>

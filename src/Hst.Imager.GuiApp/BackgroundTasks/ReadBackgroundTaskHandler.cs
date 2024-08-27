@@ -39,10 +39,12 @@
             {
                 var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
 
-                var commandHelper = new CommandHelper(appState.IsAdministrator);
+                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
-                        string.Concat(readBackgroundTask.SourcePath, readBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                        readBackgroundTask.Byteswap
+                            ? System.IO.Path.Combine(readBackgroundTask.SourcePath, "+bs")
+                            : readBackgroundTask.SourcePath,
                         readBackgroundTask.DestinationPath, 
                         new Size(readBackgroundTask.Size, Unit.Bytes), readBackgroundTask.Retries,
                         readBackgroundTask.Verify, readBackgroundTask.Force, 0);

@@ -62,7 +62,7 @@
 
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
-            var destinationMediaResult = await commandHelper.GetWritableFileMedia(destinationPath, convertSize, true);
+            var destinationMediaResult = await commandHelper.GetWritableFileMedia(destinationPath, size: convertSize, create: true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);

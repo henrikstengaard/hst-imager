@@ -46,8 +46,8 @@
             OnDebugMessage($"Compatible '{compatibleSize}'");
             
             OnDebugMessage($"Opening '{path}' as writable");
-            
-            var mediaResult = await commandHelper.GetWritableFileMedia(path, mediaSize, true);
+
+            var mediaResult = await commandHelper.GetWritableFileMedia(path, size: mediaSize, create: true);
             if (mediaResult.IsFaulted)
             {
                 return new Result(mediaResult.Error);

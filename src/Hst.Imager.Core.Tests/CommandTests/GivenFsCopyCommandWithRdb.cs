@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Intrinsics.Arm;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Amiga.DataTypes.UaeFsDbs;
@@ -38,7 +39,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                $"{srcPath}/rdb/dh0", destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -90,7 +91,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                $"{srcPath}/rdb/dh0", destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -211,7 +212,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                $"{srcPath}/rdb/dh0", destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -336,7 +337,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                $"{srcPath}/rdb/dh0", destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -392,6 +393,240 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
     }
 
+    [Fact]
+    public async Task When_CopySingleFileInRootFromRdbToRdbNotRecursive_Then_OnlyFileIsCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.None;
+        const bool recursive = false;
+
+        // arrange - test command helper
+        var testCommandHelper = new TestCommandHelper();
+        await testCommandHelper.AddTestMedia(srcPath);
+        await testCommandHelper.AddTestMedia(destPath);
+        var cancellationTokenSource = new CancellationTokenSource();
+
+        // arrange - source disk image file with directories
+        await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+        await CreatePfs3DirectoriesAndFilesWithoutUaeMetadata(testCommandHelper, srcPath);
+        await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+        // arrange - create fs copy command
+        var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(),
+            Path.Combine(srcPath, "rdb", "dh0", "file1"), 
+            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+
+        // act - copy
+        var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - files
+        var entries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+        Assert.Single(entries);
+        Assert.Equal(1, entries.Count(x => x.Type == EntryType.File && x.Name == "file1"));
+    }
+
+    [Fact]
+    public async Task When_CopySingleFileInSubdirectoryFromRdbToRdbRecursive_Then_OnlyFileIsCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.None;
+        const bool recursive = true;
+
+        // arrange - test command helper
+        var testCommandHelper = new TestCommandHelper();
+        await testCommandHelper.AddTestMedia(srcPath);
+        await testCommandHelper.AddTestMedia(destPath);
+        var cancellationTokenSource = new CancellationTokenSource();
+
+        // arrange - source disk image file with directories
+        await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+        await CreatePfs3DirectoriesAndFilesWithoutUaeMetadata(testCommandHelper, srcPath);
+        await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+        // arrange - create fs copy command
+        var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(),
+            Path.Combine(srcPath, "rdb", "dh0", "file2*"),
+            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+
+        // act - copy
+        var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - root directory only contains dir2
+        var rootEntries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+        Assert.Single(rootEntries);
+        Assert.Equal(1, rootEntries.Count(x => x.Type == EntryType.Dir && x.Name == "dir2"));
+
+        // assert - files
+        var subDirectoryEntries = (await ListPfs3Entries(testCommandHelper, destPath, new[] { "dir2" })).ToList();
+        Assert.Single(subDirectoryEntries);
+        Assert.Equal(1, subDirectoryEntries.Count(x => x.Type == EntryType.File && x.Name == "file2"));
+    }
+
+    [Fact]
+    public async Task When_CopySingleFileInRootFromLocalDirectoryToRdbNotRecursive_Then_OnlyFileIsCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}-local";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.None;
+        const bool recursive = false;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+            await testCommandHelper.AddTestMedia(destPath);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - source local file with directories
+            var dir1Path = Path.Combine(srcPath, "dir1");
+            var dir2Path = Path.Combine(srcPath, "dir2");
+            Directory.CreateDirectory(dir1Path);
+            Directory.CreateDirectory(dir2Path);
+            var file1Path = Path.Combine(srcPath, "file1");
+            var file2Path = Path.Combine(dir2Path, "file2");
+            await File.WriteAllTextAsync(file1Path, string.Empty);
+            await File.WriteAllTextAsync(file2Path, string.Empty);
+
+            // arrange - dest formatted disk
+            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "file1"),
+                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - files
+            var entries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+            Assert.Single(entries);
+            Assert.Equal(1, entries.Count(x => x.Type == EntryType.File && x.Name == "file1"));
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopySingleFileInSubdirectoryFromLocalDirectoryToRdbRecursive_Then_OnlyFileIsCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}-local";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.None;
+        const bool recursive = true;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+            await testCommandHelper.AddTestMedia(destPath);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - source local file with directories
+            var dir1Path = Path.Combine(srcPath, "dir1");
+            var dir2Path = Path.Combine(srcPath, "dir2");
+            Directory.CreateDirectory(dir1Path);
+            Directory.CreateDirectory(dir2Path);
+            var file1Path = Path.Combine(srcPath, "file1");
+            var file2Path = Path.Combine(dir2Path, "file2");
+            await File.WriteAllTextAsync(file1Path, string.Empty);
+            await File.WriteAllTextAsync(file2Path, string.Empty);
+
+            // arrange - dest formatted disk
+            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "file2*"),
+                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - root directory only contains dir2
+            var rootEntries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+            Assert.Single(rootEntries);
+            Assert.Equal(1, rootEntries.Count(x => x.Type == EntryType.Dir && x.Name == "dir2"));
+
+            // assert - files
+            var subDirectoryEntries = (await ListPfs3Entries(testCommandHelper, destPath, new[] { "dir2" })).ToList();
+            Assert.Single(subDirectoryEntries);
+            Assert.Equal(1, subDirectoryEntries.Count(x => x.Type == EntryType.File && x.Name == "file2"));
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Theory]
+    [InlineData("rdb\\dh0", ModifierEnum.None, "rdb\\dh0", false)]
+    [InlineData("rdb\\dh0\\+ file.txt", ModifierEnum.None, "rdb\\dh0\\+ file.txt", false)]
+    [InlineData("+bs\\rdb\\dh0", ModifierEnum.ByteSwap, "rdb\\dh0", true)]
+    [InlineData("+bs\\rdb\\dh0\\+ file.txt", ModifierEnum.ByteSwap, "rdb\\dh0\\+ file.txt", true)]
+    public async Task When_ResolveMediaWithImg_Then_PathsAndModifersMatch(string path, ModifierEnum expectedModifiers,
+        string expectedFileSystemPath, bool expectedByteSwap)
+    {
+        var imgPath = Path.GetFullPath($"{Guid.NewGuid()}.img");
+
+        // arrange - test command helper
+        var testCommandHelper = new TestCommandHelper();
+
+        try
+        {
+            // arrange - empty image
+            await File.WriteAllTextAsync(imgPath, string.Empty);
+
+            // act - resolve media
+            var result = testCommandHelper.ResolveMedia(Path.Combine(imgPath, path));
+
+            // assert
+            Assert.True(result.IsSuccess);
+            Assert.Equal(imgPath, result.Value.MediaPath);
+            Assert.Equal(expectedFileSystemPath, result.Value.FileSystemPath);
+            Assert.Equal(expectedModifiers, result.Value.Modifiers);
+            Assert.Equal(expectedByteSwap, result.Value.ByteSwap);
+        }
+        finally
+        {
+            DeletePaths(imgPath);
+        }
+    }
+
+    [Theory]
+    [InlineData("rdb\\dh0", "rdb\\dh0", false)]
+    [InlineData("rdb\\dh0\\+ file.txt", "rdb\\dh0\\+ file.txt", false)]
+    [InlineData("+bs\\rdb\\dh0", "rdb\\dh0", true)]
+    [InlineData("+bs\\rdb\\dh0\\+ file.txt", "rdb\\dh0\\+ file.txt", true)]
+    public void When_ResolveMediaWithPhysicalDrive_Then_PathsAndModifersMatch(string path, string expectedFileSystemPath, bool expectedByteSwap)
+    {
+        var physicalDrivePath = "\\\\.\\PhysicalDrive4";
+
+        // arrange - test command helper
+        var testCommandHelper = new TestCommandHelper();
+
+        // act - resolve media
+        var result = testCommandHelper.ResolveMedia(Path.Combine(physicalDrivePath, path));
+
+        // assert
+        Assert.True(result.IsSuccess);
+        Assert.Equal(physicalDrivePath, result.Value.MediaPath);
+        Assert.Equal(expectedFileSystemPath, result.Value.FileSystemPath);
+        Assert.Equal(expectedByteSwap, result.Value.ByteSwap);
+    }
+
     private static async Task<IEnumerable<UaeFsDbNode>> ReadUaeFsDbNodes(string uaeFsDbPath)
     {
         var uaeFsDbBytes = await File.ReadAllBytesAsync(uaeFsDbPath);
@@ -436,5 +671,46 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         await pfs3Volume.SetProtectionBits("file8+", ProtectionBits.Script);
         await pfs3Volume.SetComment("file8+", "another comment on file8");
         await pfs3Volume.CreateFile("AUX");
+    }
+
+    private async Task CreatePfs3DirectoriesAndFilesWithoutUaeMetadata(TestCommandHelper testCommandHelper, string path)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        if (mediaResult.IsFaulted)
+        {
+            throw new IOException(mediaResult.Error.ToString());
+        }
+
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        await using var pfs3Volume = await MountPfs3Volume(stream);
+        await pfs3Volume.CreateDirectory("dir1");
+        await pfs3Volume.CreateFile("file1");
+        await pfs3Volume.CreateDirectory("dir2");
+        await pfs3Volume.ChangeDirectory("dir2");
+        await pfs3Volume.CreateFile("file2");
+    }
+
+
+    private async Task<IEnumerable<Entry>> ListPfs3Entries(TestCommandHelper testCommandHelper, string path, string[] subDirectories)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        if (mediaResult.IsFaulted)
+        {
+            throw new IOException(mediaResult.Error.ToString());
+        }
+
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        await using var pfs3Volume = await MountPfs3Volume(stream);
+
+        foreach (var subDirectory in subDirectories)
+        {
+            await pfs3Volume.ChangeDirectory(subDirectory);
+        }
+
+        return await pfs3Volume.ListEntries();
     }
 }

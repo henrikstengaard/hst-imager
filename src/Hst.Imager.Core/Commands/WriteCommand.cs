@@ -72,7 +72,7 @@
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
             var destinationMediaResult =
-                await commandHelper.GetPhysicalDriveMedia(physicalDrivesList, destinationPath, true);
+                await commandHelper.GetPhysicalDriveMedia(physicalDrivesList, destinationPath, writeable: true);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);

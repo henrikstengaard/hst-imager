@@ -49,34 +49,45 @@
         public async Task WhenListPhysicalDrivesWithRigidDiskBlockThenListReadIsTriggered()
         {
             var path = $"{Guid.NewGuid()}.img";
-            File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
-            
-            var physicalDrives = new[]
+
+            try
             {
+                File.Copy(Path.Combine("TestData", "rigid-disk-block.img"), path, true);
+
+                var physicalDrives = new[]
+                {
                 new TestPhysicalDrive(path, "Type", "Model", await File.ReadAllBytesAsync(path))
             };
-            var testCommandHelper = new TestCommandHelper();
-            var cancellationTokenSource = new CancellationTokenSource();
-            
-            var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives, false);
-            IEnumerable<MediaInfo> mediaInfos = null;
-            listCommand.ListRead += (_, args) =>
+                var testCommandHelper = new TestCommandHelper();
+                var cancellationTokenSource = new CancellationTokenSource();
+
+                var listCommand = new ListCommand(new NullLogger<ListCommand>(), testCommandHelper, physicalDrives, false);
+                IEnumerable<MediaInfo> mediaInfos = null;
+                listCommand.ListRead += (_, args) =>
+                {
+                    mediaInfos = args?.MediaInfos;
+                };
+                var result = await listCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+
+                var mediaInfosList = mediaInfos.ToList();
+                Assert.Single(mediaInfosList);
+
+                var mediaInfo = mediaInfosList.First();
+
+                Assert.Equal(path, mediaInfo.Path);
+                Assert.Equal(Media.MediaType.Raw, mediaInfo.Type);
+                Assert.True(mediaInfo.IsPhysicalDrive);
+                Assert.Equal("Model", mediaInfo.Name);
+                Assert.Equal(131072, mediaInfo.DiskSize);
+            }
+            finally
             {
-                mediaInfos = args?.MediaInfos;
-            };
-            var result = await listCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(result.IsSuccess);
-
-            var mediaInfosList = mediaInfos.ToList();
-            Assert.Single(mediaInfosList);
-
-            var mediaInfo = mediaInfosList.First();
-            
-            Assert.Equal(path, mediaInfo.Path);
-            Assert.Equal(Media.MediaType.Raw, mediaInfo.Type);
-            Assert.True(mediaInfo.IsPhysicalDrive);
-            Assert.Equal("Model", mediaInfo.Name);
-            Assert.Equal(131072, mediaInfo.DiskSize);
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
         }
     }
 }

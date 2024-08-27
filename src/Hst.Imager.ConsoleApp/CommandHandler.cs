@@ -40,7 +40,7 @@ namespace Hst.Imager.ConsoleApp
 
         private static ICommandHelper GetCommandHelper()
         {
-            return new CommandHelper(User.IsAdministrator);
+            return new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator);
         }
 
         private static async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)

@@ -23,7 +23,7 @@ public class GivenVhdMedia
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - create 100mb vha file media
-            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, 100.MB(), create: true);
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: 100.MB(), create: true);
             
             // act - write sectors in descending order
             using (var media = mediaResult.Value)

@@ -326,7 +326,7 @@ public abstract class FsCommandBase : CommandBase
                 new Error($"Partition table not found in path '{mediaResult.FileSystemPath}'"));
         }
 
-        var media = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath);
+        var media = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath, mediaResult.Modifiers);
         if (media.IsFaulted)
         {
             return new Result<IEntryIterator>(media.Error);
@@ -468,7 +468,7 @@ public abstract class FsCommandBase : CommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 
-        var media = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath);
+        var media = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
         if (media.IsFaulted)
         {
             return new Result<IEntryWriter>(media.Error);

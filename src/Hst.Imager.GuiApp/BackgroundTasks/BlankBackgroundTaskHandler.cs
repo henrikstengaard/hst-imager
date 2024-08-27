@@ -42,7 +42,7 @@
                     PercentComplete = 50,
                 }, context.Token);
 
-                var commandHelper = new CommandHelper(appState.IsAdministrator);
+                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var blankCommand = new BlankCommand(loggerFactory.CreateLogger<BlankCommand>(), commandHelper, blankBackgroundTask.Path,
                      new Size(blankBackgroundTask.Size, Unit.Bytes), blankBackgroundTask.CompatibleSize);
 

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests;
@@ -11,14 +12,14 @@ public class GivenCommandHelperAndPathsToResolve
     [Fact]
     public void WhenResolveMediaWithByteSwapModifierThenModifierIsDetected()
     {
-        var path = "\\disk2+bs";
-        var commandHelper = new CommandHelper(false);
+        var path = "\\disk2\\+bs";
+        var commandHelper = new CommandHelper(new NullLogger<ICommandHelper>(), false);
 
         var mediaResult = commandHelper.ResolveMedia(path);
         Assert.True(mediaResult.IsSuccess);
 
         var resolvedMedia = mediaResult.Value;
-        Assert.Equal("\\\\.\\PhysicalDrive2+bs", resolvedMedia.MediaPath);
+        Assert.Equal("\\\\.\\PhysicalDrive2", resolvedMedia.MediaPath);
         Assert.Equal(string.Empty, resolvedMedia.FileSystemPath);
         Assert.True(resolvedMedia.ByteSwap);
     }
@@ -46,10 +47,10 @@ public class GivenCommandHelperAndPathsToResolve
 
         try
         {
-            var commandHelper = new CommandHelper(false);
+            var commandHelper = new CommandHelper(new NullLogger<ICommandHelper>(), false);
 
             // act - get file media byte swapped
-            var mediaResult = await commandHelper.GetReadableFileMedia($"{path}+bs");
+            var mediaResult = await commandHelper.GetReadableFileMedia(Path.Combine(path, "+bs"));
             using var media = mediaResult.Value;
             var stream = media.Stream;
 
