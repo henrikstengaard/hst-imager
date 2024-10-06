@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lzx;
+using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class LzxArchiveEntryIterator : IEntryIterator
@@ -169,7 +170,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
             var protectionBits = GetProtectionBits(lzxEntry.Attributes);
             var properties = new Dictionary<string, string>
             {
-                { "ProtectionBits", lzxEntry.Attributes.ToString() }
+                { "ProtectionBits", ((int)protectionBits ^ 0xf).ToString() }
             };
             if (!string.IsNullOrEmpty(lzxEntry.Comment))
             {
@@ -271,5 +272,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
     public Task Flush()
     {
         return Task.CompletedTask;
-    }    
+    }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

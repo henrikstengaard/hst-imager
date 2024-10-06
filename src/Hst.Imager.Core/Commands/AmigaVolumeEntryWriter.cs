@@ -81,9 +81,15 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
             if (i == fullPathComponents.Length - 1)
             {
-                if (!skipAttributes)
+                if (!skipAttributes && entry.Properties.ContainsKey("ProtectionBits"))
                 {
-                    await fileSystemVolume.SetProtectionBits(part, GetProtectionBits(entry.Attributes));
+                    if (!int.TryParse(entry.Properties["ProtectionBits"], out var protectionBitsValue))
+                    {
+                        protectionBitsValue = 0;
+                    }
+
+                    var protectionBits = ProtectionBitsConverter.ToProtectionBits(protectionBitsValue);
+                    await fileSystemVolume.SetProtectionBits(part, protectionBits);
                 }
 
                 if (entry.Date.HasValue)
@@ -166,9 +172,15 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                  0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
-        if (!skipAttributes)
+        if (!skipAttributes && entry.Properties.ContainsKey("ProtectionBits"))
         {
-            await fileSystemVolume.SetProtectionBits(fileName, GetProtectionBits(entry.Attributes));
+            if (!int.TryParse(entry.Properties["ProtectionBits"], out var protectionBitsValue))
+            {
+                protectionBitsValue = 0;
+            }
+
+            var protectionBits = ProtectionBitsConverter.ToProtectionBits(protectionBitsValue);
+            await fileSystemVolume.SetProtectionBits(fileName, protectionBits);
         }
 
         if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
@@ -208,48 +220,5 @@ public class AmigaVolumeEntryWriter : IEntryWriter
     public async Task Flush()
     {
         await this.fileSystemVolume.Flush();
-    }
-
-    private ProtectionBits GetProtectionBits(string attributes)
-    {
-        if (string.IsNullOrWhiteSpace(attributes))
-        {
-            return ProtectionBits.Read | ProtectionBits.Write | ProtectionBits.Executable | ProtectionBits.Delete;
-        }
-
-        var protectionBits = ProtectionBits.None;
-
-        foreach (var attribute in attributes)
-        {
-            switch (attribute)
-            {
-                case 'H':
-                    protectionBits |= ProtectionBits.HeldResident;
-                    break;
-                case 'S':
-                    protectionBits |= ProtectionBits.Script;
-                    break;
-                case 'P':
-                    protectionBits |= ProtectionBits.Pure;
-                    break;
-                case 'A':
-                    protectionBits |= ProtectionBits.Archive;
-                    break;
-                case 'R':
-                    protectionBits |= ProtectionBits.Read;
-                    break;
-                case 'W':
-                    protectionBits |= ProtectionBits.Write;
-                    break;
-                case 'E':
-                    protectionBits |= ProtectionBits.Executable;
-                    break;
-                case 'D':
-                    protectionBits |= ProtectionBits.Delete;
-                    break;
-            }
-        }
-
-        return protectionBits;
     }
 }

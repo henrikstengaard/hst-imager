@@ -25,7 +25,7 @@ public class DirectoryEntryWriter : IEntryWriter
         this.path = path;
         this.buffer = new byte[4096];
         this.logs = new List<string>();
-        this.cache = new MemoryCache("UAE_METADATA");
+        this.cache = new MemoryCache($"{nameof(DirectoryEntryWriter)}_CACHE");
         this.cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
     }
 
@@ -49,6 +49,11 @@ public class DirectoryEntryWriter : IEntryWriter
     
     private async Task<string> CreateUaeEntryPath(Entry entry, string[] entryPathComponents)
     {
+        if (entryPathComponents.Length == 0)
+        {
+            return string.Empty;
+        }
+
         var cacheKey = string.Join("|", entryPathComponents);
         
         var uaeCacheEntry = cache.Get(cacheKey) as UaeCacheEntry;
@@ -58,16 +63,11 @@ public class DirectoryEntryWriter : IEntryWriter
             return uaeCacheEntry.UaeEntryPath;
         }
 
-        if (entryPathComponents.Length <= 1)
-        {
-            return string.Empty;
-        }
-        
         var uaeEntryPath = string.Empty;
 
         var uaeEntryPathComponents = new List<string>();
         
-        foreach (var entryPathComponent in entryPathComponents) // .Take(entryPathComponents.Length - 1)
+        foreach (var entryPathComponent in entryPathComponents)
         {
             cacheKey = string.Join("|", uaeEntryPathComponents.Concat(new []{entryPathComponent}));
         
@@ -135,7 +135,7 @@ public class DirectoryEntryWriter : IEntryWriter
 
     private async Task<string> ReadNormalNameFromUaeFsDb(string path, string amigaName)
     {
-        var uaeFsDbPath = Path.Combine(path, "_UAEFSDB.___");
+        var uaeFsDbPath = Path.Combine(path, Constants.UaeFsDbFileName);
 
         if (!File.Exists(uaeFsDbPath))
         {
@@ -144,21 +144,9 @@ public class DirectoryEntryWriter : IEntryWriter
 
         await using var stream = new FileStream(uaeFsDbPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
 
-        while (stream.Length >= Constants.UaeFsDbNodeVersion1Size && stream.Position < stream.Length)
-        {
-            var nodeBytes = await stream.ReadBytes(Constants.UaeFsDbNodeVersion1Size);
+        var nodes = await UaeFsDbReader.ReadFromStream(stream);
 
-            var node = UaeFsDbReader.Read(nodeBytes);
-
-            if (!node.AmigaName.Equals(amigaName))
-            {
-                continue;
-            }
-
-            return node.NormalName;
-        }
-
-        return null;
+        return nodes.FirstOrDefault(node => node.AmigaName.Equals(amigaName))?.NormalName;
     }
 
     public async Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
@@ -169,11 +157,6 @@ public class DirectoryEntryWriter : IEntryWriter
         }
 
         var entryPath = await GetEntryPath(entry, entryPathComponents.Take(entryPathComponents.Length - 1).ToArray());
-
-        //if (string.IsNullOrEmpty(entryPath))
-        //{
-        //    return;
-        //}
 
         var fullPath = Path.Combine(path, entryPath);
         if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))

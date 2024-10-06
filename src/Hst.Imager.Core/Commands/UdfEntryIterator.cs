@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Udf;
 using Hst.Imager.Core.Models.FileSystems;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -227,4 +228,6 @@ public class UdfEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

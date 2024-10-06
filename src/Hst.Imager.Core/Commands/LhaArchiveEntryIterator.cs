@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lha;
+using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class LhaArchiveEntryIterator : IEntryIterator
@@ -192,7 +193,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
             var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute);
             var properties = new Dictionary<string, string>
             {
-                { "ProtectionBits", lhaEntry.Attribute.ToString() }
+                { "ProtectionBits", ((int)protectionBits ^ 0xf).ToString() }
             };
             var comment = GetEntryComment(lhaEntry.Name);
             if (!string.IsNullOrEmpty(comment))
@@ -270,4 +271,6 @@ public class LhaArchiveEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

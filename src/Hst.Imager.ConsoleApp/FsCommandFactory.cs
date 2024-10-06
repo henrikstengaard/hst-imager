@@ -105,14 +105,20 @@ public static class FsCommandFactory
             description: "Quiet mode.",
             getDefaultValue: () => false);
 
+        var uaeMetadataOption = new Option<UaeMetadata>(
+            new[] { "--uaemetadata", "-uae" },
+            description: "Type of UAE metadata to read and write.",
+            getDefaultValue: () => UaeMetadata.UaeFsDb);
+
         var command = new Command("extract", "Extract files or subdirectories from source to destination.");
         command.AddAlias("x");
-        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption);
+        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
         command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
+        command.AddOption(uaeMetadataOption);
 
         return command;
     }

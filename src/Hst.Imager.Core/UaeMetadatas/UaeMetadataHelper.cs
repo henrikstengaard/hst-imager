@@ -99,12 +99,12 @@ public static class UaeMetadataHelper
         var hasNode = false;
         UaeFsDbNode node = null;
 
-        while (stream.Length >= Constants.UaeFsDbNodeVersion1Size && stream.Position < stream.Length)
+        while (stream.Length >= Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size && stream.Position < stream.Length)
         {
             var position = stream.Position;
-            var nodeBytes = await stream.ReadBytes(Constants.UaeFsDbNodeVersion1Size);
+            var nodeBytes = await stream.ReadBytes(Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size);
 
-            node = UaeFsDbReader.Read(nodeBytes);
+            node = UaeFsDbReader.ReadFromBytes(nodeBytes);
 
             if (!node.AmigaName.Equals(amigaName))
             {
@@ -152,8 +152,37 @@ public static class UaeMetadataHelper
 
         var uaeMetafileBytes = UaeMetafileWriter.Build(uaeMetafile);
 
-        var uaeMetafilePath = Path.Combine(dirPath, string.Concat(Path.GetFileNameWithoutExtension(normalName), ".uaem"));
+        var uaeMetafilePath = Path.Combine(dirPath, string.Concat(Path.GetFileNameWithoutExtension(normalName),
+            Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
 
         await File.WriteAllBytesAsync(uaeMetafilePath, uaeMetafileBytes);
+    }
+
+    /// <summary>
+    /// Entry iterator supports uae metadata.
+    /// </summary>
+    /// <param name="entryIterator">Entry iterator.</param>
+    /// <returns>True, if entry iterator supports reading uae metadata.</returns>
+    public static bool EntryIteratorSupportsUaeMetadata(IEntryIterator entryIterator)
+    {
+        return entryIterator switch
+        {
+            AmigaVolumeEntryIterator _ or DirectoryEntryIterator _ or LhaArchiveEntryIterator _ or LzxArchiveEntryIterator _ => true,
+            _ => false,
+        };
+    }
+
+    /// <summary>
+    /// Entry writer supports uae metadata
+    /// </summary>
+    /// <param name="entryWriter">Entry writer.</param>
+    /// <returns>True, if entry writer supports writing uae metadata.</returns>
+    public static bool EntryWriterSupportsUaeMetadata(IEntryWriter entryWriter)
+    {
+        return entryWriter switch
+        {
+            AmigaVolumeEntryWriter _ or DirectoryEntryWriter _ => true,
+            _ => false,
+        };
     }
 }

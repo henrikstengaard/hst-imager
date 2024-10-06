@@ -503,10 +503,10 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
+        public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet, UaeMetadata uaeMetadata)
         {
             var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet);
+                await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata);
             await Execute(command);
         }
         

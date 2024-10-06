@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Hst.Imager.Core.UaeMetadatas;
 using Models.FileSystems;
 
 public class FileEntryIterator : IEntryIterator
@@ -80,4 +81,6 @@ public class FileEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

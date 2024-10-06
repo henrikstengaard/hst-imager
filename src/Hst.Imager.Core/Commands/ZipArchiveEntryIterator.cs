@@ -7,6 +7,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using EntryType = Models.FileSystems.EntryType;
 
@@ -263,4 +264,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

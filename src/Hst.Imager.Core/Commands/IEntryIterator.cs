@@ -1,5 +1,6 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+using Hst.Imager.Core.UaeMetadatas;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -14,4 +15,5 @@ public interface IEntryIterator : IDisposable
     string[] GetPathComponents(string path);
     bool UsesPattern { get; }
     Task Flush();
+    UaeMetadata UaeMetadata { get; set; }
 }

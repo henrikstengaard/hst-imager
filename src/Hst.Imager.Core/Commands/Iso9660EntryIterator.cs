@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Iso9660;
+using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class Iso9660EntryIterator : IEntryIterator
@@ -227,4 +228,6 @@ public class Iso9660EntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

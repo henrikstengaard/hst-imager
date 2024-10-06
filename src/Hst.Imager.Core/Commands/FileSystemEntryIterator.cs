@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Ext;
 using DiscUtils.Fat;
+using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
@@ -96,31 +97,6 @@ public class FileSystemEntryIterator : IEntryIterator
             }
         } while (nextEntries.Count > 0 && skipEntry);
 
-
-        //if (this.pathComponentMatcher.UsesPattern)
-        //{
-        //    do
-        //    {
-        //        if (this.nextEntries.Count <= 0)
-        //        {
-        //            return Task.FromResult(false);
-        //        }
-
-        //        currentEntry = this.nextEntries.Pop();
-        //        if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
-        //        {
-        //            EnqueueDirectory(currentEntry.FullPathComponents);
-        //        }
-        //    } while (currentEntry.Type == Models.FileSystems.EntryType.Dir);
-        //}
-        //else
-        //{
-        //    currentEntry = this.nextEntries.Pop();
-        //    if (this.recursive && currentEntry.Type == Models.FileSystems.EntryType.Dir)
-        //    {
-        //        EnqueueDirectory(currentEntry.FullPathComponents);
-        //    }
-        //}
 
         return Task.FromResult(true);
     }
@@ -359,4 +335,6 @@ public class FileSystemEntryIterator : IEntryIterator
 
         return !pathComponentMatcher.IsMatch(pathComponents);
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

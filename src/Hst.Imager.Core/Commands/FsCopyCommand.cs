@@ -36,26 +36,6 @@ public class FsCopyCommand : FsCommandBase
         this.uaeMetadata = uaeMetadata;
     }
 
-    // src provides uae metadata
-    private static bool SrcRequiresUaeMetadata(IEntryIterator srcEntryIterator)
-    {
-        return srcEntryIterator switch
-        {
-            AmigaVolumeEntryIterator _ or LhaArchiveEntryIterator _ or LzxArchiveEntryIterator _ => true,
-            _ => false,
-        };
-    }
-
-    // dest writes uae metadata 
-    private static bool DestWritesUaeMetadata(IEntryWriter entryWriter)
-    {
-        return entryWriter switch
-        {
-            DirectoryEntryWriter _ => true,
-            _ => false,
-        };
-    }
-
     public override async Task<Result> Execute(CancellationToken token)
     {
         OnInformationMessage($"Copying from source Path '{srcPath}' to destination path '{destPath}'");
@@ -76,12 +56,11 @@ public class FsCopyCommand : FsCommandBase
             return new Result(srcEntryIteratorResult.Error);
         }
 
-        var srcRequiresUaeMetadata = SrcRequiresUaeMetadata(srcEntryIteratorResult.Value);
-        var destWritesUaeMetadata = DestWritesUaeMetadata(destEntryWriterResult.Value);
+        var supportsUaeMetadata = UaeMetadataHelper.EntryIteratorSupportsUaeMetadata(srcEntryIteratorResult.Value) &&
+            UaeMetadataHelper.EntryWriterSupportsUaeMetadata(destEntryWriterResult.Value);
 
-        var destSupportUaeMetadata = srcRequiresUaeMetadata && destWritesUaeMetadata;
-
-        destEntryWriterResult.Value.UaeMetadata = destSupportUaeMetadata ? uaeMetadata : UaeMetadata.None;
+        srcEntryIteratorResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
+        destEntryWriterResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
 
         // iterate through source entries and write in destination
         var count = 0;

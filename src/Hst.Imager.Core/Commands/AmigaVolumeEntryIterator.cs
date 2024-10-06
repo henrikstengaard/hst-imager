@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
+using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -242,4 +243,6 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
         return !patternMatcher.IsMatch(name);
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }

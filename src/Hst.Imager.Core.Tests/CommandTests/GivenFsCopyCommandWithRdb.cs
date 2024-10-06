@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Intrinsics.Arm;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Amiga.DataTypes.UaeMetafiles;
 using Hst.Amiga.FileSystems;
+using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.UaeMetadatas;
@@ -627,6 +627,403 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         Assert.Equal(expectedByteSwap, result.Value.ByteSwap);
     }
 
+    [Fact]
+    public async Task When_CopyFilesFromLocalDirectoryToRdbWithUaeFsDbVersion1_Then_UaeMetadataIsRead()
+    {
+        var srcPath = $"{Guid.NewGuid()}-local";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+            await testCommandHelper.AddTestMedia(srcPath);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            Directory.CreateDirectory(srcPath);
+            var file1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file1\\");
+            var file1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, file1SafeName);
+            var file2SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file2*");
+            var file2NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, file2SafeName);
+            var dir1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("dir1*");
+            var dir1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, dir1SafeName);
+            var dir1Path = Path.Combine(srcPath, dir1NormalName);
+            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3:");
+            var file3NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(dir1Path, file3SafeName);
+
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty);
+            Directory.CreateDirectory(dir1Path);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty);
+
+            var files = Directory.GetFiles(srcPath);
+            var dirs = Directory.GetDirectories(srcPath);
+
+            // arrange - create uaefsdb version 1 nodes for file1, file2 and dir1 in src directory
+            var uaeFsDbPath = Path.Combine(srcPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+            using (var uaeFsDbStream = File.OpenWrite(uaeFsDbPath))
+            {
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file1\\",
+                    NormalName = file1NormalName,
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Script),
+                    Comment = "file1 comment"
+                }));
+
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file2*",
+                    NormalName = file2NormalName,
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Write),
+                    Comment = "file2 comment"
+                }));
+
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "dir1*",
+                    NormalName = dir1NormalName,
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                    Comment = "dir1 comment"
+                }));
+            }
+
+            // arrange - create uaefsdb version 1 nodes for file1, file2 and dir1 in src directory
+            var dir1UaeFsDbPath = Path.Combine(dir1Path, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+            using (var uaeFsDbStream = File.OpenWrite(dir1UaeFsDbPath))
+            {
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file3:",
+                    NormalName = file3NormalName,
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Script),
+                    Comment = "file3 comment"
+                }));
+            }
+
+            files = Directory.GetFiles(srcPath, "*", SearchOption.AllDirectories);
+            dirs = Directory.GetDirectories(srcPath, "*", SearchOption.AllDirectories);
+
+            // arrange - create destination disk image file
+            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - root directories and files copied from local to rdb has amiga names from uae metadata
+            var actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+            Assert.Equal(3, actualEntries.Count);
+
+            // dir1
+            var dir1Entry = actualEntries.FirstOrDefault(x => x.Name == "dir1*");
+            Assert.NotNull(dir1Entry);
+            Assert.Equal(ProtectionBits.Read, dir1Entry.ProtectionBits);
+            Assert.Equal("dir1 comment", dir1Entry.Comment);
+
+            // assert - file1
+            var file1Entry = actualEntries.FirstOrDefault(x => x.Name == "file1\\");
+            Assert.NotNull(file1Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Script, file1Entry.ProtectionBits);
+            Assert.Equal("file1 comment", file1Entry.Comment);
+
+            // assert - file2
+            var file2Entry = actualEntries.FirstOrDefault(x => x.Name == "file2*");
+            Assert.NotNull(file2Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Write, file2Entry.ProtectionBits);
+            Assert.Equal("file2 comment", file2Entry.Comment);
+
+            // assert - dir1 directories and files copied from local to rdb has amiga names from uae metadata
+            actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, new[] { "dir1*" })).ToList();
+            Assert.Single(actualEntries);
+
+            // assert - file3
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            Assert.NotNull(file3Entry);
+            Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
+            Assert.Equal("file3 comment", file3Entry.Comment);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyFilesFromLocalDirectoryToRdbWithUaeFsDbVersion2_Then_UaeMetadataIsRead()
+    {
+        // skip test, if not windows operating system
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var currentDriveName = Directory.GetCurrentDirectory().Substring(0, 3);
+
+        var currentNtfsDrive = DriveInfo.GetDrives().FirstOrDefault(x => x.Name == currentDriveName && x.DriveFormat.Equals("NTFS", StringComparison.OrdinalIgnoreCase));
+
+        // skip test, if current drive is not using NTFS filesystem
+        if (currentNtfsDrive == null)
+        {
+            return;
+        }
+
+        var srcPath = $"{Guid.NewGuid()}-local";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+            await testCommandHelper.AddTestMedia(srcPath);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            Directory.CreateDirectory(srcPath);
+            var file1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file1\\");
+            var file1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, file1SafeName);
+            var file2SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file2*");
+            var file2NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, file2SafeName);
+            var dir1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("dir1*");
+            var dir1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, dir1SafeName);
+            var dir1Path = Path.Combine(srcPath, dir1NormalName);
+            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3:");
+            var file3NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(dir1Path, file3SafeName);
+
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty);
+            Directory.CreateDirectory(dir1Path);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty);
+
+            // arrange - create file1 alternative stream with uaefsdb version 2
+            var file1UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(srcPath, file1NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
+            await File.WriteAllBytesAsync(file1UaeFsDbAlternateStreamPath, UaeFsDbWriter.Build(new UaeFsDbNode
+            {
+                Version = UaeFsDbNode.NodeVersion.Version2,
+                Valid = 1,
+                AmigaName = "file1\\",
+                NormalName = file1NormalName,
+                Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Script),
+                Comment = "file1 comment"
+            }));
+
+            // arrange - create file2 alternative stream with uaefsdb version 2
+            var file2UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(srcPath, file2NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
+            await File.WriteAllBytesAsync(file2UaeFsDbAlternateStreamPath, UaeFsDbWriter.Build(new UaeFsDbNode
+            {
+                Version = UaeFsDbNode.NodeVersion.Version2,
+                Valid = 1,
+                AmigaName = "file2*",
+                NormalName = file2NormalName,
+                Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Write),
+                Comment = "file2 comment"
+            }));
+
+            // arrange - create dir1 alternative stream with uaefsdb version 2
+            var dir1UaeFsDbAlternateStreamPath = string.Concat(dir1Path, $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
+            await File.WriteAllBytesAsync(dir1UaeFsDbAlternateStreamPath, UaeFsDbWriter.Build(new UaeFsDbNode
+            {
+                Version = UaeFsDbNode.NodeVersion.Version2,
+                Valid = 1,
+                AmigaName = "dir1*",
+                NormalName = dir1NormalName,
+                Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                Comment = "dir1 comment"
+            }));
+
+            // arrange - create file3 alternative stream with uaefsdb version 2
+            var file3UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(dir1Path, file3NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
+            await File.WriteAllBytesAsync(file3UaeFsDbAlternateStreamPath, UaeFsDbWriter.Build(new UaeFsDbNode
+            {
+                Version = UaeFsDbNode.NodeVersion.Version2,
+                Valid = 1,
+                AmigaName = "file3:",
+                NormalName = file3NormalName,
+                Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Script),
+                Comment = "file3 comment"
+            }));
+
+            // arrange - create destination disk image file
+            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - root directories and files copied from local to rdb has amiga names from uae metadata
+            var actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+            Assert.Equal(3, actualEntries.Count);
+
+            // dir1
+            var dir1Entry = actualEntries.FirstOrDefault(x => x.Name == "dir1*");
+            Assert.NotNull(dir1Entry);
+            Assert.Equal(ProtectionBits.Read, dir1Entry.ProtectionBits);
+            Assert.Equal("dir1 comment", dir1Entry.Comment);
+
+            // assert - file1
+            var file1Entry = actualEntries.FirstOrDefault(x => x.Name == "file1\\");
+            Assert.NotNull(file1Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Script, file1Entry.ProtectionBits);
+            Assert.Equal("file1 comment", file1Entry.Comment);
+
+            // assert - file2
+            var file2Entry = actualEntries.FirstOrDefault(x => x.Name == "file2*");
+            Assert.NotNull(file2Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Write, file2Entry.ProtectionBits);
+            Assert.Equal("file2 comment", file2Entry.Comment);
+
+            // assert - dir1 directories and files copied from local to rdb has amiga names from uae metadata
+            actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, new[] { "dir1*" })).ToList();
+            Assert.Single(actualEntries);
+
+            // assert - file3
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            Assert.NotNull(file3Entry);
+            Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
+            Assert.Equal("file3 comment", file3Entry.Comment);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyFilesFromLocalDirectoryToRdbWithUaeMetafile_Then_UaeMetadataIsRead()
+    {
+        var srcPath = $"{Guid.NewGuid()}-local";
+        var destPath = $"{Guid.NewGuid()}.vhd";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeMetafile;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+            await testCommandHelper.AddTestMedia(srcPath);
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            var date = new DateTime(2024, 1, 1, 12, 0, 0, DateTimeKind.Local);
+            Directory.CreateDirectory(srcPath);
+            var file1EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file1\\");
+            var file2EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file2*");
+            var dir1EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("dir1*");
+            var dir1Path = Path.Combine(srcPath, dir1EncodedName);
+            var file3EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file3:");
+
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1EncodedName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2EncodedName), string.Empty);
+            Directory.CreateDirectory(dir1Path);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3EncodedName), string.Empty);
+
+            // arrange - create file1 uae metafile
+            var file1UaeMetafilePath = Path.Combine(srcPath, string.Concat(file1EncodedName,
+                Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
+            await File.WriteAllBytesAsync(file1UaeMetafilePath, UaeMetafileWriter.Build(new UaeMetafile
+            {
+                Date = date,
+                Comment = "file1 comment",
+                ProtectionBits = "-S--R---"
+            }));
+
+            // arrange - create file2 uae metafile
+            var file2UaeMetafilePath = Path.Combine(srcPath, string.Concat(file2EncodedName,
+                Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
+            await File.WriteAllBytesAsync(file2UaeMetafilePath, UaeMetafileWriter.Build(new UaeMetafile
+            {
+                Date = date,
+                Comment = "file2 comment",
+                ProtectionBits = "----RW--"
+            }));
+
+            // arrange - create dir1 uae metafile
+            var dir1UaeMetafilePath = Path.Combine(srcPath, string.Concat(dir1EncodedName,
+                Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
+            await File.WriteAllBytesAsync(dir1UaeMetafilePath, UaeMetafileWriter.Build(new UaeMetafile
+            {
+                Date = date,
+                Comment = "dir1 comment",
+                ProtectionBits = "----R---"
+            }));
+
+            // arrange - create file3 uae metafile
+            var file3UaeMetafilePath = Path.Combine(dir1Path, string.Concat(file3EncodedName,
+                Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
+            await File.WriteAllBytesAsync(file3UaeMetafilePath, UaeMetafileWriter.Build(new UaeMetafile
+            {
+                Date = date,
+                Comment = "file3 comment",
+                ProtectionBits = "-S------"
+            }));
+
+            // arrange - create destination disk image file
+            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - root directories and files copied from local to rdb has amiga names from uae metadata
+            var actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, Array.Empty<string>())).ToList();
+            Assert.Equal(3, actualEntries.Count);
+
+            // dir1
+            var dir1Entry = actualEntries.FirstOrDefault(x => x.Name == "dir1*");
+            Assert.NotNull(dir1Entry);
+            Assert.Equal(ProtectionBits.Read, dir1Entry.ProtectionBits);
+            Assert.Equal("dir1 comment", dir1Entry.Comment);
+
+            // assert - file1
+            var file1Entry = actualEntries.FirstOrDefault(x => x.Name == "file1\\");
+            Assert.NotNull(file1Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Script, file1Entry.ProtectionBits);
+            Assert.Equal("file1 comment", file1Entry.Comment);
+
+            // assert - file2
+            var file2Entry = actualEntries.FirstOrDefault(x => x.Name == "file2*");
+            Assert.NotNull(file2Entry);
+            Assert.Equal(ProtectionBits.Read | ProtectionBits.Write, file2Entry.ProtectionBits);
+            Assert.Equal("file2 comment", file2Entry.Comment);
+
+            // assert - dir1 directories and files copied from local to rdb has amiga names from uae metadata
+            actualEntries = (await ListPfs3Entries(testCommandHelper, destPath, new[] { "dir1*" })).ToList();
+            Assert.Single(actualEntries);
+
+            // assert - file3
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            Assert.NotNull(file3Entry);
+            Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
+            Assert.Equal("file3 comment", file3Entry.Comment);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+
     private static async Task<IEnumerable<UaeFsDbNode>> ReadUaeFsDbNodes(string uaeFsDbPath)
     {
         var uaeFsDbBytes = await File.ReadAllBytesAsync(uaeFsDbPath);
@@ -634,7 +1031,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         var offset = 0;
         while (offset + Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size <= uaeFsDbBytes.Length)
         {
-            uaeFsDbNodes.Add(UaeFsDbReader.Read(uaeFsDbBytes, offset));
+            uaeFsDbNodes.Add(UaeFsDbReader.ReadFromBytes(uaeFsDbBytes, offset));
             offset += Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size;
         }
 
@@ -691,7 +1088,6 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         await pfs3Volume.ChangeDirectory("dir2");
         await pfs3Volume.CreateFile("file2");
     }
-
 
     private async Task<IEnumerable<Entry>> ListPfs3Entries(TestCommandHelper testCommandHelper, string path, string[] subDirectories)
     {

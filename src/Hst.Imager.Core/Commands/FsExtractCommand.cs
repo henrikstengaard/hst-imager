@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 using Hst.Core;
+using Hst.Imager.Core.UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
@@ -20,9 +21,11 @@ public class FsExtractCommand : FsCommandBase
     private readonly bool recursive;
     private readonly bool skipAttributes;
     private readonly bool quiet;
+    private readonly UaeMetadata uaeMetadata;
 
     public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet)
+        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, 
+        bool skipAttributes, bool quiet, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
@@ -31,6 +34,7 @@ public class FsExtractCommand : FsCommandBase
         this.recursive = recursive;
         this.skipAttributes = skipAttributes;
         this.quiet = quiet;
+        this.uaeMetadata = uaeMetadata;
     }
 
     public override async Task<Result> Execute(CancellationToken token)
@@ -52,6 +56,12 @@ public class FsExtractCommand : FsCommandBase
         {
             return new Result(destEntryWriterResult.Error);
         }
+
+        var supportsUaeMetadata = UaeMetadataHelper.EntryIteratorSupportsUaeMetadata(srcEntryIteratorResult.Value) &&
+            UaeMetadataHelper.EntryWriterSupportsUaeMetadata(destEntryWriterResult.Value);
+
+        srcEntryIteratorResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
+        destEntryWriterResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
 
         // iterate through source entries and write in destination
         var count = 0;

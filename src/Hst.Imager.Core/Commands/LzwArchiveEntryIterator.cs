@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Hst.Imager.Core.UaeMetadatas;
 using ICSharpCode.SharpZipLib.Lzw;
 using Models.FileSystems;
 
@@ -87,4 +88,6 @@ public class LzwArchiveEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public UaeMetadata UaeMetadata { get; set; }
 }
