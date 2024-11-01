@@ -170,11 +170,14 @@ public class GivenFsExtractCommandWithLzx : FsCommandTestBase
     [Fact]
     public async Task WhenExtractingAFileFromLzxToLocalDirectoryThenFileIsExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lzx", "xpk_compress.lzx");
+        var lzxPath = Path.Combine("TestData", "Lzx", "xpk_compress.lzx");
+        var srcPath = $"{Guid.NewGuid()}.lzx";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lzxPath, srcPath, true);
+
             var fakeCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -198,7 +201,7 @@ public class GivenFsExtractCommandWithLzx : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
     

@@ -42,3 +42,10 @@ https://blogs.oracle.com/linux/post/understanding-ext4-disk-layout-part-1
 https://www.kernel.org/doc/html/latest/filesystems/ext4/globals.html
 
 https://en.wikipedia.org/wiki/GUID_Partition_Table
+
+
+https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
+
+https://www.partitionwizard.com/partitionmanager/ext2-vs-ext3-vs-ext4.html
+
+https://github.com/nickdu088/SharpExt4

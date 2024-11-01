@@ -18,6 +18,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
+        const bool recursive = true;
 
         try
         {
@@ -30,33 +31,28 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
 
-            // assert - 4 files was extracted
-            Assert.Equal(4, files.Length);
+            // assert - 5 files was extracted
+            Assert.Equal(5, files.Length);
 
-            // assert - file1.txt file was extracted
-            var file1 = Path.Combine(destPath, "file1.txt");
-            Assert.Equal(file1, files.FirstOrDefault(x => x.Equals(file1, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - file2.txt file was extracted
-            var file2 = Path.Combine(destPath, "file2.txt");
-            Assert.Equal(file2, files.FirstOrDefault(x => x.Equals(file2, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - file3.txt file was extracted
-            var file3 = Path.Combine(destPath, "dir1", "file3.txt");
-            Assert.Equal(file3, files.FirstOrDefault(x => x.Equals(file3, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - test.txt file was extracted
-            var test = Path.Combine(destPath, "dir1", "test.txt");
-            Assert.Equal(test, files.FirstOrDefault(x => x.Equals(test, StringComparison.OrdinalIgnoreCase)));
+            // assert - files are extracted
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "dir1", "dir2", "file4.txt"),
+                Path.Combine(destPath, "dir1", "file3.txt"),
+                Path.Combine(destPath, "dir1", "test.txt"),
+                Path.Combine(destPath, "file1.txt"),
+                Path.Combine(destPath, "file2.txt")
+            };
+            Assert.Equal(expectedFiles, files);
         }
         finally
         {
@@ -70,6 +66,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
+        const bool recursive = true;
 
         try
         {
@@ -82,25 +79,26 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "dir1"), destPath, true, false, true);
+                Path.Combine(srcPath, "dir1"), destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
 
-            // assert - 2 files was extracted
-            Assert.Equal(2, files.Length);
+            // assert - 3 files was extracted
+            Assert.Equal(3, files.Length);
 
-            // assert - file3.txt file was extracted
-            var file3 = Path.Combine(destPath, "file3.txt");
-            Assert.Equal(file3, files.FirstOrDefault(x => x.Equals(file3, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - test.txt file was extracted
-            var test = Path.Combine(destPath, "test.txt");
-            Assert.Equal(test, files.FirstOrDefault(x => x.Equals(test, StringComparison.OrdinalIgnoreCase)));
+            // assert - files are extracted
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "dir2", "file4.txt"),
+                Path.Combine(destPath, "file3.txt"),
+                Path.Combine(destPath, "test.txt")
+            };
+            Assert.Equal(expectedFiles, files);
         }
         finally
         {
@@ -114,6 +112,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
+        const bool recursive = true;
 
         try
         {
@@ -126,29 +125,27 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "file*.txt"), destPath, true, false, true);
+                Path.Combine(srcPath, "file*.txt"), destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
 
-            // assert - 3 files was extracted
-            Assert.Equal(3, files.Length);
+            // assert - 4 files was extracted
+            Assert.Equal(4, files.Length);
 
-            // assert - file1.txt file was extracted
-            var file1 = Path.Combine(destPath, "file1.txt");
-            Assert.Equal(file1, files.FirstOrDefault(x => x.Equals(file1, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - file2.txt file was extracted
-            var file2 = Path.Combine(destPath, "file2.txt");
-            Assert.Equal(file2, files.FirstOrDefault(x => x.Equals(file2, StringComparison.OrdinalIgnoreCase)));
-
-            // assert - file3.txt file was extracted
-            var file3 = Path.Combine(destPath, "dir1", "file3.txt");
-            Assert.Equal(file3, files.FirstOrDefault(x => x.Equals(file3, StringComparison.OrdinalIgnoreCase)));
+            // assert - files are extracted
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "dir1", "dir2", "file4.txt"),
+                Path.Combine(destPath, "dir1", "file3.txt"),
+                Path.Combine(destPath, "file1.txt"),
+                Path.Combine(destPath, "file2.txt")
+            };
+            Assert.Equal(expectedFiles, files);
         }
         finally
         {
@@ -161,6 +158,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
+        const bool recursive = true;
 
         try
         {
@@ -173,7 +171,7 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "file1.txt"), destPath, true, false, true);
+                Path.Combine(srcPath, "file1.txt"), destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -181,7 +179,6 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
             // assert - get extracted files
             var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
-
             Assert.Single(files);
 
             var file1 = Path.Combine(destPath, "file1.txt");

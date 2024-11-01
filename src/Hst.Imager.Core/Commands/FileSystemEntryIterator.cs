@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Ext;
 using DiscUtils.Fat;
+using Hst.Imager.Core.Commands.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
@@ -15,9 +16,10 @@ using Entry = Models.FileSystems.Entry;
 public class FileSystemEntryIterator : IEntryIterator
 {
     private readonly Media media;
+    private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcher pathComponentMatcher;
+    private PathComponentMatcherV3 pathComponentMatcher;
     private readonly IFileSystem fileSystem;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -28,14 +30,17 @@ public class FileSystemEntryIterator : IEntryIterator
     public FileSystemEntryIterator(Media media, IFileSystem fileSystem, string rootPath, bool recursive)
     {
         this.media = media;
-        this.rootPath = rootPath.EndsWith("\\") ? rootPath : string.Concat(rootPath, "\\");
-        this.rootPathComponents = GetPathComponents(this.rootPath);
-        this.pathComponentMatcher = null;
+        this.mediaPath = CreateMediaPath(fileSystem);
+        this.rootPath = rootPath;
         this.recursive = recursive;
         this.fileSystem = fileSystem;
         this.nextEntries = new Stack<Entry>();
         this.currentEntry = null;
         this.isFirst = true;
+
+        var pathComponents = GetPathComponents(rootPath);
+        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 
     private void Dispose(bool disposing)
@@ -82,21 +87,25 @@ public class FileSystemEntryIterator : IEntryIterator
         bool skipEntry;
         do
         {
-            currentEntry = this.nextEntries.Pop();
+            skipEntry = false;
+            currentEntry = nextEntries.Pop();
 
             if (currentEntry.Type == Models.FileSystems.EntryType.File)
             {
                 return Task.FromResult(true);
             }
 
-            skipEntry = SkipEntry(currentEntry.FullPathComponents);
-
             if (recursive)
             {
-                EnqueueDirectory(currentEntry.FullPathComponents);
+                var entriesEnqueued = EnqueueDirectory(currentEntry.FullPathComponents);
+                skipEntry = pathComponentMatcher.UsesPattern && entriesEnqueued == 0;
+            }
+            else
+            {
+                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
+                    currentEntry.RelativePathComponents, recursive);
             }
         } while (nextEntries.Count > 0 && skipEntry);
-
 
         return Task.FromResult(true);
     }
@@ -108,103 +117,125 @@ public class FileSystemEntryIterator : IEntryIterator
         if (pathComponents.Length == 0)
         {
             this.rootPathComponents = pathComponents;
-            this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
+            this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
             return;
         }
 
-        var hasPattern = pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
-        this.rootPathComponents =
-            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher =
-            new PathComponentMatcher(rootPathComponents, hasPattern ? pathComponents[^1] : null, recursive);
-    }
-
-    private void EnqueueDirectory(string[] currentPathComponents)
-    {
-        var currentPath = string.Join("\\", currentPathComponents);
-
-        try
+        var dirComponents = new List<string>();
+        var usePattern = false;
+        foreach (var pathComponent in pathComponents)
         {
-            foreach (var dirPath in fileSystem.GetDirectories(currentPath).OrderByDescending(x => x).ToList())
+            dirComponents.Add(pathComponent);
+
+            var dirPath = mediaPath.Join(dirComponents.ToArray());
+
+            var dir = fileSystem.GetDirectories(dirPath).FirstOrDefault(x => x.EndsWith(pathComponent));
+
+            if (dir == null)
             {
-                var fullPathComponents = GetPathComponents(dirPath);
-                var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
-                var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
+                throw new IOException($"Path not found '{dirPath}'");
+            }
 
-                DateTime? lastWriteTime = null;
-                try
-                {
-                    lastWriteTime = fileSystem.GetLastWriteTime(dirPath);
-                }
-                catch (Exception)
-                {
-                    // ignored
-                }
-
-                nextEntries.Push(new Entry
-                {
-                    Name = relativePath,
-                    FormattedName = relativePath,
-                    RawPath = dirPath,
-                    FullPathComponents = fullPathComponents,
-                    RelativePathComponents = relativePathComponents,
-                    Attributes = Format(dirPath),
-                    Date = lastWriteTime,
-                    Size = 0,
-                    Type = Models.FileSystems.EntryType.Dir,
-                    Properties = new Dictionary<string, string>()
-                });
+            if (dirComponents.Count == pathComponents.Length - 1)
+            {
+                usePattern = true;
+                break;
             }
         }
-        catch (Exception)
-        {
-            // ignored
-        }
 
-        try
+        rootPathComponents = dirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcherV3(usePattern ? pathComponents : Array.Empty<string>(), recursive);
+    }
+
+    private int EnqueueDirectory(string[] pathComponents)
+    {
+        var uniqueEntries = new Dictionary<string, Entry>();
+
+        var path = mediaPath.Join(pathComponents);
+
+        foreach (var dirPath in fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(x => x).ToList())
         {
-            foreach (var filePath in fileSystem.GetFiles(currentPath).OrderByDescending(x => x).ToList())
+            var fullPathComponents = mediaPath.Split(dirPath);
+
+            DateTime? lastWriteTime = null;
+            var attributes = Format(dirPath);
+            try
             {
-                var fullPathComponents = GetPathComponents(filePath);
-                var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
-                var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
+                lastWriteTime = fileSystem.GetLastWriteTime(dirPath);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
 
-                if (SkipEntry(fullPathComponents))
+            var properties = new Dictionary<string, string>();
+
+            var dirAttributes = string.Empty;
+
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+                recursive, dirPath, dirPath, true, lastWriteTime ?? DateTime.Now, 0,
+                attributes, properties, dirAttributes).ToList();
+
+            foreach (var entry in entries)
+            {
+                if (rootPath.Equals(entry.RawPath) ||
+                    path.Equals(entry.Name) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.Name)))
                 {
                     continue;
                 }
 
-                DateTime? lastWriteTime = null;
-                long size = 0;
-                try
+                uniqueEntries[entry.Name] = entry;
+            }
+
+        }
+
+        foreach (var filePath in fileSystem.GetFiles(path, "*", SearchOption.TopDirectoryOnly).OrderByDescending(x => x).ToList())
+        {
+            var fullPathComponents = mediaPath.Split(filePath);
+
+            DateTime? lastWriteTime = null;
+            long size = 0;
+            try
+            {
+                lastWriteTime = fileSystem.GetLastWriteTime(filePath);
+                size = fileSystem.GetFileLength(filePath);
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+            
+            var attributes = Format(filePath);
+
+            var properties = new Dictionary<string, string>();
+
+            var dirAttributes = string.Empty;
+
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+                recursive, filePath, filePath, false, lastWriteTime ?? DateTime.Now, size,
+                attributes, properties, dirAttributes).ToList();
+
+            foreach (var entry in entries)
+            {
+                if (rootPath.Equals(entry.RawPath) ||
+                    path.Equals(entry.Name) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.Name)))
                 {
-                    lastWriteTime = fileSystem.GetLastWriteTime(filePath);
-                    size = fileSystem.GetFileLength(filePath);
-                }
-                catch (Exception)
-                {
-                    // ignored
+                    continue;
                 }
 
-                nextEntries.Push(new Entry
-                {
-                    Name = relativePath,
-                    FormattedName = relativePath,
-                    RawPath = filePath,
-                    FullPathComponents = fullPathComponents,
-                    RelativePathComponents = relativePathComponents,
-                    Attributes = Format(filePath),
-                    Date = lastWriteTime,
-                    Size = size,
-                    Type = Models.FileSystems.EntryType.File,
-                    Properties = new Dictionary<string, string>()
-                });
+                uniqueEntries[entry.Name] = entry;
             }
         }
-        catch (Exception)
+
+        foreach (var entry in uniqueEntries.Values.OrderByDescending(x => x.Name))
         {
-            // ignored
+            nextEntries.Push(entry);
         }
+
+        return uniqueEntries.Values.Count;
     }
 
     private string Format(string path)
@@ -219,6 +250,18 @@ public class FileSystemEntryIterator : IEntryIterator
                 return Format(fileAttributes);
             default:
                 return string.Empty;
+        }
+    }
+
+    private static IMediaPath CreateMediaPath(IFileSystem fileSystem)
+    {
+        switch (fileSystem)
+        {
+            case ExtFileSystem extFileSystem:
+                return new ForwardSlashMediaPath();
+            case FatFileSystem fatFileSystem:
+            default:
+                return new BackslashMediaPath();
         }
     }
 

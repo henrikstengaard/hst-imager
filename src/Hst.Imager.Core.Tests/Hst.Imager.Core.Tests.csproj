@@ -23,6 +23,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="TestData\Lzx\amiga.lzx">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="TestData\rigid-disk-block.img">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
@@ -123,6 +126,9 @@
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
       <None Update="TestData\Ext\ext4.img">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="TestData\Zip\amiga.zip">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
     </ItemGroup>

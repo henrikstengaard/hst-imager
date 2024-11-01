@@ -50,42 +50,47 @@ public class FsDirCommand : FsCommandBase
         OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
         // zip
-        var zipEntryIterator = await GetZipEntryIterator(pathResult.Value, recursive);
-        if (zipEntryIterator != null && zipEntryIterator.IsSuccess)
+        var zipEntryIteratorResult = await GetZipEntryIterator(pathResult.Value, recursive);
+        if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)
         {
-            await ListEntries(zipEntryIterator.Value, pathResult.Value.FileSystemPath);
+            using var zipEntryIterator = zipEntryIteratorResult.Value;
+            await ListEntries(zipEntryIterator, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
         // lha
-        var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
-        if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
+        var lhaEntryIteratorResult = await GetLhaEntryIterator(pathResult.Value, recursive);
+        if (lhaEntryIteratorResult != null && lhaEntryIteratorResult.IsSuccess)
         {
-            await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
+            using var lhaEntryIterator = lhaEntryIteratorResult.Value;
+            await ListEntries(lhaEntryIterator, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
         // lzx
-        var lzxEntryIterator = await GetLzxEntryIterator(pathResult.Value, recursive);
-        if (lzxEntryIterator != null && lzxEntryIterator.IsSuccess)
+        var lzxEntryIteratorResult = await GetLzxEntryIterator(pathResult.Value, recursive);
+        if (lzxEntryIteratorResult != null && lzxEntryIteratorResult.IsSuccess)
         {
-            await ListEntries(lzxEntryIterator.Value, pathResult.Value.FileSystemPath);
+            using var lzxEntryIterator = lzxEntryIteratorResult.Value;
+            await ListEntries(lzxEntryIterator, pathResult.Value.FileSystemPath);
             return new Result();
         }
 
         // adf
-        var adfEntryIterator = await GetAdfEntryIterator(pathResult.Value, recursive);
-        if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
+        var adfEntryIteratorResult = await GetAdfEntryIterator(pathResult.Value, recursive);
+        if (adfEntryIteratorResult != null && adfEntryIteratorResult.IsSuccess)
         {
-            await ListEntries(adfEntryIterator.Value, pathResult.Value.FileSystemPath);
+            using var adfEntryIterator = adfEntryIteratorResult.Value;
+            await ListEntries(adfEntryIterator, pathResult.Value.FileSystemPath);
             return new Result();
         }
         
         // iso
-        var iso9660EntryIterator = await GetIso9660EntryIterator(pathResult.Value, recursive);
-        if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
+        var iso9660EntryIteratorResult = await GetIso9660EntryIterator(pathResult.Value, recursive);
+        if (iso9660EntryIteratorResult != null && iso9660EntryIteratorResult.IsSuccess)
         {
-            await ListEntries(iso9660EntryIterator.Value, pathResult.Value.FileSystemPath);
+            using var iso9660EntryIterator = iso9660EntryIteratorResult.Value;
+            await ListEntries(iso9660EntryIterator, pathResult.Value.FileSystemPath);
             return new Result();
         }
         

@@ -3,7 +3,10 @@ using DiscUtils.Ntfs;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 
+using System;
+using System.DirectoryServices;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,6 +20,7 @@ using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Models;
+using SharpCompress.Archives.Zip;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 
@@ -241,12 +245,17 @@ public class FsCommandTestBase : CommandTestBase
 
         await volume.CreateFile("file1.txt");
         await volume.CreateFile("file2.txt");
-
+        
         await volume.CreateDirectory("dir1");
         await volume.ChangeDirectory("dir1");
 
         await volume.CreateFile("file3.txt");
         await volume.CreateFile("test.txt");
+        
+        await volume.CreateDirectory("dir2");
+        await volume.ChangeDirectory("dir2");
+
+        await volume.CreateFile("file4.txt");
     }
 
     protected async Task<Pfs3Volume> MountPfs3Volume(Stream stream)
@@ -287,5 +296,36 @@ public class FsCommandTestBase : CommandTestBase
                 Directory.Delete(path, true);
             }
         }
+    }
+
+    protected void CreateIso9660WithDirectoriesAndFiles(string path)
+    {
+        var builder = new DiscUtils.Iso9660.CDBuilder
+        {
+            UseJoliet = true
+        };
+        builder.AddFile("file1.txt", Array.Empty<byte>());
+        builder.AddFile("file2.txt", Array.Empty<byte>());
+        builder.AddDirectory("dir1");
+        builder.AddFile(@"dir1\file3.txt", Array.Empty<byte>());
+        builder.AddFile(@"dir1\test.txt", Array.Empty<byte>());
+        builder.AddDirectory(@"dir1\dir2");
+        builder.AddFile(@"dir1\dir2\file4.txt", Array.Empty<byte>());
+        builder.Build(path);
+    }
+
+    protected async Task CreateZipWithDirectoriesAndFiles(string path)
+    {
+        await using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
+
+        using var zipArchive = new System.IO.Compression.ZipArchive(stream, ZipArchiveMode.Create);
+
+        zipArchive.CreateEntry("file1.txt");
+        zipArchive.CreateEntry("file2.txt");
+        zipArchive.CreateEntry("dir1/");
+        zipArchive.CreateEntry("dir1/file3.txt");
+        zipArchive.CreateEntry("dir1/test.txt");
+        zipArchive.CreateEntry("dir1/dir2/");
+        zipArchive.CreateEntry("dir1/dir2/file4.txt");
     }
 }

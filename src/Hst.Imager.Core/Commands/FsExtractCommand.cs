@@ -163,45 +163,45 @@ public class FsExtractCommand : FsCommandBase
         }
 
         // zip
-        var zipEntryIterator = await GetZipEntryIterator(mediaResult.Value, recursive);
-        if (zipEntryIterator != null && zipEntryIterator.IsSuccess)
+        var zipEntryIteratorResult = await GetZipEntryIterator(mediaResult.Value, recursive);
+        if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(zipEntryIterator.Value);
+            return new Result<IEntryIterator>(zipEntryIteratorResult.Value);
         }
 
         // lha
-        var lhaEntryIterator = await GetLhaEntryIterator(mediaResult.Value, recursive);
-        if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
+        var lhaEntryIteratorResult = await GetLhaEntryIterator(mediaResult.Value, recursive);
+        if (lhaEntryIteratorResult != null && lhaEntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(lhaEntryIterator.Value);
+            return new Result<IEntryIterator>(lhaEntryIteratorResult.Value);
         }
 
         // lzx
-        var lzxEntryIterator = await GetLzxEntryIterator(mediaResult.Value, recursive);
-        if (lzxEntryIterator != null && lzxEntryIterator.IsSuccess)
+        var lzxEntryIteratorResult = await GetLzxEntryIterator(mediaResult.Value, recursive);
+        if (lzxEntryIteratorResult != null && lzxEntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(lzxEntryIterator.Value);
+            return new Result<IEntryIterator>(lzxEntryIteratorResult.Value);
         }
         
         // lzw
-        var lzwEntryIterator = await GetLzwEntryIterator(mediaResult.Value);
-        if (lzwEntryIterator != null && lzwEntryIterator.IsSuccess)
+        var lzwEntryIteratorResult = await GetLzwEntryIterator(mediaResult.Value);
+        if (lzwEntryIteratorResult != null && lzwEntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(lzwEntryIterator.Value);
+            return new Result<IEntryIterator>(lzwEntryIteratorResult.Value);
         }
 
         // adf
-        var adfEntryIterator = await GetAdfEntryIterator(mediaResult.Value, recursive);
-        if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
+        var adfEntryIteratorResult = await GetAdfEntryIterator(mediaResult.Value, recursive);
+        if (adfEntryIteratorResult != null && adfEntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(adfEntryIterator.Value);
+            return new Result<IEntryIterator>(adfEntryIteratorResult.Value);
         }
 
         // iso
-        var iso9660EntryIterator = await GetIso9660EntryIterator(mediaResult.Value, recursive);
-        if (iso9660EntryIterator != null && iso9660EntryIterator.IsSuccess)
+        var iso9660EntryIteratorResult = await GetIso9660EntryIterator(mediaResult.Value, recursive);
+        if (iso9660EntryIteratorResult != null && iso9660EntryIteratorResult.IsSuccess)
         {
-            return new Result<IEntryIterator>(iso9660EntryIterator.Value);
+            return new Result<IEntryIterator>(iso9660EntryIteratorResult.Value);
         }
 
         return new Result<IEntryIterator>(new Error($"File system at path '{path}' not supported"));

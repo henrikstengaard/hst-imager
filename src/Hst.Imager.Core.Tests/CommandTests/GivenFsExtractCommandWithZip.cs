@@ -236,7 +236,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
         using var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create);
         zipArchive.CreateEntry("file1.txt");
         zipArchive.CreateEntry("file2.txt");
-        zipArchive.CreateEntry(@"dir1\file3.txt");
-        zipArchive.CreateEntry(@"dir1\test.txt");
+        zipArchive.CreateEntry("dir1/file3.txt");
+        zipArchive.CreateEntry("dir1/test.txt");
     }
 }
