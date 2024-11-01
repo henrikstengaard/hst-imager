@@ -7,8 +7,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Iso9660;
-using Hst.Imager.Core.Commands.PathComponents;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
@@ -29,7 +29,7 @@ public class Iso9660EntryIterator : IEntryIterator
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = new Iso9660Path();
+        this.mediaPath = MediaPath.Iso9660Path;
         this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath;
         this.cdReader = cdReader;
         this.recursive = recursive;

@@ -26,7 +26,7 @@ using Helpers;
 using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 
 public abstract class FsCommandBase : CommandBase
 {
@@ -245,7 +245,7 @@ public abstract class FsCommandBase : CommandBase
         var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read);
 
         var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
-        var rootPath = new ZipArchivePath().Join(rootPathComponents);
+        var rootPath = MediaPath.ZipArchivePath.Join(rootPathComponents);
 
         return new Result<IEntryIterator>(new ZipArchiveEntryIterator(zipStream, rootPath, zipArchive,
             recursive));
@@ -262,7 +262,7 @@ public abstract class FsCommandBase : CommandBase
         var lhaArchive = new LhaArchive(lhaStream, LhaOptions.AmigaLhaOptions);
 
         var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
-        var rootPath = new LhaArchivePath().Join(rootPathComponents);
+        var rootPath = MediaPath.LhaArchivePath.Join(rootPathComponents);
 
         return new Result<IEntryIterator>(new LhaArchiveEntryIterator(lhaStream, rootPath, lhaArchive,
             recursive));
@@ -279,7 +279,7 @@ public abstract class FsCommandBase : CommandBase
         var lzxArchive = new LzxArchive(lzxStream, LzxOptions.AmigaLzxOptions);
 
         var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
-        var rootPath = new LzxArchivePath().Join(rootPathComponents);
+        var rootPath = MediaPath.LzxArchivePath.Join(rootPathComponents);
 
         return new Result<IEntryIterator>(new LzxArchiveEntryIterator(lzxStream, rootPath, lzxArchive,
             recursive));
@@ -310,7 +310,7 @@ public abstract class FsCommandBase : CommandBase
         }
 
         var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
-        var rootPath = new AmigaPath().Join(rootPathComponents);
+        var rootPath = MediaPath.AmigaOsPath.Join(rootPathComponents);
 
         return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(adfStream, rootPath,
             fileSystemVolumeResult.Value, recursive));
@@ -327,7 +327,7 @@ public abstract class FsCommandBase : CommandBase
         var cdReader = new CDReader(iso96690Stream, true);
 
         var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
-        var rootPath = new Iso9660Path().Join(rootPathComponents);
+        var rootPath = MediaPath.Iso9660Path.Join(rootPathComponents);
 
         return new Result<IEntryIterator>(new Iso9660EntryIterator(iso96690Stream, rootPath, cdReader,
             recursive));

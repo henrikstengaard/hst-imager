@@ -1,4 +1,4 @@
-﻿using Hst.Imager.Core.Commands.PathComponents;
+﻿using Hst.Imager.Core.PathComponents;
 using System.Linq;
 using Xunit;
 
@@ -12,7 +12,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_OneRelativePathComponent_Then_NoDirEntriesAreReturned(bool recursive)
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             var relativePathComponents = new[] { "file1.txt" };
             var attributes = "ATTRIBUTES";
 
@@ -30,7 +30,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_TwoRelativePathComponents_Then_OneDirEntryIsReturned(bool recursive)
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             var relativePathComponents = new[] { "dir1", "file2.txt" };
             var attributes = "ATTRIBUTES";
 
@@ -52,7 +52,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_ThreeRelativePathComponents_Then_OneDirEntryIsReturned()
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             var relativePathComponents = new[] { "dir1", "dir2", "file3.txt" };
             var attributes = "ATTRIBUTES";
             const bool recursive = false;
@@ -75,7 +75,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_ThreeRelativePathComponentsRecursive_Then_TwoDirEntriesAreReturned()
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             var relativePathComponents = new[] { "dir1", "dir2", "file3.txt" };
             var attributes = "ATTRIBUTES";
             const bool recursive = true;

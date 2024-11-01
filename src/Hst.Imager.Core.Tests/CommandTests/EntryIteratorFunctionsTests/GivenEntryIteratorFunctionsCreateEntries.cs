@@ -1,5 +1,5 @@
 ﻿using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,7 +14,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_CreateEntriesWithNoRootPathComponents_Then_OneEntryIsCreated()
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = false;
             var rootPathComponents = Array.Empty<string>();
             var pathComponentMatcher = new PathComponentMatcherV3(rootPathComponents, recursive);
@@ -58,7 +58,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_CreateEntriesWithNoRootPathComponentsRecursive_Then_TwoEntriesAreCreated()
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = true;
             var rootPathComponents = Array.Empty<string>();
             var pathComponentMatcher = new PathComponentMatcherV3(rootPathComponents, recursive);
@@ -110,7 +110,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         public void When_CreateEntriesWithOneRootPathComponent_Then_OneEntriesIsCreated()
         {
             // arrange
-            var mediaPath = new ZipArchivePath();
+            var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = false;
             var rootPathComponents = new[] { "dir1" };
             var pathComponentMatcher = new PathComponentMatcherV3(rootPathComponents, recursive);

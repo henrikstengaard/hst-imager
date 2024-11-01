@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hst.Imager.Core.Commands.PathComponents
+namespace Hst.Imager.Core.PathComponents
 {
     public class BackslashMediaPath : IMediaPath
     {

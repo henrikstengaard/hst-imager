@@ -1,4 +1,4 @@
-﻿namespace Hst.Imager.Core.Commands.PathComponents;
+﻿namespace Hst.Imager.Core.PathComponents;
 
 public interface IMediaPath
 {

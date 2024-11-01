@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lha;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
@@ -29,7 +29,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
     public LhaArchiveEntryIterator(Stream stream, string rootPath, LhaArchive lhaArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = new LhaArchivePath();
+        this.mediaPath = MediaPath.LhaArchivePath;
         this.rootPath = rootPath;
         this.lhaArchive = lhaArchive;
         this.recursive = recursive;

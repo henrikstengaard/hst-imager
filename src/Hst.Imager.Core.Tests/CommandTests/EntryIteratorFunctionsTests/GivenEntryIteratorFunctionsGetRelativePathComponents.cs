@@ -1,4 +1,4 @@
-﻿using Hst.Imager.Core.Commands.PathComponents;
+﻿using Hst.Imager.Core.PathComponents;
 using System.Linq;
 using Xunit;
 

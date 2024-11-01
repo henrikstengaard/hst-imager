@@ -7,9 +7,9 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Hst.Imager.Core.Commands.PathComponents;
 using Hst.Imager.Core.Compressions.Zip;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using EntryType = Models.FileSystems.EntryType;
@@ -32,7 +32,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
     public ZipArchiveEntryIterator(Stream stream, string rootPath, ZipArchive zipArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = new ZipArchivePath();
+        this.mediaPath = MediaPath.ZipArchivePath;
         this.rootPath = rootPath;
         this.zipArchive = zipArchive;
         this.recursive = recursive;

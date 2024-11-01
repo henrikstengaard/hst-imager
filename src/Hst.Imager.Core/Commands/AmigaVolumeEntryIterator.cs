@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
@@ -28,7 +28,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     public AmigaVolumeEntryIterator(Stream stream, string rootPath, IFileSystemVolume fileSystemVolume, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = new AmigaPath();
+        this.mediaPath = MediaPath.AmigaOsPath;
         this.rootPath = rootPath;
         this.rootPathComponents = Array.Empty<string>();
         this.fileSystemVolume = fileSystemVolume;

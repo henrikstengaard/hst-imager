@@ -6,9 +6,9 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Iso9660;
 using DiscUtils.Udf;
-using Hst.Imager.Core.Commands.PathComponents;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models.FileSystems;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;

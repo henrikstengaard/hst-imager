@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System;
+using Hst.Imager.Core.Commands;
 
-namespace Hst.Imager.Core.Commands.PathComponents;
+namespace Hst.Imager.Core.PathComponents;
 
 public static class EntryIteratorFunctions
 {
@@ -183,13 +184,13 @@ public static class EntryIteratorFunctions
 
             yield return dirEntry;
         }
-            
+
         if (!IsRelativePathComponentsValid2(relativePathComponents, recursive) ||
             !pathComponentMatcher.IsMatch(fullPathComponents))
         {
             yield break;
         }
-        
+
         var entryRelativePath = mediaPath.Join(relativePathComponents.ToArray());
 
         yield return new Models.FileSystems.Entry

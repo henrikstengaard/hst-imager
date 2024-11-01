@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Ext;
 using DiscUtils.Fat;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;

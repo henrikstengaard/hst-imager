@@ -7,7 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lzx;
-using Hst.Imager.Core.Commands.PathComponents;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
@@ -29,7 +29,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
     public LzxArchiveEntryIterator(Stream stream, string rootPath, LzxArchive lzxArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = new LzxArchivePath();
+        this.mediaPath = MediaPath.LzxArchivePath;
         this.rootPath = rootPath;
         this.lzxArchive = lzxArchive;
         this.recursive = recursive;
