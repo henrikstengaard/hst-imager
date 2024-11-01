@@ -8,13 +8,15 @@ using System.Runtime.Caching;
 using System.Threading.Tasks;
 using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Amiga.DataTypes.UaeMetafiles;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
-using Models.FileSystems;
+using Entry = Models.FileSystems.Entry;
 
 public class DirectoryEntryIterator : IEntryIterator
 {
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
+    private readonly string pattern;
     private readonly string[] rootPathComponents;
     private readonly PathComponentMatcher pathComponentMatcher;
     private readonly bool recursive;
@@ -27,12 +29,17 @@ public class DirectoryEntryIterator : IEntryIterator
     {
         this.nextEntries = new Stack<Entry>();
         this.rootPath = Path.GetFullPath(path);
-        this.rootPathComponents = GetPathComponents(this.rootPath);
-        this.pathComponentMatcher = new PathComponentMatcher(rootPathComponents, pattern, recursive: recursive);
+        this.pattern = pattern;
         this.recursive = recursive;
         this.isFirst = true;
         this.cache = new MemoryCache($"{nameof(DirectoryEntryIterator)}_CACHE");
         this.cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
+
+        var usePattern = !string.IsNullOrWhiteSpace(pattern);
+        rootPathComponents = GetPathComponents(this.rootPath);
+        pathComponentMatcher = new PathComponentMatcher(usePattern
+            ? rootPathComponents.Concat(new[] { pattern }).ToArray()
+            : rootPathComponents, recursive);
     }
 
     public string RootPath => rootPath;
@@ -45,7 +52,7 @@ public class DirectoryEntryIterator : IEntryIterator
         {
             isFirst = false;
             currentEntry = null;
-            await EnqueueDirectory(rootPath);
+            await EnqueueDirectory(rootPathComponents);
         }
 
         if (this.nextEntries.Count <= 0)
@@ -58,7 +65,7 @@ public class DirectoryEntryIterator : IEntryIterator
         {
             currentEntry = this.nextEntries.Pop();
 
-            if (currentEntry.Type == EntryType.File)
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
             {
                 return true;
             }
@@ -67,7 +74,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
             if (recursive)
             {
-                await EnqueueDirectory(currentEntry.RawPath);
+                await EnqueueDirectory(currentEntry.FullPathComponents);
             }
         } while (nextEntries.Count > 0 && skipEntry);
 
@@ -152,8 +159,9 @@ public class DirectoryEntryIterator : IEntryIterator
         return cacheEntry;
     }
 
-    private async Task EnqueueDirectory(string currentPath)
+    private async Task EnqueueDirectory(string[] pathComponents)
     {
+        var currentPath = Path.Combine(pathComponents);
         var currentDir = new DirectoryInfo(currentPath);
 
         foreach (var dirInfo in currentDir.GetDirectories().OrderByDescending(x => x.Name).ToList())
@@ -189,7 +197,7 @@ public class DirectoryEntryIterator : IEntryIterator
                 RelativePathComponents = relativePathComponents,
                 Date = date,
                 Size = 0,
-                Type = EntryType.Dir,
+                Type = Models.FileSystems.EntryType.Dir,
                 Properties = properties
             });
         }
@@ -239,7 +247,7 @@ public class DirectoryEntryIterator : IEntryIterator
                 RelativePathComponents = relativePathComponents,
                 Date = date,
                 Size = fileInfo.Length,
-                Type = EntryType.File,
+                Type = Models.FileSystems.EntryType.File,
                 Properties = properties
             });
         }

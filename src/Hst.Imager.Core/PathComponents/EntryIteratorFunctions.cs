@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System;
-using Hst.Imager.Core.Commands;
 
 namespace Hst.Imager.Core.PathComponents;
 
@@ -22,7 +21,7 @@ public static class EntryIteratorFunctions
         return true;
     }
 
-    public static bool IsRelativePathComponentsValid(PathComponentMatcherV3 pathComponentMatcher,
+    public static bool IsRelativePathComponentsValid(PathComponentMatcher pathComponentMatcher,
         string[] relativePathComponents, bool recursive)
     {
         if (!recursive && relativePathComponents.Length > 1)
@@ -150,7 +149,7 @@ public static class EntryIteratorFunctions
 
     public static IEnumerable<Models.FileSystems.Entry> CreateEntries(
         IMediaPath mediaPath,
-        PathComponentMatcherV3 pathComponentMatcher,
+        PathComponentMatcher pathComponentMatcher,
         string[] rootPathComponents,
         bool recursive,
         string entryPath,

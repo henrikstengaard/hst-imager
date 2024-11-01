@@ -17,7 +17,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly IFileSystemVolume fileSystemVolume;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -133,7 +133,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         }
 
         rootPathComponents = pathComponents.Take(dirComponents).ToArray();
-        pathComponentMatcher = new PathComponentMatcherV3(usePattern ? pathComponents : Array.Empty<string>(), recursive);
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : Array.Empty<string>(), recursive);
     }
 
     public async Task<Stream> OpenEntry(Entry entry)

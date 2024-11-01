@@ -19,7 +19,7 @@ public class FileSystemEntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly IFileSystem fileSystem;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -39,7 +39,7 @@ public class FileSystemEntryIterator : IEntryIterator
         this.isFirst = true;
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 
@@ -117,7 +117,7 @@ public class FileSystemEntryIterator : IEntryIterator
         if (pathComponents.Length == 0)
         {
             this.rootPathComponents = pathComponents;
-            this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+            this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
             return;
         }
 
@@ -144,7 +144,7 @@ public class FileSystemEntryIterator : IEntryIterator
         }
 
         rootPathComponents = dirComponents.ToArray();
-        pathComponentMatcher = new PathComponentMatcherV3(usePattern ? pathComponents : Array.Empty<string>(), recursive);
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : Array.Empty<string>(), recursive);
     }
 
     private int EnqueueDirectory(string[] pathComponents)

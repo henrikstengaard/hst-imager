@@ -1,7 +1,7 @@
 ﻿namespace Hst.Imager.Core.Tests;
 
 using System;
-using Commands;
+using Hst.Imager.Core.PathComponents;
 using Xunit;
 
 public class GivenPathComponentMatcher
@@ -9,7 +9,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingWithoutAnyPathComponents_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(Array.Empty<string>());
+        var matcher = new PathComponentMatcher(Array.Empty<string>());
         
         Assert.True(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir2" }));
@@ -20,7 +20,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingOnePathComponents_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new []{ "dir1" });
+        var matcher = new PathComponentMatcher(new []{ "dir1" });
         
         Assert.True(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir2" }));
@@ -32,7 +32,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingTwoPathComponents_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new []{ "dir1", "dir2" });
+        var matcher = new PathComponentMatcher(new []{ "dir1", "dir2" });
         
         Assert.False(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir2" }));
@@ -43,7 +43,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingOnePathComponentWithPatternAndRecursive_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new[] { "*.png" }, true);
+        var matcher = new PathComponentMatcher(new[] { "*.png" }, true);
         
         Assert.True(matcher.IsMatch(new[] { "file1.png" }));
         Assert.False(matcher.IsMatch(new[] { "file2.gif" }));
@@ -56,7 +56,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingTwoPathComponentsWithTxtPattern_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new[] { "dir1", "*.txt" }, false);
+        var matcher = new PathComponentMatcher(new[] { "dir1", "*.txt" }, false);
 
         Assert.False(matcher.IsMatch(new[] { "file1.txt" }));
         Assert.False(matcher.IsMatch(new[] { "dir1" }));
@@ -68,7 +68,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingOnePathComponentsWithAnyPattern_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new[] { "*" }, true);
+        var matcher = new PathComponentMatcher(new[] { "*" }, true);
 
         Assert.True(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir3" }));
@@ -79,7 +79,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingTwoPathComponentsWithAnyPattern_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new []{ "dir1", "*" });
+        var matcher = new PathComponentMatcher(new []{ "dir1", "*" });
         
         Assert.True(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir2" }));
@@ -92,7 +92,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingThreePathComponentsWithAnyPattern_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new []{ "dir1", "dir4", "*" });
+        var matcher = new PathComponentMatcher(new []{ "dir1", "dir4", "*" });
         
         Assert.False(matcher.IsMatch(new[] { "dir1" }));
         Assert.False(matcher.IsMatch(new[] { "dir1", "dir2" }));
@@ -107,7 +107,7 @@ public class GivenPathComponentMatcher
     [Fact]
     public void When_MatchingTwoPathComponentsWithPngPatternAndRecursive_Then_EqualOrMorePathComponentsMatch()
     {
-        var matcher = new PathComponentMatcherV3(new []{ "dir1", "*.png" }, true);
+        var matcher = new PathComponentMatcher(new []{ "dir1", "*.png" }, true);
         
         Assert.False(matcher.IsMatch(new[] { "dir1" }));
         Assert.True(matcher.IsMatch(new[] { "dir1", "dir2", "file1.png" }));

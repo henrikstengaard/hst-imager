@@ -17,7 +17,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly LzxArchive lzxArchive;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -43,7 +43,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
             pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
         this.rootPathComponents =
             hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
     }
 
     private void Dispose(bool disposing)

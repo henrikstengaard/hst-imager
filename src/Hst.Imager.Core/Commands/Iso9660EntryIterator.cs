@@ -18,7 +18,7 @@ public class Iso9660EntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly CDReader cdReader;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -38,7 +38,7 @@ public class Iso9660EntryIterator : IEntryIterator
         this.isFirst = true;
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 

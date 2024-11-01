@@ -17,7 +17,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly LhaArchive lhaArchive;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
@@ -39,7 +39,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
         this.lhaEntryIndex = new Dictionary<string, LzHeader>(StringComparer.OrdinalIgnoreCase);
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 

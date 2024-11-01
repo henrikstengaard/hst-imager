@@ -19,16 +19,13 @@ public class UdfEntryIterator : IEntryIterator
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
     private string[] rootPathComponents;
-    private PathComponentMatcherV3 pathComponentMatcher;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly UdfReader udfReader;
     private readonly bool recursive;
     private readonly Stack<Entry> nextEntries;
     private bool isFirst;
     private Entry currentEntry;
     private bool disposed;
-
-    // backslash is required by diskutils iso9660 to list directories and files in a given iso file
-    //private const string PathSeparator = "\\";
 
     public UdfEntryIterator(Stream stream, string rootPath, UdfReader udfReader, bool recursive)
     {
@@ -42,7 +39,7 @@ public class UdfEntryIterator : IEntryIterator
         this.isFirst = true;
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcherV3(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
     
