@@ -135,7 +135,7 @@ public class DirectoryEntryWriter : IEntryWriter
 
     private async Task<string> ReadNormalNameFromUaeFsDb(string path, string amigaName)
     {
-        var uaeFsDbPath = Path.Combine(path, Constants.UaeFsDbFileName);
+        var uaeFsDbPath = Path.Combine(path, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
 
         if (!File.Exists(uaeFsDbPath))
         {

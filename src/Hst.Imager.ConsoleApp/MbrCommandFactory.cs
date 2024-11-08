@@ -57,6 +57,8 @@ namespace Hst.Imager.ConsoleApp
             partCommand.AddCommand(CreateMbrPartAdd());
             partCommand.AddCommand(CreateMbrPartDel());
             partCommand.AddCommand(CreateMbrPartFormat());
+            partCommand.AddCommand(CreateMbrPartExport());
+            partCommand.AddCommand(CreateMbrPartImport());
 
             return partCommand;
         }
@@ -67,9 +69,9 @@ namespace Hst.Imager.ConsoleApp
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var typeArgument = new Argument<MbrPartType>(
+            var typeArgument = new Argument<string>(
                 name: "Type",
-                description: "Type of the partition (e.g. FAT32).");
+                description: "Type of the partition as number or name (e.g. value 11 or name FAT32 for FAT32).");
 
             var sizeArgument = new Argument<string>(
                 name: "Size",
@@ -136,6 +138,53 @@ namespace Hst.Imager.ConsoleApp
             formatCommand.AddArgument(nameArgument);
 
             return formatCommand;
+        }
+
+        private static Command CreateMbrPartExport()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var partition = new Argument<string>(
+                name: "Partition",
+                description: "Partition to export from (\"2\" for partition number 2 or \"fat32\" for first fat32 partition).");
+
+            var destinationPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination physical drive or image file.");
+
+            var command = new Command("export", "Export partition to a file.");
+            command.SetHandler(CommandHandler.MbrPartExport, sourcePathArgument, partition,
+                destinationPathArgument);
+            command.AddArgument(sourcePathArgument);
+            command.AddArgument(partition);
+            command.AddArgument(destinationPathArgument);
+
+            return command;
+        }
+
+        private static Command CreateMbrPartImport()
+        {
+            var sourcePathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source file.");
+
+            var destinationPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination physical drive or image file.");
+
+            var partitionNumber = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to import to.");
+
+            var command = new Command("import", "Import partition from a file.");
+            command.SetHandler(CommandHandler.MbrPartImport, sourcePathArgument, destinationPathArgument, partitionNumber);
+            command.AddArgument(sourcePathArgument);
+            command.AddArgument(destinationPathArgument);
+            command.AddArgument(partitionNumber);
+
+            return command;
         }
     }
 }

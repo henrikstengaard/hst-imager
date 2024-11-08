@@ -84,25 +84,33 @@ namespace Hst.Imager.Core.Commands
             return media;
         }
 
-        public virtual Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+        public virtual async Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             ModifierEnum? modifiers = null)
         {
+            var fileSystemPath = string.Empty;
             if (modifiers == null)
             {
                 var mediaResult = ResolveMedia(path);
                 if (mediaResult.IsFaulted)
                 {
-                    return Task.FromResult(new Result<Media>(mediaResult.Error));
+                    return new Result<Media>(mediaResult.Error);
                 }
 
                 path = mediaResult.Value.MediaPath;
+                fileSystemPath = mediaResult.Value.FileSystemPath;
                 modifiers = mediaResult.Value.Modifiers;
             }
 
             logger.LogDebug($"Opening '{path}' as readable");
 
-            return GetPhysicalDriveMedia(physicalDrives, path, modifiers)
-                .Then(() => GetReadableFileMedia(path, modifiers));
+            var physicalDriveMediaResult = await GetPhysicalDriveMedia(physicalDrives, path, modifiers);
+
+            if (physicalDriveMediaResult.IsSuccess && physicalDriveMediaResult.Value != null)
+            {
+                return physicalDriveMediaResult;
+            }
+
+            return await GetReadableFileMedia(path, modifiers);
         }
 
         public virtual Stream CreateWriteableStream(string path, bool create)
@@ -144,12 +152,12 @@ namespace Hst.Imager.Core.Commands
                 return Task.FromResult(new Result<Media>((Media)null));
             }
 
-            var media = GetActiveMedia(physicalDrivePath);
-            if (media != null)
+            var activeMedia = GetActiveMedia(physicalDrivePath);
+            if (activeMedia != null)
             {
                 return Task.FromResult(!isAdministrator
                     ? new Result<Media>(new Error($"Path '{path}' requires administrator privileges"))
-                    : new Result<Media>(media));
+                    : new Result<Media>(activeMedia));
             }
 
             var physicalDrive =
@@ -170,6 +178,7 @@ namespace Hst.Imager.Core.Commands
             physicalDrive.SetByteSwap(byteSwap);
             var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
                 Media.MediaType.Raw, true, physicalDrive.Open(), byteSwap);
+
             this.activeMedias.Add(physicalDriveMedia);
             return Task.FromResult(new Result<Media>(physicalDriveMedia));
         }
@@ -222,27 +231,33 @@ namespace Hst.Imager.Core.Commands
                 return new Result<Media>(new PathNotFoundError($"Path '{path ?? "null"}' not found", nameof(path)));
             }
 
-            var media = GetActiveMedia(path);
-            if (media != null)
+            var activeMedia = GetActiveMedia(path);
+            if (activeMedia != null)
             {
-                return new Result<Media>(media);
+                return new Result<Media>(activeMedia);
             }
 
             var name = Path.GetFileName(path);
-            if (!IsVhd(path))
-            {
-                var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
-                var fileMedia = await ResolveFileMedia(path, name, fileStream, modifiers ?? ModifierEnum.None);
-                this.activeMedias.Add(fileMedia);
-                return new Result<Media>(fileMedia);
-            }
+            var fileMedia = IsVhd(path)
+                ? GetVhdMedia(path, name, byteSwap, false)
+                : await GetFileMedia(path, name, false, modifiers ?? ModifierEnum.None);
 
-            var vhdDisk = VirtualDisk.OpenDisk(path, FileAccess.Read);
+            this.activeMedias.Add(fileMedia);
+            return new Result<Media>(fileMedia);
+        }
+
+        private async Task<Media> GetFileMedia(string path, string name, bool writeable, ModifierEnum modifiers)
+        {
+            var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
+            return await ResolveFileMedia(path, name, fileStream, modifiers);
+        }
+
+        private static Media GetVhdMedia(string path, string name, bool writeable, bool byteSwap)
+        {
+            var vhdDisk = VirtualDisk.OpenDisk(path, writeable ? FileAccess.ReadWrite : FileAccess.Read);
             vhdDisk.Content.Position = 0;
-            var vhdMedia = new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
+            return new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
                 byteSwap, new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true));
-            this.activeMedias.Add(vhdMedia);
-            return new Result<Media>(vhdMedia);
         }
 
         private async Task<Media> ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
@@ -543,7 +558,7 @@ namespace Hst.Imager.Core.Commands
             return new Media(path, name, stream.Length, Media.MediaType.Raw, false, stream, false);
         }
 
-        public virtual Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
+        public virtual async Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             ModifierEnum? modifiers = null, long? size = null, bool create = false)
         {
             if (!create && modifiers == null)
@@ -551,7 +566,7 @@ namespace Hst.Imager.Core.Commands
                 var mediaResult = ResolveMedia(path);
                 if (mediaResult.IsFaulted)
                 {
-                    return Task.FromResult(new Result<Media>(mediaResult.Error));
+                    return new Result<Media>(mediaResult.Error);
                 }
 
                 path = mediaResult.Value.MediaPath;
@@ -560,8 +575,14 @@ namespace Hst.Imager.Core.Commands
 
             logger.LogDebug($"Opening '{path}' as readable");
 
-            return GetPhysicalDriveMedia(physicalDrives, path, modifiers, true)
-                .Then(() => GetWritableFileMedia(path, modifiers, size, create));
+            var physicalDriveMediaResult = await GetPhysicalDriveMedia(physicalDrives, path, modifiers, true);
+
+            if (physicalDriveMediaResult.IsSuccess && physicalDriveMediaResult.Value != null)
+            {
+                return physicalDriveMediaResult;
+            }
+
+            return await GetWritableFileMedia(path, modifiers, size, create);
         }
 
         public virtual long GetVhdSize(long size)

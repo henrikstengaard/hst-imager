@@ -32,7 +32,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - mbr partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, MbrPartType.Fat32, new Size(0, Unit.Bytes), null, null);
+            new List<IPhysicalDrive>(), imgPath, "Fat32", new Size(0, Unit.Bytes), null, null);
 
         // act - execute mbr partition add
         var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -74,7 +74,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - mbr partition add command with type FAT32 and size 50% of rdb disk size
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, MbrPartType.Fat32, new Size(50, Unit.Percent), null, null);
+            new List<IPhysicalDrive>(), imgPath, "Fat32", new Size(50, Unit.Percent), null, null);
 
         // act - execute mbr partition add
         var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -96,5 +96,42 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
                 x.Size < expectedPartitionSize + margin);
         Assert.NotNull(partInfo);
         Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partInfo.BiosType);
+    }
+
+    [Fact]
+    public async Task When_AddMbrPartitionTypeAsNumber_Then_ThenPartitionIsAdded()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        const byte partitionType = 187;
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // arrange - create mbr disk
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
+
+        // arrange - mbr partition add command with type FAT32 and size 0
+        var cancellationTokenSource = new CancellationTokenSource();
+        var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, partitionType.ToString(), new Size(0, Unit.Bytes), null, null);
+
+        // act - execute mbr partition add
+        var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - read disk info
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using var media = mediaResult.Value;
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        Assert.NotNull(diskInfo?.MbrPartitionTablePart);
+
+        // assert - mbr partition of type 187 is added
+        var partitionPartInfo = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => x.PartType == PartType.Partition);
+        Assert.NotNull(partitionPartInfo);
+        Assert.Equal(partitionType.ToString(), partitionPartInfo.BiosType);
     }
 }

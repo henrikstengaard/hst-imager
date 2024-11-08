@@ -41,7 +41,7 @@ public static class GuidPartitionTableReader
             var gptPartitions = new List<PartitionInfo>();
             foreach (var partition in guidPartitionTable.Partitions)
             {
-                gptPartitions.Add(await ReadGptPartitionInfo(++guidPartitionNumber, partition, disk.BlockSize));
+                gptPartitions.Add(await ReadGptPartitionInfo(++guidPartitionNumber, disk, partition));
             }
 
             var guidReservedSize = guidPartitionTable.FirstUsableSector * disk.BlockSize;
@@ -83,7 +83,7 @@ public static class GuidPartitionTableReader
     }
 
     private static async Task<PartitionInfo> ReadGptPartitionInfo(int guidPartitionNumber,
-        DiscUtils.Partitions.PartitionInfo partitionInfo, int blockSize)
+        VirtualDisk disk, DiscUtils.Partitions.PartitionInfo partitionInfo)
     {
         var partitionType = GuidPartitionTypeRegister.Value.TryGet(partitionInfo.GuidType, out var guidPartitionType)
             ? guidPartitionType.PartitionType
@@ -96,9 +96,9 @@ public static class GuidPartitionTableReader
             PartitionNumber = guidPartitionNumber,
             PartitionType = partitionType,
             FileSystem = fileSystemInfo?.FileSystemType,
-            Size = partitionInfo.SectorCount * blockSize,
-            StartOffset = partitionInfo.FirstSector * blockSize,
-            EndOffset = ((partitionInfo.LastSector + 1) * blockSize) - 1,
+            Size = partitionInfo.SectorCount * disk.BlockSize,
+            StartOffset = partitionInfo.FirstSector * disk.BlockSize,
+            EndOffset = ((partitionInfo.LastSector + 1) * disk.BlockSize) - 1,
             StartSector = partitionInfo.FirstSector,
             EndSector = partitionInfo.LastSector,
             StartCylinder = 0,

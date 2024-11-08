@@ -129,9 +129,11 @@ public class FileSystemEntryIterator : IEntryIterator
 
             var dirPath = mediaPath.Join(dirComponents.ToArray());
 
-            var dir = fileSystem.GetDirectories(dirPath).FirstOrDefault(x => x.EndsWith(pathComponent));
-
-            if (dir == null)
+            try
+            {
+                fileSystem.GetLastAccessTime(dirPath);
+            }
+            catch (Exception)
             {
                 throw new IOException($"Path not found '{dirPath}'");
             }
@@ -158,11 +160,12 @@ public class FileSystemEntryIterator : IEntryIterator
         {
             var fullPathComponents = mediaPath.Split(dirPath);
 
+            var attributes = string.Empty;
             DateTime? lastWriteTime = null;
-            var attributes = Format(dirPath);
             try
             {
                 lastWriteTime = fileSystem.GetLastWriteTime(dirPath);
+                attributes = Format(dirPath);
             }
             catch (Exception)
             {
@@ -195,26 +198,37 @@ public class FileSystemEntryIterator : IEntryIterator
         {
             var fullPathComponents = mediaPath.Split(filePath);
 
-            DateTime? lastWriteTime = null;
-            long size = 0;
+            DiscFileInfo fileInfo = null;
+
             try
             {
-                lastWriteTime = fileSystem.GetLastWriteTime(filePath);
-                size = fileSystem.GetFileLength(filePath);
+                fileInfo = fileSystem.GetFileInfo(filePath);
+
+                // file is opened to verify the file can be accessed
+                using var fileStream = fileSystem.OpenFile(filePath, FileMode.Open);
             }
             catch (Exception)
             {
                 // ignored
+                continue;
             }
-            
-            var attributes = Format(filePath);
+
+            // skip file, if it's not possible to get file info or open the file
+            if (fileInfo == null)
+            {
+                continue;
+            }
+
+            var lastWriteTime = fileInfo.LastWriteTime;
+            var size = fileInfo.Length;
+            var attributes = Format(fileInfo.Attributes);
 
             var properties = new Dictionary<string, string>();
 
             var dirAttributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
-                recursive, filePath, filePath, false, lastWriteTime ?? DateTime.Now, size,
+                recursive, filePath, filePath, false, lastWriteTime, size,
                 attributes, properties, dirAttributes).ToList();
 
             foreach (var entry in entries)

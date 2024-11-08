@@ -52,7 +52,7 @@ namespace Hst.Imager.GuiApp
 #endif
             services.AddSignalR(o =>
             {
-                o.EnableDetailedErrors = ApplicationDataHelper.HasDebugEnabled(Constants.AppName);
+                o.EnableDetailedErrors = ApplicationDataHelper.HasDebugEnabled(Core.Models.Constants.AppName);
                 o.MaximumReceiveMessageSize = 1024 * 1024;
             }).AddJsonProtocol(options =>
             {
@@ -79,9 +79,9 @@ namespace Hst.Imager.GuiApp
             services.AddSingleton(new AppState
             {
                 AppPath = AppContext.BaseDirectory,
-                LogsPath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Constants.AppName), "logs"),
+                LogsPath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName), "logs"),
                 ExecutingFile = WorkerHelper.GetExecutingFile(),
-                IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(Constants.AppName),
+                IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(Core.Models.Constants.AppName),
                 IsAdministrator = OperatingSystem.IsAdministrator(),
                 IsElectronActive = HybridSupport.IsElectronActive,
                 UseFake = Debugger.IsAttached,
@@ -184,8 +184,8 @@ namespace Hst.Imager.GuiApp
             browserWindow.OnMaximize += () => Electron.IpcMain.Send(browserWindow, "window-maximized");
             browserWindow.OnUnmaximize += () => Electron.IpcMain.Send(browserWindow, "window-unmaximized");
 
-            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName))?.DebugMode ?? false;
-            if (ApplicationDataHelper.HasDebugEnabled(Constants.AppName) || debugMode)
+            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Core.Models.Constants.AppName))?.DebugMode ?? false;
+            if (ApplicationDataHelper.HasDebugEnabled(Core.Models.Constants.AppName) || debugMode)
             {
                 browserWindow.WebContents.OpenDevTools();
             }

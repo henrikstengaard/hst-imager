@@ -32,7 +32,7 @@ public static class MbrPartitionTableReader
         var mbrPartitions = new List<PartitionInfo>();
         foreach (var partition in biosPartitionTable.Partitions.OfType<BiosPartitionInfo>())
         {
-            mbrPartitions.Add(await ReadMbrPartitionInfo(++mbrPartitionNumber, partition, disk.BlockSize));
+            mbrPartitions.Add(await ReadMbrPartitionInfo(++mbrPartitionNumber, disk, partition));
         }
 
         return new PartitionTableInfo
@@ -68,12 +68,12 @@ public static class MbrPartitionTableReader
         };
     }
     
-    private static async Task<PartitionInfo> ReadMbrPartitionInfo(int mbrPartitionNumber,
-        BiosPartitionInfo biosPartitionInfo, int blockSize)
+    private static async Task<PartitionInfo> ReadMbrPartitionInfo(int mbrPartitionNumber, VirtualDisk disk,
+        BiosPartitionInfo biosPartitionInfo)
     {
         var fileSystemInfo = await FileSystemReader.ReadFileSystem(biosPartitionInfo);
 
-        var partitionType = await ReadPartitionType(biosPartitionInfo);
+        var partitionType = GetPartitionType(biosPartitionInfo);
         
         return new PartitionInfo
         {
@@ -82,9 +82,9 @@ public static class MbrPartitionTableReader
             PartitionNumber = mbrPartitionNumber,
             PartitionType = partitionType,
             FileSystem = fileSystemInfo?.FileSystemType,
-            Size = biosPartitionInfo.SectorCount * blockSize,
-            StartOffset = biosPartitionInfo.FirstSector * blockSize,
-            EndOffset = ((biosPartitionInfo.LastSector + 1) * blockSize) - 1,
+            Size = biosPartitionInfo.SectorCount * disk.BlockSize,
+            StartOffset = biosPartitionInfo.FirstSector * disk.BlockSize,
+            EndOffset = ((biosPartitionInfo.LastSector + 1) * disk.BlockSize) - 1,
             StartSector = biosPartitionInfo.FirstSector,
             EndSector = biosPartitionInfo.LastSector,
             StartChs = new ChsAddressInfo
@@ -105,17 +105,10 @@ public static class MbrPartitionTableReader
         };
     }
 
-    private static async Task<string> ReadPartitionType(DiscUtils.Partitions.PartitionInfo partitionInfo)
+    public static string GetPartitionType(DiscUtils.Partitions.PartitionInfo partitionInfo)
     {
-        if (partitionInfo.BiosType != 0x76)
-        {
-            return partitionInfo.TypeAsString;
-        }
-        
-        await using var stream = partitionInfo.Open();
-        
-        var rigidDiskBlock = await Amiga.RigidDiskBlocks.RigidDiskBlockReader.Read(stream);
-
-        return rigidDiskBlock != null ? "PiStorm RDB" : partitionInfo.TypeAsString;
+        return partitionInfo.BiosType == Constants.BiosPartitionTypes.PiStormRdb
+            ? Constants.FileSystemNames.PiStormRdb
+            : partitionInfo.TypeAsString;
     }
 }

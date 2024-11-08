@@ -71,6 +71,22 @@ public class FsCommandTestBase : CommandTestBase
         biosPartitionTable.CreatePrimaryBySector(1, disk.BiosGeometry.TotalSectorsLong - 1, partitionType, true);
     }
 
+    protected async Task AddMbrPartition(TestCommandHelper testCommandHelper, string path,
+        long startSector, long endSector, byte partitionType = BiosPartitionTypes.Fat16)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        var biosPartitionTable = new BiosPartitionTable(disk);
+
+        biosPartitionTable.CreatePrimaryBySector(startSector, endSector, partitionType, true);
+    }
+
     protected async Task CreateGptDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)
     {

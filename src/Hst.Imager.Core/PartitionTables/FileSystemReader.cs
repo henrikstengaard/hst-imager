@@ -5,29 +5,40 @@ using DiscUtils.HfsPlus;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
 using Hst.Imager.Core.FileSystems.Ext;
-using Hst.Imager.Core.Models.FileSystems;
 
 namespace Hst.Imager.Core.PartitionTables;
 
 public static class FileSystemReader
 {
-    public static async Task<FileSystemInfo> ReadFileSystem(PartitionInfo partitionInfo)
+    public static async Task<Models.FileSystems.FileSystemInfo> ReadFileSystem(PartitionInfo partitionInfo)
     {
         if (partitionInfo.BiosType == BiosPartitionTypes.GptProtective)
         {
-            return new FileSystemInfo
+            return new Models.FileSystems.FileSystemInfo
             {
                 FileSystemType = string.Empty
             };
         }
 
+        if (partitionInfo.BiosType == Constants.BiosPartitionTypes.PiStormRdb)
+        {
+            return new Models.FileSystems.FileSystemInfo
+            {
+                FileSystemType = Constants.FileSystemNames.PiStormRdb,
+                VolumeName = string.Empty,
+                VolumeSize = 0,
+                VolumeFree = 0,
+                ClusterSize = 0
+            };
+        }
+
         await using var stream = partitionInfo.Open();
-        
+
         try
         {
             stream.Position = 0;
             var fatFileSystem = new FatFileSystem(stream);
-            return new FileSystemInfo
+            return new Models.FileSystems.FileSystemInfo
             {
                 FileSystemType = fatFileSystem.FileSystemType.ToUpper(),
                 VolumeName = fatFileSystem.VolumeLabel,
@@ -45,7 +56,7 @@ public static class FileSystemReader
         {
             stream.Position = 0;
             var ntfsFileSystem = new NtfsFileSystem(stream);
-            return new FileSystemInfo
+            return new Models.FileSystems.FileSystemInfo
             {
                 FileSystemType = "NTFS",
                 VolumeName = ntfsFileSystem.VolumeLabel,
@@ -63,7 +74,7 @@ public static class FileSystemReader
         {
             stream.Position = 0;
             var hfsPlusFileSystem = new HfsPlusFileSystem(stream);
-            return new FileSystemInfo
+            return new Models.FileSystems.FileSystemInfo
             {
                 FileSystemType = "Mac OS Extended",
                 VolumeName = hfsPlusFileSystem.VolumeLabel,
@@ -81,7 +92,7 @@ public static class FileSystemReader
         {
             stream.Position = 0;
             var extFileSystemInfo = await ExtFileSystemReader.Read(stream);
-            return new FileSystemInfo
+            return new Models.FileSystems.FileSystemInfo
             {
                 FileSystemType = extFileSystemInfo.Version.ToString().ToUpper(),
                 VolumeName = extFileSystemInfo.VolumeName,
@@ -94,7 +105,7 @@ public static class FileSystemReader
             // ignored, if errors occur. not ext file system
         }
 
-        return new FileSystemInfo
+        return new Models.FileSystems.FileSystemInfo
         {
             FileSystemType = "RAW"
         };

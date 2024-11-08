@@ -21,6 +21,9 @@
       <None Update="license.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="scripts\create_32gb_vhd_rdb_pfs3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="Scripts\create_4gb_rdb_vhd_dos3.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

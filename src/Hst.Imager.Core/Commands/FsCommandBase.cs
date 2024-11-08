@@ -342,17 +342,26 @@ public abstract class FsCommandBase : CommandBase
                 new Error($"Partition table not found in path '{mediaResult.FileSystemPath}'"));
         }
 
-        var media = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath, mediaResult.Modifiers);
-        if (media.IsFaulted)
+        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.MediaPath, mediaResult.Modifiers);
+        if (readableMediaResult.IsFaulted)
         {
-            return new Result<IEntryIterator>(media.Error);
+            return new Result<IEntryIterator>(readableMediaResult.Error);
         }
 
-        var parts = mediaResult.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var fileSystemPath = mediaResult.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = mediaResult.DirectorySeparatorChar;
 
-        if (media.Value.Type == Media.MediaType.Floppy)
+        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        var media = piStormRdbMediaResult.Item1;
+        fileSystemPath = piStormRdbMediaResult.Item2;
+
+        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+
+        if (media.Type == Media.MediaType.Floppy)
         {
-            return await GetFloppyFileSystemEntryIterator(media.Value, parts, recursive);
+            return await GetFloppyFileSystemEntryIterator(media, parts, recursive);
         }
         
         if (parts.Length == 0)
@@ -362,9 +371,9 @@ public abstract class FsCommandBase : CommandBase
 
         return parts[0].ToLowerInvariant() switch
         {
-            "mbr" => await GetMbrFileSystemEntryIterator(media.Value, parts, recursive),
-            "gpt" => await GetGptFileSystemEntryIterator(media.Value, parts, recursive),
-            "rdb" => await GetAmigaVolumeEntryIterator(media.Value, parts, recursive),
+            "mbr" => await GetMbrFileSystemEntryIterator(media, parts, recursive),
+            "gpt" => await GetGptFileSystemEntryIterator(media, parts, recursive),
+            "rdb" => await GetAmigaVolumeEntryIterator(media, parts, recursive),
             _ => new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}'"))
         };
     }
@@ -484,39 +493,48 @@ public abstract class FsCommandBase : CommandBase
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 
-        var media = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
-        if (media.IsFaulted)
+        var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
+        if (writableMediaResult.IsFaulted)
         {
-            return new Result<IEntryWriter>(media.Error);
+            return new Result<IEntryWriter>(writableMediaResult.Error);
         }
+
+        var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
+
+        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+            writableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        var media = piStormRdbMediaResult.Item1;
+        fileSystemPath = piStormRdbMediaResult.Item2;
 
         // adf
         if (File.Exists(mediaResult.Value.MediaPath) &&
             (Path.GetExtension(mediaResult.Value.MediaPath) ?? string.Empty).Equals(".adf",
                 StringComparison.OrdinalIgnoreCase))
         {
-            var stream = media.Value.Stream;
+            var stream = media.Stream;
             var fileSystemVolumeResult = await MountAdfFileSystemVolume(stream);
             if (fileSystemVolumeResult.IsFaulted)
             {
                 return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
             }
 
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, string.Empty,
-                mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
+            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media, string.Empty,
+                fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
                 fileSystemVolumeResult.Value));
         }
 
         // disk
-        var parts = mediaResult.Value.FileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length == 0)
         {
             return new Result<IEntryWriter>(new Error($"No partition table in path"));
         }
 
-        var disk = media.Value is DiskMedia diskMedia
-            ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Value.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
         switch (parts[0].ToLowerInvariant())
         {
@@ -528,7 +546,7 @@ public abstract class FsCommandBase : CommandBase
                 }
                 
                 // skip 2 first parts, partition table and partition number
-                return new Result<IEntryWriter>(new FileSystemEntryWriter(media.Value, mbrFileSystemResult.Value, parts.Skip(2).ToArray()));
+                return new Result<IEntryWriter>(new FileSystemEntryWriter(media, mbrFileSystemResult.Value, parts.Skip(2).ToArray()));
             case "gpt":
                 var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
                 if (gptFileSystemResult.IsFaulted)
@@ -537,7 +555,7 @@ public abstract class FsCommandBase : CommandBase
                 }
                 
                 // skip 2 first parts, partition table and partition number
-                return new Result<IEntryWriter>(new FileSystemEntryWriter(media.Value, gptFileSystemResult.Value, parts.Skip(2).ToArray()));
+                return new Result<IEntryWriter>(new FileSystemEntryWriter(media, gptFileSystemResult.Value, parts.Skip(2).ToArray()));
             case "rdb":
                 if (parts.Length == 1)
                 {
@@ -551,7 +569,7 @@ public abstract class FsCommandBase : CommandBase
                 }
 
                 // skip 2 first parts, partition table and device/drive name
-                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media.Value, mediaResult.Value.FileSystemPath, parts.Skip(2).ToArray(),
+                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media, fileSystemPath, parts.Skip(2).ToArray(),
                     fileSystemVolumeResult.Value));
             default:
                 return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));

@@ -21,7 +21,7 @@
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
-        private readonly MbrPartType type;
+        private readonly string type;
         private readonly Size size;
         private readonly long? startSector;
         private readonly long? endSector;
@@ -29,7 +29,7 @@
         private const int RdbMbrGap = 512 * 1024;
 
         public MbrPartAddCommand(ILogger<MbrPartAddCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path, MbrPartType type, Size size,
+            IEnumerable<IPhysicalDrive> physicalDrives, string path, string type, Size size,
             long? startSector, long? endSector, bool active = false)
         {
             this.logger = logger;
@@ -191,7 +191,17 @@
 
         private Result<byte> GetBiosPartitionType()
         {
-            return type switch
+            if (byte.TryParse(type, out var biosType))
+            {
+                return new Result<byte>(biosType);
+            }
+
+            if (!Enum.TryParse<MbrPartType>(type, out var mbrPartType))
+            {
+                return new Result<byte>(new Error($"Unsupported partition type '{type}'"));
+            }
+
+            return mbrPartType switch
             {
                 MbrPartType.Fat12 => new Result<byte>(BiosPartitionTypes.Fat12),
                 MbrPartType.Fat16 => new Result<byte>(BiosPartitionTypes.Fat16),
@@ -200,6 +210,7 @@
                 MbrPartType.Fat32 => new Result<byte>(BiosPartitionTypes.Fat32),
                 MbrPartType.Fat32Lba => new Result<byte>(BiosPartitionTypes.Fat32Lba),
                 MbrPartType.Ntfs => new Result<byte>(BiosPartitionTypes.Ntfs),
+                MbrPartType.PiStormRdb => new Result<byte>(Core.Constants.BiosPartitionTypes.PiStormRdb),
                 _ => new Result<byte>(new Error($"Unsupported partition type '{type}'"))
             };
         }

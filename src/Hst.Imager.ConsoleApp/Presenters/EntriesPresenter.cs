@@ -113,7 +113,7 @@ public static class EntriesPresenter
         outputBuilder.AppendLine();
         outputBuilder.Append(TablePresenter.Present(entriesTable));
         outputBuilder.AppendLine();
-        outputBuilder.AppendLine($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}");
+        outputBuilder.AppendLine($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount == 1 ? "file" : "files")}");
         outputBuilder.AppendLine();
         return outputBuilder.ToString();
     }

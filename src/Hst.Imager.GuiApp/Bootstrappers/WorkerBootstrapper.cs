@@ -136,7 +136,7 @@
 
             await queuedHostedService.StartAsync(CancellationToken.None);
 
-            workerHubConnection.On<BackgroundTask>(Constants.HubMethodNames.RunBackgroundTask, async (task) =>
+            workerHubConnection.On<BackgroundTask>(Core.Models.Constants.HubMethodNames.RunBackgroundTask, async (task) =>
             {
                 logger.LogDebug($"Start handle background task type '{task.Type}' with payload '{task.Payload}'");
                 try
@@ -151,7 +151,7 @@
                 }
             });
 
-            workerHubConnection.On(Constants.HubMethodNames.CancelBackgroundTask, () =>
+            workerHubConnection.On(Core.Models.Constants.HubMethodNames.CancelBackgroundTask, () =>
             {
                 logger.LogDebug("Cancel background task");
                 try
@@ -233,7 +233,7 @@
 
         private static void SetupReleaseLogging(bool hasDebugEnabled)
         {
-            var logFilePath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Constants.AppName), "logs",
+            var logFilePath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName), "logs",
                 "log-worker.txt");
             if (hasDebugEnabled)
             {

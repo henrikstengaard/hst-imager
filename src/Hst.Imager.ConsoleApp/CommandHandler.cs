@@ -17,6 +17,7 @@ namespace Hst.Imager.ConsoleApp
     using Core.Extensions;
     using Core.Models;
     using Hst.Core;
+    using Hst.Imager.Core.Commands.MbrCommands;
     using Hst.Imager.Core.UaeMetadatas;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -311,7 +312,7 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path));
         }
 
-        public static async Task MbrPartAdd(string path, MbrPartType type, string size, long? startSector, bool active)
+        public static async Task MbrPartAdd(string path, string type, string size, long? startSector, bool active)
         {
             await Execute(new MbrPartAddCommand(GetLogger<MbrPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, type, ParseSize(size), startSector, null, active));
@@ -327,6 +328,22 @@ namespace Hst.Imager.ConsoleApp
         {
             await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name));
+        }
+
+        public static async Task MbrPartExport(string sourcePath, string partition, string destinationPath)
+        {
+            var command = new MbrPartExportCommand(GetLogger<MbrPartExportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), sourcePath, partition, destinationPath);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+
+        public static async Task MbrPartImport(string sourcePath, string destinationPath, int partitionNumber)
+        {
+            var command = new MbrPartImportCommand(GetLogger<MbrPartImportCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), sourcePath, destinationPath, partitionNumber);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
         }
 
         public static async Task RdbInfo(string path, bool showUnallocated)

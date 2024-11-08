@@ -137,7 +137,7 @@ public class FsExtractCommand : FsCommandBase
         stopwatch.Stop();
 
         OnInformationMessage(
-            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount > 1 ? "files" : "file")}, {totalBytes.FormatBytes()} extracted in {stopwatch.Elapsed.FormatElapsed()}");
+            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount == 1 ? "file" : "files")}, {totalBytes.FormatBytes()} extracted in {stopwatch.Elapsed.FormatElapsed()}");
 
         return new Result();
     }

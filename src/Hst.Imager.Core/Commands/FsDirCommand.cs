@@ -14,6 +14,8 @@ using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Extensions;
 using Hst.Core;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.PartitionTables;
 using Microsoft.Extensions.Logging;
 using Models;
 using Entry = Models.FileSystems.Entry;
@@ -101,10 +103,18 @@ public class FsDirCommand : FsCommandBase
             return new Result(readableMediaResult.Error);
         }
 
-        using var media = readableMediaResult.Value;
+        var fileSystemPath = pathResult.Value.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = pathResult.Value.DirectorySeparatorChar;
+
+        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        var media = piStormRdbMediaResult.Item1;
+        fileSystemPath = piStormRdbMediaResult.Item2;
+
         var stream = media.Stream;
 
-        var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(new []{ directorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
         if (media.Type == Media.MediaType.Floppy)
         {
@@ -233,7 +243,7 @@ public class FsDirCommand : FsCommandBase
         });
     }
 
-    private Task<Result> ListMbrPartitions(Media media)
+    private async Task<Result> ListMbrPartitions(Media media)
     {
         OnDebugMessage("Reading Master Boot Record");
 
@@ -248,7 +258,7 @@ public class FsDirCommand : FsCommandBase
         }
         catch (Exception)
         {
-            return Task.FromResult<Result>(new Result<IEntryIterator>(new Error("Master Boot Record not found")));
+            return new Result<IEntryIterator>(new Error("Master Boot Record not found"));
         }
 
         var partitionNumber = 0;
@@ -257,16 +267,16 @@ public class FsDirCommand : FsCommandBase
         foreach (var partition in biosPartitionTable.Partitions)
         {
             var partitionNumberFormatted = (++partitionNumber).ToString();
+
+            var partitionType = MbrPartitionTableReader.GetPartitionType(partition);
+
             entries.Add(new Entry
             {
                 Name = partitionNumberFormatted,
                 FormattedName = partitionNumberFormatted,
                 Type = EntryType.Dir,
                 Size = 0,
-                Properties = new Dictionary<string, string>
-                {
-                    { "Info", string.Join(", ", (partition.SectorCount * 512).FormatBytes(), partition.TypeAsString) }
-                }
+                Properties = await GetPartitionProperties(disk, partition)
             });
         }
         
@@ -276,12 +286,14 @@ public class FsDirCommand : FsCommandBase
             Entries = entries
         });
 
-        return Task.FromResult(new Result());
+        return new Result();
     }
     
     private async Task<Result> ListMbrPartitionEntries(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
             
         var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[0]);
         if (mbrFileSystemResult.IsFaulted)
@@ -315,7 +327,7 @@ public class FsDirCommand : FsCommandBase
         return new Result();
     }
 
-    private Task<Result> ListGptPartitions(Media media)
+    private async Task<Result> ListGptPartitions(Media media)
     {
         OnDebugMessage("Reading Guid Partition Table");
 
@@ -328,7 +340,7 @@ public class FsDirCommand : FsCommandBase
         }
         catch (Exception)
         {
-            return Task.FromResult<Result>(new Result<IEntryIterator>(new Error("Guid Partition Table not found")));
+            return new Result<IEntryIterator>(new Error("Guid Partition Table not found"));
         }
 
         var partitionNumber = 0;
@@ -343,10 +355,7 @@ public class FsDirCommand : FsCommandBase
                 FormattedName = partitionNumberFormatted,
                 Type = EntryType.Dir,
                 Size = 0,
-                Properties = new Dictionary<string, string>
-                {
-                    { "Info", string.Join(", ", (partition.SectorCount * 512).FormatBytes(), partition.TypeAsString) }
-                }
+                Properties = await GetPartitionProperties(disk, partition)
             });
         }
         
@@ -356,16 +365,31 @@ public class FsDirCommand : FsCommandBase
             Entries = entries
         });
 
-        return Task.FromResult(new Result());
+        return new Result();
     }
-    
+
+    private async Task<RigidDiskBlock> ReadRigidDiskBlockFromMedia(Media media)
+    {
+        if (media is PiStormRdbMedia piStormRdbMedia)
+        {
+            return piStormRdbMedia.RigidDiskBlock;
+        }
+
+        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+        return await commandHelper.GetRigidDiskBlock(disk.Content);
+    }
+
+
     private async Task<Result> ListRdbPartitions(Media media)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = media is DiskMedia diskMedia
+            ? diskMedia.Disk
+            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(disk.Content);
+        var rigidDiskBlock = await ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {
@@ -392,6 +416,18 @@ public class FsDirCommand : FsCommandBase
         });
 
         return new Result();
+    }
+
+    private async Task<Dictionary<string, string>> GetPartitionProperties(VirtualDisk disk,
+    DiscUtils.Partitions.PartitionInfo partitionInfo)
+    {
+        var fileSystemInfo = await FileSystemReader.ReadFileSystem(partitionInfo);
+
+        return new Dictionary<string, string>
+        {
+            { "File System", $"{fileSystemInfo.FileSystemType}" },
+            { "Size", $"{(partitionInfo.SectorCount * disk.SectorSize).FormatBytes()}" }
+        };
     }
 
     private async Task<Dictionary<string, string>> GetRdbPartitionProperties(VirtualDisk disk,
