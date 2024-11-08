@@ -33,7 +33,7 @@ jobs:
           "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
       - name: Upload release tag artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: hst-imager.release-tag
           path: hst-imager.release-tag.txt
@@ -41,7 +41,7 @@ jobs:
         if: matrix.target == 'win-x64'
 
       - name: Upload release version artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: hst-imager.release-version
           path: hst-imager.release-version.txt
@@ -93,7 +93,7 @@ jobs:
           "::set-output name=artifact_path::$artifactPath"
 
       - name: Upload console app artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.build_console_app_artifact.outputs.artifact_name }}"
           path: "${{ steps.build_console_app_artifact.outputs.artifact_path }}"
@@ -188,7 +188,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit setup artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.windows_x64_setup.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_setup.outputs.artifact_path }}"
@@ -208,7 +208,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit portable artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.windows_x64_portable.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_portable.outputs.artifact_path }}"
@@ -228,7 +228,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit zip artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.windows_x64_zip.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_zip.outputs.artifact_path }}"
@@ -248,7 +248,7 @@ jobs:
         if: matrix.os == 'macos-latest'
 
       - name: Upload macOS 64-bit dmg artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
           path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
@@ -268,7 +268,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux 64-bit appimage artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.linux_x64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_x64_appimage.outputs.artifact_path }}"
@@ -288,7 +288,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux arm64 appimage artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.linux_arm64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_arm64_appimage.outputs.artifact_path }}"
@@ -308,7 +308,7 @@ jobs:
 #        if: matrix.os == 'ubuntu-latest'
 
 #      - name: Upload Linux 64-bit deb artifact
-#        uses: actions/upload-artifact@v2
+#        uses: actions/upload-artifact@v4
 #        with:
 #          name: "${{ steps.linux_x64_deb.outputs.artifact_name }}"
 #          path: "${{ steps.linux_x64_deb.outputs.artifact_path }}"
@@ -320,12 +320,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.release-tag
 
       - name: Download release version artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.release-version
 
@@ -337,228 +337,114 @@ jobs:
               
         # windows
       - name: Download Console Windows 64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.win-x64.zip
 
       - name: Download Console Windows arm64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.win-arm64.zip
         
       - name: Download Gui Windows 64-bit setup artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.win-x64-setup.exe
 
       - name: Download Gui Windows 64-bit portable artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.win-x64-portable.exe
 
       - name: Download Gui Windows 64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.win-x64.zip
 
         # macos
       - name: Download Console macOS 64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.osx-x64.zip
 
       - name: Download Console macOS arm64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.osx-arm64.zip
 
       - name: Download Gui macOS 64-bit dmg artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.osx-x64.dmg
 
         # linux
       - name: Download Console Linux 64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.linux-x64.zip
 
       - name: Download Console Linux arm-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.linux-arm.zip
 
       - name: Download Console Linux arm64-bit zip artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.console.linux-arm64.zip
 
       - name: Download Gui Linux 64-bit appimage artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.linux-x64.AppImage
 
       - name: Download Gui Linux arm64-bit appimage artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
 #      - name: Download Gui Linux arm64-bit deb artifact
-#        uses: actions/download-artifact@v2
+#        uses: actions/download-artifact@v4
 #        with:
 #          name: hst-imager.gui.linux-arm64.deb
 
+      - name: Version artifacts
+        shell: pwsh
+        run: |
+          Rename-Item -Path hst-imager.console.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_windows_x64.zip"
+          Rename-Item -Path hst-imager.console.win-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_windows_arm64.zip"
+          Rename-Item -Path hst-imager.gui.win-x64-setup.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe"
+          Rename-Item -Path hst-imager.gui.win-x64-portable.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64_portable.exe"
+          Rename-Item -Path hst-imager.gui.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64.zip"
+          Rename-Item -Path hst-imager.console.osx-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_x64.zip"
+          Rename-Item -Path hst-imager.console.osx-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip"
+          Rename-Item -Path hst-imager.gui.osx-x64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg"
+          Rename-Item -Path hst-imager.console.linux-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_x64.zip"
+          Rename-Item -Path hst-imager.console.linux-arm.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm.zip"
+          Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
+          Rename-Item -Path hst-imager.gui.linux-x64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage"
+          Rename-Item -Path hst-imager.gui.linux-arm64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
+
       - name: Create release
-        uses: actions/create-release@v1
-        id: create_release
+        uses: softprops/action-gh-release@v2
         with:
+          files: |
+            ${{ env.RELEASE_VERSION }}_console_windows_x64.zip
+            ${{ env.RELEASE_VERSION }}_console_windows_arm64.zip
+            ${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe
+            ${{ env.RELEASE_VERSION }}_gui_windows_x64_portable.exe
+            ${{ env.RELEASE_VERSION }}_gui_windows_x64.zip
+            ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
+            ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
+            ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
+            ${{ env.RELEASE_VERSION }}_console_linux_x64.zip
+            ${{ env.RELEASE_VERSION }}_console_linux_arm.zip
+            ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip
+            ${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage
+            ${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage
+  
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_VERSION }}
+          body: Prerelease of ${{ env.RELEASE_VERSION }}
           draft: true
           prerelease: true
-          release_name: ${{ env.RELEASE_VERSION }}
-          tag_name: ${{ env.RELEASE_TAG }}
-          body: Prerelease of ${{ env.RELEASE_VERSION }}
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-
-        # windows
-      - name: Upload Console Windows 64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.win-x64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_windows_x64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Console Windows arm64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.win-arm64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_windows_arm64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui Windows 64-bit setup artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.win-x64-setup.exe
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui Windows 64-bit portable artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.win-x64-portable.exe
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_windows_x64_portable.exe'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui Windows 64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.win-x64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_windows_x64.zip'
-          asset_content_type: 'application/octet-stream'
-
-        # macos
-      - name: Upload Console macOS 64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.osx-x64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_macos_x64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Console macOS arm64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.osx-arm64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_macos_arm64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui macOS 64-bit dmg artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.osx-x64.dmg
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg'
-          asset_content_type: 'application/octet-stream'
-
-        # linux
-      - name: Upload Console Linux 64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.linux-x64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_linux_x64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Console Linux arm zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.linux-arm.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_linux_arm.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Console Linux arm64-bit zip artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.console.linux-arm64.zip
-          asset_name: '${{ env.RELEASE_VERSION }}_console_linux_arm64.zip'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui Linux 64-bit appimage artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.linux-x64.AppImage
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage'
-          asset_content_type: 'application/octet-stream'
-
-      - name: Upload Gui Linux arm64 appimage artifact
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: hst-imager.gui.linux-arm64.AppImage
-          asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage'
-          asset_content_type: 'application/octet-stream'
-          
-#      - name: Upload Gui Linux arm64 deb artifact
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ github.token }}
-#        with:
-#          upload_url: ${{ steps.create_release.outputs.upload_url }}
-#          asset_path: hst-imager.gui.linux-arm64.deb
-#          asset_name: '${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb'
-#          asset_content_type: 'application/octet-stream'
