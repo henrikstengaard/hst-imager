@@ -3,9 +3,9 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2024-11-10
 #
-# A python script to install Amiga OS 3.1 adf files to an amiga harddisk file
+# A python script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
 #
 # Requirements:
@@ -50,6 +50,10 @@ amigaos_32_files = [
     {
         'Filename': 'Storage3.2.adf',
         'Name': 'AmigaOS 3.2 Storage Disk'
+    },
+    {
+        'Filename': 'DiskDoctor.adf',
+        'Name': 'AmigaOS 3.2 Disk Doctor'
     }
 ]
 
@@ -63,6 +67,7 @@ extras_adf_path = os.path.join(current_path, "Extras3.2.adf")
 classes_adf_path = os.path.join(current_path, "Classes3.2.adf")
 fonts_adf_path = os.path.join(current_path, "Fonts.adf")
 storage_adf_path = os.path.join(current_path, "Storage3.2.adf")
+diskdoctor_adf_path = os.path.join(current_path, "DiskDoctor.adf")
 
 # confirm create image confirm 
 create_image = shared.confirm("Do you want to create a new hard disk image file?", "enter = yes")
@@ -260,5 +265,10 @@ shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, '
 
 # copy icons from local directory to image file
 shared.run_command([hst_imager_path, 'fs', 'copy', icons_path, os.path.join(image_path, 'rdb', 'dh0'), '--recursive'])
+
+# copy files from disk doctor for mounting adf in amigaos
+if os.path.exists(diskdoctor_adf_path):
+    shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(diskdoctor_adf_path, 'C', 'DAControl'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+    shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(diskdoctor_adf_path, 'Devs', 'trackfile.device'), os.path.join(image_path, 'rdb', 'dh0', 'Devs')])
 
 print('Done')

@@ -2,8 +2,8 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
-# A powershell script to install Amiga OS 3.1 adf files to an amiga harddisk file
+# Date:   2024-11-10
+# A powershell script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
 #
 # Requirements:
@@ -52,6 +52,10 @@ $amigaOs32Files = @(
     @{
         'Filename' = 'Storage3.2.adf';
         'Name' = 'AmigaOS 3.2 Storage Disk'
+    },
+    @{
+        'Filename' = 'DiskDoctor.adf';
+        'Name' = 'AmigaOS 3.2 Disk Doctor'
     }
 )
 
@@ -65,6 +69,7 @@ $extrasAdfPath = Join-Path $currentPath -ChildPath "Extras3.2.adf"
 $classesAdfPath = Join-Path $currentPath -ChildPath "Classes3.2.adf"
 $fontsAdfPath = Join-Path $currentPath -ChildPath "Fonts.adf"
 $storageAdfPath = Join-Path $currentPath -ChildPath "Storage3.2.adf"
+$diskDoctorAdfPath = Join-Path $currentPath -ChildPath "DiskDoctor.adf"
 
 # show create image question dialog
 $createImage = QuestionDialog 'Create image' "Do you want to create a new image file?`r`n`r`nIf No then existing image file can be selected."
@@ -288,3 +293,12 @@ Copy-Item (Join-Path $iconsPath -ChildPath "Devs.info") (Join-Path $iconsPath -C
 
 # copy icons from local directory to image file
 & $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive
+
+# copy files from disk doctor for mounting adf in amigaos
+if (Test-Path $diskDoctorAdfPath)
+{
+    & $hstImagerPath fs extract "$diskDoctorAdfPath\C\DAControl" "$imagePath\rdb\dh0\C"
+    & $hstImagerPath fs extract "$diskDoctorAdfPath\Devs\trackfile.device" "$imagePath\rdb\dh0\Devs"
+}
+
+Write-Host "Done"
