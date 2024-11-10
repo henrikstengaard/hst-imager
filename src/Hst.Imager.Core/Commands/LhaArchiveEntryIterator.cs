@@ -113,12 +113,12 @@ public class LhaArchiveEntryIterator : IEntryIterator
             var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute);
             var properties = new Dictionary<string, string>
             {
-                { "ProtectionBits", ((int)protectionBits ^ 0xf).ToString() }
+                { Core.Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
             };
             var comment = GetEntryComment(lhaEntry.Name);
             if (!string.IsNullOrEmpty(comment))
             {
-                properties.Add("Comment", comment);
+                properties.Add(Core.Constants.EntryPropertyNames.Comment, comment);
             }
 
             var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));

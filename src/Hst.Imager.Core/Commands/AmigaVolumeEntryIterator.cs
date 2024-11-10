@@ -191,8 +191,8 @@ public class AmigaVolumeEntryIterator : IEntryIterator
             var attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits);
             var properties = new Dictionary<string, string>
             {
-                { "Comment", entry.Comment },
-                { "ProtectionBits", ((int)entry.ProtectionBits ^ 0xf).ToString() }
+                { Constants.EntryPropertyNames.Comment, entry.Comment },
+                { Constants.EntryPropertyNames.ProtectionBits, ((int)entry.ProtectionBits ^ 0xf).ToString() }
             };
 
             var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, rootPathComponents,

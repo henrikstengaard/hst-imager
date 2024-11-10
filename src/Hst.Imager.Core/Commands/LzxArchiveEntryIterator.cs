@@ -116,12 +116,12 @@ public class LzxArchiveEntryIterator : IEntryIterator
             var protectionBits = GetProtectionBits(lzxEntry.Attributes);
             var properties = new Dictionary<string, string>
             {
-                { "ProtectionBits", ((int)protectionBits ^ 0xf).ToString() }
+                { Core.Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
             };
 
             if (!string.IsNullOrEmpty(lzxEntry.Comment))
             {
-                properties.Add("Comment", lzxEntry.Comment);
+                properties.Add(Core.Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
             }
 
             var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
@@ -148,12 +148,12 @@ public class LzxArchiveEntryIterator : IEntryIterator
         var protectionBits = GetProtectionBits(lzxEntry.Attributes);
         var properties = new Dictionary<string, string>
         {
-            { "ProtectionBits", ((int)protectionBits ^ 0xf).ToString() }
+            { Core.Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
         };
 
         if (!string.IsNullOrEmpty(lzxEntry.Comment))
         {
-            properties.Add("Comment", lzxEntry.Comment);
+            properties.Add(Core.Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
         }
 
         var entryRelativePath = mediaPath.Join(relativePathComponents.ToArray());

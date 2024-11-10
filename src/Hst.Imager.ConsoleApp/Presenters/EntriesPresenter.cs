@@ -49,7 +49,7 @@ public static class EntriesPresenter
         {
             foreach (var property in entry.Properties)
             {
-                if (propertiesIndex.Contains(property.Key))
+                if (IsPropertyHidden(property.Key) || propertiesIndex.Contains(property.Key))
                 {
                     continue;
                 }
@@ -117,4 +117,6 @@ public static class EntriesPresenter
         outputBuilder.AppendLine();
         return outputBuilder.ToString();
     }
+
+    private static bool IsPropertyHidden(string propertyName) => propertyName.StartsWith("$");
 }

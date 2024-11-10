@@ -164,12 +164,12 @@ public class DirectoryEntryWriter : IEntryWriter
             Directory.CreateDirectory(fullPath);
         }
 
-        if (!int.TryParse(GetProperty(entry.Properties, "ProtectionBits"), out var protectionBits))
+        if (!int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
         {
             protectionBits = 0;
         }
             
-        var comment = GetProperty(entry.Properties, "Comment");
+        var comment = GetProperty(entry.Properties, Constants.EntryPropertyNames.Comment);
 
         var entryName = entryPathComponents[^1];
         var useUaeMetadataProperties = UaeMetadata != UaeMetadata.None
@@ -242,12 +242,12 @@ public class DirectoryEntryWriter : IEntryWriter
             Directory.CreateDirectory(fullPath);
         }
 
-        if (!int.TryParse(GetProperty(entry.Properties, "ProtectionBits"), out var protectionBits))
+        if (!int.TryParse(GetProperty(entry.Properties, Core.Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
         {
             protectionBits = 0;
         }
             
-        var comment = GetProperty(entry.Properties, "Comment");
+        var comment = GetProperty(entry.Properties, Core.Constants.EntryPropertyNames.Comment);
 
         var entryName = entryPathComponents[^1];
         var requiresUaeMetadataProperties = UaeMetadata != UaeMetadata.None

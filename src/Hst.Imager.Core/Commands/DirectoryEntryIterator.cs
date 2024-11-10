@@ -181,8 +181,8 @@ public class DirectoryEntryIterator : IEntryIterator
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
                     date = uaeMetadataEntry.Date;
-                    properties["Comment"] = uaeMetadataEntry.Comment;
-                    properties["ProtectionBits"] = uaeMetadataEntry.ProtectionBits.ToString();
+                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
                 }
             }
 
@@ -231,8 +231,8 @@ public class DirectoryEntryIterator : IEntryIterator
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
                     date = uaeMetadataEntry.Date;
-                    properties["Comment"] = uaeMetadataEntry.Comment;
-                    properties["ProtectionBits"] = uaeMetadataEntry.ProtectionBits.ToString();
+                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
                 }
             }
 

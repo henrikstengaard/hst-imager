@@ -199,14 +199,14 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
         if (!string.IsNullOrEmpty(centralDirectoryFileHeader.FileComment))
         {
-            properties["Comment"] = centralDirectoryFileHeader.FileComment;
+            properties[Core.Constants.EntryPropertyNames.Comment] = centralDirectoryFileHeader.FileComment;
         }
 
         var hostOs = (HostOsFlags)centralDirectoryFileHeader.HostOs;
         if (hostOs == HostOsFlags.Amiga)
         {
             var protectionBitsValue = (int)((centralDirectoryFileHeader.ExternalFileAttributes >> 16) & 0xff);
-            properties["ProtectionBits"] = (protectionBitsValue ^ 0xf).ToString();
+            properties[Constants.EntryPropertyNames.ProtectionBits] = (protectionBitsValue ^ 0xf).ToString();
         }
 
         return properties;

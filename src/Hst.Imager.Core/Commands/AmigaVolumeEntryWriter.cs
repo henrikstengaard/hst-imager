@@ -81,9 +81,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
             if (i == fullPathComponents.Length - 1)
             {
-                if (!skipAttributes && entry.Properties.ContainsKey("ProtectionBits"))
+                if (!skipAttributes && entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.ProtectionBits))
                 {
-                    if (!int.TryParse(entry.Properties["ProtectionBits"], out var protectionBitsValue))
+                    if (!int.TryParse(entry.Properties[Core.Constants.EntryPropertyNames.ProtectionBits], out var protectionBitsValue))
                     {
                         protectionBitsValue = 0;
                     }
@@ -97,9 +97,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                     await fileSystemVolume.SetDate(part, entry.Date.Value);
                 }
 
-                if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
+                if (entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.Comment) &&
+                    !string.IsNullOrWhiteSpace(entry.Properties[Core.Constants.EntryPropertyNames.Comment]))
                 {
-                    await fileSystemVolume.SetComment(part, entry.Properties["Comment"]);
+                    await fileSystemVolume.SetComment(part, entry.Properties[Core.Constants.EntryPropertyNames.Comment]);
                 }
             }
 
@@ -172,9 +173,9 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                  0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
-        if (!skipAttributes && entry.Properties.ContainsKey("ProtectionBits"))
+        if (!skipAttributes && entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.ProtectionBits))
         {
-            if (!int.TryParse(entry.Properties["ProtectionBits"], out var protectionBitsValue))
+            if (!int.TryParse(entry.Properties[Core.Constants.EntryPropertyNames.ProtectionBits], out var protectionBitsValue))
             {
                 protectionBitsValue = 0;
             }
@@ -183,9 +184,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             await fileSystemVolume.SetProtectionBits(fileName, protectionBits);
         }
 
-        if (entry.Properties.ContainsKey("Comment") && !string.IsNullOrWhiteSpace(entry.Properties["Comment"]))
+        if (entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.Comment) &&
+            !string.IsNullOrWhiteSpace(entry.Properties[Core.Constants.EntryPropertyNames.Comment]))
         {
-            await fileSystemVolume.SetComment(fileName, entry.Properties["Comment"]);
+            await fileSystemVolume.SetComment(fileName, entry.Properties[Core.Constants.EntryPropertyNames.Comment]);
         }
 
         if (entry.Date.HasValue)

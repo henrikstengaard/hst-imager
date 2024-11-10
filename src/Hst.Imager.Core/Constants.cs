@@ -13,5 +13,11 @@ namespace Hst.Imager.Core
         {
             public const string PiStormRdb = "PiStorm RDB";
         }
+
+        public static class EntryPropertyNames
+        {
+            public const string Comment = "Comment";
+            public const string ProtectionBits = "$ProtectionBits";
+        }
     }
 }
