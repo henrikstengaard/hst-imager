@@ -46,19 +46,6 @@ export default function DiskOverview(props) {
         }
     }
     
-    const formatPartType = (partType) => {
-        switch (partType) {
-            case 'PartitionTable':
-                return 'Partition Table'
-            case 'Partition':
-                return 'Partition'
-            case 'Unallocated':
-                return 'Unallocated'
-            default:
-                return ''
-        }
-    }
-
     const renderLayout = (parts) => {
         const filteredParts = showUnallocated ? parts : parts.filter(x => x.partType !== 'Unallocated')
         return (

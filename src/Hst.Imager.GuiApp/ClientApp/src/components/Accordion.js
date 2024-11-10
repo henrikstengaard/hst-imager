@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+import * as React from 'react';
 import MuiAccordion from '@mui/material/Accordion';
 import AccordionDetails from '@mui/material/AccordionDetails';
 import AccordionSummary from '@mui/material/AccordionSummary';

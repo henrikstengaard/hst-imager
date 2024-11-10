@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {get} from "lodash";
 import {TableHead} from "@mui/material";
 import Paper from "@mui/material/Paper";

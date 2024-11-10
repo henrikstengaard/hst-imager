@@ -1,4 +1,4 @@
-﻿import {formatBytes} from "../utils/Format";
+import {formatBytes} from "../utils/Format";
 import {get} from "lodash";
 
 export const createGuidPartitionTableParts = ({ media, humanReadable = true }) => {
