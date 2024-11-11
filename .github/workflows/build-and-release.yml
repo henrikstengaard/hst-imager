@@ -154,12 +154,12 @@ jobs:
           dotnet electronize build /target win /p:DefineConstants=ELECTRON
         if: matrix.os == 'windows-latest'
 
-      - name: Build gui app for macOS
+      - name: Build gui app for macOS x64
         working-directory: ./src
         shell: pwsh
         run: |
           cd Hst.Imager.GuiApp
-          dotnet electronize build /target osx-arm64 /p:DefineConstants=ELECTRON
+          dotnet electronize build /target osx-x64 /p:DefineConstants=ELECTRON
         if: matrix.os == 'macos-latest'
 
       - name: Build gui app for Linux
