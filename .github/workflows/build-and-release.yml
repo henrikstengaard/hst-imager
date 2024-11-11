@@ -14,7 +14,7 @@ jobs:
         target: [win-x64, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm, linux-arm64]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -49,9 +49,10 @@ jobs:
         if: matrix.target == 'win-x64'
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            8.0.x
 
       - name: Restore tool
         working-directory: ./src
@@ -106,7 +107,7 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -125,11 +126,11 @@ jobs:
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
       
       - name: Setup .NET
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
+            8.0.x
 
       - name: Restore tool
         working-directory: ./src
