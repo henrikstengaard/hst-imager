@@ -83,10 +83,10 @@ public class GptPartFormatCommand : CommandBase
         switch (type)
         {
             case GptPartType.Fat32:
-                var partitionOffset = partitionInfo.FirstSector * disk.Geometry.BytesPerSector;
+                var partitionOffset = partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector;
                 await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
-                    partitionInfo.SectorCount * disk.Geometry.BytesPerSector,
-                    disk.Geometry.BytesPerSector, disk.Geometry.SectorsPerTrack, disk.Geometry.HeadsPerCylinder, 
+                    partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
+                    disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder, 
                     name);
                 break;
             case GptPartType.Ntfs:

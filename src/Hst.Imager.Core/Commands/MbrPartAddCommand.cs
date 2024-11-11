@@ -90,7 +90,7 @@
             }
             
             OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
-            OnDebugMessage($"Sectors: {disk.Geometry.TotalSectorsLong}");
+            OnDebugMessage($"Sectors: {disk.Geometry.Value.TotalSectorsLong}");
             OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
 
             // available size and default start offset
@@ -156,16 +156,16 @@
 
             if (partitionSectors <= 0)
             {
-                return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.TotalSectorsLong}'"));
+                return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.Value.TotalSectorsLong}'"));
             }
 
             var end = start + partitionSectors - 1;
             partitionSize = partitionSectors * 512;
 
             // set end to last sector, if end is larger than last sector
-            if (end > disk.Geometry.TotalSectorsLong)
+            if (end > disk.Geometry.Value.TotalSectorsLong)
             {
-                end = disk.Geometry.TotalSectorsLong;
+                end = disk.Geometry.Value.TotalSectorsLong;
                 partitionSectors = end - start + 1;
                 partitionSize = partitionSectors * 512;
             }

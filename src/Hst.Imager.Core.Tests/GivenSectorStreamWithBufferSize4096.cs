@@ -43,7 +43,7 @@ public class GivenSectorStreamWithBufferSize4096
             sectorStream.Seek(writeOffset, SeekOrigin.Begin);
             
             // assert - seek activity triggered by seeking to write offset
-            Assert.Equal(1, monitorStream.Activities.Count);
+            Assert.Single(monitorStream.Activities);
             var seekActivity = monitorStream.Activities.Last() as SeekActivity;
             Assert.NotNull(seekActivity);
             Assert.Equal(0, seekActivity.Position);

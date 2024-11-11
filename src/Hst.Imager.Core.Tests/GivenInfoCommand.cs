@@ -66,7 +66,7 @@
             Assert.NotNull(mediaInfo);
             Assert.NotNull(mediaInfo.DiskInfo);
             Assert.Single(mediaInfo.DiskInfo.PartitionTables);
-            Assert.Single(mediaInfo.DiskInfo.PartitionTables.Where(x => x.Type == PartitionTableType.RigidDiskBlock));
+            Assert.Single(mediaInfo.DiskInfo.PartitionTables, x => x.Type == PartitionTableType.RigidDiskBlock);
         }
 
         [Fact]

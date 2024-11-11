@@ -62,7 +62,7 @@ public class GptPartDelCommand : CommandBase
         }
 
         OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
-        OnDebugMessage($"Sectors: {disk.Geometry.TotalSectorsLong}");
+        OnDebugMessage($"Sectors: {disk.Geometry.Value.TotalSectorsLong}");
         OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
 
         OnDebugMessage($"Deleting partition number '{partitionNumber}'");

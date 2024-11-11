@@ -187,7 +187,7 @@ public class GivenSectorStreamWritingData
             sectorStream.Seek(writeOffset, SeekOrigin.Begin);
 
             // assert - seek activity triggered by seeking to write offset
-            Assert.Equal(1, monitorStream.Activities.Count);
+            Assert.Single(monitorStream.Activities);
             var seekActivity1 = monitorStream.Activities.Last() as SeekActivity;
             Assert.NotNull(seekActivity1);
             Assert.Equal(0, seekActivity1.Position);

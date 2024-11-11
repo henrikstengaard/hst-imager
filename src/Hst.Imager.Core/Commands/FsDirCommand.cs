@@ -421,7 +421,7 @@ public class FsDirCommand : FsCommandBase
     private async Task<Dictionary<string, string>> GetPartitionProperties(VirtualDisk disk,
     DiscUtils.Partitions.PartitionInfo partitionInfo)
     {
-        var fileSystemInfo = await FileSystemReader.ReadFileSystem(partitionInfo);
+        var fileSystemInfo = await FileSystemReader.ReadFileSystem(disk, partitionInfo);
 
         return new Dictionary<string, string>
         {

@@ -50,12 +50,12 @@ public static class GuidPartitionTableReader
                 Type = PartitionTableType.GuidPartitionTable,
                 DiskGeometry = new DiskGeometryInfo
                 {
-                    BytesPerSector = disk.Geometry.BytesPerSector,
-                    Cylinders = disk.Geometry.Cylinders,
-                    Capacity = disk.Geometry.Capacity,
-                    HeadsPerCylinder = disk.Geometry.HeadsPerCylinder,
-                    SectorsPerTrack = disk.Geometry.SectorsPerTrack,
-                    TotalSectors = disk.Geometry.TotalSectorsLong,
+                    BytesPerSector = disk.Geometry.Value.BytesPerSector,
+                    Cylinders = disk.Geometry.Value.Cylinders,
+                    Capacity = disk.Geometry.Value.Capacity,
+                    HeadsPerCylinder = disk.Geometry.Value.HeadsPerCylinder,
+                    SectorsPerTrack = disk.Geometry.Value.SectorsPerTrack,
+                    TotalSectors = disk.Geometry.Value.TotalSectorsLong,
                 },
                 Size = disk.Capacity,
                 Sectors = guidPartitionTable.LastUsableSector + 1,
@@ -89,7 +89,7 @@ public static class GuidPartitionTableReader
             ? guidPartitionType.PartitionType
             : partitionInfo.TypeAsString;
 
-        var fileSystemInfo = await FileSystemReader.ReadFileSystem(partitionInfo);
+        var fileSystemInfo = await FileSystemReader.ReadFileSystem(disk, partitionInfo);
         
         return new PartitionInfo
         {

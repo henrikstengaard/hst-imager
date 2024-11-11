@@ -1,6 +1,6 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <Copyright>Copyright © 2024</Copyright>
   </PropertyGroup>
   <PropertyGroup>

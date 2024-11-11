@@ -37,10 +37,10 @@ public class GivenFat32Formatter
         var partition = biosPartitionTable.Partitions[partitionIndex];
 
         // act - fat32 format partition
-        var partitionOffset = partition.FirstSector * disk.Geometry.BytesPerSector;
+        var partitionOffset = partition.FirstSector * disk.Geometry.Value.BytesPerSector;
         await Fat32Formatter.FormatPartition(stream, partitionOffset,
-            partition.SectorCount * disk.Geometry.BytesPerSector,
-            disk.Geometry.BytesPerSector, disk.Geometry.SectorsPerTrack, disk.Geometry.HeadsPerCylinder, 
+            partition.SectorCount * disk.Geometry.Value.BytesPerSector,
+            disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder, 
             "UNITTEST", 4096);
 
         // assert - partition sector 0 (offset 512) contains fat32 boot sector block

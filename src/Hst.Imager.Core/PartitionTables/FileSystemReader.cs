@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Threading.Tasks;
+using DiscUtils;
 using DiscUtils.Fat;
 using DiscUtils.HfsPlus;
 using DiscUtils.Ntfs;
@@ -10,7 +12,7 @@ namespace Hst.Imager.Core.PartitionTables;
 
 public static class FileSystemReader
 {
-    public static async Task<Models.FileSystems.FileSystemInfo> ReadFileSystem(PartitionInfo partitionInfo)
+    public static async Task<Models.FileSystems.FileSystemInfo> ReadFileSystem(VirtualDisk disk, PartitionInfo partitionInfo)
     {
         if (partitionInfo.BiosType == BiosPartitionTypes.GptProtective)
         {
@@ -32,8 +34,19 @@ public static class FileSystemReader
             };
         }
 
+        if (disk.Geometry != null &&
+            (partitionInfo.LastSector > disk.Geometry.Value.TotalSectorsLong ||
+             partitionInfo.FirstSector > disk.Geometry.Value.TotalSectorsLong))
+        {
+            return new Models.FileSystems.FileSystemInfo
+            {
+                FileSystemType = "RAW"
+            };
+        }
+        
+        
         await using var stream = partitionInfo.Open();
-
+        
         try
         {
             stream.Position = 0;

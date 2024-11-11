@@ -91,7 +91,7 @@ public class GptPartAddCommand : CommandBase
         }
         
         OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
-        OnDebugMessage($"Sectors: {disk.Geometry.TotalSectorsLong}");
+        OnDebugMessage($"Sectors: {disk.Geometry.Value.TotalSectorsLong}");
         OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
             
         // available size and default start offset
@@ -131,14 +131,14 @@ public class GptPartAddCommand : CommandBase
             start = firstSector;
         }
 
-        var diskSectors = disk.Geometry.TotalSectorsLong;
+        var diskSectors = disk.Geometry.Value.TotalSectorsLong;
 
         // calculate partition sectors
         var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / disk.SectorSize;
 
         if (partitionSectors <= 0)
         {
-            return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.TotalSectorsLong}'"));
+            return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.Value.TotalSectorsLong}'"));
         }
             
         var end = start + partitionSectors - 1;

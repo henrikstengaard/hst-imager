@@ -36,7 +36,7 @@
         {
             context.Response.ContentType = "application/json";
             context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-            context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+            context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
 
             return context.Response.WriteAsync(JsonSerializer.Serialize(new HttpError
             {

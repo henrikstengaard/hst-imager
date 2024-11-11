@@ -40,15 +40,15 @@ public static class MbrPartitionTableReader
             Type = PartitionTableType.MasterBootRecord,
             DiskGeometry = new DiskGeometryInfo
             {
-                Capacity = disk.Geometry.Capacity,
+                Capacity = disk.Geometry.Value.Capacity,
                 TotalSectors = biosPartitionTable.DiskGeometry.TotalSectorsLong,
                 BytesPerSector = biosPartitionTable.DiskGeometry.BytesPerSector,
                 HeadsPerCylinder = biosPartitionTable.DiskGeometry.HeadsPerCylinder,
                 Cylinders = biosPartitionTable.DiskGeometry.Cylinders,
                 SectorsPerTrack = biosPartitionTable.DiskGeometry.SectorsPerTrack
             },
-            Size = disk.Geometry.Capacity,
-            Sectors = disk.Geometry.TotalSectorsLong,
+            Size = disk.Geometry.Value.Capacity,
+            Sectors = disk.Geometry.Value.TotalSectorsLong,
             Cylinders = 0,
             Partitions = mbrPartitions,
             Reserved = new PartitionTableReservedInfo
@@ -62,16 +62,16 @@ public static class MbrPartitionTableReader
                 Size = 512
             },
             StartOffset = 0,
-            EndOffset = disk.Geometry.Capacity - 1,
+            EndOffset = disk.Geometry.Value.Capacity - 1,
             StartSector = 0,
-            EndSector = disk.Geometry.TotalSectorsLong - 1
+            EndSector = disk.Geometry.Value.TotalSectorsLong - 1
         };
     }
     
     private static async Task<PartitionInfo> ReadMbrPartitionInfo(int mbrPartitionNumber, VirtualDisk disk,
         BiosPartitionInfo biosPartitionInfo)
     {
-        var fileSystemInfo = await FileSystemReader.ReadFileSystem(biosPartitionInfo);
+        var fileSystemInfo = await FileSystemReader.ReadFileSystem(disk, biosPartitionInfo);
 
         var partitionType = GetPartitionType(biosPartitionInfo);
         

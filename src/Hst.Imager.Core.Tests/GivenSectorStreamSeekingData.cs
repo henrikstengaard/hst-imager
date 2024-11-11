@@ -54,7 +54,7 @@ public class GivenSectorStreamSeekingData
             sectorStream.Seek(700, SeekOrigin.Begin);
 
             // assert - seek activity triggered by seeking to offset 700
-            Assert.Equal(1, monitorStream.Activities.Count);
+            Assert.Single(monitorStream.Activities);
             var seekActivity = monitorStream.Activities.Last() as SeekActivity;
             Assert.NotNull(seekActivity);
             Assert.Equal(0, seekActivity.Position);
