@@ -103,7 +103,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-14, ubuntu-latest]
+        os: [windows-latest, macos-14-large, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -160,7 +160,7 @@ jobs:
         run: |
           cd Hst.Imager.GuiApp
           dotnet electronize build /target osx /p:DefineConstants=ELECTRON
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-14-large'
 
       - name: Build gui app for Linux
         working-directory: ./src
