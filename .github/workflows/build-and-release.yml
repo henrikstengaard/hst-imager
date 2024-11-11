@@ -90,8 +90,8 @@ jobs:
           Rename-Item -Path $exeFileName -NewName ($exeFileName -replace 'Hst.Imager.ConsoleApp', 'hst.imager')
           zip -r $artifactName *
           $artifactPath=((Get-ChildItem -Filter $artifactName) | Select -First 1).FullName
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
 
       - name: Upload console app artifact
         uses: actions/upload-artifact@v4
@@ -184,8 +184,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit setup artifact
@@ -204,8 +204,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit portable artifact
@@ -224,8 +224,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows 64-bit zip artifact
@@ -244,8 +244,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
 
       - name: Upload macOS dmg artifact
@@ -264,8 +264,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux 64-bit appimage artifact
@@ -284,8 +284,8 @@ jobs:
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux arm64 appimage artifact
@@ -296,25 +296,45 @@ jobs:
           retention-days: 3
         if: matrix.os == 'ubuntu-latest'
 
-#      - name: Set Linux arm64 deb artifact
-#        id: linux_x64_deb
-#        shell: pwsh
-#        run: |
-#          $artifactName='hst-imager.gui.linux-arm64.deb'
-#          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
-#          Rename-Item $artifactFile -NewName $artifactName
-#          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-#          "::set-output name=artifact_name::$artifactName"
-#          "::set-output name=artifact_path::$artifactPath"
-#        if: matrix.os == 'ubuntu-latest'
+      - name: Set Linux amd64 deb artifact
+        id: linux_amd64_deb
+        shell: pwsh
+        run: |
+          $artifactName='hst-imager.gui.linux-amd64.deb'
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
+          Rename-Item $artifactFile -NewName $artifactName
+          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
+        if: matrix.os == 'ubuntu-latest'
 
-#      - name: Upload Linux 64-bit deb artifact
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: "${{ steps.linux_x64_deb.outputs.artifact_name }}"
-#          path: "${{ steps.linux_x64_deb.outputs.artifact_path }}"
-#          retention-days: 3
-#        if: matrix.os == 'ubuntu-latest'
+      - name: Upload Linux amd64 deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.linux_amd64_deb.outputs.artifact_name }}"
+          path: "${{ steps.linux_amd64_deb.outputs.artifact_path }}"
+          retention-days: 3
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Set Linux arm64 deb artifact
+        id: linux_arm64_deb
+        shell: pwsh
+        run: |
+          $artifactName='hst-imager.gui.linux-arm64.deb'
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
+          Rename-Item $artifactFile -NewName $artifactName
+          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+          echo "artifact_name=$artifactName" >> $GITHUB_OUTPUT
+          echo "artifact_path=$artifactPath" >> $GITHUB_OUTPUT
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Upload Linux arm64 deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.linux_arm64_deb.outputs.artifact_name }}"
+          path: "${{ steps.linux_arm64_deb.outputs.artifact_path }}"
+          retention-days: 3
+        if: matrix.os == 'ubuntu-latest'
 
   publish:
     needs: [build-console, build-gui]
@@ -404,10 +424,15 @@ jobs:
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
-#      - name: Download Gui Linux arm64-bit deb artifact
-#        uses: actions/download-artifact@v4
-#        with:
-#          name: hst-imager.gui.linux-arm64.deb
+      - name: Download Gui Linux amd64-bit deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hst-imager.gui.linux-amd64.deb
+
+      - name: Download Gui Linux arm64-bit deb artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hst-imager.gui.linux-arm64.deb
 
       - name: Version artifacts
         shell: pwsh
@@ -419,12 +444,14 @@ jobs:
           Rename-Item -Path hst-imager.gui.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64.zip"
           Rename-Item -Path hst-imager.console.osx-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_x64.zip"
           Rename-Item -Path hst-imager.console.osx-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip"
-          Rename-Item -Path hst-imager.gui.osx-x64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg"
+          Rename-Item -Path hst-imager.gui.osx.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos.dmg"
           Rename-Item -Path hst-imager.console.linux-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_x64.zip"
           Rename-Item -Path hst-imager.console.linux-arm.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm.zip"
           Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
           Rename-Item -Path hst-imager.gui.linux-x64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage"
           Rename-Item -Path hst-imager.gui.linux-arm64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
+          Rename-Item -Path hst-imager.gui.linux-amd64.deb -NewName "${{ env.RELEASE_VERSION }}_gui_linux_amd64.deb"
+          Rename-Item -Path hst-imager.gui.linux-arm64.deb -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -437,12 +464,14 @@ jobs:
             ${{ env.RELEASE_VERSION }}_gui_windows_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
+            ${{ env.RELEASE_VERSION }}_gui_macos.dmg
             ${{ env.RELEASE_VERSION }}_console_linux_x64.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip
             ${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage
             ${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage
+            ${{ env.RELEASE_VERSION }}_gui_linux_amd64.deb
+            ${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb
   
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_VERSION }}
