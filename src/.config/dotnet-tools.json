@@ -3,16 +3,18 @@
   "isRoot": true,
   "tools": {
     "paket": {
-      "version": "5.257.0",
+      "version": "8.0.3",
       "commands": [
         "paket"
-      ]
+      ],
+      "rollForward": false
     },
     "electronnet.cli": {
-      "version": "13.5.1",
+      "version": "23.6.2",
       "commands": [
         "electronize"
-      ]
+      ],
+      "rollForward": false
     }
   }
 }
