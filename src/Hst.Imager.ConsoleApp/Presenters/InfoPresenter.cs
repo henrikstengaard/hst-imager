@@ -249,9 +249,9 @@
 
             var length = endOffset - startOffset + 1;
             
-            if (length <= 0)
+            if (length < 0)
             {
-                length = 1;
+                length = 0;
             }
             
             if (length > size)
@@ -261,6 +261,11 @@
 
             var layoutLength = Convert.ToInt32(sizePerWidth * length);
             
+            if (layoutLength <= 0)
+            {
+                layoutLength = 1;
+            }
+
             var layoutEnd = layoutStart + layoutLength;
             
             return string.Concat(new string(' ', layoutStart), new string('=', layoutLength), new string(' ', maxWidth - layoutEnd));
