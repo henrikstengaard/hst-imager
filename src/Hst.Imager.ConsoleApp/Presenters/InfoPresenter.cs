@@ -225,10 +225,21 @@
         private static string BuildLayout(int maxWidth, long size, long startOffset, long endOffset)
         {
             var sizePerWidth = (double)maxWidth / size;
-            var start = Convert.ToInt32(sizePerWidth * startOffset);
-            if (start == maxWidth)
+            var layoutStart = Convert.ToInt32(sizePerWidth * startOffset);
+            
+            if (layoutStart == maxWidth)
             {
-                start = maxWidth - 1;
+                layoutStart = maxWidth - 1;
+            }
+            
+            if (layoutStart < 0)
+            {
+                layoutStart = 0;
+            }
+            
+            if (layoutStart > maxWidth)
+            {
+                layoutStart = maxWidth;
             }
 
             if (endOffset > size)
@@ -236,15 +247,23 @@
                 endOffset = size;
             }
 
-            var length = Convert.ToInt32(sizePerWidth * (endOffset - startOffset + 1));
+            var length = endOffset - startOffset + 1;
+            
             if (length <= 0)
             {
                 length = 1;
             }
+            
+            if (length > size)
+            {
+                length = size;
+            }
 
-            var end = start + length;
-
-            return string.Concat(new string(' ', start), new string('=', length), new string(' ', maxWidth - end));
+            var layoutLength = Convert.ToInt32(sizePerWidth * length);
+            
+            var layoutEnd = layoutStart + layoutLength;
+            
+            return string.Concat(new string(' ', layoutStart), new string('=', layoutLength), new string(' ', maxWidth - layoutEnd));
         }
     }
 }
