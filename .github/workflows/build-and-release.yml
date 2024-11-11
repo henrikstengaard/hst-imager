@@ -21,7 +21,7 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          "BUILD_VERSION=1.1.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
+          "BUILD_VERSION=1.2.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
 
       - name: Write version and tag
@@ -103,7 +103,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-14-large, ubuntu-latest]
+        os: [windows-latest, macos-latest, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v2
@@ -113,7 +113,7 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          "BUILD_VERSION=1.1.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
+          "BUILD_VERSION=1.2.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
           "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
           "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
@@ -159,8 +159,8 @@ jobs:
         shell: pwsh
         run: |
           cd Hst.Imager.GuiApp
-          dotnet electronize build /target osx /p:DefineConstants=ELECTRON
-        if: matrix.os == 'macos-14-large'
+          dotnet electronize build /target osx-arm64 /p:DefineConstants=ELECTRON
+        if: matrix.os == 'macos-latest'
 
       - name: Build gui app for Linux
         working-directory: ./src
@@ -235,25 +235,25 @@ jobs:
           retention-days: 3
         if: matrix.os == 'windows-latest'
 
-      - name: Set macOS 64-bit dmg artifact
-        id: macos_x64_dmg
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.osx-x64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          "::set-output name=artifact_name::$artifactName"
-          "::set-output name=artifact_path::$artifactPath"
-        if: matrix.os == 'macos-latest'
+      # - name: Set macOS 64-bit dmg artifact
+      #   id: macos_x64_dmg
+      #   shell: pwsh
+      #   run: |
+      #     $artifactName='hst-imager.gui.osx-x64.dmg'
+      #     $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
+      #     Rename-Item $artifactFile -NewName $artifactName
+      #     $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+      #     "::set-output name=artifact_name::$artifactName"
+      #     "::set-output name=artifact_path::$artifactPath"
+      #   if: matrix.os == 'macos-latest'
 
-      - name: Upload macOS 64-bit dmg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
-          path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'macos-latest'
+      # - name: Upload macOS 64-bit dmg artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
+      #     path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
+      #     retention-days: 3
+      #   if: matrix.os == 'macos-latest'
 
       - name: Set Linux 64-bit appimage artifact
         id: linux_x64_appimage
@@ -372,10 +372,10 @@ jobs:
         with:
           name: hst-imager.console.osx-arm64.zip
 
-      - name: Download Gui macOS 64-bit dmg artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hst-imager.gui.osx-x64.dmg
+      # - name: Download Gui macOS 64-bit dmg artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: hst-imager.gui.osx-x64.dmg
 
         # linux
       - name: Download Console Linux 64-bit zip artifact
