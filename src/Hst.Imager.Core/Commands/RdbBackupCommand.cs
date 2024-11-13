@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using Directory = System.IO.Directory;
 
@@ -33,18 +34,18 @@ public class RdbBackupCommand : CommandBase
             
         OnDebugMessage($"Opening '{diskPath}' as readable");
 
-        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, diskPath);
-        if (mediaResult.IsFaulted)
+        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, diskPath);
+        if (readableMediaResult.IsFaulted)
         {
-            return new Result(mediaResult.Error);
+            return new Result(readableMediaResult.Error);
         }
 
-        using var media = mediaResult.Value;
+        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, readableMediaResult.Value, diskPath);
         var stream = media.Stream;
 
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {

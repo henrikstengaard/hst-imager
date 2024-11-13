@@ -3,8 +3,8 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Amiga.RigidDiskBlocks;
 using Hst.Core;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 
 public class RdbUpdateCommand : CommandBase
@@ -40,18 +40,18 @@ public class RdbUpdateCommand : CommandBase
         
         OnDebugMessage($"Opening '{path}' as writable");
 
-        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
-        if (mediaResult.IsFaulted)
+        var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
+        if (writableMediaResult.IsFaulted)
         {
-            return new Result(mediaResult.Error);
+            return new Result(writableMediaResult.Error);
         }
 
-        using var media = mediaResult.Value;
+        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
         var stream = media.Stream;
 
         OnDebugMessage("Reading Rigid Disk Block");
             
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {
@@ -104,7 +104,7 @@ public class RdbUpdateCommand : CommandBase
         }
 
         OnDebugMessage("Writing Rigid Disk Block");
-        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+        await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
         return new Result();
     }

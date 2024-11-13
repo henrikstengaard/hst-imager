@@ -3,8 +3,10 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Hst.Amiga.RigidDiskBlocks;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 
 public class RdbRestoreCommand : CommandBase
@@ -38,7 +40,7 @@ public class RdbRestoreCommand : CommandBase
         var rdbBytes = await backupStream.ReadBytes((int)backupStream.Length);
         
         backupStream.Position = 0;
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(backupStream);
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(backupStream);
 
         if (rigidDiskBlock == null)
         {
@@ -64,13 +66,13 @@ public class RdbRestoreCommand : CommandBase
             
         OnDebugMessage($"Opening '{diskPath}' as writable");
 
-        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, diskPath);
-        if (mediaResult.IsFaulted)
+        var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, diskPath);
+        if (writableMediaResult.IsFaulted)
         {
-            return new Result(mediaResult.Error);
+            return new Result(writableMediaResult.Error);
         }
 
-        using var media = mediaResult.Value;
+        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, diskPath);
         var stream = media.Stream;
 
         OnDebugMessage($"Writing Rigid Disk Block backup to '{diskPath}'");

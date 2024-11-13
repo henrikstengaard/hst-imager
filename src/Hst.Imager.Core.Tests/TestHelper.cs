@@ -35,6 +35,7 @@
 
         public static async Task<Pfs3Volume> MountPfs3Volume(Stream stream)
         {
+            stream.Position = 0;
             var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
             var partitionBlock = rigidDiskBlock.PartitionBlocks.First();

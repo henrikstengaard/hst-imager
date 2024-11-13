@@ -1,0 +1,47 @@
+﻿# create pistorm 32gb vhd new rdb
+# -------------------------------
+# this script creates a 200mb fat32 boot partition for emu68 and
+# a pistorm rdb partition with id 0x76, which is partitioned and formatted.
+
+
+# create blank 32gb image with compatible size (cf/sd/ssd friendly)
+blank pistorm_32gb.vhd 32000000000 --compatible
+
+# initialize mbr
+mbr init pistorm_32gb.vhd
+
+# add mbr partition for boot
+mbr part add pistorm_32gb.vhd fat32 200mb --active --start-sector 2048
+
+# add mbr partition for pistorm rdb hard disk of remaining disk space
+mbr part add pistorm_32gb.vhd pistormrdb *
+
+# format mbr partition number 1 with name "BOOT"
+mbr part format pistorm_32gb.vhd 1 BOOT
+
+# initialize rigid disk block
+rdb init pistorm_32gb.vhd\mbr\2 --name PiStorm
+
+# add rdb file system pfs3aio with dos type PDS3
+rdb fs add pistorm_32gb.vhd\mbr\2 pfs3aio PDS3
+
+# add rdb partition of 500mb with device name "DH0" and set bootable
+rdb part add pistorm_32gb.vhd\mbr\2 DH0 PDS3 500mb --bootable
+
+# add rdb partition of remaining space with device name "DH1"
+rdb part add pistorm_32gb.vhd\mbr\2 DH1 PDS3 *
+
+# format rdb partition number 1 with volume name "Workbench"
+rdb part format pistorm_32gb.vhd\mbr\2 1 Workbench
+
+# format rdb partition number 2 with volume name "Work"
+rdb part format pistorm_32gb.vhd\mbr\2 2 Work
+
+# show disk info
+info pistorm_32gb.vhd
+
+# show pistorm rdb info
+rdb info pistorm_32gb.vhd\mbr\2
+
+# list pistorm rdb partitions
+fs dir pistorm_32gb.vhd\mbr\2\rdb

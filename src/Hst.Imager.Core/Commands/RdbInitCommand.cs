@@ -9,6 +9,7 @@
     using Extensions;
     using Hst.Core;
     using Hst.Core.Extensions;
+    using Hst.Imager.Core.Helpers;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 
@@ -68,13 +69,13 @@
 
             OnDebugMessage($"Opening '{path}' for read/write");
 
-            var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
-            if (mediaResult.IsFaulted)
+            var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
+            if (writableMediaResult.IsFaulted)
             {
-                return new Result(mediaResult.Error);
+                return new Result(writableMediaResult.Error);
             }
 
-            using var media = mediaResult.Value;
+            using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
             var stream = media.Stream;
 
             OnDebugMessage("Initializing Rigid Disk Block");
@@ -111,7 +112,7 @@
             OnDebugMessage($"RdbBlockHi '{rigidDiskBlock.RdbBlockHi}'");
 
             OnDebugMessage("Writing Rigid Disk Block");
-            await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+            await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
             return new Result();
         }

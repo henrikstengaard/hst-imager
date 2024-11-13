@@ -9,6 +9,7 @@
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
+    using Hst.Imager.Core.Helpers;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartImportCommand : CommandBase
@@ -79,12 +80,12 @@
                 return new Result(destinationMediaResult.Error);
             }
 
-            using var destinationMedia = destinationMediaResult.Value;
-            var destinationStream = destinationMedia.Stream;
+            using var destinationMedia = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, destinationMediaResult.Value, destinationPath);
 
+            var destinationStream = destinationMedia.Stream;
             OnDebugMessage("Reading destination Rigid Disk Block");
 
-            var destinationRigidDiskBlock = await commandHelper.GetRigidDiskBlock(destinationStream);
+            var destinationRigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(destinationMedia);
 
             var destinationPartitionBlocks = destinationRigidDiskBlock.PartitionBlocks.ToList();
 
@@ -143,7 +144,7 @@
                 isVhd);
 
             OnDebugMessage("Writing destination Rigid Disk Block");
-            await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
+            await MediaHelper.WriteRigidDiskBlockToMedia(destinationMedia, destinationRigidDiskBlock);
 
             OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             

@@ -606,11 +606,6 @@ namespace Hst.Imager.Core.Commands
             return path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
         }
 
-        public virtual async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
-        {
-            return await RigidDiskBlockReader.Read(stream);
-        }
-
         private async Task<VirtualDisk> ResolveVirtualDisk(Media media)
         {
             if (media.Type == Media.MediaType.Raw)
@@ -674,7 +669,8 @@ namespace Hst.Imager.Core.Commands
             RigidDiskBlock rigidDiskBlock = null;
             try
             {
-                rigidDiskBlock = await GetRigidDiskBlock(disk.Content);
+                disk.Content.Position = 0;
+                rigidDiskBlock = await RigidDiskBlockReader.Read(disk.Content);
                 if (rigidDiskBlock != null)
                 {
                     rdbPartitionTableInfo = PartitionTables.RigidDiskBlockReader.Read(disk, rigidDiskBlock);

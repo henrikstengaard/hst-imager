@@ -184,16 +184,6 @@
             return diskInfo;
         }
 
-        public override async Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream)
-        {
-            if (RigidDiskBlock != null)
-            {
-                return RigidDiskBlock;
-            }
-
-            return await base.GetRigidDiskBlock(stream);
-        }
-
         public override Result<MediaResult> ResolveMedia(string path)
         {
             if (path == null)

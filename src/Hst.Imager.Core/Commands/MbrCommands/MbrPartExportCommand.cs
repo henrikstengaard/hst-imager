@@ -44,6 +44,9 @@
         {
             OnInformationMessage($"Exporting partition from '{sourcePath}' to '{destinationPath}'");
 
+            OnInformationMessage("Source:");
+            OnInformationMessage($"- Path '{sourcePath}'");
+
             OnDebugMessage($"Opening source path '{sourcePath}' as readable");
 
             var sourceMediaResult =
@@ -65,6 +68,8 @@
                 return new Result(new Error("Master Boot Record not found"));
             }
 
+            OnInformationMessage($"- Partition '{partition}'");
+
             var partitionPartInfo = GetPartitionPartInfo(sourceDiskInfo.MbrPartitionTablePart, partition);
 
             if (partitionPartInfo == null)
@@ -76,8 +81,6 @@
             var sourceOffset = partitionPartInfo.StartOffset;
             var sourceStream = sourceDisk.Content;
 
-            OnInformationMessage("Source partition:");
-            OnInformationMessage($"- Partition number '{partitionPartInfo.PartitionNumber}'");
             OnInformationMessage($"- Type '{partitionPartInfo.BiosType}'");
             OnInformationMessage($"- Start offset '{partitionPartInfo.StartOffset}'");
             OnInformationMessage($"- End offset '{partitionPartInfo.EndOffset}'");
@@ -86,6 +89,9 @@
             OnInformationMessage($"- Size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
+
+            OnInformationMessage("Destination:");
+            OnInformationMessage($"- Path '{destinationPath}'");
 
             var destinationMediaResult =
                 await commandHelper.GetWritableMedia(physicalDrives, destinationPath, create: true);
@@ -130,18 +136,6 @@
             }
 
             return null;
-        }
-
-        private static string FormatBiosType(string biosType)
-        {
-            if (!byte.TryParse(biosType, out var biosTypeByteValue))
-            {
-                return string.Empty;
-            }
-
-            return biosTypeByteValue == Core.Constants.BiosPartitionTypes.PiStormRdb
-                ? Core.Constants.FileSystemNames.PiStormRdb
-                : BiosPartitionTypes.ToString(biosTypeByteValue);
         }
 
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

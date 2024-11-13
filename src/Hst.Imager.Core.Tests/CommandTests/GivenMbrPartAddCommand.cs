@@ -134,4 +134,57 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         Assert.NotNull(partitionPartInfo);
         Assert.Equal(partitionType.ToString(), partitionPartInfo.BiosType);
     }
+
+    [Fact]
+    public async Task When_AddAnySizePartitionWithExistingSmallPartition_Then_LargestUnallocatedPartIsUsed()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        const string partitionType = "fat32";
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // arrange - create mbr disk with partition starting at sector 2048
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
+        await AddMbrPartition(testCommandHelper, imgPath, 2048, 5000);
+
+        // arrange - read disk info and get largest unallocated part
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        PartInfo largestUnallocatedPart;
+        using (var media = mediaResult.Value)
+        {
+            var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+            Assert.NotNull(diskInfo?.MbrPartitionTablePart);
+            largestUnallocatedPart = diskInfo.MbrPartitionTablePart.Parts
+                .OrderByDescending(x => x.Size).FirstOrDefault(x => x.PartType == PartType.Unallocated);
+            Assert.NotNull(largestUnallocatedPart);
+        }
+
+        // arrange - mbr partition add command with type fat32 and size 0
+        var cancellationTokenSource = new CancellationTokenSource();
+        var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, partitionType.ToString(), new Size(0, Unit.Bytes), null, null);
+
+        // act - execute mbr partition add
+        var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - read disk info and assert mbr partition added is equal to largest unallocated part
+        mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using (var media = mediaResult.Value)
+        {
+            var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+            Assert.NotNull(diskInfo?.MbrPartitionTablePart);
+            var largestPartition = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => x.PartitionNumber == 2);
+            Assert.NotNull(largestPartition);
+            var margin = 5000;
+            Assert.True(largestPartition.Size > largestUnallocatedPart.Size - margin &&
+                largestPartition.Size < largestUnallocatedPart.Size);
+        }
+    }
 }

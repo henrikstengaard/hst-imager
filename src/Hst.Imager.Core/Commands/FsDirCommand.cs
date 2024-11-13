@@ -109,8 +109,8 @@ public class FsDirCommand : FsCommandBase
         var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
             readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
-        var media = piStormRdbMediaResult.Item1;
-        fileSystemPath = piStormRdbMediaResult.Item2;
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
         var stream = media.Stream;
 
@@ -121,7 +121,7 @@ public class FsDirCommand : FsCommandBase
             var listFloppyEntriesResult = await ListFloppyEntries(media, parts);
             return listFloppyEntriesResult.IsFaulted ? new Result(listFloppyEntriesResult.Error) : new Result();
         }
-        
+
         if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
         {
             await ListPartitionTables(media, stream);
@@ -201,39 +201,15 @@ public class FsDirCommand : FsCommandBase
         OnDebugMessage($"Listing partition tables");
 
         var entries = new List<Entry>();
-        var diskInfo = await commandHelper.ReadDiskInfo(media);
 
-        if (diskInfo.MbrPartitionTablePart != null)
+        switch(media)
         {
-            entries.Add(new Entry
-            {
-                Name = "MBR",
-                FormattedName = "MBR", 
-                Type = EntryType.Dir,
-                Size = diskInfo.MbrPartitionTablePart.Size
-            });
-        }
-        
-        if (diskInfo.GptPartitionTablePart != null)
-        {
-            entries.Add(new Entry
-            {
-                Name = "GPT",
-                FormattedName = "GPT", 
-                Type = EntryType.Dir,
-                Size = diskInfo.GptPartitionTablePart.Size
-            });
-        }
-        
-        if (diskInfo.RdbPartitionTablePart != null)
-        {
-            entries.Add(new Entry
-            {
-                Name = "RDB",
-                FormattedName = "RDB", 
-                Type = EntryType.Dir,
-                Size = diskInfo.RdbPartitionTablePart.Size
-            });
+            case PiStormRdbMedia piStormRdbMedia:
+                entries.AddRange(GetPartitionTablesFromPiStormRdb(piStormRdbMedia.RigidDiskBlock));
+                break;
+            default:
+                entries.AddRange(await GetPartitionTablesFromMedia(media));
+                break;
         }
 
         OnEntriesRead(new EntriesInfo
@@ -241,6 +217,64 @@ public class FsDirCommand : FsCommandBase
             Path = path,
             Entries = entries
         });
+    }
+
+    private IEnumerable<Entry> GetPartitionTablesFromPiStormRdb(RigidDiskBlock rigidDiskBlock)
+    {
+        if (rigidDiskBlock == null)
+        {
+            yield break;
+        }
+
+        yield return new Entry
+        {
+            Name = "RDB",
+            FormattedName = "RDB",
+            Type = EntryType.Dir,
+            Size = rigidDiskBlock.DiskSize
+        };
+    }
+
+    private async Task<IEnumerable<Entry>> GetPartitionTablesFromMedia(Media media)
+    {
+        var entries = new List<Entry>();
+
+        var diskInfo = await commandHelper.ReadDiskInfo(media);
+
+        if (diskInfo.MbrPartitionTablePart != null)
+        {
+            entries.Add(new Entry
+            {
+                Name = "MBR",
+                FormattedName = "MBR",
+                Type = EntryType.Dir,
+                Size = diskInfo.MbrPartitionTablePart.Size
+            });
+        }
+
+        if (diskInfo.GptPartitionTablePart != null)
+        {
+            entries.Add(new Entry
+            {
+                Name = "GPT",
+                FormattedName = "GPT",
+                Type = EntryType.Dir,
+                Size = diskInfo.GptPartitionTablePart.Size
+            });
+        }
+
+        if (diskInfo.RdbPartitionTablePart != null)
+        {
+            entries.Add(new Entry
+            {
+                Name = "RDB",
+                FormattedName = "RDB",
+                Type = EntryType.Dir,
+                Size = diskInfo.RdbPartitionTablePart.Size
+            });
+        }
+
+        return entries;
     }
 
     private async Task<Result> ListMbrPartitions(Media media)
@@ -368,28 +402,13 @@ public class FsDirCommand : FsCommandBase
         return new Result();
     }
 
-    private async Task<RigidDiskBlock> ReadRigidDiskBlockFromMedia(Media media)
-    {
-        if (media is PiStormRdbMedia piStormRdbMedia)
-        {
-            return piStormRdbMedia.RigidDiskBlock;
-        }
-
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-
-        return await commandHelper.GetRigidDiskBlock(disk.Content);
-    }
 
 
     private async Task<Result> ListRdbPartitions(Media media)
     {
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-
-        var rigidDiskBlock = await ReadRigidDiskBlockFromMedia(media);
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {
@@ -405,7 +424,7 @@ public class FsDirCommand : FsCommandBase
                 FormattedName = partitionBlock.DriveName,
                 Type = EntryType.Dir,
                 Size = partitionBlock.PartitionSize,
-                Properties = await GetRdbPartitionProperties(disk, partitionBlock)
+                Properties = await GetRdbPartitionProperties(media, partitionBlock)
             });
         }
         
@@ -430,13 +449,13 @@ public class FsDirCommand : FsCommandBase
         };
     }
 
-    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(VirtualDisk disk,
+    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Media media,
         PartitionBlock partitionBlock)
     {
         IFileSystemVolume fileSystemVolume = null;
         try
         {
-            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(disk.Content, partitionBlock);
+            var fileSystemVolumeResult = await MountPartitionFileSystemVolume(media, partitionBlock);
             fileSystemVolume = fileSystemVolumeResult.IsSuccess ? fileSystemVolumeResult.Value : null;
         }
         catch (Exception)
@@ -463,11 +482,7 @@ public class FsDirCommand : FsCommandBase
 
     private async Task<Result> ListRdbPartitionEntries(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-        
-        var volumeResult = await MountRdbFileSystemVolume(disk, parts[0]);
+        var volumeResult = await MountRdbFileSystemVolume(media, parts[0]);
         if (volumeResult.IsFaulted)
         {
             return new Result(volumeResult.Error);

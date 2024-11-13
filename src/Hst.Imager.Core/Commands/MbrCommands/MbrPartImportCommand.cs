@@ -9,6 +9,7 @@
     using Hst.Core;
     using Hst.Imager.Core;
     using Hst.Imager.Core.Commands;
+    using Hst.Imager.Core.Models;
     using Microsoft.Extensions.Logging;
 
     public class MbrPartImportCommand : CommandBase
@@ -18,21 +19,21 @@
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string sourcePath;
         private readonly string destinationPath;
-        private readonly int partitionNumber;
+        private readonly string partition;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
         public MbrPartImportCommand(ILogger<MbrPartImportCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string destinationPath, int partitionNumber)
+            IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string destinationPath, string partition)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
             this.physicalDrives = physicalDrives;
             this.sourcePath = sourcePath;
             this.destinationPath = destinationPath;
-            this.partitionNumber = partitionNumber;
+            this.partition = partition;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -41,6 +42,9 @@
             OnInformationMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
 
             OnDebugMessage($"Opening source path '{sourcePath}' as readable");
+
+            OnInformationMessage("Source:");
+            OnInformationMessage($"- Path '{sourcePath}'");
 
             var sourceMediaResult =
                 await commandHelper.GetReadableMedia(physicalDrives, sourcePath);
@@ -51,8 +55,14 @@
 
             using var sourceMedia = sourceMediaResult.Value;
             var sourceStream = sourceMedia.Stream;
+            var sourceSize = sourceMedia.Size;
+
+            OnInformationMessage($"- Size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
+
+            OnInformationMessage("Destination:");
+            OnInformationMessage($"- Path '{destinationPath}'");
 
             var destinationMediaResult =
                 await commandHelper.GetWritableMedia(physicalDrives, destinationPath);
@@ -64,71 +74,38 @@
             using var destinationMedia = destinationMediaResult.Value;
             var destinationStream = destinationMedia.Stream;
 
+            OnDebugMessage($"Reading disk info from destination path '{destinationPath}'");
 
-            //OnInformationMessage(
-            //    $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
-            //OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
-            //OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
-            //OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");
-            //OnInformationMessage($"- PreAlloc '{partitionBlock.PreAlloc}'");
-            //OnInformationMessage($"- Buffers '{partitionBlock.NumBuffer}'");
-            //OnInformationMessage($"- Max Transfer '{partitionBlock.MaxTransfer}'");
-            //OnInformationMessage($"- File System Block Size '{partitionBlock.FileSystemBlockSize}'");
+            var destinationDiskInfo = await commandHelper.ReadDiskInfo(destinationMedia, PartitionTableType.MasterBootRecord);
 
-            //destinationRigidDiskBlock.PartitionBlocks =
-            //    destinationRigidDiskBlock.PartitionBlocks.Concat(new[] { partitionBlock });
-
-            //// calculate source cylinder size, offset and size
-            //var destinationCylinderSize = destinationRigidDiskBlock.Heads * destinationRigidDiskBlock.Sectors *
-            //                              destinationRigidDiskBlock.BlockSize;
-            //var destinationOffset = (long)partitionBlock.LowCyl * destinationCylinderSize;
-
-
-            //using var destinationMedia = sourceMediaResult.Value;
-            //var sourceDisk = destinationMedia is DiskMedia diskMedia
-            //    ? diskMedia.Disk
-            //    : new DiscUtils.Raw.Disk(destinationMedia.Stream, Ownership.None);
-
-            var sourceDiskInfo = await commandHelper.ReadDiskInfo(destinationMedia, PartitionTableType.MasterBootRecord);
-
-            if (sourceDiskInfo.MbrPartitionTablePart == null)
+            if (destinationDiskInfo.MbrPartitionTablePart == null)
             {
                 return new Result(new Error("Master Boot Record not found"));
             }
 
-            OnInformationMessage($"- Partition number '{partitionNumber}'");
+            OnInformationMessage($"- Partition '{partition}'");
 
-            var partitionPartInfo = sourceDiskInfo.MbrPartitionTablePart.Parts
-                .FirstOrDefault(x => x.PartType == PartType.Partition && x.PartitionNumber == partitionNumber);
+            var partitionPartInfo = GetPartitionPartInfo(destinationDiskInfo.MbrPartitionTablePart, partition);
 
             if (partitionPartInfo == null)
             {
-                return new Result(new Error($"Invalid partition number '{partitionNumber}'"));
+                return new Result(new Error($"Invalid partition '{partition}'"));
             }
 
             if (sourceMedia.Size > partitionPartInfo.Size)
             {
-                return new Result(new Error($"Source is '{partitionPartInfo.Size}' bytes and larger than partition number '{partitionNumber}' of '{partitionPartInfo.Size}' bytes"));
+                return new Result(new Error($"Source is '{partitionPartInfo.Size}' bytes and larger than partition size of '{partitionPartInfo.Size}' bytes"));
             }
 
-
-            //OnDebugMessage($"Copying source partition number '{partitionNumber}'");
-
-            //var destinationSizeSize = partitionPartInfo.Size;
-            var sourceSize = sourceMedia.Size;
             const int sourceOffset = 0;
             var destinationOffset = partitionPartInfo.StartOffset;
-            //var sourceStream = sourceDisk.Content;
 
-            OnInformationMessage("Destination:");
-            OnInformationMessage($"Partition number '{partitionNumber}'");
-            OnInformationMessage($"Type '{partitionPartInfo.BiosType}'");
-            OnInformationMessage($"Start offset '{partitionPartInfo.StartOffset}'");
-            OnInformationMessage($"End offset '{partitionPartInfo.EndOffset}'");
-            OnInformationMessage($"Start sector '{partitionPartInfo.StartSector}'");
-            OnInformationMessage($"End sector '{partitionPartInfo.EndSector}'");
-            OnInformationMessage($"Size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
-
+            OnInformationMessage($"- Type '{partitionPartInfo.BiosType}'");
+            OnInformationMessage($"- Start offset '{partitionPartInfo.StartOffset}'");
+            OnInformationMessage($"- End offset '{partitionPartInfo.EndOffset}'");
+            OnInformationMessage($"- Start sector '{partitionPartInfo.StartSector}'");
+            OnInformationMessage($"- End sector '{partitionPartInfo.EndSector}'");
+            OnInformationMessage($"- Size '{partitionPartInfo.Size.FormatBytes()}' ({partitionPartInfo.Size} bytes)");
 
             OnDebugMessage($"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
@@ -142,12 +119,29 @@
                 OnDataProcessed(e.Indeterminate, e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
-            await streamCopier.Copy(token, sourceStream, destinationStream, sourceStream.Length, 0, destinationOffset,
+            await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, 0, destinationOffset,
                 isVhd);
 
             OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
             return new Result();
+        }
+
+        private static PartInfo GetPartitionPartInfo(PartitionTablePart mbrPartitionTablePart, string partition)
+        {
+            if (int.TryParse(partition, out var partitionNumber))
+            {
+                return mbrPartitionTablePart.Parts
+                    .FirstOrDefault(x => x.PartType == PartType.Partition && x.PartitionNumber == partitionNumber);
+            }
+
+            if (Enum.TryParse<MbrPartType>(partition, true, out var partitionType))
+            {
+                return mbrPartitionTablePart.Parts
+                    .FirstOrDefault(x => x.PartType == PartType.Partition && x.BiosType == ((int)partitionType).ToString());
+            }
+
+            return null;
         }
 
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

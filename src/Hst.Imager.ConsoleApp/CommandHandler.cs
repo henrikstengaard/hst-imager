@@ -338,10 +338,10 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task MbrPartImport(string sourcePath, string destinationPath, int partitionNumber)
+        public static async Task MbrPartImport(string sourcePath, string destinationPath, string partition)
         {
             var command = new MbrPartImportCommand(GetLogger<MbrPartImportCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), sourcePath, destinationPath, partitionNumber);
+                await GetPhysicalDrives(), sourcePath, destinationPath, partition);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
         }

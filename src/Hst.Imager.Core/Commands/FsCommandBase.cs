@@ -354,8 +354,8 @@ public abstract class FsCommandBase : CommandBase
         var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
             readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
-        var media = piStormRdbMediaResult.Item1;
-        fileSystemPath = piStormRdbMediaResult.Item2;
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
         var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 
@@ -404,7 +404,7 @@ public abstract class FsCommandBase : CommandBase
             ? diskMedia.Disk
             : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
-        var fileSystemVolumeResult = await MountRdbFileSystemVolume(disk, parts[1]);
+        var fileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
@@ -505,8 +505,8 @@ public abstract class FsCommandBase : CommandBase
         var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
             writableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
-        var media = piStormRdbMediaResult.Item1;
-        fileSystemPath = piStormRdbMediaResult.Item2;
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
         // adf
         if (File.Exists(mediaResult.Value.MediaPath) &&
@@ -562,7 +562,7 @@ public abstract class FsCommandBase : CommandBase
                     return new Result<IEntryWriter>(new Error($"No device name in path"));
                 }
 
-                var fileSystemVolumeResult = await MountRdbFileSystemVolume(disk, parts[1]);
+                var fileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
                 if (fileSystemVolumeResult.IsFaulted)
                 {
                     return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
@@ -718,11 +718,11 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IFileSystem>(new Error("Unsupported Guid Partition Table file system"));
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(VirtualDisk disk, string partitionName)
+    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Media media, string partitionName)
     {
         OnDebugMessage("Reading Rigid Disk Block");
-
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(disk.Content);
+        
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {
@@ -741,7 +741,7 @@ public abstract class FsCommandBase : CommandBase
 
         OnDebugMessage($"Mounting file system");
 
-        var fileSystemVolumeResult = await MountPartitionFileSystemVolume(disk.Content, partitionBlock);
+        var fileSystemVolumeResult = await MountPartitionFileSystemVolume(media, partitionBlock);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IFileSystemVolume>(fileSystemVolumeResult.Error);
@@ -758,10 +758,11 @@ public abstract class FsCommandBase : CommandBase
         return new Result<IFileSystemVolume>(fileSystemVolume);
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Stream stream,
+    protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Media media,
         PartitionBlock partitionBlock)
     {
-        // var cached = new CachedBlockStream(stream, 512);
+        var stream = MediaHelper.GetStreamFromMedia(media);
+
         switch (partitionBlock.DosTypeFormatted)
         {
             case "DOS\\0":

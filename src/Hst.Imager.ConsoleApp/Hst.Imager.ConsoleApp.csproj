@@ -21,6 +21,12 @@
       <None Update="license.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="scripts\create_pistorm_32gb_vhd_import_rdb.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_pistorm_32gb_vhd_new_rdb.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="scripts\create_32gb_vhd_rdb_pfs3.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

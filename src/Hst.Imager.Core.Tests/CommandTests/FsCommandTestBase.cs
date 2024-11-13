@@ -276,6 +276,7 @@ public class FsCommandTestBase : CommandTestBase
 
     protected async Task<Pfs3Volume> MountPfs3Volume(Stream stream)
     {
+        stream.Position = 0;
         var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
         var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
@@ -290,6 +291,7 @@ public class FsCommandTestBase : CommandTestBase
             return await FastFileSystemVolume.MountAdf(stream);
         }
         
+        stream.Position = 0;
         var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
         var partitionBlock = rigidDiskBlock.PartitionBlocks.First();

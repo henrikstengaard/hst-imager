@@ -1,0 +1,46 @@
+﻿# create pistorm 32gb vhd import rdb
+# ----------------------------------
+# this script creates a 200mb fat32 boot partition with pistorm32lite files extracted and
+# a pistorm rdb partition with id 0x76 with amigaos-3.2.vhd disk imported as pistorm rdb hard disk.
+#
+# requirements:
+# - Example script install amigaos 3.2 is run.
+# - Emu68-pistorm32lite.zip downloaded from https://github.com/michalsc/Emu68/releases
+# - kick.rom, which is copy of kicka1200.rom file from amigaos 3.2 rom directory.
+
+
+# create blank 32gb image with compatible size (cf/sd/ssd friendly)
+blank pistorm_32gb.vhd 32000000000 --compatible
+
+# initialize mbr
+mbr init pistorm_32gb.vhd
+
+# add mbr partition for boot
+mbr part add pistorm_32gb.vhd fat32 200mb --active --start-sector 2048
+
+# add mbr partition for pistorm rdb hard disk
+mbr part add pistorm_32gb.vhd pistormrdb *
+
+# format mbr partition number 1 with name "BOOT"
+mbr part format pistorm_32gb.vhd 1 BOOT
+
+# extract emu68 pistorm32 lite files to mbr partition 1
+fs extract Emu68-pistorm32lite.zip pistorm_32gb.vhd\mbr\1
+
+# copy kick.rom to mbr partition 1 
+fs copy kick.rom pistorm_32gb.vhd\mbr\1
+
+# import amigaos 3.2 vhd hard disk image to mbr partition 2
+mbr part import amigaos-3.2.vhd pistorm_32gb.vhd 2
+
+# show disk info
+info pistorm_32gb.vhd
+
+# show pistorm rdb info
+rdb info pistorm_32gb.vhd\mbr\2
+
+# show mbr partition 1 fat32 files
+fs dir pistorm_32gb.vhd\mbr\1
+
+# show mbr partition 2 pistorm rdb hard disk partition dh0 files
+fs dir pistorm_32gb.vhd\mbr\2\rdb

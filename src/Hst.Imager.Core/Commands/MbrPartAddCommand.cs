@@ -116,8 +116,9 @@
                 : availableSize.ResolveSize(size).ToSectorSize();
             
             // find unallocated part for partition size with start offset equal or larger
-            var unallocatedPart = diskInfo.DiskParts.FirstOrDefault(x =>
-                x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
+            var unallocatedPart = diskInfo.DiskParts
+                .OrderByDescending(x => x.Size)
+                .FirstOrDefault(x => x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
             if (unallocatedPart == null)
             {
                 return new Result(new Error($"Master Boot Record does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
@@ -196,7 +197,7 @@
                 return new Result<byte>(biosType);
             }
 
-            if (!Enum.TryParse<MbrPartType>(type, out var mbrPartType))
+            if (!Enum.TryParse<MbrPartType>(type, true, out var mbrPartType))
             {
                 return new Result<byte>(new Error($"Unsupported partition type '{type}'"));
             }

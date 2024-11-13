@@ -8,6 +8,7 @@
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
+    using Hst.Imager.Core.Helpers;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartCopyCommand : CommandBase
@@ -52,12 +53,11 @@
                 return new Result(sourceMediaResult.Error);
             }
 
-            using var sourceMedia = sourceMediaResult.Value;
+            using var sourceMedia = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, sourceMediaResult.Value, sourcePath);
             var sourceStream = sourceMedia.Stream;
-
             OnDebugMessage("Reading source Rigid Disk Block");
 
-            var sourceRigidDiskBlock = await commandHelper.GetRigidDiskBlock(sourceStream);
+            var sourceRigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(sourceMedia);
 
             var sourcePartitionBlocks = sourceRigidDiskBlock.PartitionBlocks.ToList();
 
@@ -86,12 +86,12 @@
                 return new Result(destinationMediaResult.Error);
             }
 
-            using var destinationMedia = destinationMediaResult.Value;
+            using var destinationMedia = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, destinationMediaResult.Value, destinationPath);
             var destinationStream = destinationMedia.Stream;
 
             OnDebugMessage("Reading destination Rigid Disk Block");
 
-            var destinationRigidDiskBlock = await commandHelper.GetRigidDiskBlock(destinationStream);
+            var destinationRigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(destinationMedia);
 
             if (sourceRigidDiskBlock.Heads != destinationRigidDiskBlock.Heads)
             {

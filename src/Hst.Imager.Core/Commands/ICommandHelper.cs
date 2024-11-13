@@ -1,9 +1,7 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
     using System.Collections.Generic;
-    using System.IO;
     using System.Threading.Tasks;
-    using Hst.Amiga.RigidDiskBlocks;
     using Hst.Core;
     using Models;
 
@@ -20,7 +18,6 @@
         bool IsVhd(string path);
         bool IsZip(string path);
         bool IsGZip(string path);
-        Task<RigidDiskBlock> GetRigidDiskBlock(Stream stream);
         Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None);
         Result<MediaResult> ResolveMedia(string path);

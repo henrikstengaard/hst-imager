@@ -174,15 +174,15 @@ namespace Hst.Imager.ConsoleApp
                 name: "DestinationPath",
                 description: "Path to destination physical drive or image file.");
 
-            var partitionNumber = new Argument<int>(
-                name: "PartitionNumber",
-                description: "Partition number to import to.");
+            var partition = new Argument<string>(
+                name: "Partition",
+                description: "Partition to import to (\"2\" for partition number 2 or \"fat32\" for first fat32 partition).");
 
             var command = new Command("import", "Import partition from a file.");
-            command.SetHandler(CommandHandler.MbrPartImport, sourcePathArgument, destinationPathArgument, partitionNumber);
+            command.SetHandler(CommandHandler.MbrPartImport, sourcePathArgument, destinationPathArgument, partition);
             command.AddArgument(sourcePathArgument);
             command.AddArgument(destinationPathArgument);
-            command.AddArgument(partitionNumber);
+            command.AddArgument(partition);
 
             return command;
         }

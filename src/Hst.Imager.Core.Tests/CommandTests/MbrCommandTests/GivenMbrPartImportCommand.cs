@@ -26,7 +26,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
             const int mbrPartition2StartSector = 5001;
             const int mbrPartition2EndSector = 8000;
             var mbrPartition2StartOffset = mbrPartition2StartSector * sectorSize;
-            const int partitionNumberImportingTo = 2;
+            const string partitionToImportTo = "2";
 
             // arrange - create source partition data
             var sectors = mbrPartition2EndSector - mbrPartition2StartSector + 1;
@@ -62,7 +62,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
             // arrange - mbr partition import command
             var cancellationTokenSource = new CancellationTokenSource();
             var mbrPartImportCommand = new MbrPartImportCommand(new NullLogger<MbrPartImportCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), srcPath, destPath, partitionNumberImportingTo);
+                new List<IPhysicalDrive>(), srcPath, destPath, partitionToImportTo);
 
             // act - execute mbr partition import
             var result = await mbrPartImportCommand.Execute(cancellationTokenSource.Token);
@@ -90,7 +90,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
             const int mbrPartition1EndSector = 5000;
             const int mbrPartition2StartSector = 5001;
             const int mbrPartition2EndSector = 8000;
-            const int partitionNumberImportTo = 2;
+            const string partitionToImportTo = "2";
 
             // arrange - create source partition data
             var srcPartitionDataBytes = new byte[10.MB()];
@@ -121,7 +121,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
             // arrange - mbr partition import command
             var cancellationTokenSource = new CancellationTokenSource();
             var mbrPartImportCommand = new MbrPartImportCommand(new NullLogger<MbrPartImportCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), srcPath, destPath, partitionNumberImportTo);
+                new List<IPhysicalDrive>(), srcPath, destPath, partitionToImportTo);
 
             // act - execute mbr partition import
             var result = await mbrPartImportCommand.Execute(cancellationTokenSource.Token);

@@ -13,6 +13,7 @@ using Amiga.VersionStrings;
 using Extensions;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using BlockHelper = Amiga.RigidDiskBlocks.BlockHelper;
 using Constants = Amiga.FileSystems.FastFileSystem.Constants;
@@ -51,18 +52,18 @@ public class RdbFsImportCommand : CommandBase
         
         OnDebugMessage($"Opening '{path}' as writable");
 
-        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
-        if (mediaResult.IsFaulted)
+        var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
+        if (writableMediaResult.IsFaulted)
         {
-            return new Result(mediaResult.Error);
+            return new Result(writableMediaResult.Error);
         }
 
-        using var media = mediaResult.Value;
+        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
         var stream = media.Stream;
 
         OnDebugMessage("Reading Rigid Disk Block");
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 
         if (rigidDiskBlock == null)
         {
@@ -103,7 +104,7 @@ public class RdbFsImportCommand : CommandBase
         }
 
         OnDebugMessage("Writing Rigid Disk Block");
-        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+        await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
         return new Result();
     }
@@ -140,7 +141,8 @@ public class RdbFsImportCommand : CommandBase
             ? DosTypeHelper.FormatDosType(dosType)
             : Array.Empty<byte>();
 
-        var rigidDiskBlock = await commandHelper.GetRigidDiskBlock(stream);
+        stream.Position = 0;
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
         var fileSystemHeaderBlocks = (await FileSystemHeaderBlockReader.Read(rigidDiskBlock, stream)).ToList();
 
