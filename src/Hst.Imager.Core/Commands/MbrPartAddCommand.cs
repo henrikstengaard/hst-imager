@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text.RegularExpressions;
     using System.Threading;
     using System.Threading.Tasks;
     using DiscUtils.Partitions;
@@ -190,11 +191,13 @@
             return new Result();
         }
 
+        private static Regex partitionTypeAsNumberRegex = new Regex("0x[0-9a-f]{1,2}", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
         private Result<byte> GetBiosPartitionType()
         {
-            if (byte.TryParse(type, out var biosType))
+            if (partitionTypeAsNumberRegex.IsMatch(type))
             {
-                return new Result<byte>(biosType);
+                return new Result<byte>((byte)Convert.ToInt32(type, 16));
             }
 
             if (!Enum.TryParse<MbrPartType>(type, true, out var mbrPartType))

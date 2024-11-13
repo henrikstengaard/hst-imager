@@ -106,6 +106,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         var testCommandHelper = new TestCommandHelper();
         var size = 100.MB();
         const byte partitionType = 187;
+        var partitionTypeAsNumber = $"0x{partitionType:x}";
 
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, size);
@@ -116,7 +117,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // arrange - mbr partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, partitionType.ToString(), new Size(0, Unit.Bytes), null, null);
+            new List<IPhysicalDrive>(), imgPath, partitionTypeAsNumber, new Size(0, Unit.Bytes), null, null);
 
         // act - execute mbr partition add
         var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
