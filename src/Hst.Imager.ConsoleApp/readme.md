@@ -15,7 +15,6 @@ This tool can be used to create new blank images or create images of physical dr
 > Hst Imager filters out fixed disks, so only USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
 > Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
 
-
 ## Features
 
 Hst Imager console comes with following features:
@@ -38,9 +37,11 @@ Hst Imager console comes with following features:
   - Read Master Boot Record information.
   - Initialize Master Boot Record.
   - Add partition to Master Boot Record.
+  - Export partition from Master Boot Record to file.
   - Delete partition from Master Boot Record.
   - Format partition in Master Boot Record.
-- Rigid Disk Block;
+  - Import partition from file to Master Boot Record.
+- Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
   - Add file system to Rigid Disk Block.
@@ -56,6 +57,8 @@ Hst Imager console comes with following features:
   - Import partition from hard file to Rigid Disk Block.
   - Kill and restore partition in Rigid Disk Block.
   - Update partition in Rigid Disk Block.
+  - Backup Rigid Disk Block to file.
+  - Restore Rigid Disk Block from file. 
 
 ## Supported operating systems
 
@@ -91,6 +94,42 @@ Commands accessing physical drives requires administrator privileges:
 - macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, e.g. `sudo hst.imager list` to list physical drives.
 
 Hst Imager will only allow access to removable or USB attached physical drives.
+
+## PiStorm support
+
+Hst Imager supports creating Master Boot Record partition with partition type 0x76 used as hard disk for PiStorm.
+
+Example of adding a PiStorm partition of remaining space to Master Boot Record on a 4GB vhd image file using type 0x76:
+```
+hst.imager mbr part add 16gb.img 0x76 *
+```
+
+Example of adding a PiStorm partition of remaining space to Master Boot Record on a 4GB vhd image file using type pistormrdb, which will be translated to 0x76:
+```
+hst.imager mbr part add 16gb.img pistormrdb *
+```
+
+File system commands and Rigid Disk Block commands also supports PiStorm by adding `mbr` and partition number to physical disk or image paths.
+
+Example of listing of files and directories in 16GB img image Master Boot Record partition 2 with PiStorm Rigid Disk Block partition DH0:
+```
+hst.imager fs dir 16gb.img\mbr\2\rdb\dh0
+```
+
+Example of copying files and subdirectories recursively from 16GB img image Master Boot Record partition 2 with PiStorm Rigid Disk Block partition DH0 to directory DH0:
+```
+hst.imager fs copy 16gb.img\mbr\2\rdb\dh0 dh0 --recursive
+```
+
+Example of initializing PiStorm Rigid Disk Block in a 16GB img image Master Boot Record partition 2:
+```
+hst.imager rdb init 16gb.img\mbr\2
+```
+
+Example of adding a bootable PDS3 partition of 500MB with device name DH0 to PiStorm Rigid Disk Block in 16GB img image Master Boot Record partition 2:
+```
+hst.imager rdb part add 16gb.img\mbr\2 DH0 PDS3 500mb --bootable
+```
 
 ## Source and destination paths 
 
