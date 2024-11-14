@@ -156,5 +156,27 @@ namespace Hst.Imager.Core.Tests
             Assert.Equal(5, memoryStream.Length);
             Assert.Equal(data.Take(5).ToArray(), memoryStream.ToArray());
         }
+
+        [Fact]
+        public async Task When_ReadingMoreThanMaxSize_ThenLessThanMaxSizeIsRead()
+        {
+            // arrange
+            var memoryStream = new MemoryStream();
+            var virtualStream = new VirtualStream(memoryStream, 8, 5);
+            var data = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+            memoryStream.Write(data, 0, data.Length);
+
+            // act - set position 1
+            virtualStream.Position = 1;
+
+            // act - read 5 bytes
+            var readBuffer = new byte[5];
+            var bytesRead = await virtualStream.ReadAsync(readBuffer, 0, readBuffer.Length);
+
+            // assert - 1 byte was read
+            Assert.Equal(1, bytesRead);
+            Assert.Equal(new byte[] { 10 }, readBuffer.Take(1));
+            Assert.Equal(2, virtualStream.Length);
+        }
     }
 }

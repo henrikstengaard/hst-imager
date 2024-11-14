@@ -8,7 +8,7 @@ public class VirtualStream : Stream
     private readonly Stream stream;
     private readonly long startOffset;
     private readonly long maxSize;
-    private bool hasSeekedToStartOffset;
+    private bool hasSeekedToCurrentOffset;
     private long currentSize;
     private long currentOffset;
 
@@ -22,7 +22,7 @@ public class VirtualStream : Stream
         this.stream = stream;
         this.startOffset = startOffset;
         this.maxSize = maxSize;
-        hasSeekedToStartOffset = startOffset == 0;
+        hasSeekedToCurrentOffset = startOffset == 0;
         this.currentSize = currentSize;
         this.currentOffset = 0;
     }
@@ -40,8 +40,7 @@ public class VirtualStream : Stream
         get => currentOffset;
         set
         {
-            currentOffset = value;
-            Seek(startOffset + currentOffset, SeekOrigin.Begin);
+            Seek(value, SeekOrigin.Begin);
         }
     }
 
@@ -52,10 +51,9 @@ public class VirtualStream : Stream
 
     public override int Read(byte[] buffer, int offset, int count)
     {
-        if (!hasSeekedToStartOffset)
+        if (!hasSeekedToCurrentOffset)
         {
-            stream.Seek(startOffset, SeekOrigin.Begin);
-            hasSeekedToStartOffset = true;
+            Seek(currentOffset, SeekOrigin.Begin);
         }
 
         var readLength = maxSize > 0 && Position + count > maxSize ? (int)(maxSize - Position) : count; 
@@ -64,17 +62,25 @@ public class VirtualStream : Stream
 
         currentOffset += bytesRead;
 
+        if (currentOffset > currentSize)
+        {
+            currentSize = currentOffset;
+        }
+        
         return bytesRead;
     }
 
     public override long Seek(long offset, SeekOrigin origin)
     {
-        if (offset >= Length)
+        if (origin != SeekOrigin.Begin)
         {
-            throw new IOException($"Seek {offset} offset is out of range with length {Length}");
+            throw new IOException("Only origin begin is supported");
         }
 
-        return stream.Seek(this.startOffset + offset, origin);
+        var newOffset = stream.Seek(this.startOffset + offset, origin);
+        hasSeekedToCurrentOffset = true;
+        currentOffset = newOffset - this.startOffset;
+        return newOffset;
     }
 
     public override void SetLength(long value)
@@ -89,10 +95,9 @@ public class VirtualStream : Stream
 
     public override void Write(byte[] buffer, int offset, int count)
     {
-        if (!hasSeekedToStartOffset)
+        if (!hasSeekedToCurrentOffset)
         {
-            stream.Seek(startOffset, SeekOrigin.Begin);
-            hasSeekedToStartOffset = true;
+            Seek(currentOffset, SeekOrigin.Begin);
         }
 
         var writeLength = maxSize > 0 && Position + count > maxSize ? (int)(maxSize - Position) : count;
