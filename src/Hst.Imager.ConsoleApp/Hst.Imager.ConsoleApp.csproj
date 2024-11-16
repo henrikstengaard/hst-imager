@@ -24,6 +24,9 @@
       <None Update="scripts\create_pistorm_32gb_vhd_import_rdb.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="scripts\create_pistorm_32gb_vhd_new_rdb_disk1.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="scripts\create_pistorm_32gb_vhd_new_rdb.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

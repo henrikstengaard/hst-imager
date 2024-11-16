@@ -46,7 +46,7 @@ public class RdbUpdateCommand : CommandBase
             return new Result(writableMediaResult.Error);
         }
 
-        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
+        using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
         var stream = media.Stream;
 
         OnDebugMessage("Reading Rigid Disk Block");

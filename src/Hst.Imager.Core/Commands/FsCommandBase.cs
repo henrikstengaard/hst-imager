@@ -351,7 +351,7 @@ public abstract class FsCommandBase : CommandBase
         var fileSystemPath = mediaResult.FileSystemPath ?? string.Empty;
         var directorySeparatorChar = mediaResult.DirectorySeparatorChar;
 
-        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
             readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
         var media = piStormRdbMediaResult.Media;
@@ -502,7 +502,7 @@ public abstract class FsCommandBase : CommandBase
         var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
         var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
 
-        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
             writableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
         var media = piStormRdbMediaResult.Media;

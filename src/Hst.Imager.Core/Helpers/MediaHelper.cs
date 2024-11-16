@@ -14,7 +14,7 @@ namespace Hst.Imager.Core.Helpers
 {
     public static class MediaHelper
     {
-        public static async Task<Media> GetMediaWithPiStormRdbSupport(ICommandHelper commandHelper, Media media, string path)
+        public static Media GetMediaWithPiStormRdbSupport(ICommandHelper commandHelper, Media media, string path)
         {
             var pathResult = commandHelper.ResolveMedia(path);
             if (pathResult.IsFaulted)
@@ -22,7 +22,7 @@ namespace Hst.Imager.Core.Helpers
                 return media;
             }
             
-            var piStormRdbMediaResult = await GetPiStormRdbMedia(
+            var piStormRdbMediaResult = GetPiStormRdbMedia(
                 media, pathResult.Value.FileSystemPath, pathResult.Value.DirectorySeparatorChar);
 
             return piStormRdbMediaResult.HasPiStormRdb ? piStormRdbMediaResult.Media : media;
@@ -34,7 +34,7 @@ namespace Hst.Imager.Core.Helpers
         /// <param name="media">Media used to get pistorm rdb from.</param>
         /// <param name="fileSystemPath">File system path used to get pistorm rdb from.</param>
         /// <returns>PiStormRdb media result with PiStormRdb media, if master boot record partition type is 0x76. Otherwise media is returned.</returns>
-        public static async Task<PiStormRdbMediaResult> GetPiStormRdbMedia(Media media, string fileSystemPath,
+        public static PiStormRdbMediaResult GetPiStormRdbMedia(Media media, string fileSystemPath,
             string directorySeparatorChar)
         {
             if (media.Type != Media.MediaType.Raw && media.Type != Media.MediaType.Vhd)
@@ -110,9 +110,7 @@ namespace Hst.Imager.Core.Helpers
 
             var partitionStream = new VirtualStream(disk.Content, partitionOffset, partitionSize, partitionSize);
 
-            var rigidDiskBlock = await RigidDiskBlockReader.Read(partitionStream);
-
-            var piStormRdbMedia = CreatePiStormRdbMedia(media, partitionSize, partitionStream, rigidDiskBlock);
+            var piStormRdbMedia = CreatePiStormRdbMedia(media, partitionSize, partitionStream);
 
             return new PiStormRdbMediaResult
             {
@@ -122,24 +120,18 @@ namespace Hst.Imager.Core.Helpers
             };
         }
 
-        private static Media CreatePiStormRdbMedia(Media media, long size, Stream stream, RigidDiskBlock rigidDiskBlock)
+        private static Media CreatePiStormRdbMedia(Media media, long size, Stream stream)
         {
-            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : null;
             var type = media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd
                 ? Media.MediaType.CompressedRaw
                 : Media.MediaType.Raw;
 
             return new PiStormRdbMedia(media.Path, Constants.FileSystemNames.PiStormRdb, size, type,
-                false, stream, false, rigidDiskBlock, disk);
+                false, stream, false, media);
         }
 
         public static async Task<RigidDiskBlock> ReadRigidDiskBlockFromMedia(Media media)
         {
-            if (media is PiStormRdbMedia piStormRdbMedia)
-            {
-                return piStormRdbMedia.RigidDiskBlock;
-            }
-
             if (media is DiskMedia diskMedia)
             {
                 diskMedia.Disk.Content.Position = 0;

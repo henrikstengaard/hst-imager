@@ -2,30 +2,29 @@
 {
     using DiscUtils;
     using Hst.Amiga.RigidDiskBlocks;
+    using System;
     using System.IO;
 
     /// <summary>
-    /// PiStormRdb media, keeps the rigid disk block read from mbr partition and disk, if opened from a disk media.
+    /// PiStorm RDB media represents a Master Boot Record partition containing a Rigid Disk Block
     /// </summary>
     public class PiStormRdbMedia : Media
     {
-        public readonly RigidDiskBlock RigidDiskBlock;
-        private readonly VirtualDisk disk;
+        private readonly Media baseMedia;
 
         public PiStormRdbMedia(string path, string name, long size, MediaType type,
-            bool isPhysicalDrive, Stream stream, bool byteswap, RigidDiskBlock rigidDiskBlock, VirtualDisk disk = null)
+            bool isPhysicalDrive, Stream stream, bool byteswap, Media baseMedia)
             : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
         {
-            RigidDiskBlock = rigidDiskBlock;
-            this.disk = disk;
+            this.baseMedia = baseMedia;
         }
 
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
-            if (disposing && disk != null)
+            if (disposing)
             {
-                disk.Dispose();
+                baseMedia.Dispose();
             }
         }
     }

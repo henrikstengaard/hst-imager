@@ -49,7 +49,7 @@
                 return new Result(sourceMediaResult.Error);
             }
 
-            using var sourceMedia = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, sourceMediaResult.Value, sourcePath);
+            using var sourceMedia = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, sourceMediaResult.Value, sourcePath);
             var sourceStream = sourceMedia.Stream;
             OnDebugMessage("Reading source Rigid Disk Block");
 

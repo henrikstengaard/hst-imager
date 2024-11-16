@@ -38,7 +38,7 @@
                 return new Result(readableMediaResult.Error);
             }
 
-            using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, readableMediaResult.Value, path);
+            using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, readableMediaResult.Value, path);
 
             OnDebugMessage($"Reading Rigid Disk Block from path '{path}'");
             

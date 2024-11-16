@@ -72,7 +72,7 @@ public class RdbRestoreCommand : CommandBase
             return new Result(writableMediaResult.Error);
         }
 
-        using var media = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, diskPath);
+        using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, diskPath);
         var stream = media.Stream;
 
         OnDebugMessage($"Writing Rigid Disk Block backup to '{diskPath}'");

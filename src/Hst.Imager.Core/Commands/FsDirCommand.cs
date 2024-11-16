@@ -106,7 +106,7 @@ public class FsDirCommand : FsCommandBase
         var fileSystemPath = pathResult.Value.FileSystemPath ?? string.Empty;
         var directorySeparatorChar = pathResult.Value.DirectorySeparatorChar;
 
-        var piStormRdbMediaResult = await MediaHelper.GetPiStormRdbMedia(
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
             readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
 
         var media = piStormRdbMediaResult.Media;
@@ -205,7 +205,7 @@ public class FsDirCommand : FsCommandBase
         switch(media)
         {
             case PiStormRdbMedia piStormRdbMedia:
-                entries.AddRange(GetPartitionTablesFromPiStormRdb(piStormRdbMedia.RigidDiskBlock));
+                entries.AddRange(await GetPartitionTablesFromPiStormRdb(piStormRdbMedia));
                 break;
             default:
                 entries.AddRange(await GetPartitionTablesFromMedia(media));
@@ -219,7 +219,14 @@ public class FsDirCommand : FsCommandBase
         });
     }
 
-    private IEnumerable<Entry> GetPartitionTablesFromPiStormRdb(RigidDiskBlock rigidDiskBlock)
+    private async Task<IEnumerable<Entry>> GetPartitionTablesFromPiStormRdb(PiStormRdbMedia piStormRdbMedia)
+    {
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(piStormRdbMedia);
+
+        return GetPartitionTablesFromRdb(rigidDiskBlock);
+    }
+
+    private IEnumerable<Entry> GetPartitionTablesFromRdb(RigidDiskBlock rigidDiskBlock)
     {
         if (rigidDiskBlock == null)
         {

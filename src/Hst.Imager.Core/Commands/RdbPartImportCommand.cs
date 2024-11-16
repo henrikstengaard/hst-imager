@@ -80,7 +80,7 @@
                 return new Result(destinationMediaResult.Error);
             }
 
-            using var destinationMedia = await MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, destinationMediaResult.Value, destinationPath);
+            using var destinationMedia = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, destinationMediaResult.Value, destinationPath);
 
             var destinationStream = destinationMedia.Stream;
             OnDebugMessage("Reading destination Rigid Disk Block");
