@@ -346,6 +346,15 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
+        public static async Task MbrPartClone(string srcPath, int srcPartitionNumber, string destPath,
+            int destPartitionNumber)
+        {
+            var command = new MbrPartCloneCommand(GetLogger<MbrPartCloneCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), srcPath, srcPartitionNumber, destPath, destPartitionNumber);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
+        }
+
         public static async Task RdbInfo(string path, bool showUnallocated)
         {
             var command = new RdbInfoCommand(GetLogger<RdbInfoCommand>(), GetCommandHelper(),

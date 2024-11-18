@@ -37,10 +37,11 @@ Hst Imager console comes with following features:
   - Read Master Boot Record information.
   - Initialize Master Boot Record.
   - Add partition to Master Boot Record.
-  - Export partition from Master Boot Record to file.
+  - Clone partition from Master Boot Record to same or other Master Boot Record partition.
   - Delete partition from Master Boot Record.
+  - Export partition from Master Boot Record to file.
   - Format partition in Master Boot Record.
-  - Import partition from file to Master Boot Record.
+  - Import partition from file to Master Boot Record partition.
 - Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
@@ -471,6 +472,20 @@ Example of adding a FAT32 partition of remaining space to Master Boot Record on 
 hst.imager mbr part add 4gb.vhd FAT32 *
 ```
 
+### Clone partition from Master Boot Record to same or other Master Boot Record partition.
+
+Clone a partition from Master Boot Record to same or other Master Boot Record partition by copying the partition contents.
+
+Example of cloning a partition 1 from 4GB vhd image file to 16GB vhd image file partition 2:
+```
+hst.imager mbr part clone 4gb.vhd 1 16gb.vhd 2
+```
+ 
+Example of cloning a partition 1 from 4GB vhd image file to same image file partition 2:
+```
+hst.imager mbr part clone 4gb.vhd 1 4gb.vhd 2
+```
+
 ### Delete partition from Master Boot Record
 
 Deletes a partition from Master Boot Record.
@@ -485,6 +500,15 @@ Example of delete partition number 1 from Master Boot Record on a 4GB vhd image 
 hst.imager mbr part del 4gb.vhd 1
 ```
 
+### Export partition from Master Boot Record to file
+
+Export a partition from Master Boot Record to a file.
+
+Example of exporting partition 1 from 4GB vhd image file a file:
+```
+hst.imager mbr part export 4gb.vhd 1 partition1.vhd
+```
+
 ### Format partition in Master Boot Record
 
 Formats a partition in Master Boot Record.
@@ -497,6 +521,15 @@ hst.imager mbr part format
 Example of formatting partition number 1 with label "PC" in Master Boot Record on a 4GB vhd image file:
 ```
 hst.imager mbr part format 4gb.vhd 1 PC
+```
+
+### Import partition from file to Master Boot Record
+
+Import a partition from a file to Master Boot Record.
+
+Example of importing a partition from a file to 4GB vhd image file partition 1:
+```
+hst.imager mbr part import partition1.vhd 4gb.vhd 1 
 ```
 
 ## Rigid Disk Block commands

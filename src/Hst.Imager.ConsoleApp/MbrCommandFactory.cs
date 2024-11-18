@@ -59,6 +59,7 @@ namespace Hst.Imager.ConsoleApp
             partCommand.AddCommand(CreateMbrPartFormat());
             partCommand.AddCommand(CreateMbrPartExport());
             partCommand.AddCommand(CreateMbrPartImport());
+            partCommand.AddCommand(CreateMbrPartClone());
 
             return partCommand;
         }
@@ -183,6 +184,34 @@ namespace Hst.Imager.ConsoleApp
             command.AddArgument(sourcePathArgument);
             command.AddArgument(destinationPathArgument);
             command.AddArgument(partition);
+
+            return command;
+        }
+        
+        private static Command CreateMbrPartClone()
+        {
+            var srcPathArgument = new Argument<string>(
+                name: "SourcePath",
+                description: "Path to source physical drive or image file.");
+
+            var srcPartitionNumber = new Argument<int>(
+                name: "Partition",
+                description: "Source partition to clone from.");
+
+            var destPathArgument = new Argument<string>(
+                name: "DestinationPath",
+                description: "Path to destination physical drive or image file.");
+
+            var destPartitionNumber = new Argument<int>(
+                name: "DestinationPartitionNumber",
+                description: "Destination partition number to clone to.");
+
+            var command = new Command("clone", "Clone partition from a physical drive or image file.");
+            command.SetHandler(CommandHandler.MbrPartClone, srcPathArgument, srcPartitionNumber, destPathArgument, destPartitionNumber);
+            command.AddArgument(srcPathArgument);
+            command.AddArgument(srcPartitionNumber);
+            command.AddArgument(destPathArgument);
+            command.AddArgument(destPartitionNumber);
 
             return command;
         }

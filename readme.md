@@ -40,7 +40,7 @@ See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for 
 
 ## Features
 
-Hst Imager comes with following features:
+Hst Imager Gui comes with following features:
 - List physical drives.
 - Read information from physical drive or image file (supports writing .rar, .zip, .gz, .xz compressed image files).
 - Read physical drive to image file (supports writing to .zip, .gz, compressed image files).
@@ -62,8 +62,11 @@ Hst Imager Console version comes with following additional features:
   - Read Master Boot Record information.
   - Initialize Master Boot Record.
   - Add partition to Master Boot Record.
+  - Export partition from Master Boot Record to file.
   - Delete partition from Master Boot Record.
   - Format partition in Master Boot Record.
+  - Import partition from file to Master Boot Record partition.
+  - Clone partition from Master Boot Record to same or other Master Boot Record partition.
 - Rigid Disk Block;
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
