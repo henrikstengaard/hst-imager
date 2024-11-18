@@ -4,7 +4,7 @@
 # a pistorm rdb partition with id 0x76 with amigaos-3.2.vhd disk imported as pistorm rdb hard disk.
 #
 # requirements:
-# - Example script install amigaos 3.2 is run.
+# - Example script install amigaos 3.2 is run to create amigaos-3.2.vhd.
 # - Emu68-pistorm32lite.zip downloaded from https://github.com/michalsc/Emu68/releases
 # - kick.rom, which is copy of kicka1200.rom file from amigaos 3.2 rom directory.
 
