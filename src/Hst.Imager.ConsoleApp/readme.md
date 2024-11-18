@@ -96,6 +96,21 @@ Commands accessing physical drives requires administrator privileges:
 
 Hst Imager will only allow access to removable or USB attached physical drives.
 
+## UAE metadata support
+
+UAE metadata is used by Amiga emulators like WinUAE and FS-UAE to support filenames with special characters as well as
+comments and protection bits that are not supported by Windows, MacOS or Linux when using local directories as harddrives.
+
+Hst Imager Console supports UAE metadata when copying files between local directories, image files or physical drives and
+when extracting .zip, .lha and .lzx with special characters in filenames, comments and Amiga protection bits.
+
+Hst Imager Console supports both UAEFSDB metadata file used by WinUAE and UAE metafiles used by FS-UAE.
+By default Hst Imager Console will use UAEFSDB metadata files as these are supported by both WinUAE and FS-UAE Amiga emulators.
+Hst Imager will also automatically detect when UAE metadata files will be read and written by checking if source or destination
+supports UAE metadata files.
+The type of UAE metadata files to read and write can be changed by specifying the `--uaemetadata` option with values
+`None`, `UaeFsDb` or `UaeMetafile` for file system copy and extract commands.
+
 ## PiStorm support
 
 Hst Imager supports creating Master Boot Record partition with partition type 0x76 used as hard disk for PiStorm.
@@ -378,6 +393,16 @@ Example of copying files and subdirectories recursively from directory DH0 to 16
 hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive
 ```
 
+Example of copying files and subdirectories recursively from directory DH0 to 16GB img image file Rigid Disk Block partition DH0 and read UAE metafile used by FS-UAE Amiga emulator:
+```
+hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive --uaemetadata=UaeMetafile
+```
+
+Example of copying files and subdirectories recursively from 16GB img image file Rigid Disk Block partition DH0 to directory DH0 and write UAE metafile used by FS-UAE Amiga emulator:
+```
+hst.imager fs copy 16gb.img\rdb\dh0 dh0 --recursive --uaemetadata=UaeMetafile
+```
+
 ### Extract files and subdirectories from source to destination file system
 
 Example of displaying usage for extracting files and subdirectories from source to destination file system:
@@ -398,6 +423,11 @@ hst.imager fs extract whdload.lha 16gb.img\rdb\dh0
 Example of extracting files and subdirectories recursively from Amiga OS 3.2 iso file to 16GB img image file Rigid Disk Block partition DH0:
 ```
 hst.imager fs extract amigaos3.2.iso 16gb.img\rdb\dh0
+```
+
+Example of extracting files and subdirectories recursively from lha archive whdload.lha file to local directory whdload and write UAE metafile used by FS-UAE Amiga emulator:
+```
+hst.imager fs extract whdload.lha whdload --uaemetadata=UaeMetafile
 ```
 
 ## ADF commands
