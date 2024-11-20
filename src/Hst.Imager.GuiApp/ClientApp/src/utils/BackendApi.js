@@ -79,8 +79,6 @@ export class BackendApi {
         if (!response.ok) {
             throw new Error('Failed to update license')
         }
-
-        return await response.json();
     }
     
     async updateList() {

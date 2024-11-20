@@ -19,7 +19,7 @@
                 return BadRequest(ModelState);
             }
 
-            if (HybridSupport.IsElectronActive && !request.LicenseAgreed)
+            if (!request.LicenseAgreed)
             {
                 Electron.App.Exit();
             }
