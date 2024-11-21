@@ -38,7 +38,8 @@
       "target": [{
         "target": "dmg",
         "arch": [
-          "x64"
+          "x64",
+          "arm64"
         ]
       }],
       "icon": "../../../hst.imager.icns"
