@@ -490,7 +490,8 @@ jobs:
             ${{ env.RELEASE_VERSION }}_gui_windows_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_macos.dmg
+            ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
+            ${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg
             ${{ env.RELEASE_VERSION }}_console_linux_x64.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip
