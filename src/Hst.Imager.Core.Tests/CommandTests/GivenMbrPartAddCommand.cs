@@ -188,4 +188,47 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
                 largestPartition.Size < largestUnallocatedPart.Size);
         }
     }
+
+    [Fact]
+    public async Task When_AddMbrPartitionWithStartAndEndSectors_Then_PartitionIsAdded()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        var startSector = 63;
+        var endSector = size / 1024;
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // arrange - create mbr disk
+        await CreateMbrDisk(testCommandHelper, imgPath, size);
+
+        // arrange - mbr partition add command with type FAT32 and sectors 50% of disk size
+        var cancellationTokenSource = new CancellationTokenSource();
+        var mbrPartAddCommand = new MbrPartAddCommand(new NullLogger<MbrPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, "Fat32", new Size(), startSector, endSector);
+
+        // act - execute mbr partition add
+        var result = await mbrPartAddCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - read disk info
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using var media = mediaResult.Value;
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        Assert.NotNull(diskInfo?.MbrPartitionTablePart);
+
+        // assert - added mbr partition size is equal to 50% of disk size with an allowed margin of 50kb
+        var expectedPartitionSize = diskInfo.Size * 0.5;
+        var margin = 50000;
+        var partInfo =
+            diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>
+                x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
+                x.Size < expectedPartitionSize + margin);
+        Assert.NotNull(partInfo);
+        Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partInfo.BiosType);
+    }
 }

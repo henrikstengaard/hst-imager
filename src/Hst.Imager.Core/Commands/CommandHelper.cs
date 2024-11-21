@@ -75,6 +75,12 @@ namespace Hst.Imager.Core.Commands
                 return diskMedia;
             }
 
+            if (media is PhysicalDriveMedia physicalDriveMedia)
+            {
+                physicalDriveMedia.OpenStream();
+                return physicalDriveMedia;
+            }
+
             if (media.Stream == null)
             {
                 media.SetStream(File.Open(path, FileMode.Open,
@@ -176,8 +182,8 @@ namespace Hst.Imager.Core.Commands
 
             physicalDrive.SetWritable(writeable);
             physicalDrive.SetByteSwap(byteSwap);
-            var physicalDriveMedia = new Media(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
-                Media.MediaType.Raw, true, physicalDrive.Open(), byteSwap);
+            var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
+                Media.MediaType.Raw, true, physicalDrive, byteSwap);
 
             this.activeMedias.Add(physicalDriveMedia);
             return Task.FromResult(new Result<Media>(physicalDriveMedia));

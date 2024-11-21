@@ -31,6 +31,7 @@
             rootCommand.AddGlobalOption(VerboseOption);
             rootCommand.AddCommand(CreateBlankCommand());
             rootCommand.AddCommand(CreateConvertCommand());
+            rootCommand.AddCommand(CreateFormatCommand());
             rootCommand.AddCommand(CreateInfoCommand());
             rootCommand.AddCommand(CreateListCommand());
             rootCommand.AddCommand(CreateOptimizeCommand());
@@ -207,6 +208,34 @@
             convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption, verifyOption);
 
             return convertCommand;
+        }
+
+        public static Command CreateFormatCommand()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var partitionTableArgument = new Argument<PartitionTable>(
+                name: "PartitionTable",
+                description: "Partition table to create.");
+
+            var fileSystemArgument = new Argument<string>(
+                name: "FileSystem",
+                description: "File system to format partition created.");
+
+            var sizeOption = new Option<string>(
+                new[] { "--size", "-s" },
+                description: "Size of disk to format.");
+
+            var command = new Command("format", "Format physical drive or image file.");
+            command.AddArgument(pathArgument);
+            command.AddArgument(partitionTableArgument);
+            command.AddArgument(fileSystemArgument);
+            command.AddOption(sizeOption);
+            command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument, sizeOption);
+
+            return command;
         }
 
         public static Command CreateBlankCommand()

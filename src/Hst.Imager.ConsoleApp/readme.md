@@ -322,12 +322,39 @@ Example of optimizing the size of a 16GB img image file to size of Rigid Disk Bl
 hst.imager optimize 16gb.img -rdb
 ```
 
+## Format commands
+
+### Format physical drive or image file
+
+Format physical drive or image file by erasing existing partition tables, initialize Master Boot Record or Guid Partition Table,
+add partition of with FAT or NTFS file system and format the partition.
+
+Example of displaying usage for format physical drive or image file:
+```
+hst.imager format
+```
+
+Example of formatting physical drive 1 with Master Boot Record and FAT32 formatted partition as large as physical drive 1:
+```
+hst.imager format \disk1 mbr fat32
+```
+
+Example of formatting physical drive 1 with Master Boot Record and FAT32 formatted partition with the size of 8GB:
+```
+hst.imager format \disk1 mbr fat32 -s 8gb
+```
+
+Example of formatting physical drive 1 with Guid Partition Table and NTFS formatted partition as large as physical drive 1:
+```
+hst.imager format \disk1 gpt ntfs
+```
+
 ## File system commands
 
 File system commands support following types as source path:
 - Physical drives: Physical drives attached via USB.
 - Image files: IMG or VHD image files.
-- Archives: LHA and ZIP archives.
+- Archives: LHA, LZX and ZIP archives.
 - ADF images: Amiga Disk File images.
 - CD images: ISO 9660 cd images.
 

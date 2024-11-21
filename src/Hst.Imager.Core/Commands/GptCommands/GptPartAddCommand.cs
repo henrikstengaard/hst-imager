@@ -144,6 +144,13 @@ public class GptPartAddCommand : CommandBase
         var end = start + partitionSectors - 1;
         partitionSize = partitionSectors * disk.SectorSize;
 
+        if (endSector.HasValue && end > endSector)
+        {
+            end = endSector.Value;
+            partitionSectors = end - start + 1;
+            partitionSize = partitionSectors * 512;
+        }
+
         // set end to last sector, if end is larger than last sector
         if (end > diskSectors)
         {
@@ -168,10 +175,6 @@ public class GptPartAddCommand : CommandBase
 
         // create guid partition
         guidPartitionTable.Create(start, end, partitionTypeGuidResult.Value, 0, name);
-
-        // flush disk content
-        //await disk.Content.FlushAsync(token);
-        //disk.Dispose();
             
         return new Result();
     }

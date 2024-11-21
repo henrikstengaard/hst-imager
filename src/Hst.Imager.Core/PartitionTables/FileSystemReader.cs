@@ -50,15 +50,19 @@ public static class FileSystemReader
         try
         {
             stream.Position = 0;
-            var fatFileSystem = new FatFileSystem(stream);
-            return new Models.FileSystems.FileSystemInfo
+
+            if (FatFileSystem.Detect(stream))
             {
-                FileSystemType = fatFileSystem.FileSystemType.ToUpper(),
-                VolumeName = fatFileSystem.VolumeLabel,
-                VolumeSize = fatFileSystem.Size,
-                VolumeFree = fatFileSystem.Size - fatFileSystem.UsedSpace,
-                ClusterSize = fatFileSystem.ClusterSize
-            };
+                var fatFileSystem = new FatFileSystem(stream);
+                return new Models.FileSystems.FileSystemInfo
+                {
+                    FileSystemType = fatFileSystem.FatVariant.ToString().ToUpper(),
+                    VolumeName = fatFileSystem.VolumeLabel,
+                    VolumeSize = fatFileSystem.Size,
+                    VolumeFree = fatFileSystem.Size - fatFileSystem.UsedSpace,
+                    ClusterSize = fatFileSystem.ClusterSize
+                };
+            }
         }
         catch (Exception)
         {
@@ -68,15 +72,19 @@ public static class FileSystemReader
         try
         {
             stream.Position = 0;
-            var ntfsFileSystem = new NtfsFileSystem(stream);
-            return new Models.FileSystems.FileSystemInfo
+
+            if (NtfsFileSystem.Detect(stream))
             {
-                FileSystemType = "NTFS",
-                VolumeName = ntfsFileSystem.VolumeLabel,
-                VolumeSize = ntfsFileSystem.Size,
-                VolumeFree = ntfsFileSystem.Size - ntfsFileSystem.UsedSpace,
-                ClusterSize = ntfsFileSystem.ClusterSize
-            };
+                var ntfsFileSystem = new NtfsFileSystem(stream);
+                return new Models.FileSystems.FileSystemInfo
+                {
+                    FileSystemType = "NTFS",
+                    VolumeName = ntfsFileSystem.VolumeLabel,
+                    VolumeSize = ntfsFileSystem.Size,
+                    VolumeFree = ntfsFileSystem.Size - ntfsFileSystem.UsedSpace,
+                    ClusterSize = ntfsFileSystem.ClusterSize
+                };
+            }
         }
         catch (Exception)
         {

@@ -260,6 +260,12 @@ namespace Hst.Imager.ConsoleApp
                 compatibleSize));
         }
 
+        public static async Task Format(string path, PartitionTable partitionTable, string fileSystem, string size)
+        {
+            await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
+                GetCommandHelper(), await GetPhysicalDrives(), path, partitionTable, fileSystem, ParseSize(size)));
+        }
+
         public static async Task GptInfo(string path, bool showUnallocated)
         {
             var command = new GptInfoCommand(GetLogger<GptInfoCommand>(), GetCommandHelper(),

@@ -164,6 +164,13 @@
             var end = start + partitionSectors - 1;
             partitionSize = partitionSectors * 512;
 
+            if (endSector.HasValue && end > endSector)
+            {
+                end = endSector.Value;
+                partitionSectors = end - start + 1;
+                partitionSize = partitionSectors * 512;
+            }
+
             // set end to last sector, if end is larger than last sector
             if (end > disk.Geometry.Value.TotalSectorsLong)
             {

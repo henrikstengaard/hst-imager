@@ -100,4 +100,47 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         Assert.NotNull(partInfo);
         Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partInfo.GuidType);
     }
+
+    [Fact]
+    public async Task When_AddGptPartitionWithStartAndEndSectors_Then_PartitionIsAdded()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        var startSector = 63;
+        var endSector = size / 1024;
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // arrange - create gpt
+        await CreateGptDisk(testCommandHelper, imgPath, size);
+
+        // arrange - gpt partition add command with type FAT32 and sectors 50% of disk size
+        var cancellationTokenSource = new CancellationTokenSource();
+        var gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, GptPartType.Fat32, "FAT32GPT", new Size(), startSector, endSector);
+
+        // act - execute gpt partition add
+        var result = await gptPartAddCommand.Execute(cancellationTokenSource.Token);
+        Assert.True(result.IsSuccess);
+
+        // assert - read disk info
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using var media = mediaResult.Value;
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        Assert.NotNull(diskInfo?.GptPartitionTablePart);
+
+        // assert - added gpt partition size is equal to 50% of disk size with an allowed margin of 50kb
+        var expectedPartitionSize = diskInfo.Size * 0.5;
+        var margin = 50000;
+        var partInfo =
+            diskInfo.GptPartitionTablePart.Parts.FirstOrDefault(x =>
+                x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
+                x.Size < expectedPartitionSize + margin);
+        Assert.NotNull(partInfo);
+        Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partInfo.GuidType);
+    }
 }

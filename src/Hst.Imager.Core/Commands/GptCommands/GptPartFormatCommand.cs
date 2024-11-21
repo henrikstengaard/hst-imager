@@ -79,7 +79,7 @@ public class GptPartFormatCommand : CommandBase
         OnInformationMessage($"- Type '{partitionInfo.TypeAsString}'");
         OnInformationMessage($"- Partition name '{name}'");
 
-        // format mbr partition
+        // format gpt partition
         switch (type)
         {
             case GptPartType.Fat32:

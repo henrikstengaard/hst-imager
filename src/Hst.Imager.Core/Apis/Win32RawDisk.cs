@@ -361,7 +361,10 @@
             if (disposing)
             {
                 CloseDevice();
-                safeFileHandle.Close();
+                if (!safeFileHandle.IsInvalid)
+                {
+                    safeFileHandle.Close();
+                }
                 safeFileHandle.Dispose();
             }
 
