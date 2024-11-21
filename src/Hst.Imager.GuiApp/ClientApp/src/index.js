@@ -14,6 +14,11 @@ console.log(`frontend base url = '${frontendBaseUrl}'`);
 let backendBaseUrl =  frontendBaseUrl;
 
 let host = 'native';
+
+if (navigator.userAgent.toLowerCase().includes('electron')) {
+    host = 'electron';
+}
+
 const hostMetaTag = document.querySelector("meta[name='host']")
 if (hostMetaTag) {
     host = hostMetaTag.getAttribute("content") || 'native';

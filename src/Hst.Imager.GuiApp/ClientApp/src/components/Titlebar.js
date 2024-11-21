@@ -10,7 +10,7 @@ import {AppStateContext} from "./AppStateContext";
 
 export default function Titlebar() {
     const appState = React.useContext(AppStateContext)
-    const [maximized] = React.useState(false)
+    const [maximized, setMaximized] = React.useState(false)
 
     const handleMinimizeWindow = () => {
         appState.hostIpc.minimizeWindow()
@@ -18,10 +18,12 @@ export default function Titlebar() {
 
     const handleMaximizeWindow = () => {
         appState.hostIpc.maximizeWindow()
+        setMaximized(true)
     }
 
     const handleRestoreWindow = () => {
         appState.hostIpc.restoreWindow()
+        setMaximized(false)
     }
 
     const handleCloseWindow = () => {
