@@ -236,11 +236,11 @@ jobs:
           retention-days: 3
         if: matrix.os == 'windows-latest'
 
-      - name: Set macOS dmg artifact
+      - name: Set macOS 64-bit dmg artifact
         id: macos_x64_dmg
         shell: pwsh
         run: |
-          $artifactName='hst-imager.gui.osx.dmg'
+          $artifactName='hst-imager.gui.osx-x64.dmg'
           $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
@@ -248,11 +248,31 @@ jobs:
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
 
-      - name: Upload macOS dmg artifact
+      - name: Upload macOS 64-bit dmg artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
           path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
+          retention-days: 3
+        if: matrix.os == 'macos-latest'
+
+      - name: Set macOS arm64 dmg artifact
+        id: macos_arm64_dmg
+        shell: pwsh
+        run: |
+          $artifactName='hst-imager.gui.osx-arm64.dmg'
+          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}-arm64.dmg' | Select-Object -First 1).FullName
+          Rename-Item $artifactFile -NewName $artifactName
+          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
+          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
+        if: matrix.os == 'macos-latest'
+
+      - name: Upload macOS arm64 dmg artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.macos_arm64_dmg.outputs.artifact_name }}"
+          path: "${{ steps.macos_arm64_dmg.outputs.artifact_path }}"
           retention-days: 3
         if: matrix.os == 'macos-latest'
 
@@ -393,10 +413,15 @@ jobs:
         with:
           name: hst-imager.console.osx-arm64.zip
 
-      - name: Download Gui macOS dmg artifact
+      - name: Download Gui macOS 64-bit dmg artifact
         uses: actions/download-artifact@v4
         with:
-          name: hst-imager.gui.osx.dmg
+          name: hst-imager.gui.osx-x64.dmg
+
+      - name: Download Gui macOS arm64 dmg artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hst-imager.gui.osx-arm64.dmg
 
         # linux
       - name: Download Console Linux 64-bit zip artifact
@@ -444,7 +469,8 @@ jobs:
           Rename-Item -Path hst-imager.gui.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64.zip"
           Rename-Item -Path hst-imager.console.osx-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_x64.zip"
           Rename-Item -Path hst-imager.console.osx-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip"
-          Rename-Item -Path hst-imager.gui.osx.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos.dmg"
+          Rename-Item -Path hst-imager.gui.osx-x64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg"
+          Rename-Item -Path hst-imager.gui.osx-arm64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg"
           Rename-Item -Path hst-imager.console.linux-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_x64.zip"
           Rename-Item -Path hst-imager.console.linux-arm.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm.zip"
           Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
