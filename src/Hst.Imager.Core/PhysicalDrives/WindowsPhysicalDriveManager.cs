@@ -162,10 +162,6 @@
 
         private static bool IsRemovable(string type, string busType)
         {
-            // if (!(physicalDrive is WindowsPhysicalDrive windowsPhysicalDrive))
-            // {
-            //     return false;
-            // }
             return (type == "RemovableMedia" && busType != "BusTypeSata") ||
                    (type == "FixedMedia" && (busType == "BusTypeUsb" ||
                                              busType == "BusTypeSd" ||
@@ -178,7 +174,7 @@
             var wmicWin32DiskDriveToDiskPartitionsCsv = await GetWmicWin32DiskDriveToDiskPartitionPath();
             var wmicWin32LogicalDiskToPartitionsCsv = await GetWmicWin32LogicalDiskToPartitionPath();
 
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(wmicDiskDriveListCsv).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicDiskDrives(wmicDiskDriveListCsv).ToList();
             var wmicDiskDriveToDiskPartitions =
                 WmicReader.ParseWmicDiskDriveToDiskPartitions(wmicWin32DiskDriveToDiskPartitionsCsv).ToList();
             var wmicLogicalDiskToPartitions =

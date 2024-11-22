@@ -2,29 +2,43 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
-    using System.IO;
-    using System.Linq;
-    using System.Text;
     using System.Text.RegularExpressions;
-    using CsvHelper;
-    using CsvHelper.Configuration;
     using Models;
 
     public static class WmicReader
     {
         private static readonly Regex deviceIdRegex = new Regex("DeviceID=\"([^\"]*)\"", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-        
-        public static IEnumerable<T> ParseWmicCsv<T>(string csv)
-        {
-            using var csvReader = new CsvReader(new StreamReader(new MemoryStream(Encoding.UTF8.GetBytes(csv))),
-                new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    Delimiter = ",",
-                    Encoding = Encoding.UTF8
-                });
 
-            return csvReader.GetRecords<T>().ToList();
+        public static IEnumerable<WmicDiskDrive> ParseWmicDiskDrives(string csv)
+        {
+            var lineCount = 0;
+
+            var columnIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var line in csv.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                lineCount++;
+
+                var columns = line.Split(',');
+
+                if (lineCount == 1)
+                {
+                    for (var i = 0; i < columns.Length; i++)
+                    {
+                        columnIndex[columns[i]] = i;
+                    }
+                    continue;
+                }
+
+                yield return new WmicDiskDrive
+                {
+                    MediaType = columns[columnIndex["MediaType"]],
+                    Model = columns[columnIndex["Model"]],
+                    Name = columns[columnIndex["Name"]],
+                    Size = long.TryParse(columns[columnIndex["Size"]], out var size) ? size : null,
+                    InterfaceType = columns[columnIndex["InterfaceType"]]
+                };
+            }
         }
 
         public static IEnumerable<WmicDiskDriveToDiskPartition> ParseWmicDiskDriveToDiskPartitions(string csv)

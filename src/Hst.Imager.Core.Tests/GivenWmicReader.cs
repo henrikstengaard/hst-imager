@@ -3,7 +3,6 @@
     using System.IO;
     using System.Linq;
     using System.Threading.Tasks;
-    using Models;
     using PhysicalDrives;
     using Xunit;
 
@@ -12,7 +11,7 @@
         [Fact]
         public async Task WhenParseCsvOutputFromWmicThenWmicDiskDrivesAreReturned()
         {
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-DiskDrive.csv"))).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicDiskDrives(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-DiskDrive.csv"))).ToList();
 
             Assert.NotNull(wmicDiskDrives);
             Assert.NotEmpty(wmicDiskDrives);
@@ -36,7 +35,7 @@
         [Fact]
         public async Task WhenParseCsvOutputFromWmicWithoutSizeThenWmicDiskDrivesAreReturned()
         {
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-diskdrive-list-0-size.csv"))).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicDiskDrives(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic-diskdrive-list-0-size.csv"))).ToList();
 
             Assert.NotNull(wmicDiskDrives);
             Assert.Single(wmicDiskDrives);
@@ -48,31 +47,12 @@
         [Fact]
         public async Task WhenParseCsvOutputFromWmicWith3DiskDrivesWmicDiskDrivesAreReturned()
         {
-            var wmicDiskDrives = WmicReader.ParseWmicCsv<WmicDiskDrive>(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic_diskdrive_list_error.csv"))).ToList();
+            var wmicDiskDrives = WmicReader.ParseWmicDiskDrives(await File.ReadAllTextAsync(Path.Combine("TestData", "wmic_diskdrive_list_error.csv"))).ToList();
 
             Assert.NotNull(wmicDiskDrives);
             Assert.NotEmpty(wmicDiskDrives);
             Assert.Equal(3, wmicDiskDrives.Count);
 
-/*
-    InterfaceType: "SCSI"
-    MediaType: "Fixed hard disk media"
-    Model: "Samsung SSD 970 EVO 2TB"
-    Name: "\\\\.\\PHYSICALDRIVE0"
-    Size: 2000396321280
-    
-    InterfaceType: "SCSI"
-    MediaType: "Fixed hard disk media"
-    Model: "WDC PC SN720 SDAPNTW-512G"
-    Name: "\\\\.\\PHYSICALDRIVE1"
-    Size: 512105932800    
-    
-    InterfaceType: "USB"
-    MediaType: ""
-    Model: "Generic STORAGE DEVICE USB Device"
-    Name: "\\\\.\\PHYSICALDRIVE2"
-    Size: null    
- */
             var wmicDiskDrive1 = wmicDiskDrives[0];
             Assert.Equal("Fixed hard disk media", wmicDiskDrive1.MediaType);
             Assert.Equal("Samsung SSD 970 EVO 2TB", wmicDiskDrive1.Model);
