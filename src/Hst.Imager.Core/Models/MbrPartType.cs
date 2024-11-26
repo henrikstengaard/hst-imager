@@ -1,13 +1,14 @@
 ﻿namespace Hst.Imager.Core.Models;
 
-public enum MbrPartType : int
+public enum MbrPartType
 {
-    Fat12 = 1,
-    Fat16 = 6,
-    Fat16Small = 4,
-    Fat16Lba = 14,
-    Fat32 = 11,
-    Fat32Lba = 12,
-    Ntfs = 7,
-    PiStormRdb = 0x76
+    Fat12,
+    Fat16,
+    Fat16Small,
+    Fat16Lba,
+    Fat32,
+    Fat32Lba,
+    Ntfs,
+    ExFat,
+    PiStormRdb
 }

@@ -20,14 +20,14 @@ public class GptPartAddCommand : CommandBase
     private readonly ICommandHelper commandHelper;
     private readonly IEnumerable<IPhysicalDrive> physicalDrives;
     private readonly string path;
-    private readonly GptPartType type;
+    private readonly string type;
     private readonly string name;
     private readonly Size size;
     private readonly long? startSector;
     private readonly long? endSector;
 
     public GptPartAddCommand(ILogger<GptPartAddCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string path, GptPartType type, string name, Size size,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, string type, string name, Size size,
         long? startSector, long? endSector)
     {
         this.logger = logger;
@@ -43,15 +43,11 @@ public class GptPartAddCommand : CommandBase
 
     public override async Task<Result> Execute(CancellationToken token)
     {
-        // get well known partition type
-        var wellKnownPartitionTypeResult = GetWellKnownPartitionType();
-        if (wellKnownPartitionTypeResult.IsFaulted)
+        var gptPartitionTypeResult = GetGptPartitionType();
+        if (gptPartitionTypeResult.IsFaulted)
         {
-            return new Result(wellKnownPartitionTypeResult.Error);
+            return new Result(gptPartitionTypeResult.Error);
         }
-        
-        // get partition type guid
-        var partitionTypeGuidResult = GetPartitionTypeGuid(wellKnownPartitionTypeResult.Value);
 
         OnInformationMessage($"Adding partition to Guid Partition Table at '{path}'");
             
@@ -131,7 +127,7 @@ public class GptPartAddCommand : CommandBase
             start = firstSector;
         }
 
-        var diskSectors = disk.Geometry.Value.TotalSectorsLong;
+        var diskSectors = Math.Min(guidPartitionTable.LastUsableSector, disk.Geometry.Value.TotalSectorsLong);
 
         // calculate partition sectors
         var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / disk.SectorSize;
@@ -168,37 +164,36 @@ public class GptPartAddCommand : CommandBase
             
         OnInformationMessage($"- Partition number '{guidPartitionTable.Partitions.Count + 1}'");
         OnInformationMessage($"- Type '{type.ToString().ToUpper()}'");
+        OnInformationMessage($"- Guid Partition Type '{gptPartitionTypeResult.Value}'");
         OnInformationMessage($"- Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
         OnInformationMessage($"- Start sector '{start}'");
         OnInformationMessage($"- End sector '{end}'");
         OnInformationMessage($"- Name '{name}'");
 
         // create guid partition
-        guidPartitionTable.Create(start, end, partitionTypeGuidResult.Value, 0, name);
+        guidPartitionTable.Create(start, end, gptPartitionTypeResult.Value, 0, name);
             
         return new Result();
     }
-    
-    private Result<WellKnownPartitionType> GetWellKnownPartitionType()
+
+    private Result<Guid> GetGptPartitionType()
     {
-        return type switch
+        if (Guid.TryParse(type, out var parsedGuid))
         {
-            GptPartType.Fat32 => new Result<WellKnownPartitionType>(WellKnownPartitionType.WindowsFat),
-            GptPartType.Ntfs => new Result<WellKnownPartitionType>(WellKnownPartitionType.WindowsNtfs),
-            _ => new Result<WellKnownPartitionType>(new Error($"Unsupported partition type '{type}'"))
-        };
-    }
-    
-    private static Result<Guid> GetPartitionTypeGuid(WellKnownPartitionType wellKnownPartitionType)
-    {
-        return wellKnownPartitionType switch
+            return new Result<Guid>(parsedGuid);
+        }
+
+        if (!Enum.TryParse<GptPartType>(type, true, out var gptPartType))
         {
-            WellKnownPartitionType.WindowsFat => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
-            WellKnownPartitionType.WindowsNtfs => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
-            WellKnownPartitionType.Linux => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
-            WellKnownPartitionType.LinuxSwap => new Result<Guid>(GuidPartitionTypes.LinuxSwap),
-            WellKnownPartitionType.LinuxLvm => new Result<Guid>(GuidPartitionTypes.LinuxLvm),
-            _ => new Result<Guid>(new Error($"Unknown partition type '{wellKnownPartitionType}'"))
+            return new Result<Guid>(new Error($"Unsupported partition type '{type}'"));
+        }
+
+        return gptPartType switch
+        {
+            GptPartType.Fat32 => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
+            GptPartType.Ntfs => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
+            GptPartType.ExFat => new Result<Guid>(GuidPartitionTypes.WindowsBasicData),
+            _ => new Result<Guid>(new Error($"Unsupported partition type '{type}'"))
         };
     }
 }

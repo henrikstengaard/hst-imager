@@ -72,7 +72,7 @@ namespace Hst.Imager.ConsoleApp
 
             var typeArgument = new Argument<string>(
                 name: "Type",
-                description: "Type of the partition as number or name (e.g. value 11 or name FAT32 for FAT32).");
+                description: "Type of the partition as name or number (e.g. name FAT32 or value 0xb for FAT32).");
 
             var sizeArgument = new Argument<string>(
                 name: "Size",
@@ -132,8 +132,12 @@ namespace Hst.Imager.ConsoleApp
                 name: "Name",
                 description: "Name of the partition.");
 
+            var fileSystemOption = new Option<string>(
+                new[] { "--file-system", "-fs" },
+                description: "File system format partition with.");
+
             var formatCommand = new Command("format", "Format partition.");
-            formatCommand.SetHandler(CommandHandler.MbrPartFormat, pathArgument, partitionNumberArgument, nameArgument);
+            formatCommand.SetHandler(CommandHandler.MbrPartFormat, pathArgument, partitionNumberArgument, nameArgument, fileSystemOption);
             formatCommand.AddArgument(pathArgument);
             formatCommand.AddArgument(partitionNumberArgument);
             formatCommand.AddArgument(nameArgument);

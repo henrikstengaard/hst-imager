@@ -3,10 +3,12 @@
     <ItemGroup>
       <PackageReference Include="Hst.Amiga" Version="0.4.177" />
       <PackageReference Include="hst.compression" Version="0.4.60" />
-      <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.47" />
-      <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.47" />
-      <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.47" />
-      <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.47" />
+      <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.48" />
+      <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.48" />
+      <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.48" />
+      <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.48" />
+      <PackageReference Include="LTRData.ExFat.Core" Version="1.0.16" />
+      <PackageReference Include="LTRData.ExFat.DiscUtils" Version="1.0.16" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
       <PackageReference Include="plist-cil" Version="2.2.0" />
       <PackageReference Include="SharpCompress" Version="0.38.0" />

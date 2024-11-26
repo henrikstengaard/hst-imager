@@ -6,6 +6,7 @@ using DiscUtils.Fat;
 using DiscUtils.HfsPlus;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
+using ExFat.DiscUtils;
 using Hst.Imager.Core.FileSystems.Ext;
 
 namespace Hst.Imager.Core.PartitionTables;
@@ -66,7 +67,29 @@ public static class FileSystemReader
         }
         catch (Exception)
         {
-            // ignored, if errors occur. not ext file system
+            // ignored, if errors occur, not fat file system
+        }
+
+        try
+        {
+            stream.Position = 0;
+
+            if (ExFatFileSystem.Detect(stream))
+            {
+                var exFatFileSystem = new ExFatFileSystem(stream);
+                return new Models.FileSystems.FileSystemInfo
+                {
+                    FileSystemType = "exFAT",
+                    VolumeName = exFatFileSystem.VolumeLabel,
+                    VolumeSize = exFatFileSystem.Size,
+                    VolumeFree = exFatFileSystem.Size - exFatFileSystem.UsedSpace,
+                    ClusterSize = 0
+                };
+            }
+        }
+        catch (Exception)
+        {
+            // ignored, if errors occur, not exfat file system
         }
 
         try
@@ -88,7 +111,7 @@ public static class FileSystemReader
         }
         catch (Exception)
         {
-            // ignored, if errors occur. not ext file system
+            // ignored, if errors occur, not ntfs file system
         }
 
         try
@@ -106,7 +129,7 @@ public static class FileSystemReader
         }
         catch (Exception)
         {
-            // ignored, if errors occur. not ext file system
+            // ignored, if errors occur, not hfs plus file system
         }
 
         try
@@ -123,7 +146,7 @@ public static class FileSystemReader
         }
         catch (Exception)
         {
-            // ignored, if errors occur. not ext file system
+            // ignored, if errors occur, not ext file system
         }
 
         return new Models.FileSystems.FileSystemInfo

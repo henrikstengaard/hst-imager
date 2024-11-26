@@ -34,7 +34,7 @@ public class GivenMbrPartFormatCommand : FsCommandTestBase
         // arrange - mbr partition format command with type volume name "TEST"
         var cancellationTokenSource = new CancellationTokenSource();
         var mbrPartFormatCommand = new MbrPartFormatCommand(new NullLogger<MbrPartFormatCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, 1, "TEST");
+            new List<IPhysicalDrive>(), imgPath, 1, "TEST", "Fat16");
 
         // act - execute mbr partition format
         var result = await mbrPartFormatCommand.Execute(cancellationTokenSource.Token);

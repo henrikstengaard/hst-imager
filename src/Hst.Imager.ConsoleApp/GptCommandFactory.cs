@@ -66,9 +66,9 @@ public static class GptCommandFactory
             name: "Path",
             description: "Path to physical drive or image file.");
 
-        var typeArgument = new Argument<GptPartType>(
+        var typeArgument = new Argument<string>(
             name: "Type",
-            description: "Type of the partition (e.g. NTFS).");
+                description: "Type of the partition as name or guid (e.g. name NTFS or value EBD0A0A2-B9E5-4433-87C0-68B6B72699C7 for WindowsBasicData).");
 
         var nameArgument = new Argument<string>(
             name: "Name",

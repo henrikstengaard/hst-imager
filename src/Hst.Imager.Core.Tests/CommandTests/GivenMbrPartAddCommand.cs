@@ -48,7 +48,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
         // assert - added mbr partition size is equal to remaining disk size with an allowed margin of 50kb
         var expectedPartitionSize = diskInfo.MbrPartitionTablePart.Size - diskInfo.MbrPartitionTablePart
             .Parts.Where(x => x.PartType == PartType.PartitionTable).Sum(x => x.Size);
-        var margin = 5000;
+        var margin = 50000;
         var partInfo =
             diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
@@ -183,7 +183,7 @@ public class GivenMbrPartAddCommand : FsCommandTestBase
             Assert.NotNull(diskInfo?.MbrPartitionTablePart);
             var largestPartition = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => x.PartitionNumber == 2);
             Assert.NotNull(largestPartition);
-            var margin = 5000;
+            var margin = 500000;
             Assert.True(largestPartition.Size > largestUnallocatedPart.Size - margin &&
                 largestPartition.Size < largestUnallocatedPart.Size);
         }

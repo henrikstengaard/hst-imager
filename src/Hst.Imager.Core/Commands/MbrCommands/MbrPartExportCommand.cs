@@ -131,11 +131,30 @@
 
             if (Enum.TryParse<MbrPartType>(partition, true, out var partitionType))
             {
+                var biosType = GetBiosType(partitionType);
+
                 return mbrPartitionTablePart.Parts
-                    .FirstOrDefault(x => x.PartType == PartType.Partition && x.BiosType == ((int)partitionType).ToString());
+                    .FirstOrDefault(x => x.PartType == PartType.Partition && x.BiosType == biosType.ToString());
             }
 
             return null;
+        }
+
+        private static int GetBiosType(MbrPartType mbrPartType)
+        {
+            return mbrPartType switch
+            {
+                MbrPartType.Fat12 => 1,
+                MbrPartType.Fat16 => 6,
+                MbrPartType.Fat16Small => 4,
+                MbrPartType.Fat16Lba => 14,
+                MbrPartType.Fat32 => 11,
+                MbrPartType.Fat32Lba => 12,
+                MbrPartType.Ntfs => 7,
+                MbrPartType.ExFat => 7,
+                MbrPartType.PiStormRdb => 0x76,
+                _ => throw new ArgumentOutOfRangeException(nameof(mbrPartType), $"Unsupported partition type '{mbrPartType}'")
+            };
         }
 
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,

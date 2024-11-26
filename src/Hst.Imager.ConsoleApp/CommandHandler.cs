@@ -283,7 +283,7 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path));
         }
 
-        public static async Task GptPartAdd(string path, GptPartType type, string name, string size, long? startSector)
+        public static async Task GptPartAdd(string path, string type, string name, string size, long? startSector)
         {
             await Execute(new GptPartAddCommand(GetLogger<GptPartAddCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, type, name, ParseSize(size), startSector, null));
@@ -330,10 +330,10 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
-        public static async Task MbrPartFormat(string path, int partitionNumber, string name)
+        public static async Task MbrPartFormat(string path, int partitionNumber, string name, string fileSystem)
         {
             await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, partitionNumber, name));
+                await GetPhysicalDrives(), path, partitionNumber, name, fileSystem));
         }
 
         public static async Task MbrPartExport(string sourcePath, string partition, string destinationPath)

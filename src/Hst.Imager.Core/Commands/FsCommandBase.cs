@@ -27,6 +27,7 @@ using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using Hst.Imager.Core.PathComponents;
+using ExFat.DiscUtils;
 
 public abstract class FsCommandBase : CommandBase
 {
@@ -647,6 +648,11 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IFileSystem>(new FatFileSystem(stream));
         }
 
+        if (ExFatFileSystem.Detect(stream))
+        {
+            return new Result<IFileSystem>(new ExFatFileSystem(stream));
+        }
+
         if (NtfsFileSystem.Detect(stream))
         {
             return new Result<IFileSystem>(new NtfsFileSystem(stream));
@@ -682,40 +688,12 @@ public abstract class FsCommandBase : CommandBase
         }
 
         var partitionInfo = guidPartitionTable.Partitions[partitionNumberIntValue - 1];
-        
+
         OnDebugMessage($"Mounting file system");
 
         var stream = partitionInfo.Open();
-        var partitionOffset = stream.Position;
 
-        // read first 64kb block bytes of partition
-        var blockBytes = await stream.ReadBytes(512 * 128);
-
-        // ext super block magic signature
-        if (blockBytes[1024 + 0x38] == 0x53 && blockBytes[1024 + 0x39] == 0xEF)
-        {
-            return new Result<IFileSystem>(new ExtFileSystem(stream));
-        }
-        
-        // for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
-        // {
-        //     // fat magic Signature
-        //     if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
-        //     {
-        //     }
-        // }
-        
-        if (FatFileSystem.Detect(stream))
-        {
-            return new Result<IFileSystem>(new FatFileSystem(stream));
-        }
-
-        if (NtfsFileSystem.Detect(stream))
-        {
-            return new Result<IFileSystem>(new NtfsFileSystem(stream));
-        }
-        
-        return new Result<IFileSystem>(new Error("Unsupported Guid Partition Table file system"));
+        return await MountFileSystem(stream);
     }
 
     protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Media media, string partitionName)

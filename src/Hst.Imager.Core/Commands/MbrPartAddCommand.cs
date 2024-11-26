@@ -126,7 +126,7 @@
             }
 
             var firstSector = rdbPartitionTable == null
-                ? 1
+                ? 63
                 : rdbPartitionTable.Size / 512;
             
             // add rdb mbr gap, if rdb is present and mbr doesn't have any partitions
@@ -171,22 +171,25 @@
                 partitionSize = partitionSectors * 512;
             }
 
+            var diskSectors = disk.Geometry.Value.TotalSectorsLong;
+
             // set end to last sector, if end is larger than last sector
-            if (end > disk.Geometry.Value.TotalSectorsLong)
+            if (end > diskSectors)
             {
-                end = disk.Geometry.Value.TotalSectorsLong;
+                end = diskSectors;
                 partitionSectors = end - start + 1;
                 partitionSize = partitionSectors * 512;
             }
-            
+
             // return error, if start it's less than start offset
             if (start < startOffset / 512)
             {
                 return new Result(new Error($"Start sector {startSector} is overlapping reversed partition space"));
             }
-            
+
             OnInformationMessage($"- Partition number '{biosPartitionTable.Partitions.Count + 1}'");
             OnInformationMessage($"- Type '{type.ToString().ToUpper()}'");
+            OnInformationMessage($"- Bios Type '0x{biosPartitionTypeResult.Value:x2}'");
             OnInformationMessage($"- Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
             OnInformationMessage($"- Start sector '{start}'");
             OnInformationMessage($"- End sector '{end}'");
@@ -221,6 +224,7 @@
                 MbrPartType.Fat32 => new Result<byte>(BiosPartitionTypes.Fat32),
                 MbrPartType.Fat32Lba => new Result<byte>(BiosPartitionTypes.Fat32Lba),
                 MbrPartType.Ntfs => new Result<byte>(BiosPartitionTypes.Ntfs),
+                MbrPartType.ExFat => new Result<byte>(BiosPartitionTypes.Ntfs),
                 MbrPartType.PiStormRdb => new Result<byte>(Core.Constants.BiosPartitionTypes.PiStormRdb),
                 _ => new Result<byte>(new Error($"Unsupported partition type '{type}'"))
             };

@@ -26,7 +26,8 @@ public class GptPartFormatCommand : CommandBase
     private readonly string name;
 
     public GptPartFormatCommand(ILogger<GptPartFormatCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, GptPartType type, string name)
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, GptPartType type,
+        string name)
     {
         this.logger = logger;
         this.commandHelper = commandHelper;
@@ -75,8 +76,9 @@ public class GptPartFormatCommand : CommandBase
         }
 
         var partitionInfo = guidPartitionTable.Partitions[partitionNumber - 1];
-            
+
         OnInformationMessage($"- Type '{partitionInfo.TypeAsString}'");
+        OnInformationMessage($"- File system '{type}'");
         OnInformationMessage($"- Partition name '{name}'");
 
         // format gpt partition
@@ -90,9 +92,11 @@ public class GptPartFormatCommand : CommandBase
                     name);
                 break;
             case GptPartType.Ntfs:
-                var partition = disk.Partitions.Partitions[partitionNumber - 1];
-                NtfsFileSystem.Format(partition.Open(), name, Geometry.FromCapacity(partition.SectorCount * 512), 
-                    partition.FirstSector, partition.SectorCount);
+                NtfsFileSystem.Format(partitionInfo.Open(), name, Geometry.FromCapacity(partitionInfo.SectorCount * 512),
+                    partitionInfo.FirstSector, partitionInfo.SectorCount);
+                break;
+            case GptPartType.ExFat:
+                ExFat.Filesystem.ExFatEntryFilesystem.Format(partitionInfo.Open(), new ExFat.ExFatFormatOptions(), name);
                 break;
             default:
                 return new Result(new Error("Unsupported partition type"));

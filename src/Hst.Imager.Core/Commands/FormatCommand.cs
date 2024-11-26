@@ -126,7 +126,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             var mbrPartFormatCommand = new MbrPartFormatCommand(loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives,
-                path, 1, fileSystem.ToUpper());
+                path, 1, "Empty", fileSystem.ToUpper());
             AddMessageEvents(mbrPartFormatCommand);
 
             return await mbrPartFormatCommand.Execute(cancellationToken);
@@ -148,7 +148,7 @@ namespace Hst.Imager.Core.Commands
             long? endSector = partitionSize / 512;
 
             var gptPartAddCommand = new GptPartAddCommand(loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper, physicalDrives,
-                path, gptPartType, fileSystem, new Size(), startSector, endSector);
+                path, gptPartType.ToString(), "Empty", new Size(), startSector, endSector);
             AddMessageEvents(gptPartAddCommand);
 
             var gptPartAddResult = await gptPartAddCommand.Execute(cancellationToken);
@@ -158,7 +158,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(), commandHelper, physicalDrives,
-                path, 1, gptPartType, fileSystem.ToUpper());
+                path, 1, gptPartType, "Empty");
             AddMessageEvents(gptPartFormatCommand);
 
             return await gptPartFormatCommand.Execute(cancellationToken);

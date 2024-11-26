@@ -22,6 +22,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
         var size = 100.MB();
+        var fileSystem = "fat32";
 
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, size);
@@ -32,7 +33,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // arrange - gpt partition add command with type FAT32 and size 0
         var cancellationTokenSource = new CancellationTokenSource();
         var gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, GptPartType.Fat32, "FAT32GPT", new Size(0, Unit.Bytes), 
+            new List<IPhysicalDrive>(), imgPath, fileSystem, "UNITTEST", new Size(0, Unit.Bytes), 
             null, null);
 
         // act - execute gpt partition add
@@ -50,7 +51,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // assert - added gpt partition size is equal to remaining disk size with an allowed margin of 5kb
         var expectedPartitionSize = diskInfo.Size - diskInfo.GptPartitionTablePart
             .Parts.Where(x => x.PartType == PartType.PartitionTable).Sum(x => x.Size);
-        var margin = 5000;
+        var margin = 50000;
         var partInfo =
             diskInfo.GptPartitionTablePart.Parts.FirstOrDefault(x =>
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&
@@ -66,6 +67,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         var imgPath = $"{Guid.NewGuid()}.img";
         var testCommandHelper = new TestCommandHelper();
         var size = 100.MB();
+        var fileSystem = "fat32";
 
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, size);
@@ -76,7 +78,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // arrange - gpt partition add command with type FAT32 and size 50% of disk size
         var cancellationTokenSource = new CancellationTokenSource();
         var gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, GptPartType.Fat32, "FAT32GPT", new Size(50, Unit.Percent), 
+            new List<IPhysicalDrive>(), imgPath, fileSystem, "UNITTEST", new Size(50, Unit.Percent), 
             null, null);
 
         // act - execute gpt partition add
@@ -110,6 +112,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         var size = 100.MB();
         var startSector = 63;
         var endSector = size / 1024;
+        var fileSystem = "fat32";
 
         // arrange - create img media
         testCommandHelper.AddTestMedia(imgPath, size);
@@ -120,7 +123,7 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         // arrange - gpt partition add command with type FAT32 and sectors 50% of disk size
         var cancellationTokenSource = new CancellationTokenSource();
         var gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
-            new List<IPhysicalDrive>(), imgPath, GptPartType.Fat32, "FAT32GPT", new Size(), startSector, endSector);
+            new List<IPhysicalDrive>(), imgPath, fileSystem, "UNITTEST", new Size(), startSector, endSector);
 
         // act - execute gpt partition add
         var result = await gptPartAddCommand.Execute(cancellationTokenSource.Token);
