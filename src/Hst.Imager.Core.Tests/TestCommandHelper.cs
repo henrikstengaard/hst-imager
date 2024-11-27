@@ -123,7 +123,7 @@
             }
             
             var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
-            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, Media.MediaType.Vhd, 
+            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, Media.MediaType.Vhd, 
                 false, disk, false, stream));        
         }
 
@@ -160,7 +160,7 @@
             var disk = create || testMedia.Stream.Length == 0
                 ? DiscUtils.Vhd.Disk.InitializeDynamic(testMedia.Stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
-            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, testMedia.Size, 
+            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, 
                 Media.MediaType.Vhd, false, disk, false, stream)));
         }
 

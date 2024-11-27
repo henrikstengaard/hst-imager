@@ -378,6 +378,12 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, name, ParseSize(size), chs, rdbBlockLo));
         }
 
+        public static async Task RdbResize(string path, string size)
+        {
+            await Execute(new RdbResizeCommand(GetLogger<RdbResizeCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, ParseSize(size)));
+        }
+
         public static async Task RdbUpdate(string path, uint? flags, uint? hostId, string diskProduct,
             string diskRevision, string diskVendor)
         {

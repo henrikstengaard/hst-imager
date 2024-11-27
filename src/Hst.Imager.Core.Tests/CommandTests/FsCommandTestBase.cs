@@ -186,13 +186,13 @@ public class FsCommandTestBase : CommandTestBase
     }
     
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
-        long diskSize = 10 * 1024 * 1024)
+        long diskSize = 10 * 1024 * 1024, bool create = true)
     {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: create);
         using var media = mediaResult.Value;
         var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
 
-        var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
+        var rigidDiskBlock = RigidDiskBlock.Create(diskSize);
 
         rigidDiskBlock.AddFileSystem(Pfs3DosType, await File.ReadAllBytesAsync(Pfs3AioPath))
             .AddPartition("DH0", bootable: true);

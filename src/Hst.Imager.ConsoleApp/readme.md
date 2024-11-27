@@ -231,6 +231,30 @@ Example of writing 4GB vhd image file to Linux physical drive /dev/sdb:
 hst.imager write 4gb.vhd /dev/sdb
 ```
 
+### Format physical drive or image file
+
+Formats physical drive or image file by erasing first 10MB, initializing Master Boot Record or Guid Partition Table, add a partition with size of physical drive or image file and format partition with file system FAT32, exFAT or NTFS.
+
+Example of displaying usage for formatting physical drive or image file:
+```
+hst.imager format
+```
+
+Example of formatting Windows physical drive disk 2 with Master Boot Record and FAT32 file system:
+```
+hst.imager format \disk2 mbr fat32
+```
+
+Example of formatting 16GB vhd image file with Master Boot Record and exFAT file system:
+```
+hst.imager format 16gb.vhd mbr exfat
+```
+
+Example of formatting Windows physical drive disk 2 with Guid Partition Table and NTFS file system:
+```
+hst.imager format \disk2 gpt ntfs
+```
+
 ### Compare physical drive and image file
 
 Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges. Supports comparing from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
@@ -607,7 +631,7 @@ hst.imager rdb info 4gb.vhd
 
 ### Initialize Rigid Disk Block
 
-Initializes a new Rigid Disk Block. Existing Rigid Disk Block will be overwritten.
+Initializes a new Rigid Disk Block. **Existing Rigid Disk Block will be overwritten!**
 
 Example of displaying usage for initializing Rigid Disk Block:
 ```
@@ -622,6 +646,32 @@ hst.imager rdb init 4gb.vhd
 Example of initializing Rigid Disk Block using cylinders, heads and sectors on a 4GB vhd image file:
 ```
 hst.imager rdb init 4gb.vhd -chs 800,16,63
+```
+
+### Resize Rigid Disk Block
+
+Resizes Rigid Disk Block by default to largest size or to a specified size.
+
+Rigid Disk Block will automatically be resized to smallest when specifying a size that is smaller than highest used cylinder and will also be resized to largest size when specifying a size that is larger than disk size.
+
+Example of displaying usage for resize Rigid Disk Block:
+```
+hst.imager rdb resize
+```
+
+Example of resizing Rigid Disk Block to largest size of 4GB vhd image file:
+```
+hst.imager rdb resize 4gb.vhd
+```
+
+Example of resizing Rigid Disk Block to largest size of Windows physical drive 1:
+```
+hst.imager rdb resize \disk1
+```
+
+Example of resizing Rigid Disk Block to 32GB in size of 64GB vhd image file:
+```
+hst.imager rdb resize 64gb.vhd -size 32gb
 ```
 
 ### Update Rigid Disk Block

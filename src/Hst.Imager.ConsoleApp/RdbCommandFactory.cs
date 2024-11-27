@@ -10,6 +10,7 @@
 
             rdbCommand.AddCommand(CreateRdbInfo());
             rdbCommand.AddCommand(CreateRdbInit());
+            rdbCommand.AddCommand(CreateRdbResize());
             rdbCommand.AddCommand(CreateRdbFs());
             rdbCommand.AddCommand(CreateRdbPart());
             rdbCommand.AddCommand(CreateRdbUpdate());
@@ -71,6 +72,25 @@
             rdbInitCommand.AddOption(rdbBlockLoOption);
 
             return rdbInitCommand;
+        }
+
+        private static Command CreateRdbResize()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var sizeOption = new Option<string>(
+                new[] { "--size", "-s" },
+                description: "Size of Rigid Disk Block.");
+
+            var command = new Command("resize", "Resize Rigid Disk Block.");
+            command.AddAlias("init");
+            command.SetHandler(CommandHandler.RdbResize, pathArgument, sizeOption);
+            command.AddArgument(pathArgument);
+            command.AddOption(sizeOption);
+
+            return command;
         }
 
         private static Command CreateRdbFs()
