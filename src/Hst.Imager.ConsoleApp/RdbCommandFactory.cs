@@ -85,7 +85,6 @@
                 description: "Size of Rigid Disk Block.");
 
             var command = new Command("resize", "Resize Rigid Disk Block.");
-            command.AddAlias("init");
             command.SetHandler(CommandHandler.RdbResize, pathArgument, sizeOption);
             command.AddArgument(pathArgument);
             command.AddOption(sizeOption);
