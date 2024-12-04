@@ -4,10 +4,12 @@
     using System.CommandLine.Parsing;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Amiga.FileSystems.Pfs3;
     using Core.Commands;
+    using Hst.Core;
     using Serilog;
     using Serilog.Core;
     using Serilog.Events;
@@ -40,6 +42,15 @@
                 .CreateLogger();
 
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+
+            if ((args.Any() && args[0].Equals("list", System.StringComparison.OrdinalIgnoreCase)) ||
+                (!User.IsAdministrator && ArgsHelper.HasPhysicalDrivePaths(args)))
+            {
+                Log.Logger.Warning("Command or arguments used requires administrator privileges to access physical drives!");
+                Log.Logger.Warning(OperatingSystem.IsWindows()
+                    ? "Run Command Prompt or PowerShell as Administrator and run Hst Imager with same arguments."
+                    : "Run Hst Imager with sudo and same arguments.");
+            }
 
             var rootCommand = CommandFactory.CreateRootCommand();
 

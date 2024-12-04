@@ -117,14 +117,8 @@ namespace Hst.Imager.ConsoleApp
             };
         }
 
-        private static async Task Execute(CommandBase command, bool requiresAdministrator = false)
+        private static async Task Execute(CommandBase command)
         {
-            if (requiresAdministrator && !User.IsAdministrator)
-            {
-                Log.Logger.Error($"Command requires administrator privileges");
-                Environment.Exit(1);
-            }
-
             command.DebugMessage += (_, progressMessage) => { Log.Logger.Debug(progressMessage); };
             command.InformationMessage += (_, progressMessage) => { Log.Logger.Information(progressMessage); };
 
@@ -184,7 +178,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives(all), all);
             command.ListRead += (_, args) => { Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos)); };
-            await Execute(command, true);
+            await Execute(command);
         }
 
         public static async Task Convert(string sourcePath, string destinationPath, string size, bool verify)

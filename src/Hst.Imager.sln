@@ -1,12 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hst.Imager.Core", "Hst.Imager.Core\Hst.Imager.Core.csproj", "{EE219057-FC6B-4781-8CE9-F4168FE1A068}"
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35208.52
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hst.Imager.Core", "Hst.Imager.Core\Hst.Imager.Core.csproj", "{EE219057-FC6B-4781-8CE9-F4168FE1A068}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hst.Imager.ConsoleApp", "Hst.Imager.ConsoleApp\Hst.Imager.ConsoleApp.csproj", "{7468C6A5-9A04-42A0-B12D-DFCA850CADFF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hst.Imager.ConsoleApp", "Hst.Imager.ConsoleApp\Hst.Imager.ConsoleApp.csproj", "{7468C6A5-9A04-42A0-B12D-DFCA850CADFF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hst.Imager.Core.Tests", "Hst.Imager.Core.Tests\Hst.Imager.Core.Tests.csproj", "{9BCF2252-4FF4-434F-8392-8CE08150CFFA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hst.Imager.Core.Tests", "Hst.Imager.Core.Tests\Hst.Imager.Core.Tests.csproj", "{9BCF2252-4FF4-434F-8392-8CE08150CFFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hst.Imager.GuiApp", "Hst.Imager.GuiApp\Hst.Imager.GuiApp.csproj", "{8D55F534-F3FD-4BA7-8781-13EEA8F53475}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Hst.Imager.GuiApp", "Hst.Imager.GuiApp\Hst.Imager.GuiApp.csproj", "{8D55F534-F3FD-4BA7-8781-13EEA8F53475}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHubWorkflows", "GitHubWorkflows", "{0F77FBC1-964C-4DB6-89FA-DFE7E3A96833}"
 	ProjectSection(SolutionItems) = preProject
@@ -31,6 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{F50E0629
 		run-neutralinojs-app.ps1 = run-neutralinojs-app.ps1
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Hst.Imager.ConsoleApp.Tests", "Hst.Imager.ConsoleApp.Tests\Hst.Imager.ConsoleApp.Tests.csproj", "{B76427A4-34A3-450A-B41C-DB376FA2EBEC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -53,5 +58,12 @@ Global
 		{8D55F534-F3FD-4BA7-8781-13EEA8F53475}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D55F534-F3FD-4BA7-8781-13EEA8F53475}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D55F534-F3FD-4BA7-8781-13EEA8F53475}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B76427A4-34A3-450A-B41C-DB376FA2EBEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B76427A4-34A3-450A-B41C-DB376FA2EBEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B76427A4-34A3-450A-B41C-DB376FA2EBEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B76427A4-34A3-450A-B41C-DB376FA2EBEC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

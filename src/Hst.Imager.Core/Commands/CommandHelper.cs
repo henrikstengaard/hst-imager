@@ -846,7 +846,7 @@ namespace Hst.Imager.Core.Commands
         {
             if (diskSize <= 0)
             {
-                throw new ArgumentException($"Invalid disk size '{diskSize}'", nameof(diskSize));
+                yield break;
             }
 
             if (partitionTableTypeContext == PartitionTableType.GuidPartitionTable)
@@ -866,7 +866,7 @@ namespace Hst.Imager.Core.Commands
                 if (overlappingPart.StartOffset > offset)
                 {
                     var unallocatedSize = overlappingPart.StartOffset - offset;
-                    unallocatedParts.Add(new PartInfo
+                    yield return new PartInfo
                     {
                         PartitionType = PartType.Unallocated.ToString(),
                         FileSystem = string.Empty,
@@ -880,7 +880,7 @@ namespace Hst.Imager.Core.Commands
                         StartCylinder = overlappingPart.StartCylinder == 0 ? 0 : cylinder,
                         EndCylinder = overlappingPart.StartCylinder == 0 ? 0 : overlappingPart.StartCylinder - 1,
                         PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
-                    });
+                    };
                 }
 
                 offset = overlappingPart.EndOffset + 1;
@@ -891,7 +891,7 @@ namespace Hst.Imager.Core.Commands
             if (offset < diskSize)
             {
                 var unallocatedSize = diskSize - offset;
-                unallocatedParts.Add(new PartInfo
+                yield return new PartInfo
                 {
                     PartitionType = PartType.Unallocated.ToString(),
                     FileSystem = string.Empty,
@@ -905,10 +905,8 @@ namespace Hst.Imager.Core.Commands
                     StartCylinder = cylinders == 0 ? 0 : cylinder,
                     EndCylinder = cylinders == 0 ? 0 : cylinders - 1,
                     PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
-                });
+                };
             }
-
-            return unallocatedParts;
         }
 
         private static IEnumerable<PartInfo> MergeOverlappingParts(IEnumerable<PartInfo> parts)
