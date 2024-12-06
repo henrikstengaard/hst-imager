@@ -26,6 +26,7 @@ public class FileSystemEntryIterator : IEntryIterator
     private bool isFirst;
     private Entry currentEntry;
     private bool disposed;
+    private readonly HashSet<string> dirPathsIteratedIndex;
 
     public FileSystemEntryIterator(Media media, IFileSystem fileSystem, string rootPath, bool recursive)
     {
@@ -41,6 +42,7 @@ public class FileSystemEntryIterator : IEntryIterator
         var pathComponents = GetPathComponents(rootPath);
         this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
+        this.dirPathsIteratedIndex = new HashSet<string>();
     }
 
     private void Dispose(bool disposing)
@@ -123,37 +125,48 @@ public class FileSystemEntryIterator : IEntryIterator
 
         var dirComponents = new List<string>();
         var usePattern = false;
+
+        var validDirComponents = new List<string>();
+
         foreach (var pathComponent in pathComponents)
         {
             dirComponents.Add(pathComponent);
 
             var dirPath = mediaPath.Join(dirComponents.ToArray());
 
-            try
+            if (fileSystem.DirectoryExists(dirPath))
             {
-                fileSystem.GetLastAccessTime(dirPath);
-            }
-            catch (Exception)
-            {
-                throw new IOException($"Path not found '{dirPath}'");
+                validDirComponents.Add(pathComponent);
+                continue;
             }
 
-            if (dirComponents.Count == pathComponents.Length - 1)
+            // use pattern, if last path componenets is not a directory
+            if (validDirComponents.Count == pathComponents.Length - 1)
             {
                 usePattern = true;
                 break;
             }
+
+            // two or more path components doesnt exist, throw io exception
+            throw new IOException($"Path not found '{dirPath}'");
         }
 
-        rootPathComponents = dirComponents.ToArray();
-        pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : Array.Empty<string>(), recursive);
+        rootPathComponents = validDirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? dirComponents.ToArray() : Array.Empty<string>(), recursive);
     }
 
     private int EnqueueDirectory(string[] pathComponents)
     {
-        var uniqueEntries = new Dictionary<string, Entry>();
-
         var path = mediaPath.Join(pathComponents);
+
+        if (dirPathsIteratedIndex.Contains(path))
+        {
+            return 0;
+        }
+
+        dirPathsIteratedIndex.Add(path);
+
+        var uniqueEntries = new Dictionary<string, Entry>();
 
         foreach (var dirPath in fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
             .OrderByDescending(x => x).ToList())
@@ -182,16 +195,17 @@ public class FileSystemEntryIterator : IEntryIterator
 
             foreach (var entry in entries)
             {
-                if (rootPath.Equals(entry.RawPath) ||
-                    path.Equals(entry.Name) ||
-                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.Name)))
+                var entryPath = mediaPath.Join(entry.FullPathComponents);
+
+                if (path.Equals(entry.Name) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && dirPathsIteratedIndex.Contains(entryPath)) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.RawPath)))
                 {
                     continue;
                 }
 
                 uniqueEntries[entry.Name] = entry;
             }
-
         }
 
         foreach (var filePath in fileSystem.GetFiles(path, "*", SearchOption.TopDirectoryOnly).OrderByDescending(x => x).ToList())
@@ -233,9 +247,11 @@ public class FileSystemEntryIterator : IEntryIterator
 
             foreach (var entry in entries)
             {
-                if (rootPath.Equals(entry.RawPath) ||
-                    path.Equals(entry.Name) ||
-                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.Name)))
+                var entryPath = mediaPath.Join(entry.FullPathComponents);
+
+                if (path.Equals(entry.Name) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && dirPathsIteratedIndex.Contains(entryPath)) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && uniqueEntries.ContainsKey(entry.RawPath)))
                 {
                     continue;
                 }

@@ -77,43 +77,19 @@ public static class EntryIteratorFunctions
         }
     }
 
-    public static IEnumerable<Models.FileSystems.Entry> GetDirEntries(IMediaPath mediaPath,
-        string[] relativePathComponents, string attributes, bool recursive)
-    {
-        if (relativePathComponents.Length <= 1)
-        {
-            yield break;
-        }
-
-        var dirPathComponents = new List<string>();
-
-        var maxPathComponentIndex = recursive ? relativePathComponents.Length - 1 : 1;
-        for (var pathComponentIndex = 0; pathComponentIndex < maxPathComponentIndex; pathComponentIndex++)
-        {
-            dirPathComponents.Add(relativePathComponents[pathComponentIndex]);
-
-            var dirPath = mediaPath.Join(dirPathComponents.ToArray());
-
-            var dirEntry = new Models.FileSystems.Entry
-            {
-                Name = dirPath,
-                FormattedName = dirPath,
-                RawPath = dirPath,
-                FullPathComponents = dirPathComponents.ToArray(),
-                RelativePathComponents = dirPathComponents.ToArray(),
-                Date = DateTime.Now,
-                Size = 0,
-                Type = Models.FileSystems.EntryType.Dir,
-                Attributes = attributes,
-                Properties = new Dictionary<string, string>()
-            };
-
-            yield return dirEntry;
-        }
-    }
-
+    /// <summary>
+    /// Create dir entries from relative path components.
+    /// will skip if only 1 relative path component (entry only, no dir path components)
+    /// </summary>
+    /// <param name="mediaPath"></param>
+    /// <param name="fullPathComponents"></param>
+    /// <param name="relativePathComponents"></param>
+    /// <param name="isDir"></param>
+    /// <param name="attributes"></param>
+    /// <param name="recursive"></param>
+    /// <returns></returns>
     public static IEnumerable<Models.FileSystems.Entry> GetDirEntries2(IMediaPath mediaPath,
-    string[] fullPathComponents, string[] relativePathComponents, string attributes, bool recursive)
+    string[] fullPathComponents, string[] relativePathComponents, bool isDir, string attributes, bool recursive)
     {
         if (relativePathComponents.Length <= 1)
         {
@@ -171,7 +147,7 @@ public static class EntryIteratorFunctions
         var relativePathComponents = GetRelativePathComponents(
             rootPathComponents, fullPathComponents).ToArray();
 
-        var dirEntries = GetDirEntries2(mediaPath, rootPathComponents, relativePathComponents, dirAttributes, recursive)
+        var dirEntries = GetDirEntries2(mediaPath, rootPathComponents, relativePathComponents, isDir, dirAttributes, recursive)
             .ToList();
 
         foreach (var dirEntry in dirEntries)
@@ -185,7 +161,7 @@ public static class EntryIteratorFunctions
         }
 
         if (!IsRelativePathComponentsValid2(relativePathComponents, recursive) ||
-            !pathComponentMatcher.IsMatch(fullPathComponents))
+            (!isDir && !pathComponentMatcher.IsMatch(fullPathComponents)))
         {
             yield break;
         }

@@ -138,6 +138,11 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
             var isDir = zipEntry.FullName.EndsWith("/");
 
+            if (isDir && UsesPattern)
+            {
+                continue;
+            }
+
             var centralDirectoryFileHeader = centralDirectoryFileHeaderIndex.ContainsKey(zipEntry.FullName)
                 ? centralDirectoryFileHeaderIndex[zipEntry.FullName]
                 : null;

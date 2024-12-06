@@ -16,8 +16,9 @@ public class FileSystemEntryWriter : IEntryWriter
     private readonly Media media;
     private readonly string[] pathComponents;
     private readonly IFileSystem fileSystem;
-    private string[] currentPathComponents;
+    private string currentDirPath;
     private bool disposed;
+    private readonly HashSet<string> dirPathsCreated;
 
     public FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] pathComponents)
     {
@@ -25,7 +26,9 @@ public class FileSystemEntryWriter : IEntryWriter
         this.media = media;
         this.pathComponents = pathComponents;
         this.fileSystem = fileSystem;
-        this.currentPathComponents = Array.Empty<string>();
+        this.currentDirPath = string.Empty;
+
+        dirPathsCreated = new HashSet<string>();
     }
 
     public string MediaPath => this.media.Path;
@@ -58,29 +61,46 @@ public class FileSystemEntryWriter : IEntryWriter
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
 
-        for (var i = 1; i <= fullPathComponents.Length; i++)
-        {
-            fileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
-        }
+        CreateFileSystemDirectory(fullPathComponents);
 
-        currentPathComponents = fullPathComponents;
+        var dirPath = string.Join("\\", fullPathComponents);
+        currentDirPath = dirPath;
 
         return Task.CompletedTask;
+    }
+
+    private void CreateFileSystemDirectory(string[] pathComponents)
+    {
+        for (var i = 1; i <= pathComponents.Length; i++)
+        {
+            var dirPathComponents = pathComponents.Take(i);
+            var dirPath = string.Join("\\", dirPathComponents).ToLower();
+
+            if (dirPathsCreated.Contains(dirPath))
+            {
+                continue;
+            }
+
+            fileSystem.CreateDirectory(string.Join("\\", pathComponents.Take(i)));
+
+            dirPathsCreated.Add(dirPath);
+        }
     }
 
     public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
     {
         var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
-        
-        var directoryChanged = currentPathComponents.Length != fullPathComponents.Length - 1;
-        if (directoryChanged && fullPathComponents.Length > 1)
+
+        var dirPathComponents = fullPathComponents.Length <= 1 
+            ? Array.Empty<string>()
+            : fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
+        var dirPath = string.Join("\\", dirPathComponents);
+
+        if (dirPathComponents.Length > 0 && !currentDirPath.Equals(dirPath))
         {
-            for (var i = 1; i < fullPathComponents.Length; i++)
-            {
-                fileSystem.CreateDirectory(string.Join("\\", fullPathComponents.Take(i)));
-            }
-            
-            currentPathComponents = fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
+            CreateFileSystemDirectory(dirPathComponents);
+
+            currentDirPath = dirPath;
         }
 
         var fullPath = string.Join("\\", fullPathComponents);

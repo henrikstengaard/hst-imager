@@ -1,4 +1,5 @@
 ﻿using Hst.Imager.Core.PathComponents;
+using System;
 using System.Linq;
 using Xunit;
 
@@ -13,12 +14,13 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         {
             // arrange
             var mediaPath = MediaPath.ForwardSlashMediaPath;
+            var fullPathComponents = Array.Empty<string>();
             var relativePathComponents = new[] { "file1.txt" };
             var attributes = "ATTRIBUTES";
 
             // act
-            var dirEntries = EntryIteratorFunctions.GetDirEntries(mediaPath, relativePathComponents,
-                attributes, recursive).ToArray();
+            var dirEntries = EntryIteratorFunctions.GetDirEntries2(mediaPath, fullPathComponents,
+                relativePathComponents, false, attributes, recursive).ToArray();
 
             // assert
             Assert.Empty(dirEntries);
@@ -31,12 +33,13 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         {
             // arrange
             var mediaPath = MediaPath.ForwardSlashMediaPath;
+            var fullPathComponents = Array.Empty<string>();
             var relativePathComponents = new[] { "dir1", "file2.txt" };
             var attributes = "ATTRIBUTES";
 
             // act
-            var dirEntries = EntryIteratorFunctions.GetDirEntries(mediaPath, relativePathComponents,
-                attributes, recursive).ToArray();
+            var dirEntries = EntryIteratorFunctions.GetDirEntries2(mediaPath, fullPathComponents,
+                relativePathComponents, false, attributes, recursive).ToArray();
 
             // assert
             Assert.Single(dirEntries);
@@ -53,13 +56,14 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         {
             // arrange
             var mediaPath = MediaPath.ForwardSlashMediaPath;
+            var fullPathComponents = Array.Empty<string>();
             var relativePathComponents = new[] { "dir1", "dir2", "file3.txt" };
             var attributes = "ATTRIBUTES";
             const bool recursive = false;
 
             // act
-            var dirEntries = EntryIteratorFunctions.GetDirEntries(mediaPath, relativePathComponents,
-                attributes, recursive).ToArray();
+            var dirEntries = EntryIteratorFunctions.GetDirEntries2(mediaPath, fullPathComponents,
+                relativePathComponents, false, attributes, recursive).ToArray();
 
             // assert
             Assert.Single(dirEntries);
@@ -76,13 +80,14 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
         {
             // arrange
             var mediaPath = MediaPath.ForwardSlashMediaPath;
+            var fullPathComponents = Array.Empty<string>();
             var relativePathComponents = new[] { "dir1", "dir2", "file3.txt" };
             var attributes = "ATTRIBUTES";
             const bool recursive = true;
 
             // act
-            var dirEntries = EntryIteratorFunctions.GetDirEntries(mediaPath, relativePathComponents,
-                attributes, recursive).ToArray();
+            var dirEntries = EntryIteratorFunctions.GetDirEntries2(mediaPath, fullPathComponents,
+                relativePathComponents, false, attributes, recursive).ToArray();
 
             // assert - 2 dir entries are returned
             Assert.Equal(2, dirEntries.Length);

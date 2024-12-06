@@ -122,7 +122,8 @@ public class Iso9660EntryIterator : IEntryIterator
 
             foreach (var entry in entries)
             {
-                if (rootPath.Equals(entry.RawPath))
+                if ((entry.Type == Models.FileSystems.EntryType.Dir && rootPath.Equals(entry.RawPath)) ||
+                    (entry.Type == Models.FileSystems.EntryType.Dir && UsesPattern))
                 {
                     continue;
                 }
