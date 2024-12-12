@@ -260,6 +260,7 @@
             rdbPartCommand.AddCommand(CreateRdbPartExport());
             rdbPartCommand.AddCommand(CreateRdbPartImport());
             rdbPartCommand.AddCommand(CreateRdbPartKill());
+            rdbPartCommand.AddCommand(CreateRdbPartMove());
             rdbPartCommand.AddCommand(CreateRdbPartFormat());
 
             return rdbPartCommand;
@@ -586,6 +587,29 @@
             command.AddArgument(sourcePathArgument);
             command.AddArgument(partitionNumber);
             command.AddArgument(hexBootBytesArgument);
+
+            return command;
+        }
+
+        private static Command CreateRdbPartMove()
+        {
+            var pathArgument = new Argument<string>(
+                name: "Path",
+                description: "Path to physical drive or image file.");
+
+            var partitionNumber = new Argument<int>(
+                name: "PartitionNumber",
+                description: "Partition number to move.");
+
+            var startCylinder = new Argument<uint>(
+                name: "StartCylinder",
+                description: "Start cylinder to move partition to.");
+
+            var command = new Command("move", "Move partition.");
+            command.SetHandler(CommandHandler.RdbPartMove, pathArgument, partitionNumber, startCylinder);
+            command.AddArgument(pathArgument);
+            command.AddArgument(partitionNumber);
+            command.AddArgument(startCylinder);
 
             return command;
         }

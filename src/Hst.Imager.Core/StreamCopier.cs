@@ -46,15 +46,35 @@
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            if (source.CanSeek)
+            if (source == destination)
             {
-                source.Seek(sourceOffset, SeekOrigin.Begin);
+                if (size == 0)
+                {
+                    throw new IOException("Size can not be 0 when source and destination is the same");
+                }
+
+                if (!source.CanSeek)
+                {
+                    throw new IOException("Source stream does not support seek");
+                }
+
+                if (!destination.CanSeek)
+                {
+                    throw new IOException("Destination stream does not support seek");
+                }
             }
 
-            if (destination.CanSeek)
-            {
-                destination.Seek(destinationOffset, SeekOrigin.Begin);
-            }
+            // copy right to left, if source and destination are the same,
+            // destination offset is higher than source offset and
+            // destination offset is less than source offset + size to copy
+            var copyRightToLeft = source == destination &&
+                destinationOffset > sourceOffset &&
+                destinationOffset < sourceOffset + size;
+
+            var startOffset = size < bufferSize ? 0 : size - this.bufferSize;
+
+            var srcOffset = sourceOffset + (copyRightToLeft ? startOffset : 0);
+            var destOffset = destinationOffset + (copyRightToLeft ? startOffset : 0);
 
             sendDataProcessed = true;
             OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
@@ -83,7 +103,7 @@
                     {
                         if (source.CanSeek)
                         {
-                            source.Seek(sourceOffset + bytesProcessed, SeekOrigin.Begin);
+                            source.Seek(srcOffset, SeekOrigin.Begin);
                         }
 
                         bytesRead = await source.ReadAsync(this.buffer, 0, readBytes, token);
@@ -97,7 +117,7 @@
                             throw;
                         }
                         
-                        OnSrcError(sourceOffset + bytesProcessed, readBytes, e.ToString());
+                        OnSrcError(srcOffset, readBytes, e.ToString());
                     }
 
                     srcRetry++;
@@ -133,16 +153,16 @@
                         {
                             if (destination.CanSeek)
                             {
-                                destination.Seek(destinationOffset + dataSector.Start, SeekOrigin.Begin);
+                                destination.Seek(destOffset + dataSector.Start, SeekOrigin.Begin);
                             }
-                            
+
                             await destination.WriteAsync(sectorData, 0, sectorData.Length, token);
                             destWriteFailed = false;
                                 
                             if (verify && !await Verify(this.buffer, destination,
-                                    destinationOffset + dataSector.Start, sectorSize, token))
+                                    destOffset + dataSector.Start, sectorSize, token))
                             {
-                                OnDestError(destinationOffset + dataSector.Start, sectorSize, "Verify error");
+                                OnDestError(destOffset + dataSector.Start, sectorSize, "Verify error");
                                 destWriteFailed = true;
                             }
                         }
@@ -154,7 +174,7 @@
                                 throw;
                             }
 
-                            OnDestError(destinationOffset + dataSector.Start, sectorSize, e.ToString());
+                            OnDestError(destOffset + dataSector.Start, sectorSize, e.ToString());
                         }
 
                         destRetry++;
@@ -162,13 +182,21 @@
                 }
 
                 bytesProcessed += bytesRead;
-                destinationOffset += bytesRead;
                 var bytesRemaining = size == 0 ? 0 : size - bytesProcessed;
                 var percentComplete = size == 0 || bytesProcessed == 0 ? 0 : Math.Round((double)100 / size * bytesProcessed, 1);
                 var timeElapsed = stopwatch.Elapsed;
                 var timeRemaining = size == 0 ? TimeSpan.Zero : TimeHelper.CalculateTimeRemaining(percentComplete, timeElapsed);
                 var timeTotal = size == 0 ? TimeSpan.Zero : timeElapsed + timeRemaining;
                 var bytesPerSecond = Convert.ToInt64(bytesProcessed / timeElapsed.TotalSeconds);
+
+                var srcDecrementStep = srcOffset - bufferSize < sourceOffset ? srcOffset - sourceOffset : bufferSize;
+                var srcIncrementStep = bytesRead;
+
+                var destDecrementStep = destOffset - bufferSize < destinationOffset ? destOffset - destinationOffset : bufferSize;
+                var destIncrementStep = bytesRead;
+
+                srcOffset += copyRightToLeft ? -srcDecrementStep : srcIncrementStep;
+                destOffset += copyRightToLeft ? -destDecrementStep : destIncrementStep;
 
                 OnDataProcessed(size == 0, percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining,
                     timeTotal, bytesPerSecond);

@@ -28,7 +28,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
-            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, false);
+            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, create: false);
 
             // arrange - rdb resize command
             var rdbResizeCommand = new RdbResizeCommand(new NullLogger<RdbResizeCommand>(), testCommandHelper,
@@ -67,7 +67,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
-            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, false);
+            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, create: false);
 
             // arrange - rdb resize command
             var rdbResizeCommand = new RdbResizeCommand(new NullLogger<RdbResizeCommand>(), testCommandHelper,
@@ -106,7 +106,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
-            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, false);
+            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, create: false);
 
             // arrange - rdb resize command
             var rdbResizeCommand = new RdbResizeCommand(new NullLogger<RdbResizeCommand>(), testCommandHelper,
@@ -130,7 +130,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
         }
 
         [Fact]
-        public async Task When_ResizingRdbWithSizeSmallerThanRdb_Then_RdbIsResizedTo50PercentOfDisk()
+        public async Task When_ResizingRdbTo50PercentOfRdbSize_Then_RdbIsResizedTo50Percent()
         {
             // arrange - path and disk size
             var imgPath = $"rdb-{Guid.NewGuid()}.vhd";
@@ -145,7 +145,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
-            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, false);
+            await CreatePfs3FormattedDisk(testCommandHelper, imgPath, rdbSize, create: false);
 
             // arrange - rdb resize command
             var rdbResizeCommand = new RdbResizeCommand(new NullLogger<RdbResizeCommand>(), testCommandHelper,
@@ -164,9 +164,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
 
             // assert - resized rdb size is equal to rdb size with an allowed margin of 512000 bytes,
             // since partition uses entire rdb size
-            var margin = 512000;
-            Assert.True(diskInfo.RdbPartitionTablePart.Size > rdbSize - margin &&
-                diskInfo.RdbPartitionTablePart.Size < rdbSize + margin);
+            var expectedRdbSize = rdbSize / 2;
+            var margin = 2.MB();
+            Assert.True(diskInfo.RdbPartitionTablePart.Size > expectedRdbSize - margin &&
+                diskInfo.RdbPartitionTablePart.Size < expectedRdbSize + margin);
         }
     }
 }

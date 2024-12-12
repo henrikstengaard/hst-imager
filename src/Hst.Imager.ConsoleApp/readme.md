@@ -37,14 +37,15 @@ Hst Imager console comes with following features:
   - Read Master Boot Record information.
   - Initialize Master Boot Record.
   - Add partition to Master Boot Record.
-  - Clone partition from Master Boot Record to same or other Master Boot Record partition.
   - Delete partition from Master Boot Record.
   - Export partition from Master Boot Record to file.
   - Format partition in Master Boot Record.
   - Import partition from file to Master Boot Record partition.
+  - Clone partition from Master Boot Record to same or other Master Boot Record partition.
 - Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
+  - Resize Rigid Disk Block.
   - Add file system to Rigid Disk Block.
   - Delete file system from Rigid Disk Block.
   - Export file system from Rigid Disk Block to file.
@@ -57,6 +58,7 @@ Hst Imager console comes with following features:
   - Format partition in Rigid Disk Block.
   - Import partition from hard file to Rigid Disk Block.
   - Kill and restore partition in Rigid Disk Block.
+  - Move partition in Rigid Disk Block.
   - Update partition in Rigid Disk Block.
   - Backup Rigid Disk Block to file.
   - Restore Rigid Disk Block from file. 
@@ -671,7 +673,7 @@ hst.imager rdb resize \disk1
 
 Example of resizing Rigid Disk Block to 32GB in size of 64GB vhd image file:
 ```
-hst.imager rdb resize 64gb.vhd -size 32gb
+hst.imager rdb resize 64gb.vhd --size 32gb
 ```
 
 ### Update Rigid Disk Block
@@ -898,6 +900,26 @@ hst.imager rdb part kill 4gb.vhd 1 00000000
 Example of restoring partition number 1 with PFS3 boot bytes hex values 50465301 in Rigid Disk Block on a 4GB vhd image file:
 ```
 hst.imager rdb part kill 4gb.vhd 1 50465301
+```
+
+### Move partition in Rigid Disk Block
+
+Move a partition in Rigid Disk Block by copying the partitions cylinders to a new start cylinder. 
+
+Example of displaying usage for moving a partition in Rigid Disk Block:
+```
+hst.imager rdb part move
+```
+
+Example of moving partition number 2 to start cylinder 1000 in Rigid Disk Block in a 4GB vhd image file:
+```
+hst.imager rdb part move 4gb.vhd 2 1000
+```
+
+Example of moving partition number 2 to start cylinder 1000 in physical drive 1 Rigid Disk Block:
+Example of formatting physical drive 1 with Guid Partition Table and NTFS formatted partition as large as physical drive 1:
+```
+hst.imager rdb part move \disk1 2 1000
 ```
 
 ### Update partition in Rigid Disk Block

@@ -67,9 +67,10 @@ Hst Imager Console version comes with following additional features:
   - Format partition in Master Boot Record.
   - Import partition from file to Master Boot Record partition.
   - Clone partition from Master Boot Record to same or other Master Boot Record partition.
-- Rigid Disk Block;
+- Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
+  - Resize Rigid Disk Block.
   - Add file system to Rigid Disk Block.
   - Delete file system from Rigid Disk Block.
   - Export file system from Rigid Disk Block to file.
@@ -82,7 +83,10 @@ Hst Imager Console version comes with following additional features:
   - Format partition in Rigid Disk Block.
   - Import partition from hard file to Rigid Disk Block.
   - Kill and restore partition in Rigid Disk Block.
+  - Move partition in Rigid Disk Block.
   - Update partition in Rigid Disk Block.
+  - Backup Rigid Disk Block to file.
+  - Restore Rigid Disk Block from file.
 
 **Read and write to and from physical drives requires administrative rights on Windows, macOS and Linux.**
 

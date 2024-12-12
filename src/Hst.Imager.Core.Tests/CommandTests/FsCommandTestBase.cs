@@ -4,7 +4,6 @@ using DiscUtils.Ntfs;
 namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
-using System.DirectoryServices;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -19,8 +18,8 @@ using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Models;
-using SharpCompress.Archives.Zip;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 
@@ -186,7 +185,7 @@ public class FsCommandTestBase : CommandTestBase
     }
     
     protected async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path,
-        long diskSize = 10 * 1024 * 1024, bool create = true)
+        long diskSize = 10 * 1024 * 1024, long partitionSize = 10 * 1024 * 1024, bool create = true)
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: create);
         using var media = mediaResult.Value;
@@ -195,12 +194,30 @@ public class FsCommandTestBase : CommandTestBase
         var rigidDiskBlock = RigidDiskBlock.Create(diskSize);
 
         rigidDiskBlock.AddFileSystem(Pfs3DosType, await File.ReadAllBytesAsync(Pfs3AioPath))
-            .AddPartition("DH0", bootable: true);
+            .AddPartition("DH0", bootable: true, size: partitionSize);
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
 
         var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
 
         await Pfs3Formatter.FormatPartition(stream, partitionBlock, "Workbench");
+    }
+
+    protected async Task AddPfs3FormattedPartition(TestCommandHelper testCommandHelper, string path,
+        string driveName, string volumeName, long partitionSize = 10 * 1024 * 1024)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
+
+        rigidDiskBlock = rigidDiskBlock.AddPartition(driveName, size: partitionSize);
+
+        await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
+
+        var partitionBlock = rigidDiskBlock.PartitionBlocks.Last();
+
+        await Pfs3Formatter.FormatPartition(stream, partitionBlock, volumeName);
     }
 
     protected async Task CreateAdfDisk(TestCommandHelper testCommandHelper, string path)

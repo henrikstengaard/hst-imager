@@ -18,6 +18,7 @@ namespace Hst.Imager.ConsoleApp
     using Core.Models;
     using Hst.Core;
     using Hst.Imager.Core.Commands.MbrCommands;
+    using Hst.Imager.Core.Commands.RdbCommands;
     using Hst.Imager.Core.UaeMetadatas;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -492,6 +493,14 @@ namespace Hst.Imager.ConsoleApp
         {
             await Execute(new RdbPartKillCommand(GetLogger<RdbPartKillCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, hexBootBytes));
+        }
+
+        public static async Task RdbPartMove(string path, int partitionNumber, uint startCylinder)
+        {
+            var command = new RdbPartMoveCommand(GetLogger<RdbPartMoveCommand>(), GetCommandHelper(),
+                await GetPhysicalDrives(), path, partitionNumber, startCylinder);
+            command.DataProcessed += WriteProcessMessage;
+            await Execute(command);
         }
 
         public static async Task BlockRead(string path, string outputPath, int blockSize, bool used, long? start, long? end)
