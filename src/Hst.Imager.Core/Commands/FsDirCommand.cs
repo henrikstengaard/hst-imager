@@ -423,12 +423,14 @@ public class FsDirCommand : FsCommandBase
         }
 
         var entries = new List<Entry>();
+        var partitionNumber = 0;
         foreach (var partitionBlock in rigidDiskBlock.PartitionBlocks)
         {
+            partitionNumber++;
             entries.Add(new Entry
             {
-                Name = partitionBlock.DriveName,
-                FormattedName = partitionBlock.DriveName,
+                Name = partitionNumber.ToString(),
+                FormattedName = partitionNumber.ToString(),
                 Type = EntryType.Dir,
                 Size = partitionBlock.PartitionSize,
                 Properties = await GetRdbPartitionProperties(media, partitionBlock)
@@ -456,8 +458,7 @@ public class FsDirCommand : FsCommandBase
         };
     }
 
-    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Media media,
-        PartitionBlock partitionBlock)
+    private async Task<Dictionary<string, string>> GetRdbPartitionProperties(Media media, PartitionBlock partitionBlock)
     {
         IFileSystemVolume fileSystemVolume = null;
         try
@@ -472,6 +473,7 @@ public class FsDirCommand : FsCommandBase
 
         var properties = new Dictionary<string, string>
         {
+            { "Device Name", partitionBlock.DriveName },
             { "Dos Type", $"{partitionBlock.DosTypeHex} ({partitionBlock.DosTypeFormatted})" }
         };
 

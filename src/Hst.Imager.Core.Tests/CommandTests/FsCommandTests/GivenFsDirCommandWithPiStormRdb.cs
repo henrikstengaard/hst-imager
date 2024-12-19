@@ -52,7 +52,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             // assert - rdb partition dh0 is listed as directory
             var expectedDirNames = new[]
             {
-                "DH0"
+                "1"
             };
             var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir).Select(x => x.Name).ToList();
             Assert.Equal(expectedDirNames, dirNames);

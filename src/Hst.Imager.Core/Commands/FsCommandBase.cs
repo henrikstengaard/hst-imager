@@ -28,8 +28,9 @@ using Directory = System.IO.Directory;
 using File = System.IO.File;
 using Hst.Imager.Core.PathComponents;
 using ExFat.DiscUtils;
+using System.Text.RegularExpressions;
 
-public abstract class FsCommandBase : CommandBase
+public abstract partial class FsCommandBase : CommandBase
 {
     protected readonly ICommandHelper commandHelper;
     protected readonly IEnumerable<IPhysicalDrive> physicalDrives;
@@ -696,7 +697,7 @@ public abstract class FsCommandBase : CommandBase
         return await MountFileSystem(stream);
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Media media, string partitionName)
+    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Media media, string partition)
     {
         OnDebugMessage("Reading Rigid Disk Block");
         
@@ -707,14 +708,23 @@ public abstract class FsCommandBase : CommandBase
             return new Result<IFileSystemVolume>(new Error("No rigid disk block"));
         }
 
-        OnDebugMessage($"Partition '{partitionName}'");
+        var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+        
+        OnDebugMessage($"Partition '{partition}'");
 
-        var partitionBlock = rigidDiskBlock.PartitionBlocks.FirstOrDefault(x =>
-            x.DriveName.Equals(partitionName, StringComparison.OrdinalIgnoreCase));
+        var partitionNumberMatch = NumberRegex().Match(partition);
+
+        var partitionBlock = partitionNumberMatch.Success &&
+            int.TryParse(partition, out var partitionNumber) &&
+            partitionNumber >= 1 &&
+            partitionNumber <= partitionBlocks.Count
+            ? partitionBlocks[partitionNumber - 1]
+            : partitionBlocks.FirstOrDefault(x =>
+            x.DriveName.Equals(partition, StringComparison.OrdinalIgnoreCase));
 
         if (partitionBlock == null)
         {
-            return new Result<IFileSystemVolume>(new Error($"Partition '{partitionName}' not found"));
+            return new Result<IFileSystemVolume>(new Error($"Partition '{partition}' not found"));
         }
 
         OnDebugMessage($"Mounting file system");
@@ -759,4 +769,7 @@ public abstract class FsCommandBase : CommandBase
 
         return new Result<IFileSystemVolume>(new Error($"Unsupported file system '{partitionBlock.DosTypeFormatted}'"));
     }
+
+    [GeneratedRegex("^\\d+$", RegexOptions.IgnoreCase, "en-DK")]
+    private static partial Regex NumberRegex();
 }
