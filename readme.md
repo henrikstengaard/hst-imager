@@ -50,6 +50,7 @@ Hst Imager Gui comes with following features:
 - Optimize image file size.
 
 Hst Imager Console version comes with following additional features:
+- Format physical drive or image file with MBR, GPT or RDB partition table and partitions formatted.
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.

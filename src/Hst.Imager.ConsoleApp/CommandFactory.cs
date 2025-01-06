@@ -216,13 +216,13 @@
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
-            var partitionTableArgument = new Argument<PartitionTable>(
-                name: "PartitionTable",
-                description: "Partition table to create.");
+            var partitionTableArgument = new Argument<FormatType>(
+                name: "FormatType",
+                description: "Type of disk to format.");
 
             var fileSystemArgument = new Argument<string>(
                 name: "FileSystem",
-                description: "File system to format partition created.");
+                description: "File system to format partition(s) created.");
 
             var sizeOption = new Option<string>(
                 new[] { "--size", "-s" },

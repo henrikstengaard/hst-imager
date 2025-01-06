@@ -17,7 +17,7 @@
 
     public class RdbPartFormatCommand : CommandBase
     {
-        private readonly ILogger<RdbInitCommand> logger;
+        private readonly ILogger<RdbPartFormatCommand> logger;
         private readonly ICommandHelper commandHelper;
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
         private readonly string path;
@@ -27,7 +27,7 @@
         private readonly string chs;
         private readonly string dosType;
 
-        public RdbPartFormatCommand(ILogger<RdbInitCommand> logger, ICommandHelper commandHelper,
+        public RdbPartFormatCommand(ILogger<RdbPartFormatCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, bool nonRdb,
             string chs, string dosType)
         {

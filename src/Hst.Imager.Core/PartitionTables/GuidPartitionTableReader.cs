@@ -37,49 +37,51 @@ public static class GuidPartitionTableReader
 
     public static async Task<PartitionTableInfo> Read(VirtualDisk disk, DiscUtils.Partitions.GuidPartitionTable guidPartitionTable)
     {
-            var guidPartitionNumber = 0;
-            var gptPartitions = new List<PartitionInfo>();
-            foreach (var partition in guidPartitionTable.Partitions)
-            {
-                gptPartitions.Add(await ReadGptPartitionInfo(++guidPartitionNumber, disk, partition));
-            }
+        var totalSectors = disk.Capacity / disk.SectorSize;
 
-            var guidReservedSize = guidPartitionTable.FirstUsableSector * disk.BlockSize;
-            return new PartitionTableInfo
+        var guidPartitionNumber = 0;
+        var gptPartitions = new List<PartitionInfo>();
+        foreach (var partition in guidPartitionTable.Partitions)
+        {
+            gptPartitions.Add(await ReadGptPartitionInfo(++guidPartitionNumber, disk, partition));
+        }
+
+        var guidReservedSize = guidPartitionTable.FirstUsableSector * disk.BlockSize;
+        return new PartitionTableInfo
+        {
+            Type = PartitionTableType.GuidPartitionTable,
+            DiskGeometry = new DiskGeometryInfo
             {
-                Type = PartitionTableType.GuidPartitionTable,
-                DiskGeometry = new DiskGeometryInfo
-                {
-                    BytesPerSector = disk.Geometry.Value.BytesPerSector,
-                    Cylinders = disk.Geometry.Value.Cylinders,
-                    Capacity = disk.Geometry.Value.Capacity,
-                    HeadsPerCylinder = disk.Geometry.Value.HeadsPerCylinder,
-                    SectorsPerTrack = disk.Geometry.Value.SectorsPerTrack,
-                    TotalSectors = disk.Geometry.Value.TotalSectorsLong,
-                },
-                Size = disk.Capacity,
-                Sectors = guidPartitionTable.LastUsableSector + 1,
-                Cylinders = 0,
-                Partitions = gptPartitions,
-                Reserved = new PartitionTableReservedInfo
-                {
-                    StartOffset = 0,
-                    EndOffset = guidReservedSize - 1,
-                    StartSector = 0,
-                    EndSector = guidPartitionTable.FirstUsableSector > 0
-                        ? guidPartitionTable.FirstUsableSector - 1
-                        : 0,
-                    StartCylinder = 0,
-                    EndCylinder = 0,
-                    Size = guidReservedSize
-                },
+                BytesPerSector = disk.Geometry.Value.BytesPerSector,
+                Cylinders = disk.Geometry.Value.Cylinders,
+                Capacity = disk.Geometry.Value.Capacity,
+                HeadsPerCylinder = disk.Geometry.Value.HeadsPerCylinder,
+                SectorsPerTrack = disk.Geometry.Value.SectorsPerTrack,
+                TotalSectors = totalSectors,
+            },
+            Size = disk.Capacity,
+            Sectors = guidPartitionTable.LastUsableSector + 1,
+            Cylinders = 0,
+            Partitions = gptPartitions,
+            Reserved = new PartitionTableReservedInfo
+            {
                 StartOffset = 0,
-                EndOffset = disk.Capacity - 1,
-                StartSector = guidPartitionTable.FirstUsableSector,
-                EndSector = guidPartitionTable.LastUsableSector,
+                EndOffset = guidReservedSize - 1,
+                StartSector = 0,
+                EndSector = guidPartitionTable.FirstUsableSector > 0
+                    ? guidPartitionTable.FirstUsableSector - 1
+                    : 0,
                 StartCylinder = 0,
-                EndCylinder = 0
-            };
+                EndCylinder = 0,
+                Size = guidReservedSize
+            },
+            StartOffset = 0,
+            EndOffset = disk.Capacity - 1,
+            StartSector = guidPartitionTable.FirstUsableSector,
+            EndSector = guidPartitionTable.LastUsableSector,
+            StartCylinder = 0,
+            EndCylinder = 0
+        };
     }
 
     private static async Task<PartitionInfo> ReadGptPartitionInfo(int guidPartitionNumber,

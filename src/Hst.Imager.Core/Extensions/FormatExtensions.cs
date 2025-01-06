@@ -6,6 +6,11 @@
     {
         public static string FormatBytes(this long size, int precision = 1, string format = null)
         {
+            if (size < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(size), "Size can't be negative");
+            }
+
             var units = new[] { "B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB" };
             
             var unit = size == 0 ? 0 : Math.Log(size, 1024);

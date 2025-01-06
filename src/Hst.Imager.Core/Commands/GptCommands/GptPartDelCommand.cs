@@ -61,8 +61,10 @@ public class GptPartDelCommand : CommandBase
             return new Result(new Error("Guid Partition Table not found"));
         }
 
+        var totalSectors = disk.Capacity / disk.SectorSize;
+
         OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
-        OnDebugMessage($"Sectors: {disk.Geometry.Value.TotalSectorsLong}");
+        OnDebugMessage($"Sectors: {totalSectors}");
         OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
 
         OnDebugMessage($"Deleting partition number '{partitionNumber}'");

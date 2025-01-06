@@ -15,6 +15,8 @@ public static class FileSystemReader
 {
     public static async Task<Models.FileSystems.FileSystemInfo> ReadFileSystem(VirtualDisk disk, PartitionInfo partitionInfo)
     {
+        var totalSectors = disk.Capacity / disk.SectorSize;
+
         if (partitionInfo.BiosType == BiosPartitionTypes.GptProtective)
         {
             return new Models.FileSystems.FileSystemInfo
@@ -36,8 +38,8 @@ public static class FileSystemReader
         }
 
         if (disk.Geometry != null &&
-            (partitionInfo.LastSector > disk.Geometry.Value.TotalSectorsLong ||
-             partitionInfo.FirstSector > disk.Geometry.Value.TotalSectorsLong))
+            (partitionInfo.LastSector > totalSectors ||
+             partitionInfo.FirstSector > totalSectors))
         {
             return new Models.FileSystems.FileSystemInfo
             {

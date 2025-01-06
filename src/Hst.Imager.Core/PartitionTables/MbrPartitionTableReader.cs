@@ -28,6 +28,9 @@ public static class MbrPartitionTableReader
 
     public static async Task<PartitionTableInfo> Read(VirtualDisk disk, BiosPartitionTable biosPartitionTable)
     {
+        var totalSectors = disk.Capacity / disk.SectorSize;
+        var lastSector = totalSectors - 100;
+
         var mbrPartitionNumber = 0;
         var mbrPartitions = new List<PartitionInfo>();
         foreach (var partition in biosPartitionTable.Partitions.OfType<BiosPartitionInfo>())
@@ -40,15 +43,15 @@ public static class MbrPartitionTableReader
             Type = PartitionTableType.MasterBootRecord,
             DiskGeometry = new DiskGeometryInfo
             {
-                Capacity = disk.Geometry.Value.Capacity,
-                TotalSectors = biosPartitionTable.DiskGeometry.TotalSectorsLong,
+                Capacity = disk.Capacity,
+                TotalSectors = totalSectors,
                 BytesPerSector = biosPartitionTable.DiskGeometry.BytesPerSector,
                 HeadsPerCylinder = biosPartitionTable.DiskGeometry.HeadsPerCylinder,
                 Cylinders = biosPartitionTable.DiskGeometry.Cylinders,
                 SectorsPerTrack = biosPartitionTable.DiskGeometry.SectorsPerTrack
             },
-            Size = disk.Geometry.Value.Capacity,
-            Sectors = disk.Geometry.Value.TotalSectorsLong,
+            Size = disk.Capacity,
+            Sectors = totalSectors,
             Cylinders = 0,
             Partitions = mbrPartitions,
             Reserved = new PartitionTableReservedInfo
@@ -62,9 +65,9 @@ public static class MbrPartitionTableReader
                 Size = 512
             },
             StartOffset = 0,
-            EndOffset = disk.Geometry.Value.Capacity - 1,
+            EndOffset = disk.Capacity - 1,
             StartSector = 0,
-            EndSector = disk.Geometry.Value.TotalSectorsLong - 1
+            EndSector = lastSector
         };
     }
     

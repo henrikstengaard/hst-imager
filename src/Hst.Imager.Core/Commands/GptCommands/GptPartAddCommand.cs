@@ -85,9 +85,12 @@ public class GptPartAddCommand : CommandBase
         {
             return new Result(new Error("Guid Partition Table not found"));
         }
-        
+
+        var totalSectors = disk.Capacity / disk.SectorSize;
+        var lastSector = totalSectors - 100;
+
         OnDebugMessage($"Disk size: {disk.Capacity.FormatBytes()} ({disk.Capacity} bytes)");
-        OnDebugMessage($"Sectors: {disk.Geometry.Value.TotalSectorsLong}");
+        OnDebugMessage($"Sectors: {totalSectors}");
         OnDebugMessage($"Sector size: {disk.SectorSize} bytes");
             
         // available size and default start offset
@@ -127,14 +130,13 @@ public class GptPartAddCommand : CommandBase
             start = firstSector;
         }
 
-        var diskSectors = Math.Min(guidPartitionTable.LastUsableSector, disk.Geometry.Value.TotalSectorsLong);
 
         // calculate partition sectors
         var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / disk.SectorSize;
 
         if (partitionSectors <= 0)
         {
-            return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{disk.Geometry.Value.TotalSectorsLong}'"));
+            return new Result(new Error($"Invalid sectors for partition size '{partitionSize}', start sector '{start}', total sectors '{totalSectors}'"));
         }
             
         var end = start + partitionSectors - 1;
@@ -148,9 +150,9 @@ public class GptPartAddCommand : CommandBase
         }
 
         // set end to last sector, if end is larger than last sector
-        if (end > diskSectors)
+        if (end > lastSector)
         {
-            end = diskSectors;
+            end = lastSector;
             partitionSectors = end - start + 1;
             partitionSize = partitionSectors * disk.SectorSize;
         }

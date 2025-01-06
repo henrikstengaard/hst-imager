@@ -67,7 +67,7 @@ public class FsCommandTestBase : CommandTestBase
 
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
 
-        biosPartitionTable.CreatePrimaryBySector(1, disk.BiosGeometry.TotalSectorsLong - 1, partitionType, true);
+        biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1, partitionType, true);
     }
 
     protected async Task AddMbrPartition(TestCommandHelper testCommandHelper, string path,
@@ -135,7 +135,7 @@ public class FsCommandTestBase : CommandTestBase
 
         var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
-        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
+        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Fat32Lba, true);
         FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
     }
@@ -149,7 +149,7 @@ public class FsCommandTestBase : CommandTestBase
 
         var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
-        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, biosPartitionTable.DiskGeometry.TotalSectorsLong,
+        var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Ntfs, true);
         var partition = biosPartitionTable.Partitions[partitionIndex];
         NtfsFileSystem.Format(partition.Open(), "NTFSDISK", Geometry.FromCapacity(partition.SectorCount * 512), 

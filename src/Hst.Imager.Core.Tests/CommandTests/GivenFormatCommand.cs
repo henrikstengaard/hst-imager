@@ -6,20 +6,21 @@ using Hst.Imager.Core.Commands;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.Threading;
-using PartitionTable = Hst.Imager.Core.Models.PartitionTable;
 using DiscUtils.Partitions;
 using System.Linq;
+using System.IO;
+using Hst.Core;
 
 namespace Hst.Imager.Core.Tests.CommandTests
 {
     public class GivenFormatCommand : FsCommandTestBase
     {
         [Fact]
-        public async Task When_FormattingDiskWithMbrFat32_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithMbrFat32_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Mbr;
+            var partitionTable = Models.FormatType.Mbr;
             var fileSystem = "fat32";
 
             // arrange - test command helper
@@ -58,11 +59,11 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithMbrFat32AndSize50Percent_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithMbrFat32AndSize50Percent_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Mbr;
+            var partitionTable = Models.FormatType.Mbr;
             var fileSystem = "fat32";
 
             // arrange - test command helper
@@ -101,11 +102,11 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithMbrNtfs_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithMbrNtfs_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Mbr;
+            var partitionTable = Models.FormatType.Mbr;
             var fileSystem = "ntfs";
 
             // arrange - test command helper
@@ -144,11 +145,11 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithGptFat32_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithGptFat32_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Gpt;
+            var partitionTable = Models.FormatType.Gpt;
             var fileSystem = "fat32";
 
             // arrange - test command helper
@@ -194,11 +195,11 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithGptFat32AndSize50Percent_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithGptFat32AndSize50Percent_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Gpt;
+            var partitionTable = Models.FormatType.Gpt;
             var fileSystem = "fat32";
 
             // arrange - test command helper
@@ -244,11 +245,11 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithGptNtfs_Then_DiskIsFormatted()
+        public async Task When_FormattingDiskWithGptNtfs_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
             var diskSize = 100.MB();
-            var partitionTable = PartitionTable.Gpt;
+            var partitionTable = Models.FormatType.Gpt;
             var fileSystem = "ntfs";
 
             // arrange - test command helper
@@ -291,6 +292,347 @@ namespace Hst.Imager.Core.Tests.CommandTests
             Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partitionPart.GuidType);
             Assert.Equal("NTFS", partitionPart.FileSystem);
             Assert.True(partitionPart.PercentSize >= 98 && partitionPart.PercentSize <= 100);
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithRdbPfs3_Then_DiskIsPartitionedAndFormattedWith1Partition()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 100.MB();
+            var formatType = Models.FormatType.Rdb;
+            var fileSystem = "pfs3";
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+            Result formatResult = null;
+
+            try
+            {
+                // copy required pfs3aio used to format rdb
+                File.Copy(pfs3AioPath, "pfs3aio", true);
+
+                // arrange - add disk
+                testCommandHelper.AddTestMedia(diskPath, diskSize);
+                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+                // arrange - create format command
+                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
+
+                // act - execute format command
+                formatResult = await formatCommand.Execute(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                DeletePaths("pfs3aio");
+            }
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+
+            // arrange - get disk info from media
+            var diskMediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await testCommandHelper.ReadDiskInfo(diskMedia);
+
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo);
+            Assert.Null(diskInfo.MbrPartitionTablePart);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - rdb partition table exists and contains 1 partition
+            Assert.NotNull(diskInfo.RdbPartitionTablePart);
+            var partitionParts = diskInfo.RdbPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Single(partitionParts);
+            var partitionPart1 = partitionParts[0];
+            Assert.Equal("PDS\\3", partitionPart1.FileSystem);
+            Assert.True(partitionPart1.PercentSize >= 98 && partitionPart1.PercentSize <= 100);
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithRdbPfs3AndSize1Gb_Then_DiskIsPartitionedAndFormattedWith2Partitions()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 1.GB();
+            var formatType = Models.FormatType.Rdb;
+            var fileSystem = "pfs3";
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+            Result formatResult = null;
+
+            try
+            {
+                // copy required pfs3aio used to format rdb
+                File.Copy(pfs3AioPath, "pfs3aio", true);
+
+                // arrange - add disk
+                testCommandHelper.AddTestMedia(diskPath, diskSize);
+                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+                // arrange - create format command
+                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
+
+                // act - execute format command
+                formatResult = await formatCommand.Execute(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                DeletePaths("pfs3aio");
+            }
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+
+            // arrange - get disk info from media
+            var diskMediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await testCommandHelper.ReadDiskInfo(diskMedia);
+
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo);
+            Assert.Null(diskInfo.MbrPartitionTablePart);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - rdb partition table exists and contains 2 partitions
+            Assert.NotNull(diskInfo.RdbPartitionTablePart);
+            var partitionParts = diskInfo.RdbPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Equal(2, partitionParts.Count);
+            var partitionPart1 = partitionParts[0];
+            Assert.Equal("PDS\\3", partitionPart1.FileSystem);
+            Assert.True(partitionPart1.PercentSize >= 49 && partitionPart1.PercentSize <= 51);
+            var partitionPart2 = partitionParts[1];
+            Assert.Equal("PDS\\3", partitionPart2.FileSystem);
+            Assert.True(partitionPart2.PercentSize >= 49 && partitionPart2.PercentSize <= 51);
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithRdbPfs3AndSize50Percent_Then_DiskIsPartitionedAndFormattedWith1Partition()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 100.MB();
+            var formatType = Models.FormatType.Rdb;
+            var fileSystem = "pfs3";
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+            Result formatResult = null;
+
+            try
+            {
+                // copy required pfs3aio used to format rdb
+                File.Copy(pfs3AioPath, "pfs3aio", true);
+
+                // arrange - add disk
+                testCommandHelper.AddTestMedia(diskPath, diskSize);
+                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+                // arrange - create format command
+                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size(50, Models.Unit.Percent));
+
+                // act - execute format command
+                formatResult = await formatCommand.Execute(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                DeletePaths("pfs3aio");
+            }
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+
+            // arrange - get disk info from media
+            var diskMediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await testCommandHelper.ReadDiskInfo(diskMedia);
+
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo);
+            Assert.Null(diskInfo.MbrPartitionTablePart);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - rdb partition table exists and contains 1 partition
+            Assert.NotNull(diskInfo.RdbPartitionTablePart);
+            var partitionParts = diskInfo.RdbPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Single(partitionParts);
+            var partitionPart = partitionParts[0];
+            Assert.Equal("PDS\\3", partitionPart.FileSystem);
+            Assert.True(partitionPart.PercentSize >= 49 && partitionPart.PercentSize <= 51);
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithPiStormPfs3_Then_DiskIsPartitionedAndFormattedWith2Partitions()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 1.GB();
+            var formatType = Models.FormatType.PiStorm;
+            var fileSystem = "pfs3";
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+            Result formatResult = null;
+
+            try
+            {
+                // copy required pfs3aio used to format rdb
+                File.Copy(pfs3AioPath, "pfs3aio", true);
+
+                // arrange - add disk
+                testCommandHelper.AddTestMedia(diskPath, diskSize);
+                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+                // arrange - create format command
+                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
+
+                // act - execute format command
+                formatResult = await formatCommand.Execute(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                DeletePaths("pfs3aio");
+            }
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+
+            // arrange - get disk info from media
+            var diskMediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await testCommandHelper.ReadDiskInfo(diskMedia);
+
+            // assert - disk info is not null
+            Assert.NotNull(diskInfo);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - no rdb partition table exists
+            Assert.Null(diskInfo.RdbPartitionTablePart);
+
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo.MbrPartitionTablePart);
+
+            // assert - mbr partition has 2 partitions
+            var partitionParts = diskInfo.MbrPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Equal(2, partitionParts.Count);
+
+            // assert - 1st boot partition is FAT32 formatted and has a size of 200mb
+            var bootPartitionPart = partitionParts[0];
+            Assert.Equal("FAT32", bootPartitionPart.FileSystem);
+            Assert.True(bootPartitionPart.Size > 198.MB() && bootPartitionPart.Size < 202.MB());
+
+            // assert - 2nd PiStorm partition has PiStormRdb and a size of 800mb
+            var piStormRdbPartitionPart = partitionParts[1];
+            Assert.Equal(Constants.BiosPartitionTypes.PiStormRdb.ToString(), piStormRdbPartitionPart.BiosType);
+            Assert.True(piStormRdbPartitionPart.Size > 790.MB() && piStormRdbPartitionPart.Size < 810.MB());
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithPiStormPfs3AndSize50Percent_Then_DiskIsPartitionedAndFormattedWith2Partitions()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 1.GB();
+            var formatType = Models.FormatType.PiStorm;
+            var fileSystem = "pfs3";
+            var size = new Models.Size(50, Models.Unit.Percent);
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+            Result formatResult = null;
+
+            try
+            {
+                // copy required pfs3aio used to format rdb
+                File.Copy(pfs3AioPath, "pfs3aio", true);
+
+                // arrange - add disk
+                testCommandHelper.AddTestMedia(diskPath, diskSize);
+                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+                // arrange - create format command
+                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, size);
+
+                // act - execute format command
+                formatResult = await formatCommand.Execute(CancellationToken.None);
+            }
+            catch (Exception)
+            {
+                DeletePaths("pfs3aio");
+            }
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+
+            // arrange - get disk info from media
+            var diskMediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await testCommandHelper.ReadDiskInfo(diskMedia);
+
+            // assert - disk info is not null
+            Assert.NotNull(diskInfo);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - no rdb partition table exists
+            Assert.Null(diskInfo.RdbPartitionTablePart);
+
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo.MbrPartitionTablePart);
+
+            // assert - mbr partition has 2 partitions
+            var partitionParts = diskInfo.MbrPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Equal(2, partitionParts.Count);
+
+            // assert - 1st boot partition is FAT32 formatted and has a size of 200mb
+            var bootPartitionPart = partitionParts[0];
+            Assert.Equal("FAT32", bootPartitionPart.FileSystem);
+            Assert.True(bootPartitionPart.Size > 198.MB() && bootPartitionPart.Size < 202.MB());
+
+            // assert - 2nd PiStorm partition has PiStormRdb type and a size of 300mb
+            var piStormRdbPartitionPart = partitionParts[1];
+            Assert.Equal(Constants.BiosPartitionTypes.PiStormRdb.ToString(), piStormRdbPartitionPart.BiosType);
+            Assert.True(piStormRdbPartitionPart.Size > 290.MB() && piStormRdbPartitionPart.Size < 310.MB());
         }
     }
 }

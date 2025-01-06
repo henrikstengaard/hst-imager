@@ -25,6 +25,7 @@ Hst Imager console comes with following features:
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
+- Format physical drive or image file with MBR, GPT or RDB partition table and partitions formatted.
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
@@ -235,7 +236,15 @@ hst.imager write 4gb.vhd /dev/sdb
 
 ### Format physical drive or image file
 
-Formats physical drive or image file by erasing first 10MB, initializing Master Boot Record or Guid Partition Table, add a partition with size of physical drive or image file and format partition with file system FAT32, exFAT or NTFS.
+Formats physical drive or image file with Master Boot Record, Guid Partition Table, Rigid Disk Block or PiStorm RDB and adds partitions, which are formatted and ready to use. 
+
+Formatting erases the first 10MB before initializing Master Boot Record, Guid Partition Table or Rigid Disk Block partition table.
+
+For Master Boot Record and Guid Partition Table, one partition is added with size of physical drive or image file and formatted with file system FAT32, exFAT or NTFS.
+
+For Rigid Disk Block, only PFS\3 is supported and `pfs3aio` file must exist for it to add the file system to Rigid Disk Block. First `Workbench` partition will always have the size of 500MB to support Amiga's not supporting disks larger than 4GB at boot time. Additional `Work` partitions are added for the remaining disk space with size up to 64GB.
+
+For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 200MB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
 
 Example of displaying usage for formatting physical drive or image file:
 ```
@@ -247,6 +256,11 @@ Example of formatting Windows physical drive disk 2 with Master Boot Record and 
 hst.imager format \disk2 mbr fat32
 ```
 
+Example of formatting Windows physical drive disk 2 with Master Boot Record and FAT32 file system with partition size of 4GB:
+```
+hst.imager format \disk2 mbr fat32 -s 4gb
+```
+
 Example of formatting 16GB vhd image file with Master Boot Record and exFAT file system:
 ```
 hst.imager format 16gb.vhd mbr exfat
@@ -255,6 +269,16 @@ hst.imager format 16gb.vhd mbr exfat
 Example of formatting Windows physical drive disk 2 with Guid Partition Table and NTFS file system:
 ```
 hst.imager format \disk2 gpt ntfs
+```
+
+Example of formatting Windows physical drive disk 2 with Rigid Disk Block and PFS\3 file system:
+```
+hst.imager format \disk2 rdb pfs3
+```
+
+Example of formatting Windows physical drive disk 2 for PiStorm with a 200MB FAT32 formatted boot partition and a PiStorm RDB partition (0x76) formatted with Rigid Disk Block using PFS\3 file system:
+```
+hst.imager format \disk2 pistorm pfs3
 ```
 
 ### Compare physical drive and image file

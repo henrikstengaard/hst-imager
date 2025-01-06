@@ -48,10 +48,10 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         var diskInfo = await testCommandHelper.ReadDiskInfo(media);
         Assert.NotNull(diskInfo?.GptPartitionTablePart);
 
-        // assert - added gpt partition size is equal to remaining disk size with an allowed margin of 5kb
+        // assert - added gpt partition size is equal to remaining disk size with an allowed margin of 100kb
         var expectedPartitionSize = diskInfo.Size - diskInfo.GptPartitionTablePart
             .Parts.Where(x => x.PartType == PartType.PartitionTable).Sum(x => x.Size);
-        var margin = 50000;
+        var margin = 100000;
         var partInfo =
             diskInfo.GptPartitionTablePart.Parts.FirstOrDefault(x =>
                 x.PartType == PartType.Partition && x.Size > expectedPartitionSize - margin &&

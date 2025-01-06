@@ -255,10 +255,10 @@ namespace Hst.Imager.ConsoleApp
                 compatibleSize));
         }
 
-        public static async Task Format(string path, PartitionTable partitionTable, string fileSystem, string size)
+        public static async Task Format(string path, FormatType formatType, string fileSystem, string size)
         {
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
-                GetCommandHelper(), await GetPhysicalDrives(), path, partitionTable, fileSystem, ParseSize(size)));
+                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, ParseSize(size)));
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)
@@ -485,7 +485,7 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartFormat(string path, int partitionNumber, string name, bool nonRdb, string chs, string dosType)
         {
-            await Execute(new RdbPartFormatCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            await Execute(new RdbPartFormatCommand(GetLogger<RdbPartFormatCommand>(), GetCommandHelper(),
                 await GetPhysicalDrives(), path, partitionNumber, name, nonRdb, chs, dosType));
         }
 

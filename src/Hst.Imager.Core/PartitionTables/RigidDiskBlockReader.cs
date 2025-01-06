@@ -30,6 +30,8 @@ public static class RigidDiskBlockReader
 
     public static PartitionTableInfo Read(VirtualDisk disk, RigidDiskBlock rigidDiskBlock)
     {
+        var totalSectors = disk.Capacity / disk.SectorSize;
+
         var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
         var rdbPartitionNumber = 0;
 
@@ -50,7 +52,7 @@ public static class RigidDiskBlockReader
                 Capacity = disk.Geometry.Value.Capacity,
                 HeadsPerCylinder = disk.Geometry.Value.HeadsPerCylinder,
                 SectorsPerTrack = disk.Geometry.Value.SectorsPerTrack,
-                TotalSectors = disk.Geometry.Value.TotalSectorsLong,
+                TotalSectors = totalSectors,
             },
             Size = rigidDiskBlock.DiskSize,
             Sectors = rigidDiskBlock.DiskSize / rigidDiskBlock.BlockSize,

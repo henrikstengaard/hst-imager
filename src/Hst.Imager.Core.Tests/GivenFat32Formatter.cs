@@ -32,7 +32,7 @@ public class GivenFat32Formatter
         // arrange - create fat32 lba partition
         var biosPartitionTable = new BiosPartitionTable(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1,
-            biosPartitionTable.DiskGeometry.TotalSectorsLong,
+            (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Fat32Lba, true);
         var partition = biosPartitionTable.Partitions[partitionIndex];
 
