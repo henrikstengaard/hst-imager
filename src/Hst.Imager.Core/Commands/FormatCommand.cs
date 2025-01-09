@@ -26,6 +26,10 @@ namespace Hst.Imager.Core.Commands
         private readonly string fileSystem;
         private readonly Size size;
 
+        private const long WorkbenchPartitionSize = 1000000000;
+        private const long WorkPartitionSize = 64000000000;
+        private const long PiStormBootPartitionSize = 1000000000;
+
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
             Size size)
@@ -79,6 +83,11 @@ namespace Hst.Imager.Core.Commands
                 diskSize = media.Size;
 
                 OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
+
+                if (formatType == FormatType.PiStorm && diskSize < 2.GB())
+                {
+                    return new Result(new Error($"Formatting PiStorm requires disk size of minimum 2GB and disk size is '{diskSize.FormatBytes()}' ({diskSize} bytes)"));
+                }
 
                 OnInformationMessage($"Erasing partition tables");
 
@@ -215,12 +224,11 @@ namespace Hst.Imager.Core.Commands
             Result rdbPartFormatResult;
 
             var hasWorkbenchPartition = false;
-            var workbenchPartitionSize = 500.MB();
 
             if (partitionNumber == 0)
             {
                 hasWorkbenchPartition = true;
-                var size = new Size(diskSize + 5.MB() > workbenchPartitionSize ? workbenchPartitionSize : 0, Unit.Bytes);
+                var size = new Size(diskSize - 5.MB() > WorkbenchPartitionSize ? WorkbenchPartitionSize : 0, Unit.Bytes);
 
                 // add workbench partition
                 partitionName = $"DH{partitionNumber}";
@@ -249,16 +257,15 @@ namespace Hst.Imager.Core.Commands
             }
 
             // return, if no space left for work partitions
-            var hasWorkPartitions = diskSize + 50.MB() > workbenchPartitionSize;
+            var hasWorkPartitions = diskSize - 50.MB() > WorkbenchPartitionSize;
             if (!hasWorkPartitions)
             {
                 return new Result<int>(partitionNumber);
             }
 
             // calculate work partition count and size
-            var defaultPartitionSize = 64000000000;
-            var workPartitionCount = diskSize > defaultPartitionSize
-                ? Convert.ToInt32(Math.Ceiling((double)diskSize / defaultPartitionSize))
+            var workPartitionCount = diskSize > WorkPartitionSize
+                ? Convert.ToInt32(Math.Ceiling((double)diskSize / WorkPartitionSize))
                 : 1;
             var workPartitionSize = diskSize / workPartitionCount;
 
@@ -329,7 +336,7 @@ namespace Hst.Imager.Core.Commands
             long lastSector = formatSize / 512;
 
             long startSector = 2048;
-            long endSector = 200.MB() / 512;
+            long endSector = PiStormBootPartitionSize / 512;
 
             // add pistorm boot partition
             var mbrPartAddCommand = new MbrPartAddCommand(loggerFactory.CreateLogger<MbrPartAddCommand>(), commandHelper,

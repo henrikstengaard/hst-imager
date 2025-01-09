@@ -8,13 +8,15 @@ using System.Collections.Generic;
 using System.Threading;
 using DiscUtils.Partitions;
 using System.Linq;
-using System.IO;
-using Hst.Core;
+using System.Text;
 
 namespace Hst.Imager.Core.Tests.CommandTests
 {
     public class GivenFormatCommand : FsCommandTestBase
     {
+        protected static readonly byte[] TestPfs3AioBytes = Encoding.ASCII.GetBytes(
+            "$VER: pfs3aio 0.1 (01/01/22)");
+
         [Fact]
         public async Task When_FormattingDiskWithMbrFat32_Then_DiskIsPartitionedAndFormattedWith1Partition()
         {
@@ -305,30 +307,19 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
-            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
 
-            Result formatResult = null;
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
-            try
-            {
-                // copy required pfs3aio used to format rdb
-                File.Copy(pfs3AioPath, "pfs3aio", true);
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
 
-                // arrange - add disk
-                testCommandHelper.AddTestMedia(diskPath, diskSize);
-                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
-
-                // arrange - create format command
-                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
-                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
-
-                // act - execute format command
-                formatResult = await formatCommand.Execute(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                DeletePaths("pfs3aio");
-            }
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
 
             // assert - format is successful
             Assert.NotNull(formatResult);
@@ -358,40 +349,29 @@ namespace Hst.Imager.Core.Tests.CommandTests
         }
 
         [Fact]
-        public async Task When_FormattingDiskWithRdbPfs3AndSize1Gb_Then_DiskIsPartitionedAndFormattedWith2Partitions()
+        public async Task When_FormattingDiskWithRdbPfs3AndSize2Gb_Then_DiskIsPartitionedAndFormattedWith2Partitions()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
-            var diskSize = 1.GB();
+            var diskSize = 2.GB();
             var formatType = Models.FormatType.Rdb;
             var fileSystem = "pfs3";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
-            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
 
-            Result formatResult = null;
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
-            try
-            {
-                // copy required pfs3aio used to format rdb
-                File.Copy(pfs3AioPath, "pfs3aio", true);
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
 
-                // arrange - add disk
-                testCommandHelper.AddTestMedia(diskPath, diskSize);
-                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
-
-                // arrange - create format command
-                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
-                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
-
-                // act - execute format command
-                formatResult = await formatCommand.Execute(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                DeletePaths("pfs3aio");
-            }
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
 
             // assert - format is successful
             Assert.NotNull(formatResult);
@@ -434,30 +414,19 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
-            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
 
-            Result formatResult = null;
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
-            try
-            {
-                // copy required pfs3aio used to format rdb
-                File.Copy(pfs3AioPath, "pfs3aio", true);
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size(50, Models.Unit.Percent));
 
-                // arrange - add disk
-                testCommandHelper.AddTestMedia(diskPath, diskSize);
-                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
-
-                // arrange - create format command
-                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
-                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size(50, Models.Unit.Percent));
-
-                // act - execute format command
-                formatResult = await formatCommand.Execute(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                DeletePaths("pfs3aio");
-            }
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
 
             // assert - format is successful
             Assert.NotNull(formatResult);
@@ -490,37 +459,26 @@ namespace Hst.Imager.Core.Tests.CommandTests
         public async Task When_FormattingDiskWithPiStormPfs3_Then_DiskIsPartitionedAndFormattedWith2Partitions()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
-            var diskSize = 1.GB();
+            var diskSize = 2.GB();
             var formatType = Models.FormatType.PiStorm;
             var fileSystem = "pfs3";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
-            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
 
-            Result formatResult = null;
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
-            try
-            {
-                // copy required pfs3aio used to format rdb
-                File.Copy(pfs3AioPath, "pfs3aio", true);
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
 
-                // arrange - add disk
-                testCommandHelper.AddTestMedia(diskPath, diskSize);
-                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
-
-                // arrange - create format command
-                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
-                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, new Models.Size());
-
-                // act - execute format command
-                formatResult = await formatCommand.Execute(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                DeletePaths("pfs3aio");
-            }
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
 
             // assert - format is successful
             Assert.NotNull(formatResult);
@@ -552,19 +510,19 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // assert - 1st boot partition is FAT32 formatted and has a size of 200mb
             var bootPartitionPart = partitionParts[0];
             Assert.Equal("FAT32", bootPartitionPart.FileSystem);
-            Assert.True(bootPartitionPart.Size > 198.MB() && bootPartitionPart.Size < 202.MB());
+            Assert.True(bootPartitionPart.Size > 980.MB() && bootPartitionPart.Size < 1020.MB());
 
             // assert - 2nd PiStorm partition has PiStormRdb and a size of 800mb
             var piStormRdbPartitionPart = partitionParts[1];
             Assert.Equal(Constants.BiosPartitionTypes.PiStormRdb.ToString(), piStormRdbPartitionPart.BiosType);
-            Assert.True(piStormRdbPartitionPart.Size > 790.MB() && piStormRdbPartitionPart.Size < 810.MB());
+            Assert.True(piStormRdbPartitionPart.Size > 980.MB() && piStormRdbPartitionPart.Size < 1020.MB());
         }
 
         [Fact]
         public async Task When_FormattingDiskWithPiStormPfs3AndSize50Percent_Then_DiskIsPartitionedAndFormattedWith2Partitions()
         {
             var diskPath = $"{Guid.NewGuid()}.vhd";
-            var diskSize = 1.GB();
+            var diskSize = 4.GB();
             var formatType = Models.FormatType.PiStorm;
             var fileSystem = "pfs3";
             var size = new Models.Size(50, Models.Unit.Percent);
@@ -572,30 +530,19 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
-            var pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
 
-            Result formatResult = null;
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
-            try
-            {
-                // copy required pfs3aio used to format rdb
-                File.Copy(pfs3AioPath, "pfs3aio", true);
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, size);
 
-                // arrange - add disk
-                testCommandHelper.AddTestMedia(diskPath, diskSize);
-                await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
-
-                // arrange - create format command
-                var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
-                    new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, size);
-
-                // act - execute format command
-                formatResult = await formatCommand.Execute(CancellationToken.None);
-            }
-            catch (Exception)
-            {
-                DeletePaths("pfs3aio");
-            }
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
 
             // assert - format is successful
             Assert.NotNull(formatResult);
@@ -627,12 +574,44 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // assert - 1st boot partition is FAT32 formatted and has a size of 200mb
             var bootPartitionPart = partitionParts[0];
             Assert.Equal("FAT32", bootPartitionPart.FileSystem);
-            Assert.True(bootPartitionPart.Size > 198.MB() && bootPartitionPart.Size < 202.MB());
+            Assert.True(bootPartitionPart.PercentSize >= 23 && bootPartitionPart.PercentSize <= 27);
 
             // assert - 2nd PiStorm partition has PiStormRdb type and a size of 300mb
             var piStormRdbPartitionPart = partitionParts[1];
             Assert.Equal(Constants.BiosPartitionTypes.PiStormRdb.ToString(), piStormRdbPartitionPart.BiosType);
-            Assert.True(piStormRdbPartitionPart.Size > 290.MB() && piStormRdbPartitionPart.Size < 310.MB());
+            Assert.True(piStormRdbPartitionPart.PercentSize >= 23 && piStormRdbPartitionPart.PercentSize <= 27);
+        }
+
+        [Fact]
+        public async Task When_FormattingDiskWithPiStormPfs3LessThan2Gb_Then_FormatReturnsError()
+        {
+            var diskPath = $"{Guid.NewGuid()}.vhd";
+            var diskSize = 1.GB();
+            var formatType = Models.FormatType.PiStorm;
+            var fileSystem = "pfs3";
+            var size = new Models.Size(0, Models.Unit.Percent);
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - add test pfs3aio file
+            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestPfs3AioBytes);
+
+            // arrange - add disk
+            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
+
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), testCommandHelper,
+                new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, size);
+
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
+
+            // assert - format failed
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsFaulted);
+            Assert.False(formatResult.IsSuccess);
         }
     }
 }
