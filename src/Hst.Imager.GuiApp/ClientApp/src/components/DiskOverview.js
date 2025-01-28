@@ -125,10 +125,10 @@ export default function DiskOverview(props) {
                     {partitionTableType && (
                         <Fragment>
                             <TableCell align="right">
-                                {partitionTableType === 'RigidDiskBlock' ? part.startCylinder : part.startOffset}
+                                {partitionTableType === 'RigidDiskBlock' ? part.startCylinder : part.startSector}
                             </TableCell>
                             <TableCell align="right">
-                                {partitionTableType === 'RigidDiskBlock' ? part.endCylinder : part.endOffset}
+                                {partitionTableType === 'RigidDiskBlock' ? part.endCylinder : part.endSector}
                             </TableCell>
                         </Fragment>
                     )}
