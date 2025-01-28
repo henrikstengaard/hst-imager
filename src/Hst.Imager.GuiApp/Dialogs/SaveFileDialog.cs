@@ -77,7 +77,7 @@ public class SaveFileDialog
         ofn.initialDir = InitialDirectory;
         ofn.title = Title;
         ofn.flags = (int)OpenFileNameFlags.OFN_HIDEREADONLY | (int)OpenFileNameFlags.OFN_EXPLORER |
-                    (int)OpenFileNameFlags.OFN_FILEMUSTEXIST | (int)OpenFileNameFlags.OFN_PATHMUSTEXIST;
+            (int)OpenFileNameFlags.OFN_OVERWRITEPROMPT;
 
         // Create buffer for file names
         ofn.file = Marshal.AllocHGlobal(maxFileLength * Marshal.SystemDefaultCharSize);
