@@ -51,7 +51,12 @@ export default function Start() {
         title: 'Optimize',
         description: 'Optimize image file.',
         url: '/optimize',
-        icon: 'magic'
+        icon: 'compress'
+    }, {
+        title: 'Format',
+        description: 'Format image file or physical disk.',
+        url: '/format',
+        icon: 'eraser'
     // },{
     //     title: 'Partition',
     //     description: 'Edit partition table for physical disk or image file.',

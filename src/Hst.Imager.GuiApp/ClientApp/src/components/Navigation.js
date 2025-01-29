@@ -120,8 +120,13 @@ export default function Navigation(props) {
         },
         {
             text: 'Optimize',
-            icon: 'magic',
+            icon: 'compress',
             path: '/optimize'
+        },
+        {
+            text: 'Format',
+            icon: 'eraser',
+            path: '/format'
         },
         // {
         //     text: 'Partition',

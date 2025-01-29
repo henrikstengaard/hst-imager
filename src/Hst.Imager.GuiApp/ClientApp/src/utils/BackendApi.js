@@ -239,6 +239,28 @@ export class BackendApi {
             throw new Error('Failed to start write')
         }
     }
+
+    async startFormat({ title, path, formatType, fileSystem, size, byteSwap }) {
+        const response = await fetch(`${this.baseUrl}api/format`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title,
+                path,
+                formatType,
+                fileSystem,
+                size,
+                byteSwap
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to start format')
+        }
+    }
     
     async updateSettings(settings) {
         const response = await fetch(`${this.baseUrl}api/settings`, {

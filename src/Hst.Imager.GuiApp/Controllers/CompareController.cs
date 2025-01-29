@@ -58,8 +58,8 @@
                 return Ok();
             }
 
-            await workerService.EnqueueAsync(new[]
-            {
+            await workerService.EnqueueAsync(
+            [
                 new CompareBackgroundTask
                 {
                     Title = request.Title,
@@ -70,7 +70,7 @@
                     Retries = request.Retries,
                     Byteswap = request.Byteswap
                 }
-            });
+            ], true);
 
             return Ok();
         }

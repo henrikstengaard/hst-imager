@@ -9,6 +9,7 @@ import Convert from "../pages/Convert";
 import Compare from "../pages/Compare";
 import Blank from "../pages/Blank";
 import Optimize from "../pages/Optimize";
+import Format from "../pages/Format";
 import Partition from "../pages/Partition";
 import About from "../pages/About";
 import Settings from "../pages/Settings";
@@ -29,6 +30,7 @@ export default function Content() {
             <Route path='/compare' component={Compare}/>
             <Route path='/blank' component={Blank}/>
             <Route path='/optimize' component={Optimize}/>
+            <Route path='/format' component={Format} />
             <Route path='/partition' component={Partition}/>
             <Route path='/settings' component={Settings}/>
             <Route path='/about' component={About}/>

@@ -46,15 +46,21 @@ namespace Hst.Imager.Core.Commands
 
         public override async Task<Result> Execute(CancellationToken token)
         {
-            var gptPartType = GptPartType.Fat32;
-            if (formatType == FormatType.Gpt && !Enum.TryParse<GptPartType>(fileSystem, true, out gptPartType))
+            var gptFileSystem = FormatGptFileSystem.Fat32;
+            if (formatType == FormatType.Gpt && !Enum.TryParse<FormatGptFileSystem>(fileSystem, true, out gptFileSystem))
             {
                 return new Result(new Error($"Unsupported Guid Partition Table file system '{fileSystem}'"));
             }
 
+            var mbrFileSystem = FormatMbrFileSystem.Fat32;
+            if (formatType == FormatType.Mbr && !Enum.TryParse<FormatMbrFileSystem>(fileSystem, true, out mbrFileSystem))
+            {
+                return new Result(new Error($"Unsupported Master Boot Record file system '{fileSystem}'"));
+            }
+
+            var rdbFileSystem = FormatRdbFileSystem.Pds3;
             if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
-                !(fileSystem.Equals("pfs3", StringComparison.OrdinalIgnoreCase) ||
-                fileSystem.Equals("pds3", StringComparison.OrdinalIgnoreCase)))
+                !Enum.TryParse<FormatRdbFileSystem>(fileSystem, true, out rdbFileSystem))
             {
                 return new Result(new Error($"Unsupported Rigid Disk Block file system '{fileSystem}'"));
             }
@@ -108,19 +114,20 @@ namespace Hst.Imager.Core.Commands
             switch (formatType)
             {
                 case FormatType.Mbr:
-                    return await FormatMbrDisk(diskSize, token);
+                    return await FormatMbrDisk(diskSize, mbrFileSystem, token);
                 case FormatType.Gpt:
-                    return await FormatGptDisk(diskSize, gptPartType, token);
+                    return await FormatGptDisk(diskSize, gptFileSystem, token);
                 case FormatType.Rdb:
                     return await FormatRdbDisk(diskSize, path, 0, token);
                 case FormatType.PiStorm:
                     return await FormatPiStormDisk(diskSize, token);
                 default:
-                    return new Result(new Error($"Unsupported partition table '{formatType}'"));
+                    return new Result(new Error($"Unsupported format type '{formatType}'"));
             }
         }
 
-        private async Task<Result> FormatMbrDisk(long diskSize, CancellationToken cancellationToken)
+        private async Task<Result> FormatMbrDisk(long diskSize, FormatMbrFileSystem mbrFileSystem, 
+            CancellationToken cancellationToken)
         {
             var mbrInitCommand = new MbrInitCommand(loggerFactory.CreateLogger<MbrInitCommand>(), commandHelper, physicalDrives, path);
             AddMessageEvents(mbrInitCommand);
@@ -134,9 +141,12 @@ namespace Hst.Imager.Core.Commands
             var partitionSize = diskSize.ResolveSize(size).ToSectorSize();
             long? startSector = 2048;
             long? endSector = partitionSize / 512;
+            var type = mbrFileSystem == FormatMbrFileSystem.Fat32
+                ? MbrPartType.Fat32Lba.ToString()
+                : fileSystem;
 
             var mbrPartAddCommand = new MbrPartAddCommand(loggerFactory.CreateLogger<MbrPartAddCommand>(), commandHelper, physicalDrives,
-                path, fileSystem, new Size(), startSector, endSector, active: true);
+                path, type, new Size(), startSector, endSector, active: true);
             AddMessageEvents(mbrPartAddCommand);
 
             var mbrPartAddResult = await mbrPartAddCommand.Execute(cancellationToken);
@@ -152,7 +162,7 @@ namespace Hst.Imager.Core.Commands
             return await mbrPartFormatCommand.Execute(cancellationToken);
         }
 
-        private async Task<Result> FormatGptDisk(long diskSize, GptPartType gptPartType, CancellationToken cancellationToken)
+        private async Task<Result> FormatGptDisk(long diskSize, FormatGptFileSystem gptFileSystem, CancellationToken cancellationToken)
         {
             var gptInitCommand = new GptInitCommand(loggerFactory.CreateLogger<GptInitCommand>(), commandHelper, physicalDrives, path);
             AddMessageEvents(gptInitCommand);
@@ -168,7 +178,7 @@ namespace Hst.Imager.Core.Commands
             long? endSector = partitionSize / 512;
 
             var gptPartAddCommand = new GptPartAddCommand(loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper, physicalDrives,
-                path, gptPartType.ToString(), "Empty", new Size(), startSector, endSector);
+                path, gptFileSystem.ToString(), "Empty", new Size(), startSector, endSector);
             AddMessageEvents(gptPartAddCommand);
 
             var gptPartAddResult = await gptPartAddCommand.Execute(cancellationToken);
@@ -177,11 +187,24 @@ namespace Hst.Imager.Core.Commands
                 return new Result(gptPartAddResult.Error);
             }
 
+            var gptPartType = GetGptPartType(gptFileSystem);
+
             var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(), commandHelper, physicalDrives,
                 path, 1, gptPartType, "Empty");
             AddMessageEvents(gptPartFormatCommand);
 
             return await gptPartFormatCommand.Execute(cancellationToken);
+        }
+
+        private static GptPartType GetGptPartType(FormatGptFileSystem gptFileSystem)
+        {
+            return gptFileSystem switch
+            {
+                FormatGptFileSystem.Fat32 => GptPartType.Fat32,
+                FormatGptFileSystem.Ntfs => GptPartType.Ntfs,
+                FormatGptFileSystem.ExFat => GptPartType.ExFat,
+                _ => throw new ArgumentException($"Unsupported Guid Partition Table file system '{gptFileSystem}'", nameof(gptFileSystem)),
+            };
         }
 
         private async Task<Result<int>> FormatRdbDisk(long diskSize, string rdbPath, int partitionNumber, CancellationToken cancellationToken)

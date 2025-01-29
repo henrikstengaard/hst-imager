@@ -10,7 +10,6 @@
     using Helpers;
     using Hst.Imager.Core;
     using Hst.Imager.Core.Helpers;
-    using Hst.Imager.Core.Models;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;

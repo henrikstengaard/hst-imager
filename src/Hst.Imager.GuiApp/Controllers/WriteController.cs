@@ -37,7 +37,7 @@
                 Byteswap = request.Byteswap
             };
 
-            await workerService.EnqueueAsync(new[] { writeBackgroundTask });
+            await workerService.EnqueueAsync([writeBackgroundTask], true);
 
             return Ok();
         }

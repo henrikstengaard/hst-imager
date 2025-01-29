@@ -45,9 +45,9 @@
 
         public async Task Handle(BackgroundTask backgroundTask)
         {
-            if (activeBackgroundTaskList.Count > 0)
+            if (activeBackgroundTaskList.Count > 0 && backgroundTask.CancelAll)
             {
-                logger.LogDebug("Cancel background task");
+                logger.LogDebug($"Background task '{backgroundTask.Type}' requests cancel all");
                 try
                 {
                     activeBackgroundTaskList.CancelAll();
@@ -84,9 +84,6 @@
 
         private IBackgroundTask ResolveTask(BackgroundTask backgroundTask)
         {
-            //var task = JsonSerializer.Deserialize(backgroundTask.Payload, Type.GetType(backgroundTask.Type));
-
-            //Console.WriteLine(task == null ? "task is null" : task.GetType().FullName);
             switch (backgroundTask.Type)
             {
                 case nameof(InfoBackgroundTask):
@@ -105,6 +102,8 @@
                     return JsonSerializer.Deserialize<BlankBackgroundTask>(backgroundTask.Payload);
                 case nameof(OptimizeBackgroundTask):
                     return JsonSerializer.Deserialize<OptimizeBackgroundTask>(backgroundTask.Payload);
+                case nameof(FormatBackgroundTask):
+                    return JsonSerializer.Deserialize<FormatBackgroundTask>(backgroundTask.Payload);
                 default:
                     logger.LogError($"Background task '{backgroundTask.Type}' not supported");
                     return null;
@@ -124,6 +123,8 @@
                 WriteBackgroundTask => new WriteBackgroundTaskHandler(loggerFactory, progressHubConnection,
                     physicalDriveManager, appState),
                 CompareBackgroundTask => new CompareBackgroundTaskHandler(loggerFactory,
+                    progressHubConnection, physicalDriveManager, appState),
+                FormatBackgroundTask => new FormatBackgroundTaskHandler(loggerFactory,
                     progressHubConnection, physicalDriveManager, appState),
                 _ => null
             };

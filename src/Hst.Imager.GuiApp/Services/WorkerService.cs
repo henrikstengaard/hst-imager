@@ -105,20 +105,21 @@
                 $"Failed to start worker '{workerPath}'. Process exited with error code {workerProcess.ExitCode}"));
         }
 
-        public Task EnqueueAsync<T>(IEnumerable<T> backgroundTasks)
+        public Task EnqueueAsync<T>(IEnumerable<T> backgroundTasks, bool cancelAll = false)
         {
             if (backgroundTasks == null)
             {
                 throw new ArgumentNullException(nameof(backgroundTasks));
             }
 
-            foreach (var backgroundTask in backgroundTasks)
+            foreach (var backgroundTask in backgroundTasks.ToList())
             {
                 logger.LogDebug($"Enqueue background task type '{backgroundTask.GetType().Name}'");
                 this.queue.Add(new Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask
                 {
                     Type = backgroundTask.GetType().Name,
-                    Payload = JsonSerializer.Serialize(backgroundTask)
+                    Payload = JsonSerializer.Serialize(backgroundTask),
+                    CancelAll = cancelAll
                 });
             }
 
