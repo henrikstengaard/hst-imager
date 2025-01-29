@@ -55,7 +55,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             Assert.Single(diskInfo.MbrPartitionTablePart.Parts,
                 x => x.PartType == PartType.Partition);
             var partitionPart = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => x.PartType == PartType.Partition);
-            Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partitionPart.BiosType);
+            Assert.Equal(BiosPartitionTypes.Fat32Lba.ToString(), partitionPart.BiosType);
             Assert.Equal("FAT32", partitionPart.FileSystem);
             Assert.True(partitionPart.PercentSize >= 98 && partitionPart.PercentSize <= 100);
         }
@@ -98,7 +98,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             Assert.Single(diskInfo.MbrPartitionTablePart.Parts,
                 x => x.PartType == PartType.Partition);
             var partitionPart = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => x.PartType == PartType.Partition);
-            Assert.Equal(BiosPartitionTypes.Fat32.ToString(), partitionPart.BiosType);
+            Assert.Equal(BiosPartitionTypes.Fat32Lba.ToString(), partitionPart.BiosType);
             Assert.Equal("FAT32", partitionPart.FileSystem);
             Assert.True(partitionPart.PercentSize >= 49 && partitionPart.PercentSize <= 51);
         }
