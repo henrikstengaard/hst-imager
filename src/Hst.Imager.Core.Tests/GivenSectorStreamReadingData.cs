@@ -73,4 +73,37 @@ public class GivenSectorStreamReadingData
         var flushActivity = activities[^1] as FlushActivity;
         Assert.NotNull(flushActivity);
     }
+
+    [Theory]
+    [InlineData(512)]
+    [InlineData(1024)]
+    [InlineData(1024 * 1024)]
+    public void When_ReadingDataPastEndOfStream_Then_DataUntilEndOfStreamIsRead(int bufferSize)
+    {
+        // arrange - create test data
+        var data = new byte[75899];
+        Array.Fill<byte>(data, 1);
+
+        // arrange - create sector stream
+        using var memoryStream = new MemoryStream(data);
+        using var sectorStream = new SectorStream(memoryStream, bufferSize: bufferSize);
+        
+        // act - read 75898 bytes
+        var buffer1 = new byte[75898];
+        var bytesRead = sectorStream.Read(buffer1, 0, buffer1.Length);
+        
+        // assert - 75898 bytes was read
+        Assert.Equal(75898, bytesRead);
+        Assert.Equal(data.Take(75898), buffer1);
+            
+        // act - read 21 bytes, 20 bytes past end of stream data
+        var buffer2 = new byte[21];
+        bytesRead = sectorStream.Read(buffer2, 0, buffer2.Length);
+
+        // assert - 1 byte was read
+        Assert.Equal(1, bytesRead);
+        var expectedBuffer2Data = new byte[21];
+        expectedBuffer2Data[0] = 1;
+        Assert.Equal(expectedBuffer2Data, buffer2);
+    }
 }

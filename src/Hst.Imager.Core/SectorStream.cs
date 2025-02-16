@@ -197,7 +197,7 @@
         {
             var bytesRead = 0;
 
-            while (bytesRead < count)
+            while (bytesRead < count && streamOffset < stream.Length)
             {
                 if (!isSectorBytesRead)
                 {
