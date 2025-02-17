@@ -67,8 +67,25 @@ const basicFileSystemOptions = [{
 }];
 
 const rdbFileSystemOptions = [{
+    title: "PDS\\3 (direct scsi)",
+    value: "pds3"
+}, {
     title: "PFS\\3",
     value: "pfs3"
+}, {
+    title: "DOS\\3",
+    value: "dos3"
+}, {
+    title: "DOS\\7 (long filename)",
+    value: "dos7"
+}];
+
+const amigaFormattingAssetActionOptions = [{
+    title: "Download PFS3AIO from aminet.net",
+    value: "DownloadPfs3Aio"
+}, {
+    title: "Select asset file",
+    value: "SelectAssetFile"
 }];
 
 export default function Format() {
@@ -84,6 +101,9 @@ export default function Format() {
     const [fileSystem, setFileSystem] = React.useState('fat32')
     const [fileSystemOptions, setFileSystemOptions] = React.useState(basicFileSystemOptions)
     const [formatAll, setFormatAll] = React.useState(true);
+    const [formattingAssetActionOptions, setFormattingAssetActionOptions] = React.useState([]);
+    const [formattingAssetAction, setFormattingAssetAction] = React.useState(null);
+    const [formattingAssetFilePath, setFormattingAssetFilePath] = React.useState(null);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
@@ -214,6 +234,8 @@ export default function Format() {
             path,
             formatType,
             fileSystem,
+            assetAction: formattingAssetAction === 'SelectAssetFile' ? 'None' : formattingAssetAction,
+            assetPath: formattingAssetFilePath,
             size: (size * unitOption.size),
             byteswap
         });
@@ -244,14 +266,24 @@ export default function Format() {
         setPrefillSize(null)
         setPrefillSizeOptions([])
         setConnection(null)
+        setFormattingAssetActionOptions([])
+        setFormattingAssetAction(null)
+        setFormattingAssetFilePath(null)
     }
 
     const handleUpdate = async () => {
         await backendApi.updateList()
     }
 
-    const formatDisabled = isNil(path)
+    const pathValid = !isNil(path) && path.trim().length > 0
+    const formattingAssetFilePathValid = !isNil(formattingAssetFilePath) && formattingAssetFilePath.trim().length > 0
+    
+    const formatDisabled = !pathValid ||
+        (formattingAssetAction === 'SelectAssetFile' && !formattingAssetFilePathValid)
 
+    console.log('formatDisabled', formatDisabled, 'formattingAssetAction', formattingAssetAction,
+        'formattingAssetFilePathValid', formattingAssetFilePathValid)
+    
     return (
         <Box>
             <ConfirmDialog
@@ -359,14 +391,19 @@ export default function Format() {
                                 case 'gpt':
                                     setFileSystemOptions(basicFileSystemOptions)
                                     setFileSystem(basicFileSystemOptions[0].value)
+                                    setFormattingAssetActionOptions([])
                                     break;
                                 case 'rdb':
                                 case 'pistorm':
                                     setFileSystemOptions(rdbFileSystemOptions)
                                     setFileSystem(rdbFileSystemOptions[0].value)
+                                    setFormattingAssetActionOptions(amigaFormattingAssetActionOptions)
+                                    setFormattingAssetAction('DownloadPfs3Aio')
+                                    setFormattingAssetFilePath(null)
                                     break;
                                 default:
                                     setFileSystemOptions([])
+                                    setFormattingAssetActionOptions([])
                             }
                         }}
                     />
@@ -382,15 +419,72 @@ export default function Format() {
                         options={fileSystemOptions || []}
                         onChange={(value) => {
                             setFileSystem(value)
+                            if (formattingAssetAction === 'DownloadPfs3Aio') {
+                                setFormattingAssetAction('SelectAssetFile')
+                            }
                         }}
                     />
                 </Grid>
             </Grid>
+            {(formatType === 'rdb' || formatType === 'pistorm') && (
+                <React.Fragment>
+                    {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
+                        <Grid container spacing={1} direction="row" sx={{ mt: 1 }}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label="Asset action for formatting"
+                                    id="asset-action"
+                                    value={formattingAssetAction || ''}
+                                    options={formattingAssetActionOptions}
+                                    onChange={(value) => {
+                                        setFormattingAssetAction(value)
+                                        if (value === 'DownloadPfs3Aio') {
+                                            setFormattingAssetFilePath(null)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                    {(formattingAssetAction === 'SelectAssetFile' &&
+                        (fileSystem === 'pds3' || fileSystem === 'pfs3' || fileSystem === 'dos3' || fileSystem === 'dos7')) && (
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+                            <Grid item xs={12} lg={6}>
+                                <TextField
+                                    id="asset-path"
+                                    label={
+                                        <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
+                                            <FontAwesomeIcon icon="file" style={{ marginRight: '5px' }} /> Formatting asset file
+                                        </div>
+                                    }
+                                    value={formattingAssetFilePath || ''}
+                                    endAdornment={
+                                        <BrowseOpenDialog
+                                            id="browse-formatting-asset-file-path"
+                                            title="Select formatting asset file"
+                                            onChange={async (path) => {
+                                                setFormattingAssetFilePath(path)
+                                            }}
+                                            fileFilters={[{
+                                                name: 'All files',
+                                                extensions: ['*']
+                                            }]}
+                                        />
+                                    }
+                                    onChange={(event) => {
+                                        setFormattingAssetFilePath(get(event, 'target.value'))
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+                </React.Fragment>
+            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="byteswap"
-                        label="Byteswap source sectors"
+                        label="Byteswap sectors"
                         value={byteswap}
                         onChange={async (checked) => {
                             setByteswap(checked)
@@ -405,7 +499,7 @@ export default function Format() {
                 <Grid item xs={12}>
                     <CheckboxField
                         id="format-all"
-                        label="Format entire image/disk"
+                        label={`Format entire ${sourceTypeFormatted}`}
                         value={formatAll}
                         onChange={(checked) => {
                             setSize(checked ? 0 : get(media, 'diskSize') || 0)
@@ -415,51 +509,55 @@ export default function Format() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Prefill size to format"
-                        id="prefill-size"
-                        emptyLabel="None available"
-                        disabled={formatAll}
-                        value={prefillSize || ''}
-                        options={prefillSizeOptions || []}
-                        onChange={(value) => {
-                            setSize(value)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" sx={{ mt: 1 }}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type={formatAll ? "text" : "number"}
-                        disabled={formatAll}
-                        value={formatAll ? '' : size}
-                        inputProps={{ min: 0, style: { textAlign: 'right' } }}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        disabled={formatAll}
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
-                </Grid>
-            </Grid>
+            {!formatAll && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+                        <Grid item xs={12} lg={6}>
+                            <SelectField
+                                label="Prefill size to format"
+                                id="prefill-size"
+                                emptyLabel="None available"
+                                disabled={formatAll}
+                                value={prefillSize || ''}
+                                options={prefillSizeOptions || []}
+                                onChange={(value) => {
+                                    setSize(value)
+                                    setUnit('bytes')
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{ mt: 1 }}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={formatAll ? "text" : "number"}
+                                disabled={formatAll}
+                                value={formatAll ? '' : size}
+                                inputProps={{ min: 0, style: { textAlign: 'right' } }}
+                                onChange={(event) => setSize(event.target.value)}
+                                onKeyDown={async (event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+                                    setOpenConfirm(true)
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                disabled={formatAll}
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">

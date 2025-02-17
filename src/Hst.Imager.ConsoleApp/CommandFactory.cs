@@ -224,16 +224,28 @@
                 name: "FileSystem",
                 description: "File system to format partition(s) created.");
 
+            var assetActionOption = new Option<AssetAction>(
+                ["--asset-action"],
+                description: "Asset action for formatting (only for RDB and PiStorm).",
+                getDefaultValue: () => AssetAction.DownloadPfs3Aio);
+
+            var assetPathOption = new Option<string>(
+                ["--asset-path"],
+                description: "Path to asset file used to format (only for RDB and PiStorm).");
+
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size of disk to format.");
 
             var command = new Command("format", "Format physical drive or image file.");
             command.AddArgument(pathArgument);
             command.AddArgument(partitionTableArgument);
             command.AddArgument(fileSystemArgument);
+            command.AddOption(assetActionOption);
+            command.AddOption(assetPathOption);
             command.AddOption(sizeOption);
-            command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument, sizeOption);
+            command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument,
+                assetActionOption, assetPathOption, sizeOption);
 
             return command;
         }

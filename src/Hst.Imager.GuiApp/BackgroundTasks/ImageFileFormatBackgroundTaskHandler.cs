@@ -10,7 +10,6 @@ using System.Threading.Tasks;
 using Hst.Imager.Core.Models;
 using Hst.Imager.GuiApp.Models;
 using System;
-using Hst.Imager.GuiApp.Services;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
@@ -47,12 +46,15 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var logger = loggerFactory.CreateLogger<FormatCommand>();
                 var formatCommand = new FormatCommand(logger, loggerFactory, commandHelper, Enumerable.Empty<IPhysicalDrive>(),
                     string.Concat(formatBackgroundTask.Path, formatBackgroundTask.Byteswap ? "+bs" : string.Empty),
-                    formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem,
+                    formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem, 
+                    formatBackgroundTask.AssetAction,
+                    formatBackgroundTask.AssetPath,
+                    appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes));
 
                 var result = await formatCommand.Execute(context.Token);
 
-                await Task.Delay(1000, context.Token);
+                await Task.Delay(500, context.Token);
 
                 await progressHubContext.SendProgress(new Progress
                 {

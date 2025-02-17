@@ -28,7 +28,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            await CreateAdfDisk(testCommandHelper, imagePath);
+            await TestHelper.CreateFormattedAdfDisk(testCommandHelper, imagePath, "Amiga");
             await CreateAdfContent(testCommandHelper, imagePath);
 
             // arrange - clear active medias to avoid source and destination being reused between commands

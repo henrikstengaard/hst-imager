@@ -25,6 +25,8 @@ namespace Hst.Imager.GuiApp.Models.Requests
         [Required]
 
         public string FileSystem { get; set; }
+        public AssetAction AssetAction { get; set; }
+        public string AssetPath { get; set; }
 
         public long Size { get; set; }
 

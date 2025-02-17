@@ -17,9 +17,9 @@ namespace Hst.Imager.ConsoleApp
     using Core.Extensions;
     using Core.Models;
     using Hst.Core;
-    using Hst.Imager.Core.Commands.MbrCommands;
-    using Hst.Imager.Core.Commands.RdbCommands;
-    using Hst.Imager.Core.UaeMetadatas;
+    using Core.Commands.MbrCommands;
+    using Core.Commands.RdbCommands;
+    using Core.UaeMetadatas;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
     using Presenters;
@@ -255,10 +255,12 @@ namespace Hst.Imager.ConsoleApp
                 compatibleSize));
         }
 
-        public static async Task Format(string path, FormatType formatType, string fileSystem, string size)
+        public static async Task Format(string path, FormatType formatType, string fileSystem, AssetAction assetAction,
+            string assetPath, string size)
         {
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
-                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, ParseSize(size)));
+                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, assetAction, assetPath,
+                AppState.Instance.AppPath, ParseSize(size)));
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)

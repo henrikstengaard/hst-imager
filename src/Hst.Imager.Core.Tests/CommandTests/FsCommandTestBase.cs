@@ -219,20 +219,6 @@ public class FsCommandTestBase : CommandTestBase
 
         await Pfs3Formatter.FormatPartition(stream, partitionBlock, volumeName);
     }
-
-    protected async Task CreateAdfDisk(TestCommandHelper testCommandHelper, string path)
-    {
-        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: 0, create: true);
-        using var media = mediaResult.Value;
-        var stream = media.Stream;
-
-        stream.SetLength(FloppyDiskConstants.DoubleDensity.Size);    
-        
-        await FastFileSystemFormatter.Format(stream, FloppyDiskConstants.DoubleDensity.LowCyl,
-            FloppyDiskConstants.DoubleDensity.HighCyl, FloppyDiskConstants.DoubleDensity.ReservedBlocks,
-            FloppyDiskConstants.DoubleDensity.Heads, FloppyDiskConstants.DoubleDensity.Sectors,
-            FloppyDiskConstants.BlockSize, FloppyDiskConstants.BlockSize, Dos3DosType, "Workbench");        
-    }
     
     protected async Task CreateDos7FormattedDisk(TestCommandHelper testCommandHelper, string path,
         long diskSize = 10 * 1024 * 1024)

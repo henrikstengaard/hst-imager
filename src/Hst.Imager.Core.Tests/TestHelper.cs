@@ -9,11 +9,24 @@
     using Hst.Amiga.Extensions;
     using Hst.Amiga.FileSystems.Pfs3;
     using System.Collections.Generic;
+    using Hst.Amiga.FileSystems.FastFileSystem;
+    using Hst.Amiga;
+    using System.Text;
+    using Hst.Imager.Core.PathComponents;
 
     public static class TestHelper
     {
+        public static readonly byte[] Dos3DosType = { 0x44, 0x4f, 0x53, 0x3 };
+        public static readonly byte[] Dos7DosType = { 0x44, 0x4f, 0x53, 0x7 };
         public static readonly byte[] Pfs3DosType = { 0x50, 0x46, 0x53, 0x3 };
         public static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
+
+        public static readonly byte[] FastFileSystemDos3Bytes = new byte[]{ 0x0, 0x0, 0x03, 0xf3 }.Concat(Encoding.ASCII.GetBytes(
+            "$VER: FastFileSystem 0.1 (01/01/22) ")).ToArray();
+        public static readonly byte[] FastFileSystemDos7Bytes = new byte[]{ 0x0, 0x0, 0x03, 0xf3 }.Concat(Encoding.ASCII.GetBytes(
+            "$VER: FastFileSystem 46.13 (01/01/22)   ")).ToArray();
+        public static readonly byte[] Pfs3AioBytes = new byte[]{ 0x0, 0x0, 0x03, 0xf3 }.Concat(Encoding.ASCII.GetBytes(
+            "$VER: pfs3aio 0.1 (01/01/22)")).ToArray();
 
         public static async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path, 
             long diskSize = 10 * 1024 * 1024)
@@ -66,5 +79,57 @@
             }
         }
 
+        public static async Task CreateFormattedAdfDisk(Stream stream, string volumeName)
+        {
+            stream.SetLength(FloppyDiskConstants.DoubleDensity.Size);
+
+            await FastFileSystemFormatter.Format(stream, FloppyDiskConstants.DoubleDensity.LowCyl,
+                FloppyDiskConstants.DoubleDensity.HighCyl, FloppyDiskConstants.DoubleDensity.ReservedBlocks,
+                FloppyDiskConstants.DoubleDensity.Heads, FloppyDiskConstants.DoubleDensity.Sectors,
+                FloppyDiskConstants.BlockSize, FloppyDiskConstants.BlockSize, Dos3DosType, volumeName);
+        }
+
+        public static async Task CreateFormattedAdfDisk(TestCommandHelper testCommandHelper, string adfPath, string volumeName)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(adfPath, size: 0, create: true);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+
+            await CreateFormattedAdfDisk(stream, volumeName);
+        }
+
+        public static async Task AddFileToAdf(Stream stream, string filePath, byte[] fileData)
+        {
+            await using var ffsVolume = await FastFileSystemVolume.MountAdf(stream);
+
+            var pathSegments = MediaPath.AmigaOsPath.Split(filePath);
+
+            for(var i = 0; i < pathSegments.Length - 1; i++)
+            {
+                await ffsVolume.CreateDirectory(pathSegments[i]);
+                await ffsVolume.ChangeDirectory(pathSegments[i]);
+            }
+
+            await ffsVolume.CreateFile(pathSegments[^1], true);
+            using var fileStream = await ffsVolume.OpenFile(pathSegments[^1], Amiga.FileSystems.FileMode.Append);
+            await fileStream.WriteBytes(fileData);
+        }
+
+        public static void DeletePaths(params string[] paths)
+        {
+            foreach (var path in paths)
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                    continue;
+                }
+
+                if (System.IO.Directory.Exists(path))
+                {
+                    System.IO.Directory.Delete(path, true);
+                }
+            }
+        }
     }
 }

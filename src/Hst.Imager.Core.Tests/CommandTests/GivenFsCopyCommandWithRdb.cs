@@ -1024,6 +1024,76 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
     }
 
+    [Fact]
+    public async Task When_CopyFilesFromRdbToLocalDirectoryWithWhitespaceAndUaeFsDb_Then_FileAreRenamedAndUaeMetadataIsWritten()
+    {
+        var srcPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = $"{Guid.NewGuid()}-local";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create destination disk image file
+            await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+
+            // create directory and files
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(srcPath);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            using (var pfs3Volume = await MountPfs3Volume(stream))
+            {
+                await pfs3Volume.CreateDirectory("dir1");
+                await pfs3Volume.ChangeDirectory("dir1");
+                await pfs3Volume.CreateFile("   ");
+                await pfs3Volume.CreateFile("      ");
+            }
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert - dest dir contains dirs
+            var dirs = Directory.GetDirectories(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(dirs);
+            Assert.Equal([Path.Combine(destPath, "dir1")], dirs);
+
+            // assert - dest dir contains files
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(files);
+            Assert.Equal([
+                Path.Combine(destPath, "dir1", "__uae______"),
+                Path.Combine(destPath, "dir1", "__uae_________"),
+                Path.Combine(destPath, "dir1", "_UAEFSDB.___"),
+            ], files);
+
+            // assert - uaefsdb in dir 1 contains files
+            var uaeFsDbPath = Path.Combine(destPath, "dir1", "_UAEFSDB.___");
+            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
+            var normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
+            Assert.Equal(new[] { "   ", "      " }, amigaNames);
+            Assert.Equal(new[] { "__uae______", "__uae_________" }, normalNames);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+
     private static async Task<IEnumerable<UaeFsDbNode>> ReadUaeFsDbNodes(string uaeFsDbPath)
     {
         var uaeFsDbBytes = await File.ReadAllBytesAsync(uaeFsDbPath);

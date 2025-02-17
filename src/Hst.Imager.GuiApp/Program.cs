@@ -99,7 +99,7 @@ namespace Hst.Imager.GuiApp
             }
             finally
             {
-                Log.CloseAndFlush();
+                await Log.CloseAndFlushAsync();
             }
         }
 

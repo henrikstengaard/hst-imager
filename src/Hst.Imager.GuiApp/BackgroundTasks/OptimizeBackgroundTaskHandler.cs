@@ -60,7 +60,7 @@
                     return;
                 }
 
-                await Task.Delay(1000, context.Token);
+                await Task.Delay(500, context.Token);
 
                 await progressHubContext.SendProgress(new Progress
                 {

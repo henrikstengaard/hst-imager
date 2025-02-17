@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.ConsoleApp
+﻿using System.IO;
+using System.Linq;
+
+namespace Hst.Imager.ConsoleApp
 {
     using System;
     using System.Reflection;
@@ -10,6 +13,7 @@
         private static readonly Lazy<AppState> AppStateInstance = new(() => new AppState(),
             LazyThreadSafetyMode.ExecutionAndPublication);
 
+        public readonly string AppPath;
         public readonly LoggingLevelSwitch LoggingLevelSwitch;
         public readonly Version Version;
         public readonly DateTime BuildDate;
@@ -19,6 +23,11 @@
             LoggingLevelSwitch = new LoggingLevelSwitch();
             
             var assembly = Assembly.GetExecutingAssembly();
+            var executingFile = Environment.GetCommandLineArgs().FirstOrDefault();
+            
+            AppPath = string.IsNullOrEmpty(executingFile)
+                ? Directory.GetCurrentDirectory()
+                : Path.GetDirectoryName(executingFile);
             Version = assembly.GetName().Version;
             BuildDate = GetBuildDate(assembly);
         }

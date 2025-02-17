@@ -54,12 +54,15 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var formatCommand = new FormatCommand(loggerFactory.CreateLogger<FormatCommand>(), loggerFactory,
                     commandHelper, physicalDrives,
                     string.Concat(formatBackgroundTask.Path, formatBackgroundTask.Byteswap ? "+bs" : string.Empty),
-                    formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem,
+                    formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem, 
+                    formatBackgroundTask.AssetAction,
+                    formatBackgroundTask.AssetPath,
+                    appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes));
 
                 var result = await formatCommand.Execute(context.Token);
 
-                await Task.Delay(1000, context.Token);
+                await Task.Delay(500, context.Token);
 
                 await progressHubConnection.UpdateProgress(new Progress
                 {

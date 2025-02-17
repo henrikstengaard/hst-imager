@@ -79,6 +79,7 @@ namespace Hst.Imager.GuiApp
             services.AddSingleton(new AppState
             {
                 AppPath = AppContext.BaseDirectory,
+                AppDataPath = ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName),
                 LogsPath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName), "logs"),
                 ExecutingFile = WorkerHelper.GetExecutingFile(),
                 IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(Core.Models.Constants.AppName),

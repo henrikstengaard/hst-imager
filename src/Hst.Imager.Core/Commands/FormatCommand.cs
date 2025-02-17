@@ -11,7 +11,9 @@ using Hst.Core.Extensions;
 using System.IO;
 using Hst.Imager.Core.Commands.GptCommands;
 using System;
+using Hst.Amiga.VersionStrings;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.FileSystems;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -24,15 +26,32 @@ namespace Hst.Imager.Core.Commands
         private readonly string path;
         private readonly FormatType formatType;
         private readonly string fileSystem;
+        private AssetAction assetAction;
+        private string assetPath;
+        private readonly string outputPath;
         private readonly Size size;
 
         private const long WorkbenchPartitionSize = 1000000000;
         private const long WorkPartitionSize = 64000000000;
         private const long PiStormBootPartitionSize = 1000000000;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="logger"></param>
+        /// <param name="loggerFactory"></param>
+        /// <param name="commandHelper"></param>
+        /// <param name="physicalDrives"></param>
+        /// <param name="path"></param>
+        /// <param name="formatType"></param>
+        /// <param name="fileSystem">File system to format.</param>
+        /// <param name="assetAction"></param>
+        /// <param name="assetPath">Path to asset file used to format.</param>
+        /// <param name="outputPath">Output path to write file system from media.</param>
+        /// <param name="size"></param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
-            Size size)
+            AssetAction assetAction, string assetPath, string outputPath, Size size)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -41,30 +60,62 @@ namespace Hst.Imager.Core.Commands
             this.path = path;
             this.formatType = formatType;
             this.fileSystem = fileSystem;
+            this.assetAction = string.IsNullOrWhiteSpace(assetPath) ? assetAction : AssetAction.None;
+            this.assetPath = assetPath;
+            this.outputPath = outputPath;
             this.size = size;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
         {
             var gptFileSystem = FormatGptFileSystem.Fat32;
-            if (formatType == FormatType.Gpt && !Enum.TryParse<FormatGptFileSystem>(fileSystem, true, out gptFileSystem))
+            if (formatType == FormatType.Gpt && !Enum.TryParse(fileSystem, true, out gptFileSystem))
             {
                 return new Result(new Error($"Unsupported Guid Partition Table file system '{fileSystem}'"));
             }
 
             var mbrFileSystem = FormatMbrFileSystem.Fat32;
-            if (formatType == FormatType.Mbr && !Enum.TryParse<FormatMbrFileSystem>(fileSystem, true, out mbrFileSystem))
+            if (formatType == FormatType.Mbr && !Enum.TryParse(fileSystem, true, out mbrFileSystem))
             {
                 return new Result(new Error($"Unsupported Master Boot Record file system '{fileSystem}'"));
             }
 
             var rdbFileSystem = FormatRdbFileSystem.Pds3;
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
-                !Enum.TryParse<FormatRdbFileSystem>(fileSystem, true, out rdbFileSystem))
+            if (formatType is FormatType.Rdb or FormatType.PiStorm &&
+                !Enum.TryParse(fileSystem, true, out rdbFileSystem))
             {
                 return new Result(new Error($"Unsupported Rigid Disk Block file system '{fileSystem}'"));
             }
 
+            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+                    (rdbFileSystem == FormatRdbFileSystem.Dos3 || rdbFileSystem == FormatRdbFileSystem.Dos7))
+            {
+                assetAction = AssetAction.None;
+
+                if (string.IsNullOrWhiteSpace(assetPath))
+                {
+                    return new Result(new Error($"Assert path required for file system '{rdbFileSystem.ToString().ToUpper()}'"));
+                }
+
+                if (!await MediaPathExists(assetPath))
+                {
+                    return new Result(new Error($"Assert path '{assetPath}' not found"));
+                }
+            }
+
+            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+                assetAction == AssetAction.DownloadPfs3Aio)
+            {
+                var pfs3AioLhaPath = Path.Combine(outputPath, Pfs3AioFileSystemHelper.Pfs3AioLhaFilename);
+
+                if (!File.Exists(pfs3AioLhaPath))
+                {
+                    OnInformationMessage($"Downloading '{Pfs3AioFileSystemHelper.Pfs3AioLhaFilename}' from url '{Pfs3AioFileSystemHelper.Pfs3AioLhaUrl}'");
+                }
+
+                assetPath = await Pfs3AioFileSystemHelper.DownloadPfs3AioLha(outputPath);
+            }
+            
             OnInformationMessage($"Formatting '{path}'");
 
             OnDebugMessage($"Opening '{path}' as writable");
@@ -76,7 +127,7 @@ namespace Hst.Imager.Core.Commands
                 return new Result(mediaResult.Error);
             }
 
-            var diskSize = 0L;
+            long diskSize;
 
             using (var media = mediaResult.Value)
             {
@@ -84,7 +135,7 @@ namespace Hst.Imager.Core.Commands
                     ? diskMedia.Disk
                     : new Disk(media.Stream, Ownership.None);
 
-                using var stream = media.Stream;
+                await using var stream = media.Stream;
 
                 diskSize = media.Size;
 
@@ -100,15 +151,9 @@ namespace Hst.Imager.Core.Commands
                 var emptyPartitionTableData = new byte[diskSize < 10.MB().ToSectorSize() ? diskSize : 10.MB().ToSectorSize()];
                 var emptyPartitionTableStream = new MemoryStream(emptyPartitionTableData);
 
-                var isVhd = commandHelper.IsVhd(path);
                 var streamCopier = new StreamCopier();
-                await streamCopier.Copy(token, emptyPartitionTableStream, disk.Content, emptyPartitionTableData.Length, 0, 0, isVhd);
-            }
-
-            mediaResult = await commandHelper.GetWritableMedia(physicalDrivesList, path);
-            if (mediaResult.IsFaulted)
-            {
-                return new Result(mediaResult.Error);
+                await streamCopier.Copy(token, emptyPartitionTableStream, disk.Content, 
+                    emptyPartitionTableData.Length, 0, 0);
             }
 
             switch (formatType)
@@ -118,12 +163,54 @@ namespace Hst.Imager.Core.Commands
                 case FormatType.Gpt:
                     return await FormatGptDisk(diskSize, gptFileSystem, token);
                 case FormatType.Rdb:
-                    return await FormatRdbDisk(diskSize, path, 0, token);
+                    return await FormatRdbDisk(diskSize, rdbFileSystem, path, 0, token);
                 case FormatType.PiStorm:
-                    return await FormatPiStormDisk(diskSize, token);
+                    return await FormatPiStormDisk(diskSize, rdbFileSystem, token);
                 default:
                     return new Result(new Error($"Unsupported format type '{formatType}'"));
             }
+        }
+
+        private async Task<bool> MediaPathExists(string mediaPath)
+        {
+            var mediaResult = await commandHelper.GetReadableFileMedia(mediaPath);
+            if (mediaResult.IsFaulted)
+            {
+                return false;
+            }
+
+            using var media = mediaResult.Value;
+
+            return true;
+        }
+
+        private async Task<Result<string>> PrepareFileSystem(FormatRdbFileSystem rdbFileSystem)
+        {
+            var fileSystemName = GetFileSystemName(rdbFileSystem);
+
+            var fileSystemPath = Path.Combine(outputPath, fileSystemName);
+
+            if (Path.Exists(fileSystemPath))
+            {
+                File.Delete(fileSystemPath);
+            }
+            
+            var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
+                assetPath, fileSystemName, outputPath);
+
+            return findFileSystemInMediaResult.IsFaulted
+                ? new Result<string>(findFileSystemInMediaResult.Error)
+                : new Result<string>(Path.Exists(fileSystemPath) ? fileSystemPath : null);
+        }
+        
+        private static string GetFileSystemName(FormatRdbFileSystem formatRdbFileSystem)
+        {
+            return formatRdbFileSystem switch
+            {
+                FormatRdbFileSystem.Dos3 or FormatRdbFileSystem.Dos7 => "FastFileSystem",
+                FormatRdbFileSystem.Pfs3 or FormatRdbFileSystem.Pds3 => "pfs3aio",
+                _ => throw new ArgumentOutOfRangeException(nameof(formatRdbFileSystem), formatRdbFileSystem, null)
+            };
         }
 
         private async Task<Result> FormatMbrDisk(long diskSize, FormatMbrFileSystem mbrFileSystem, 
@@ -189,7 +276,8 @@ namespace Hst.Imager.Core.Commands
 
             var gptPartType = GetGptPartType(gptFileSystem);
 
-            var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(), commandHelper, physicalDrives,
+            var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(),
+                commandHelper, physicalDrives,
                 path, 1, gptPartType, "Empty");
             AddMessageEvents(gptPartFormatCommand);
 
@@ -207,17 +295,62 @@ namespace Hst.Imager.Core.Commands
             };
         }
 
-        private async Task<Result<int>> FormatRdbDisk(long diskSize, string rdbPath, int partitionNumber, CancellationToken cancellationToken)
-        {
-            var pfs3AioPath = "pfs3aio";
+        private static bool HasFastFileSystem2GbLimit(int version) => version < 45;
 
-            if (!File.Exists(pfs3AioPath))
+        private static bool HasFastFileSystemDos7Support(int version, int revision)
+        {
+            if (version > 46)
             {
-                return new Result<int>(new Error("Pfs3 filesystem file 'pfs3aio' not found"));
+                return true;
+            }
+            
+            return revision >= 13;
+        }
+
+        private async Task<Result<int>> FormatRdbDisk(long diskSize,
+            FormatRdbFileSystem formatRdbFileSystem, string rdbPath, int partitionNumber, CancellationToken cancellationToken)
+        {
+            var fileSystemPathResult = await PrepareFileSystem(formatRdbFileSystem);
+            if (fileSystemPathResult.IsFaulted)
+            {
+                return new Result<int>(fileSystemPathResult.Error);
             }
 
-            var rdbFileSystem = "PDS3";
+            var dosType = formatRdbFileSystem.ToString().ToUpper();
+            var fileSystemPath = fileSystemPathResult.Value;
 
+            if (string.IsNullOrEmpty(fileSystemPath))
+            {
+                return new Result<int>(new Error($"No '{dosType}' file system not found in asset path '{assetPath}'"));
+            }
+            
+            // read version string from file system path
+            var versionString = VersionStringReader.Read(await File.ReadAllBytesAsync(fileSystemPath, cancellationToken));
+            var amigaVersion = string.IsNullOrWhiteSpace(versionString)
+                ? null
+                : VersionStringReader.Parse(versionString);
+
+            var optimalWorkbenchPartitionSize = WorkbenchPartitionSize;
+            var optimalWorkPartitionSize = WorkPartitionSize;
+            
+            // change dos type to dos3, if fast file system doesn't support dos7 (version 46.13 or higher)
+            if (amigaVersion != null &&
+                dosType.Equals("DOS7", StringComparison.OrdinalIgnoreCase) &&
+                !HasFastFileSystemDos7Support(amigaVersion.Version, amigaVersion.Revision))
+            {
+                dosType = "DOS3";
+            }
+            
+            // change partition sizes, if fast file system has 2gb limit (version 45 or lower)
+            if (amigaVersion != null &&
+                (dosType.Equals("DOS3", StringComparison.OrdinalIgnoreCase) || 
+                 dosType.Equals("DOS7", StringComparison.OrdinalIgnoreCase)) &&
+                HasFastFileSystem2GbLimit(amigaVersion.Version))
+            {
+                optimalWorkbenchPartitionSize = 500.MB();
+                optimalWorkPartitionSize = 2.GB();
+            }
+            
             // init rdb
             var rdbInitCommand = new RdbInitCommand(loggerFactory.CreateLogger<RdbInitCommand>(), commandHelper, physicalDrives,
                 rdbPath, "HstImager", size, string.Empty, 0);
@@ -231,7 +364,7 @@ namespace Hst.Imager.Core.Commands
 
             // add pfs3 filesystem
             var rdbFsAddCommand = new RdbFsAddCommand(loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper, physicalDrives,
-                rdbPath, pfs3AioPath, rdbFileSystem, string.Empty, null, null);
+                rdbPath, fileSystemPath, dosType, string.Empty, null, null);
             AddMessageEvents(rdbFsAddCommand);
 
             var rdbFsAddResult = await rdbFsAddCommand.Execute(cancellationToken);
@@ -251,12 +384,14 @@ namespace Hst.Imager.Core.Commands
             if (partitionNumber == 0)
             {
                 hasWorkbenchPartition = true;
-                var size = new Size(diskSize - 5.MB() > WorkbenchPartitionSize ? WorkbenchPartitionSize : 0, Unit.Bytes);
+                var partitionSize = new Size(diskSize - 5.MB() > optimalWorkbenchPartitionSize
+                    ? optimalWorkbenchPartitionSize
+                    : 0, Unit.Bytes);
 
                 // add workbench partition
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
-                physicalDrives, rdbPath, partitionName, rdbFileSystem, size, null, null, null, 0x1fe00, null, false, true, null, 512);
+                physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null, 0x1fe00, null, false, true, null, 512);
                 AddMessageEvents(rdbPartAddCommand);
 
                 rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationToken);
@@ -267,7 +402,7 @@ namespace Hst.Imager.Core.Commands
 
                 // format workbench partition
                 rdbPartFormatCommand = new RdbPartFormatCommand(loggerFactory.CreateLogger<RdbPartFormatCommand>(), commandHelper,
-                physicalDrives, rdbPath, 1, "Workbench", false, string.Empty, rdbFileSystem);
+                physicalDrives, rdbPath, 1, "Workbench", false, string.Empty, dosType);
                 AddMessageEvents(rdbPartFormatCommand);
 
                 rdbPartFormatResult = await rdbPartFormatCommand.Execute(cancellationToken);
@@ -280,27 +415,27 @@ namespace Hst.Imager.Core.Commands
             }
 
             // return, if no space left for work partitions
-            var hasWorkPartitions = diskSize - 50.MB() > WorkbenchPartitionSize;
+            var hasWorkPartitions = diskSize - 50.MB() > optimalWorkbenchPartitionSize;
             if (!hasWorkPartitions)
             {
                 return new Result<int>(partitionNumber);
             }
 
             // calculate work partition count and size
-            var workPartitionCount = diskSize > WorkPartitionSize
-                ? Convert.ToInt32(Math.Ceiling((double)diskSize / WorkPartitionSize))
+            var workPartitionCount = diskSize > optimalWorkPartitionSize
+                ? Convert.ToInt32(Math.Ceiling((double)diskSize / optimalWorkPartitionSize))
                 : 1;
             var workPartitionSize = diskSize / workPartitionCount;
 
             // add work partitions
             for (var i = 0; i < workPartitionCount; i++)
             {
-                var size = new Size(i < workPartitionCount - 1 ? workPartitionSize : 0, Unit.Bytes);
+                var partitionSize = new Size(i < workPartitionCount - 1 ? workPartitionSize : 0, Unit.Bytes);
 
                 // add work partition
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
-                    physicalDrives, rdbPath, partitionName, rdbFileSystem, size, null, null, null,
+                    physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null,
                     0x1fe00, null, false, false, null, 512);
                 AddMessageEvents(rdbPartAddCommand);
 
@@ -311,9 +446,13 @@ namespace Hst.Imager.Core.Commands
                 }
 
                 // format work partition
-                rdbPartFormatCommand = new RdbPartFormatCommand(loggerFactory.CreateLogger<RdbPartFormatCommand>(), commandHelper,
+                rdbPartFormatCommand = new RdbPartFormatCommand(loggerFactory.CreateLogger<RdbPartFormatCommand>(),
+                    commandHelper,
                     physicalDrives, rdbPath, i + 1 + (hasWorkbenchPartition ? 1 : 0),
-                    $"Work{(partitionNumber >= 2 ? partitionNumber.ToString() : string.Empty)}", false, string.Empty, rdbFileSystem);
+                    $"Work{(partitionNumber >= 2 ? partitionNumber.ToString() : string.Empty)}",
+                    false,
+                    string.Empty,
+                    dosType);
                 AddMessageEvents(rdbPartFormatCommand);
 
                 rdbPartFormatResult = await rdbPartFormatCommand.Execute(cancellationToken);
@@ -328,15 +467,9 @@ namespace Hst.Imager.Core.Commands
             return new Result<int>(partitionNumber);
         }
 
-        private async Task<Result> FormatPiStormDisk(long diskSize, CancellationToken cancellationToken)
+        private async Task<Result> FormatPiStormDisk(long diskSize,
+            FormatRdbFileSystem formatRdbFileSystem, CancellationToken cancellationToken)
         {
-            var pfs3AioPath = "pfs3aio";
-
-            if (!File.Exists(pfs3AioPath))
-            {
-                return new Result(new Error("Pfs3 filesystem file 'pfs3aio' not found"));
-            }
-
             var mbrInitCommand = new MbrInitCommand(loggerFactory.CreateLogger<MbrInitCommand>(), commandHelper, physicalDrives, path);
             AddMessageEvents(mbrInitCommand);
 
@@ -418,9 +551,10 @@ namespace Hst.Imager.Core.Commands
                     return new Result(mbrPartAddResult.Error);
                 }
 
-                //
+                // format pistorm mbr partition
                 var piStormRdbPath = Path.Combine(path, "mbr", (i + 2).ToString());
-                var formatRdbDiskResult = await FormatRdbDisk(partitionSize, piStormRdbPath, rdbPartitionNumber, cancellationToken);
+                var formatRdbDiskResult = await FormatRdbDisk(partitionSize, formatRdbFileSystem,
+                    piStormRdbPath, rdbPartitionNumber, cancellationToken);
                 if (formatRdbDiskResult.IsFaulted)
                 {
                     return new Result(formatRdbDiskResult.Error);

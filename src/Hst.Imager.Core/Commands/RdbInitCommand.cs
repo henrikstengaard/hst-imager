@@ -10,6 +10,7 @@
     using Hst.Core;
     using Hst.Core.Extensions;
     using Hst.Imager.Core.Helpers;
+    using Hst.Imager.Core.Models;
     using Microsoft.Extensions.Logging;
     using Size = Models.Size;
 
@@ -76,13 +77,12 @@
             }
 
             using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, writableMediaResult.Value, path);
-            var stream = media.Stream;
 
             OnDebugMessage("Initializing Rigid Disk Block");
 
             var defaultName = media.IsPhysicalDrive ? media.Model : Path.GetFileNameWithoutExtension(media.Model);
 
-            var diskSize = stream.Length;
+            var diskSize = media is DiskMedia diskMedia ? diskMedia.Size : media.Stream.Length;
             var rigidDiskBlockSize = diskSize.ResolveSize(size).ToSectorSize();
 
             OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
@@ -91,7 +91,7 @@
                 ? CreateFromDiskGeometry(rdbDiskGeometry)
                 : RigidDiskBlock.Create(rigidDiskBlockSize);
 
-            if (rigidDiskBlock.DiskSize > stream.Length)
+            if (rigidDiskBlock.DiskSize > diskSize)
             {
                 return new Result(new Error($"Invalid Rigid Disk Block size '{rigidDiskBlock.DiskSize}' is larger than disk size '{diskSize}'"));
             }
