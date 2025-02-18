@@ -4,8 +4,8 @@ blank 1gb.vhd 1gb
 # initialize rigid disk block for entire disk
 rdb init 1gb.vhd
 
-# add rdb file system pfs3aio with dos type PDS3
-rdb fs add 1gb.vhd pfs3aio PDS3
+# import rdb file system pfs3aio with dos type PDS3 from aminet.net
+rdb fs import 1gb.vhd https://aminet.net/disk/misc/pfs3aio.lha --dos-type PDS3 --name pfs3aio
 
 # add rdb partition of 100mb with device name "DH0" and set bootable
 rdb part add 1gb.vhd DH0 PDS3 100mb --bootable

@@ -4,8 +4,8 @@ blank 32gb.vhd 32000000000 --compatible
 # initialize rigid disk block
 rdb init 32gb.vhd
 
-# add rdb file system pfs3aio with dos type PDS3
-rdb fs add 32gb.vhd pfs3aio PDS3
+# import rdb file system pfs3aio with dos type PDS3 from aminet.net
+rdb fs import 32gb.vhd https://aminet.net/disk/misc/pfs3aio.lha --dos-type PDS3 --name pfs3aio
 
 # add rdb partition of 500mb with device name "DH0" and set bootable
 rdb part add 32gb.vhd DH0 PDS3 500mb --bootable

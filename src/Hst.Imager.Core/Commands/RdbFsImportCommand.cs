@@ -11,6 +11,7 @@ using Amiga.VersionStrings;
 using Extensions;
 using Hst.Core;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using BlockHelper = Amiga.RigidDiskBlocks.BlockHelper;
@@ -23,11 +24,12 @@ public class RdbFsImportCommand : CommandBase
     private readonly string path;
     private readonly string dosType;
     private readonly string fileSystemName;
-    private readonly string fileSystemPath;
+    private string fileSystemPath;
+    private readonly string outputPath;
 
     public RdbFsImportCommand(ILogger<RdbFsImportCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string path, string fileSystemPath, string dosType,
-        string fileSystemName)
+        string fileSystemName, string outputPath)
     {
         this.logger = logger;
         this.commandHelper = commandHelper;
@@ -36,6 +38,7 @@ public class RdbFsImportCommand : CommandBase
         this.fileSystemPath = fileSystemPath;
         this.dosType = dosType;
         this.fileSystemName = fileSystemName;
+        this.outputPath = outputPath;
     }
 
     public override async Task<Result> Execute(CancellationToken token)
@@ -45,7 +48,14 @@ public class RdbFsImportCommand : CommandBase
             return new Result(new Error("DOS type must be 4 characters"));
         }
 
-        OnDebugMessage($"Finding file system from path '{fileSystemPath}'");
+        if (fileSystemPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+        {
+            OnInformationMessage($"Downloading file system from url '{fileSystemPath}'");
+
+            fileSystemPath = await FileSystemHelper.DownloadFile(fileSystemPath, outputPath, System.IO.Path.GetFileName(fileSystemPath));
+        }
+
+        OnInformationMessage($"Finding file system from path '{fileSystemPath}'");
 
         var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
             fileSystemPath, fileSystemName);

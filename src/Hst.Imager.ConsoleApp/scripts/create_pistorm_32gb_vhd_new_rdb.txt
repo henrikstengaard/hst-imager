@@ -22,8 +22,8 @@ mbr part format pistorm_32gb.vhd 1 BOOT
 # initialize rigid disk block
 rdb init pistorm_32gb.vhd\mbr\2 --name PiStorm
 
-# add rdb file system pfs3aio with dos type PDS3
-rdb fs add pistorm_32gb.vhd\mbr\2 pfs3aio PDS3
+# import rdb file system pfs3aio with dos type PDS3 from aminet.net
+rdb fs import pistorm_32gb.vhd\mbr\2 https://aminet.net/disk/misc/pfs3aio.lha --dos-type PDS3 --name pfs3aio
 
 # add rdb partition of 500mb with device name "DH0" and set bootable
 rdb part add pistorm_32gb.vhd\mbr\2 DH0 PDS3 500mb --bootable

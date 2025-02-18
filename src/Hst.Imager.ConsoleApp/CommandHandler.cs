@@ -416,7 +416,7 @@ namespace Hst.Imager.ConsoleApp
         public static async Task RdbFsImport(string path, string fileSystemPath, string dosType, string fileSystemName)
         {
             await Execute(new RdbFsImportCommand(GetLogger<RdbFsImportCommand>(), GetCommandHelper(),
-                await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName));
+                await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName, AppState.Instance.AppPath));
         }
 
         public static async Task RdbFsExport(string path, int fileSystemNumber, string fileSystemPath)

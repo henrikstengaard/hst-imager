@@ -4,8 +4,8 @@ blank 16gb.vhd 16000000000 --compatible
 # initialize rigid disk block of size 12gb at sector 2
 rdb init 16gb.vhd --size 13gb --rdb-block-lo 2
 
-# add rdb file system pfs3aio with dos type PDS3
-rdb fs add 16gb.vhd pfs3aio PDS3
+# import rdb file system pfs3aio with dos type PDS3 from aminet.net
+rdb fs import 16gb.vhd https://aminet.net/disk/misc/pfs3aio.lha --dos-type PDS3 --name pfs3aio
 
 # add rdb partition of 500mb with device name "DH0" and set bootable
 rdb part add 16gb.vhd DH0 PDS3 500mb --bootable

@@ -106,14 +106,14 @@ namespace Hst.Imager.Core.Commands
             if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
                 assetAction == AssetAction.DownloadPfs3Aio)
             {
-                var pfs3AioLhaPath = Path.Combine(outputPath, Pfs3AioFileSystemHelper.Pfs3AioLhaFilename);
+                var pfs3AioLhaPath = Path.Combine(outputPath, FileSystemHelper.Pfs3AioLhaFilename);
 
                 if (!File.Exists(pfs3AioLhaPath))
                 {
-                    OnInformationMessage($"Downloading '{Pfs3AioFileSystemHelper.Pfs3AioLhaFilename}' from url '{Pfs3AioFileSystemHelper.Pfs3AioLhaUrl}'");
+                    OnInformationMessage($"Downloading '{FileSystemHelper.Pfs3AioLhaFilename}' from url '{FileSystemHelper.Pfs3AioLhaUrl}'");
                 }
 
-                assetPath = await Pfs3AioFileSystemHelper.DownloadPfs3AioLha(outputPath);
+                assetPath = await FileSystemHelper.DownloadPfs3AioLha(outputPath);
             }
             
             OnInformationMessage($"Formatting '{path}'");
