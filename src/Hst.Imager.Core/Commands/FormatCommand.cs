@@ -184,8 +184,12 @@ namespace Hst.Imager.Core.Commands
             return true;
         }
 
-        private async Task<Result<string>> PrepareFileSystem(FormatRdbFileSystem rdbFileSystem)
+        private async Task<Result<string>> PrepareRdbFileSystem(FormatRdbFileSystem rdbFileSystem)
         {
+            var dosType = rdbFileSystem.ToString().ToUpper();
+
+            OnInformationMessage($"Preparing Rigid Disk Block file system '{dosType}' at path '{outputPath}'");
+
             var fileSystemName = GetFileSystemName(rdbFileSystem);
 
             var fileSystemPath = Path.Combine(outputPath, fileSystemName);
@@ -198,9 +202,14 @@ namespace Hst.Imager.Core.Commands
             var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
                 assetPath, fileSystemName, outputPath);
 
-            return findFileSystemInMediaResult.IsFaulted
-                ? new Result<string>(findFileSystemInMediaResult.Error)
-                : new Result<string>(Path.Exists(fileSystemPath) ? fileSystemPath : null);
+            if (findFileSystemInMediaResult.IsFaulted)
+            {
+                new Result<string>(findFileSystemInMediaResult.Error);
+            }
+
+            OnInformationMessage($"Prepared '{findFileSystemInMediaResult.Value}' for Rigid Disk Block file system '{dosType}'");
+
+            return new Result<string>(Path.Exists(fileSystemPath) ? fileSystemPath : null);
         }
         
         private static string GetFileSystemName(FormatRdbFileSystem formatRdbFileSystem)
@@ -310,7 +319,7 @@ namespace Hst.Imager.Core.Commands
         private async Task<Result<int>> FormatRdbDisk(long diskSize,
             FormatRdbFileSystem formatRdbFileSystem, string rdbPath, int partitionNumber, CancellationToken cancellationToken)
         {
-            var fileSystemPathResult = await PrepareFileSystem(formatRdbFileSystem);
+            var fileSystemPathResult = await PrepareRdbFileSystem(formatRdbFileSystem);
             if (fileSystemPathResult.IsFaulted)
             {
                 return new Result<int>(fileSystemPathResult.Error);
@@ -330,14 +339,16 @@ namespace Hst.Imager.Core.Commands
                 ? null
                 : VersionStringReader.Parse(versionString);
 
-            var optimalWorkbenchPartitionSize = WorkbenchPartitionSize;
-            var optimalWorkPartitionSize = WorkPartitionSize;
+            var maxWorkbenchPartitionSize = WorkbenchPartitionSize;
+            var maxWorkPartitionSize = WorkPartitionSize;
             
             // change dos type to dos3, if fast file system doesn't support dos7 (version 46.13 or higher)
             if (amigaVersion != null &&
                 dosType.Equals("DOS7", StringComparison.OrdinalIgnoreCase) &&
                 !HasFastFileSystemDos7Support(amigaVersion.Version, amigaVersion.Revision))
             {
+                OnInformationMessage($"File system '{fileSystemPath}' with v{amigaVersion.Version}.{amigaVersion.Revision} doesn't support DOS7. File system is changed to DOS3, use FastFileSystem from AmigaOS 3.1.4 or newer for DOS7 support!");
+
                 dosType = "DOS3";
             }
             
@@ -347,8 +358,10 @@ namespace Hst.Imager.Core.Commands
                  dosType.Equals("DOS7", StringComparison.OrdinalIgnoreCase)) &&
                 HasFastFileSystem2GbLimit(amigaVersion.Version))
             {
-                optimalWorkbenchPartitionSize = 500.MB();
-                optimalWorkPartitionSize = 2.GB();
+                OnInformationMessage($"File system '{fileSystemPath}' with v{amigaVersion.Version}.{amigaVersion.Revision} doesn't partitions larger than 2GB. Max partition size is changed to 2GB, use FastFileSystem from AmigaOS 3.1.4 or newer for larger partitions!");
+
+                maxWorkbenchPartitionSize = 500.MB();
+                maxWorkPartitionSize = 2.GB();
             }
             
             // init rdb
@@ -384,8 +397,8 @@ namespace Hst.Imager.Core.Commands
             if (partitionNumber == 0)
             {
                 hasWorkbenchPartition = true;
-                var partitionSize = new Size(diskSize - 5.MB() > optimalWorkbenchPartitionSize
-                    ? optimalWorkbenchPartitionSize
+                var partitionSize = new Size(diskSize - 5.MB() > maxWorkbenchPartitionSize
+                    ? maxWorkbenchPartitionSize
                     : 0, Unit.Bytes);
 
                 // add workbench partition
@@ -415,15 +428,15 @@ namespace Hst.Imager.Core.Commands
             }
 
             // return, if no space left for work partitions
-            var hasWorkPartitions = diskSize - 50.MB() > optimalWorkbenchPartitionSize;
+            var hasWorkPartitions = diskSize - 50.MB() > maxWorkbenchPartitionSize;
             if (!hasWorkPartitions)
             {
                 return new Result<int>(partitionNumber);
             }
 
             // calculate work partition count and size
-            var workPartitionCount = diskSize > optimalWorkPartitionSize
-                ? Convert.ToInt32(Math.Ceiling((double)diskSize / optimalWorkPartitionSize))
+            var workPartitionCount = diskSize > maxWorkPartitionSize
+                ? Convert.ToInt32(Math.Ceiling((double)diskSize / maxWorkPartitionSize))
                 : 1;
             var workPartitionSize = diskSize / workPartitionCount;
 
