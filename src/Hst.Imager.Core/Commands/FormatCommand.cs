@@ -198,16 +198,28 @@ namespace Hst.Imager.Core.Commands
             {
                 File.Delete(fileSystemPath);
             }
-            
+
             var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
-                assetPath, fileSystemName, outputPath);
+                assetPath, fileSystemName);
 
             if (findFileSystemInMediaResult.IsFaulted)
             {
-                new Result<string>(findFileSystemInMediaResult.Error);
+                return new Result<string>(findFileSystemInMediaResult.Error);
             }
 
-            OnInformationMessage($"Prepared '{findFileSystemInMediaResult.Value}' for Rigid Disk Block file system '{dosType}'");
+            var fileSystem = findFileSystemInMediaResult.Value;
+
+            var fileSystemMediaResult = await commandHelper.GetWritableFileMedia(
+                Path.Combine(outputPath, fileSystem.Item1), create: true);
+            if (fileSystemMediaResult.IsFaulted)
+            {
+                return new Result<string>(fileSystemMediaResult.Error);
+            }
+
+            using var fileSystemMedia = fileSystemMediaResult.Value;
+            await fileSystemMedia.Stream.WriteBytes(fileSystem.Item2);
+
+            OnInformationMessage($"Prepared '{fileSystem.Item1}' for Rigid Disk Block file system '{dosType}'");
 
             return new Result<string>(Path.Exists(fileSystemPath) ? fileSystemPath : null);
         }

@@ -21,7 +21,6 @@ namespace Hst.Imager.Core.Tests.CommandTests
         public async Task When_FindFileSystemsInIsoMediaWithAdfContainingFastFileSystem_Then_FileSystemIsFound()
         {
             var isoPath = $"{Guid.NewGuid()}.iso";
-            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             // arrange - create adf disk with fast file system
@@ -43,31 +42,22 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var commandHelper = new TestCommandHelper();
             await commandHelper.AddTestMedia(isoPath, data: cdStream.ToArray());
 
-            try
-            {
-                // act - find file systems in iso
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, isoPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in iso
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, isoPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - fast file system is found in iso
-                Assert.Equal("FastFileSystem", fileSystemResult.Value);
-                var fileSystemBytes = await commandHelper.ReadMediaData(Path.Combine(outputPath, fileSystemResult.Value));
-                Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemBytes);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - fast file system is found in iso
+            Assert.Equal("FastFileSystem", fileSystemResult.Value.Item1);
+            Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemResult.Value.Item2);
         }
 
         [Fact]
         public async Task When_FindFileSystemsInIsoMediaWithEmptyAdf_Then_NoFileSystemIsFound()
         {
             var isoPath = $"{Guid.NewGuid()}.iso";
-            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             // arrange - create empty adf disk
@@ -88,22 +78,15 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var commandHelper = new TestCommandHelper();
             await commandHelper.AddTestMedia(isoPath, data: cdStream.ToArray());
 
-            try
-            {
-                // act - find file systems in iso
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, isoPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in iso
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, isoPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - no fast file system is found in iso
-                Assert.Equal(string.Empty, fileSystemResult.Value);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - no fast file system is found in iso
+            Assert.Equal(string.Empty, fileSystemResult.Value.Item1);
         }
 
         [Fact]
@@ -120,32 +103,23 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var lhaBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Lha", "FastFileSystem.lha"));
             await commandHelper.AddTestMedia(lhaPath, data: lhaBytes);
 
-            try
-            {
-                // act - find file systems in lha
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, lhaPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in lha
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, lhaPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - fast file system is found in lha
-                Assert.Equal("FastFileSystem", fileSystemResult.Value);
-                var fileSystemBytes = await commandHelper.ReadMediaData(Path.Combine(outputPath, fileSystemResult.Value));
-                Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemBytes);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - fast file system is found in lha
+            Assert.Equal("FastFileSystem", fileSystemResult.Value.Item1);
+            Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemResult.Value.Item2);
         }
 
         [Fact]
         public async Task When_FindFileSystemsInLhaMediaWithoutFastFileSystem_Then_NoFileSystemIsFound()
         {
             // arrange - paths
-            var lhaPath = $"{Guid.NewGuid()}.lha";
-            var outputPath = $"{Guid.NewGuid()}-dir";
+            var lhaPath = $"{Guid.NewGuid()}.lha";            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             var commandHelper = new TestCommandHelper();
@@ -154,22 +128,15 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var lhaBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Lha", "amiga.lha"));
             await commandHelper.AddTestMedia(lhaPath, data: lhaBytes);
 
-            try
-            {
-                // act - find file systems in lha
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, lhaPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in lha
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, lhaPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - no fast file system is found in lha
-                Assert.Equal(string.Empty, fileSystemResult.Value);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - no fast file system is found in lha
+            Assert.Equal(string.Empty, fileSystemResult.Value.Item1);
         }
 
         [Fact]
@@ -177,7 +144,6 @@ namespace Hst.Imager.Core.Tests.CommandTests
         {
             // arrange - paths
             var adfPath = $"{Guid.NewGuid()}.adf";
-            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             var commandHelper = new TestCommandHelper();
@@ -190,24 +156,16 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await commandHelper.AddTestMedia(adfPath, data: adfStream.ToArray());
             }
 
-            try
-            {
-                // act - find file systems in adf
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, adfPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in adf
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, adfPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - fast file system is found in adf
-                Assert.Equal("FastFileSystem", fileSystemResult.Value);
-                var fileSystemBytes = await commandHelper.ReadMediaData(Path.Combine(outputPath, fileSystemResult.Value));
-                Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemBytes);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - fast file system is found in adf
+            Assert.Equal("FastFileSystem", fileSystemResult.Value.Item1);
+            Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemResult.Value.Item2);
         }
 
         [Fact]
@@ -215,7 +173,6 @@ namespace Hst.Imager.Core.Tests.CommandTests
         {
             // arrange - paths
             var adfPath = $"{Guid.NewGuid()}.adf";
-            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             var commandHelper = new TestCommandHelper();
@@ -227,22 +184,15 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await commandHelper.AddTestMedia(adfPath, data: adfStream.ToArray());
             }
 
-            try
-            {
-                // act - find file systems in adf
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, adfPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in adf
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, adfPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - no fast file system is found in adf
-                Assert.Equal(string.Empty, fileSystemResult.Value);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - no fast file system is found in adf
+            Assert.Equal(string.Empty, fileSystemResult.Value.Item1);
         }
 
         [Fact]
@@ -250,7 +200,6 @@ namespace Hst.Imager.Core.Tests.CommandTests
         {
             // arrange - paths
             var rdbPath = $"{Guid.NewGuid()}.img";
-            var outputPath = $"{Guid.NewGuid()}-dir";
             const string fileSystemName = "FastFileSystem";
 
             var commandHelper = new TestCommandHelper();
@@ -264,24 +213,16 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await commandHelper.AddTestMedia(rdbPath, data: rdbStream.ToArray());
             }
 
-            try
-            {
-                // act - find file systems in rdb
-                var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, rdbPath,
-                    fileSystemName, outputPath);
+            // act - find file systems in rdb
+            var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, rdbPath,
+                fileSystemName);
 
-                // assert - find file system in media succeeded
-                Assert.True(fileSystemResult.IsSuccess);
+            // assert - find file system in media succeeded
+            Assert.True(fileSystemResult.IsSuccess);
 
-                // assert - fast file system is found in rdb
-                Assert.Equal("FastFileSystem", fileSystemResult.Value);
-                var fileSystemBytes = await commandHelper.ReadMediaData(Path.Combine(outputPath, fileSystemResult.Value));
-                Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemBytes);
-            }
-            finally
-            {
-                TestHelper.DeletePaths(outputPath);
-            }
+            // assert - fast file system is found in rdb
+            Assert.Equal("FastFileSystem", fileSystemResult.Value.Item1);
+            Assert.Equal(TestHelper.FastFileSystemDos3Bytes, fileSystemResult.Value.Item2);
         }
         
         [Fact]
@@ -322,15 +263,14 @@ namespace Hst.Imager.Core.Tests.CommandTests
 
                 // act - find file systems in mbr pistorm rdb
                 var fileSystemResult = await AmigaFileSystemHelper.FindFileSystemInMedia(testCommandHelper, diskPath,
-                    fileSystemName, outputPath);
+                    fileSystemName);
 
                 // assert - find file system in media succeeded
                 Assert.True(fileSystemResult.IsSuccess);
 
                 // assert - fast file system is found in mbr pistorm rdb
-                Assert.Equal("FastFileSystem", fileSystemResult.Value);
-                var fileSystemBytes = await testCommandHelper.ReadMediaData(Path.Combine(outputPath, fileSystemResult.Value));
-                Assert.Equal(TestHelper.FastFileSystemDos7Bytes, fileSystemBytes);
+                Assert.Equal("FastFileSystem", fileSystemResult.Value.Item1);
+                Assert.Equal(TestHelper.FastFileSystemDos7Bytes, fileSystemResult.Value.Item2);
             }
             finally
             {

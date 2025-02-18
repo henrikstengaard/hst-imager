@@ -2,12 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Amiga.Extensions;
-using Amiga.FileSystems.FastFileSystem;
 using Amiga.RigidDiskBlocks;
 using Amiga.VersionStrings;
 using Extensions;
@@ -16,7 +14,6 @@ using Hst.Core.Extensions;
 using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 using BlockHelper = Amiga.RigidDiskBlocks.BlockHelper;
-using Constants = Amiga.FileSystems.FastFileSystem.Constants;
 
 public class RdbFsImportCommand : CommandBase
 {
@@ -48,7 +45,21 @@ public class RdbFsImportCommand : CommandBase
             return new Result(new Error("DOS type must be 4 characters"));
         }
 
-        OnInformationMessage($"Importing file systems to Rigid Disk Block at '{path}' from file system path '{fileSystemPath}'");
+        OnDebugMessage($"Finding file system from path '{fileSystemPath}'");
+
+        var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
+            fileSystemPath, fileSystemName);
+
+        if (findFileSystemInMediaResult.IsFaulted)
+        {
+            return new Result(new Error($"No file systems read from file systems path '{fileSystemPath}'"));
+        }
+
+        var fileSystem = findFileSystemInMediaResult.Value;
+
+        var fileSystemHeaderBlock = ImportFileSystem(fileSystem.Item1, fileSystem.Item2);
+
+        OnInformationMessage($"Importing file system to Rigid Disk Block at '{path}' from file system path '{fileSystemPath}'");
         
         OnDebugMessage($"Opening '{path}' as writable");
 
@@ -70,38 +81,15 @@ public class RdbFsImportCommand : CommandBase
             return new Result(new Error("Rigid Disk Block not found"));
         }
 
-        OnDebugMessage($"Opening path '{fileSystemPath}' for reading file system");
+        long fileSystemSize = fileSystem.Item2.Length;
 
-        var fileSystemMediaResult =
-            await commandHelper.GetReadableMedia(physicalDrives, fileSystemPath);
-        if (fileSystemMediaResult.IsFaulted)
-        {
-            return new Result(fileSystemMediaResult.Error);
-        }
+        OnInformationMessage("Imported file system:");
+        OnInformationMessage($"- DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
+        OnInformationMessage($"- Version '{fileSystemHeaderBlock.VersionFormatted}'");
+        OnInformationMessage($"- Size '{fileSystemSize.FormatBytes()}' ({fileSystemSize} bytes)");
+        OnInformationMessage($"- File system name '{fileSystemHeaderBlock.FileSystemName}'");
 
-        using var fileSystemMedia = fileSystemMediaResult.Value;
-        await using var fileSystemStream = fileSystemMedia.Stream;
-
-        var firstBytes = await fileSystemStream.ReadBytes(512 * 2048);
-
-        var fileSystemHeaderBlocks = (await ImportFileSystems(new MemoryStream(firstBytes))).ToList();
-
-        if (!fileSystemHeaderBlocks.Any())
-        {
-            return new Result(new Error($"No file systems read from file systems path '{fileSystemPath}'"));
-        }
-
-        foreach (var fileSystemHeaderBlock in fileSystemHeaderBlocks)
-        {
-            long size = fileSystemHeaderBlock.FileSystemSize;
-            OnInformationMessage("Imported file system:");
-            OnInformationMessage($"- DOS type '0x{fileSystemHeaderBlock.DosType.FormatHex()}' ({fileSystemHeaderBlock.DosType.FormatDosType()})");
-            OnInformationMessage($"- Version '{fileSystemHeaderBlock.VersionFormatted}'");
-            OnInformationMessage($"- Size '{size.FormatBytes()}' ({size} bytes)");
-            OnInformationMessage($"- File system name '{fileSystemHeaderBlock.FileSystemName}'");
-
-            AddFileSystem(rigidDiskBlock, fileSystemHeaderBlock);
-        }
+        AddFileSystem(rigidDiskBlock, fileSystemHeaderBlock);
 
         OnDebugMessage("Writing Rigid Disk Block");
         await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
@@ -116,129 +104,21 @@ public class RdbFsImportCommand : CommandBase
                 { fileSystemHeaderBlock });
     }
 
-    private async Task<IEnumerable<FileSystemHeaderBlock>> ImportFileSystems(MemoryStream stream)
+    private FileSystemHeaderBlock ImportFileSystem(string fileSystemName, byte[] fileSystemBytes)
     {
-        var identifier = BitConverter.ToUInt32(await stream.ReadBytes(4), 0);
-        if (identifier.Equals(BlockIdentifiers.RigidDiskBlock))
-        {
-            OnDebugMessage("Importing file systems from Rigid Disk Block");
-            return await ReadFileSystemsFromRigidDiskBlock(stream);
-        }
+        var version = VersionStringReader.Read(fileSystemBytes);
+        var amigaVersion = VersionStringReader.Parse(version) ?? new AmigaVersion { Version = 1, Revision = 0 };
 
-        var dos1Identifier = BitConverter.ToUInt32(new byte[] { 0x44, 0x4f, 0x53, 0x1 });
-        if (identifier.Equals(dos1Identifier))
-        {
-            OnDebugMessage("Importing file systems from ADF");
-            return await ReadFileSystemsFromAdf(stream);
-        }
-
-        return new List<FileSystemHeaderBlock>();
-    }
-
-    private async Task<IEnumerable<FileSystemHeaderBlock>> ReadFileSystemsFromRigidDiskBlock(Stream stream)
-    {
         var dosTypeBytes = !string.IsNullOrWhiteSpace(dosType)
             ? DosTypeHelper.FormatDosType(dosType)
             : Array.Empty<byte>();
 
-        stream.Position = 0;
-        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
-
-        var fileSystemHeaderBlocks = (await FileSystemHeaderBlockReader.Read(rigidDiskBlock, stream)).ToList();
-
-        // skip file systems not matching dos type, if dos type is defined
-        if (dosTypeBytes.Length == 4)
-        {
-            fileSystemHeaderBlocks = fileSystemHeaderBlocks.Where(x => x.DosType.SequenceEqual(dosTypeBytes)).ToList();
-        }
-
-        foreach (var fileSystemHeaderBlock in fileSystemHeaderBlocks)
-        {
-            fileSystemHeaderBlock.NextFileSysHeaderBlock = 0;
-
-            foreach (var loadSegBlock in fileSystemHeaderBlock.LoadSegBlocks)
-            {
-                loadSegBlock.NextLoadSegBlock = 0;
-            }
-        }
-
-        return fileSystemHeaderBlocks;
-    }
-
-    private async Task<IEnumerable<FileSystemHeaderBlock>> ReadFileSystemsFromAdf(Stream stream)
-    {
-        var fileSystemHeaderBlocks = new List<FileSystemHeaderBlock>();
-
-        OnDebugMessage($"Mounting ADF file");
-
-        var volume = await FastFileSystemHelper.MountAdf(stream);
-
-        OnDebugMessage($"Disk name = '{volume.RootBlock.DiskName}'");
-
-        // read all entries from adf
-        var entries =
-            (await Amiga.FileSystems.FastFileSystem.Directory.ReadEntries(volume, volume.RootBlockOffset, true))
-            .OrderBy(x => x.Name).ToList();
-
-        var dosTypeBytes =
-            DosTypeHelper.FormatDosType(string.IsNullOrWhiteSpace(this.dosType) ? "DOS3" : this.dosType.ToUpper());
-
-        var findFileSystemName = string.IsNullOrWhiteSpace(fileSystemName) ? "FastFileSystem" : fileSystemName;
-        OnDebugMessage($"Finding file system files with name '{findFileSystemName}'");
-
-        var fileSystemEntries = FindEntries(entries, findFileSystemName).ToList();
-
-        if (!fileSystemEntries.Any())
-        {
-            return new List<FileSystemHeaderBlock>();
-        }
-
-        foreach (var fastFileSystemEntry in fileSystemEntries)
-        {
-            var entryStream = await Amiga.FileSystems.FastFileSystem.File.Open(volume, fastFileSystemEntry);
-            var entryBytes = await entryStream.ReadBytes((int)fastFileSystemEntry.Size);
-
-            var version = VersionStringReader.Read(entryBytes);
-            if (string.IsNullOrWhiteSpace(version))
-            {
-                continue;
-            }
-
-            var fileVersion = VersionStringReader.Parse(version);
-            if (fileVersion == null)
-            {
-                continue;
-            }
-
-            var fileSystemHeaderBlock = BlockHelper.CreateFileSystemHeaderBlock(dosTypeBytes, fileVersion.Version,
-                fileVersion.Revision, fastFileSystemEntry.Name, entryBytes);
+        var fileSystemHeaderBlock = BlockHelper.CreateFileSystemHeaderBlock(dosTypeBytes, amigaVersion.Version,
+            amigaVersion.Revision, fileSystemName, fileSystemBytes);
 
             OnDebugMessage(
                 $"- Found '{fileSystemHeaderBlock.FileSystemName}' version '{version.Trim()}' {((long)fileSystemHeaderBlock.FileSystemSize).FormatBytes()} ({fileSystemHeaderBlock.FileSystemSize} bytes)");
 
-            fileSystemHeaderBlocks.Add(fileSystemHeaderBlock);
-        }
-
-        return fileSystemHeaderBlocks;
-    }
-
-    private IEnumerable<Entry> FindEntries(IEnumerable<Entry> entries, string name)
-    {
-        var matchingEntries = new List<Entry>();
-
-        foreach (var entry in entries)
-        {
-            if (entry.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
-            {
-                matchingEntries.Add(entry);
-            }
-
-            if (entry.Type == Constants.ST_DIR)
-            {
-                matchingEntries.AddRange(FindEntries(entry.SubDir, name));
-            }
-        }
-
-        return matchingEntries;
+        return fileSystemHeaderBlock;
     }
 }

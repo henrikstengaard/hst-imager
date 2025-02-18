@@ -23,16 +23,15 @@ namespace Hst.Imager.Core.Commands
         /// <param name="commandHelper">Command helper.</param>
         /// <param name="mediaPath">Path to media with file system to find.</param>
         /// <param name="fileSystemName">Name of file system to find.</param>
-        /// <param name="outputPath">Output path to write found file system.</param>
-        /// <returns>Name of file system found written in file system path.</returns>
-        public static async Task<Result<string>> FindFileSystemInMedia(ICommandHelper commandHelper, string mediaPath,
-            string fileSystemName, string outputPath)
+        /// <returns>Name and data for file system with highest version found.</returns>
+        public static async Task<Result<Tuple<string, byte[]>>> FindFileSystemInMedia(ICommandHelper commandHelper, string mediaPath,
+            string fileSystemName)
         {
             var mediaResult = await commandHelper.GetReadableFileMedia(mediaPath);
 
             if (mediaResult.IsFaulted)
             {
-                return new Result<string>(mediaResult.Error);
+                return new Result<Tuple<string, byte[]>>(mediaResult.Error);
             }
 
             using var media = mediaResult.Value;
@@ -48,20 +47,10 @@ namespace Hst.Imager.Core.Commands
 
             if (fileSystemWithHighestVersion == null)
             {
-                return new Result<string>(string.Empty);
+                return new Result<Tuple<string, byte[]>>(new Tuple<string, byte[]>(string.Empty, []));
             }
 
-            var fileSystemMediaResult = await commandHelper.GetWritableFileMedia(
-                Path.Combine(outputPath, fileSystemWithHighestVersion.Item1), create: true);
-            if (fileSystemMediaResult.IsFaulted)
-            {
-                return new Result<string>(fileSystemMediaResult.Error);
-            }
-
-            using var fileSystemMedia = fileSystemMediaResult.Value;
-            await fileSystemMedia.Stream.WriteBytes(fileSystemWithHighestVersion.Item2);
-
-            return new Result<string>(fileSystemWithHighestVersion.Item1);
+            return new Result<Tuple<string, byte[]>>(fileSystemWithHighestVersion);
         }
 
         private static async Task<IEnumerable<Tuple<string, byte[]>>> GetFileSystemsFromMedia(string mediaPath,
