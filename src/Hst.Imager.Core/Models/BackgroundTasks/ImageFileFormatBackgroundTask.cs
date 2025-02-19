@@ -9,8 +9,7 @@
         public string Path { get; set; }
         public FormatType FormatType { get; set; }
         public string FileSystem { get; set; }
-        public AssetAction AssetAction { get; set; }
-        public string AssetPath { get; set; }
+        public string FileSystemPath { get; set; }
         public long Size { get; set; }
         public bool Byteswap { get; set; }
 

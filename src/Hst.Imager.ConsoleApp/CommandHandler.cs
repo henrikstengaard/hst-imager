@@ -255,11 +255,11 @@ namespace Hst.Imager.ConsoleApp
                 compatibleSize));
         }
 
-        public static async Task Format(string path, FormatType formatType, string fileSystem, AssetAction assetAction,
-            string assetPath, string size)
+        public static async Task Format(string path, FormatType formatType, string fileSystem,
+            string fileSystemPath, string size)
         {
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
-                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, assetAction, assetPath,
+                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, fileSystemPath,
                 AppState.Instance.AppPath, ParseSize(size)));
         }
 

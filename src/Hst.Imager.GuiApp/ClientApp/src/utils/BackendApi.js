@@ -240,7 +240,7 @@ export class BackendApi {
         }
     }
 
-    async startFormat({ title, path, formatType, fileSystem, assetAction, assetPath, size, byteSwap }) {
+    async startFormat({ title, path, formatType, fileSystem, fileSystemPath, size, byteSwap }) {
         const response = await fetch(`${this.baseUrl}api/format`, {
             method: 'POST',
             headers: {
@@ -252,8 +252,7 @@ export class BackendApi {
                 path,
                 formatType,
                 fileSystem,
-                assetAction,
-                assetPath,
+                fileSystemPath,
                 size,
                 byteSwap
             })

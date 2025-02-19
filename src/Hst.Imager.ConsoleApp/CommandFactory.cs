@@ -224,14 +224,9 @@
                 name: "FileSystem",
                 description: "File system to format partition(s) created.");
 
-            var assetActionOption = new Option<AssetAction>(
-                ["--asset-action"],
-                description: "Asset action for formatting (only for RDB and PiStorm).",
-                getDefaultValue: () => AssetAction.DownloadPfs3Aio);
-
-            var assetPathOption = new Option<string>(
-                ["--asset-path"],
-                description: "Path to asset file used to format (only for RDB and PiStorm).");
+            var fileSystemPathOption = new Option<string>(
+                ["--file-system-path"],
+                description: "Path to file system file used to format (only for RDB and PiStorm).");
 
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
@@ -241,11 +236,10 @@
             command.AddArgument(pathArgument);
             command.AddArgument(partitionTableArgument);
             command.AddArgument(fileSystemArgument);
-            command.AddOption(assetActionOption);
-            command.AddOption(assetPathOption);
+            command.AddOption(fileSystemPathOption);
             command.AddOption(sizeOption);
             command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument,
-                assetActionOption, assetPathOption, sizeOption);
+                fileSystemPathOption, sizeOption);
 
             return command;
         }

@@ -26,14 +26,15 @@ namespace Hst.Imager.Core.Commands
         private readonly string path;
         private readonly FormatType formatType;
         private readonly string fileSystem;
-        private AssetAction assetAction;
-        private string assetPath;
+        private string fileSystemPath;
         private readonly string outputPath;
         private readonly Size size;
 
         private const long WorkbenchPartitionSize = 1000000000;
         private const long WorkPartitionSize = 64000000000;
         private const long PiStormBootPartitionSize = 1000000000;
+
+        private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
 
         /// <summary>
         /// 
@@ -45,13 +46,12 @@ namespace Hst.Imager.Core.Commands
         /// <param name="path"></param>
         /// <param name="formatType"></param>
         /// <param name="fileSystem">File system to format.</param>
-        /// <param name="assetAction"></param>
-        /// <param name="assetPath">Path to asset file used to format.</param>
+        /// <param name="fileSystemPath">Path to asset file used to format.</param>
         /// <param name="outputPath">Output path to write file system from media.</param>
         /// <param name="size"></param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
-            AssetAction assetAction, string assetPath, string outputPath, Size size)
+            string fileSystemPath, string outputPath, Size size)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -60,8 +60,7 @@ namespace Hst.Imager.Core.Commands
             this.path = path;
             this.formatType = formatType;
             this.fileSystem = fileSystem;
-            this.assetAction = string.IsNullOrWhiteSpace(assetPath) ? assetAction : AssetAction.None;
-            this.assetPath = assetPath;
+            this.fileSystemPath = string.IsNullOrWhiteSpace(fileSystemPath) ? Pfs3AioLhaUrl : fileSystemPath;
             this.outputPath = outputPath;
             this.size = size;
         }
@@ -90,30 +89,23 @@ namespace Hst.Imager.Core.Commands
             if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
                     (rdbFileSystem == FormatRdbFileSystem.Dos3 || rdbFileSystem == FormatRdbFileSystem.Dos7))
             {
-                assetAction = AssetAction.None;
-
-                if (string.IsNullOrWhiteSpace(assetPath))
+                if (string.IsNullOrWhiteSpace(fileSystemPath))
                 {
-                    return new Result(new Error($"Assert path required for file system '{rdbFileSystem.ToString().ToUpper()}'"));
+                    return new Result(new Error($"File system path required for file system '{rdbFileSystem.ToString().ToUpper()}'"));
                 }
 
-                if (!await MediaPathExists(assetPath))
+                if (!await MediaPathExists(fileSystemPath))
                 {
-                    return new Result(new Error($"Assert path '{assetPath}' not found"));
+                    return new Result(new Error($"Assert path '{fileSystemPath}' not found"));
                 }
             }
 
             if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
-                assetAction == AssetAction.DownloadPfs3Aio)
+                fileSystemPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                var pfs3AioLhaPath = Path.Combine(outputPath, FileSystemHelper.Pfs3AioLhaFilename);
+                OnInformationMessage($"Downloading file system from url '{fileSystemPath}'");
 
-                if (!File.Exists(pfs3AioLhaPath))
-                {
-                    OnInformationMessage($"Downloading '{FileSystemHelper.Pfs3AioLhaFilename}' from url '{FileSystemHelper.Pfs3AioLhaUrl}'");
-                }
-
-                assetPath = await FileSystemHelper.DownloadPfs3AioLha(outputPath);
+                fileSystemPath = await FileSystemHelper.DownloadFile(fileSystemPath, outputPath, Path.GetFileName(fileSystemPath));
             }
             
             OnInformationMessage($"Formatting '{path}'");
@@ -200,7 +192,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
-                assetPath, fileSystemName);
+                this.fileSystemPath, fileSystemName);
 
             if (findFileSystemInMediaResult.IsFaulted)
             {
@@ -342,7 +334,7 @@ namespace Hst.Imager.Core.Commands
 
             if (string.IsNullOrEmpty(fileSystemPath))
             {
-                return new Result<int>(new Error($"No '{dosType}' file system not found in asset path '{assetPath}'"));
+                return new Result<int>(new Error($"No '{dosType}' file system not found in asset path '{this.fileSystemPath}'"));
             }
             
             // read version string from file system path

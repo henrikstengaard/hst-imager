@@ -47,8 +47,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var formatCommand = new FormatCommand(logger, loggerFactory, commandHelper, Enumerable.Empty<IPhysicalDrive>(),
                     string.Concat(formatBackgroundTask.Path, formatBackgroundTask.Byteswap ? "+bs" : string.Empty),
                     formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem, 
-                    formatBackgroundTask.AssetAction,
-                    formatBackgroundTask.AssetPath,
+                    formatBackgroundTask.FileSystemPath,
                     appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes));
 

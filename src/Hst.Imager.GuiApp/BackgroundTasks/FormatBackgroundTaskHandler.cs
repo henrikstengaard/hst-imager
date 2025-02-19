@@ -55,8 +55,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     commandHelper, physicalDrives,
                     string.Concat(formatBackgroundTask.Path, formatBackgroundTask.Byteswap ? "+bs" : string.Empty),
                     formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem, 
-                    formatBackgroundTask.AssetAction,
-                    formatBackgroundTask.AssetPath,
+                    formatBackgroundTask.FileSystemPath,
                     appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes));
 

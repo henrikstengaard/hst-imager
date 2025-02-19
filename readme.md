@@ -48,9 +48,9 @@ Hst Imager Gui comes with following features:
 - Convert image file between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
+- Format physical drive or image file with Master Boot Record, Guid Partition Table or Rigid Disk Block partition table, add partitions and format them.
 
 Hst Imager Console version comes with following additional features:
-- Format physical drive or image file with MBR, GPT or RDB partition table and partitions formatted.
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
@@ -68,6 +68,12 @@ Hst Imager Console version comes with following additional features:
   - Format partition in Master Boot Record.
   - Import partition from file to Master Boot Record partition.
   - Clone partition from Master Boot Record to same or other Master Boot Record partition.
+- Guid Partition Table:
+  - Read Guid Partition Table information.
+  - Initialize Guid Partition Table.
+  - Add partition to Guid Partition Table.
+  - Delete partition from Guid Partition Table.
+  - Format partition in Guid Partition Table.
 - Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
@@ -75,7 +81,7 @@ Hst Imager Console version comes with following additional features:
   - Add file system to Rigid Disk Block.
   - Delete file system from Rigid Disk Block.
   - Export file system from Rigid Disk Block to file.
-  - Import file systems from Rigid Disk Block or ADF file.
+  - Import file system from Rigid Disk Block, PiStorm RDB, .iso, .lha or .adf file.
   - Update file system in Rigid Disk Block.
   - Add partition to Rigid Disk Block.
   - Copy partition from one Rigid Disk Block to another.

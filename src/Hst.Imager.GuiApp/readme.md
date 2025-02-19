@@ -25,6 +25,7 @@ Hst Imager gui comes with following features:
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
+- Format physical drive or image file.
 
 ## Supported operating systems
 
@@ -81,3 +82,24 @@ Install Hst Imager for Linux 64-bit with following steps:
 4. Open Hst Imager in show applications.
 
 Hst Imager for 64-bit Linux is now starting and ready to use.
+
+### Format physical drive or image file
+
+Formats physical drive or image file with Master Boot Record, Guid Partition Table, Rigid Disk Block or PiStorm RDB and adds partitions, which are formatted and ready to use. 
+
+Formatting erases the first 10MB before initializing Master Boot Record, Guid Partition Table or Rigid Disk Block partition table.
+
+For Master Boot Record and Guid Partition Table, one partition is added with size of physical drive or image file and formatted with file system FAT32, exFAT or NTFS.
+
+For Rigid Disk Block, Professional File System `pfs3aio` (PDS\3 and PFS\3) and Fast File System (DOS\3 and DOS\7) are supported.
+Professional File System `pfs3aio` is selected and downloaded from aminet.net by default.
+Uncheck "Download pfs3aio from aminet.net" to select other file system file.
+When partitioning, first `Workbench` partition will always have the size of 1GB to support Amiga's that can't access disks larger than 4GB at boot time.
+Additional `Work` partitions are added for the remaining disk space with size up to 64GB.
+If Fast File System is used and it's version doesn't support large partitions, the `Workbench` partition is changed to 500MB and `Work` partition size is changed to a max of 2GB.
+If Fast File System is used and it's version doesn't support DOS\7 long filenames then it's changed to DOS\3.
+File system path for formatting Rigid Disk Block supports .lha, .iso, .adf and file system files like `pfs3aio` and `FastFileSystem`.
+If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
+If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
+
+For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.

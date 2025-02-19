@@ -25,7 +25,7 @@ Hst Imager console comes with following features:
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
-- Format physical drive or image file with MBR, GPT or RDB partition table and partitions formatted.
+- Format physical drive or image file with Master Boot Record, Guid Partition Table or Rigid Disk Block partition table, add partitions and format them.
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
@@ -43,6 +43,12 @@ Hst Imager console comes with following features:
   - Format partition in Master Boot Record.
   - Import partition from file to Master Boot Record partition.
   - Clone partition from Master Boot Record to same or other Master Boot Record partition.
+- Guid Partition Table:
+  - Read Guid Partition Table information.
+  - Initialize Guid Partition Table.
+  - Add partition to Guid Partition Table.
+  - Delete partition from Guid Partition Table.
+  - Format partition in Guid Partition Table.
 - Rigid Disk Block:
   - Read Rigid Disk Block information.
   - Initialize Rigid Disk Block.
@@ -50,7 +56,7 @@ Hst Imager console comes with following features:
   - Add file system to Rigid Disk Block.
   - Delete file system from Rigid Disk Block.
   - Export file system from Rigid Disk Block to file.
-  - Import file systems from Rigid Disk Block or ADF file.
+  - Import file system from Rigid Disk Block, PiStorm RDB, .iso, .lha or .adf file.
   - Update file system in Rigid Disk Block.
   - Add partition to Rigid Disk Block.
   - Copy partition from one Rigid Disk Block to another.
@@ -118,12 +124,12 @@ The type of UAE metadata files to read and write can be changed by specifying th
 
 Hst Imager supports creating Master Boot Record partition with partition type 0x76 used as hard disk for PiStorm.
 
-Example of adding a PiStorm partition of remaining space to Master Boot Record on a 4GB vhd image file using type 0x76:
+Example of adding a PiStorm partition of remaining space to Master Boot Record in a 4GB vhd image file using type 0x76:
 ```
 hst.imager mbr part add 16gb.img 0x76 *
 ```
 
-Example of adding a PiStorm partition of remaining space to Master Boot Record on a 4GB vhd image file using type pistormrdb, which will be translated to 0x76:
+Example of adding a PiStorm partition of remaining space to Master Boot Record in a 4GB vhd image file using type pistormrdb, which will be translated to 0x76:
 ```
 hst.imager mbr part add 16gb.img pistormrdb *
 ```
@@ -242,9 +248,17 @@ Formatting erases the first 10MB before initializing Master Boot Record, Guid Pa
 
 For Master Boot Record and Guid Partition Table, one partition is added with size of physical drive or image file and formatted with file system FAT32, exFAT or NTFS.
 
-For Rigid Disk Block, only PFS\3 is supported and `pfs3aio` file must exist for it to add the file system to Rigid Disk Block. First `Workbench` partition will always have the size of 500MB to support Amiga's not supporting disks larger than 4GB at boot time. Additional `Work` partitions are added for the remaining disk space with size up to 64GB.
+For Rigid Disk Block, Professional File System `pfs3aio` (PDS\3 and PFS\3) and Fast File System (DOS\3 and DOS\7) are supported.
+If file system PDS\3 or PFS\3 is used, then Professional File System `pfs3aio` is automatically downloaded from aminet.net by default unless another file system path is defined.
+When partitioning, first `Workbench` partition will always have the size of 1GB to support Amiga's that can't access disks larger than 4GB at boot time.
+Additional `Work` partitions are added for the remaining disk space with size up to 64GB.
+If Fast File System is used and it's version doesn't support large partitions, the `Workbench` partition is changed to 500MB and `Work` partition size is changed to a max of 2GB.
+If Fast File System is used and it's version doesn't support DOS\7 long filenames then it's changed to DOS\3.
+File system path for formatting Rigid Disk Block supports .lha, .iso, .adf and file system files like `pfs3aio` and `FastFileSystem`.
+If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
+If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
 
-For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 200MB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
+For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
 
 Example of displaying usage for formatting physical drive or image file:
 ```
@@ -271,14 +285,24 @@ Example of formatting Windows physical drive disk 2 with Guid Partition Table an
 hst.imager format \disk2 gpt ntfs
 ```
 
-Example of formatting Windows physical drive disk 2 with Rigid Disk Block and PFS\3 file system:
+Example of formatting Windows physical drive disk 2 with Rigid Disk Block and PFS\3 file system (direct scsi):
 ```
-hst.imager format \disk2 rdb pfs3
+hst.imager format \disk2 rdb pds3
 ```
 
-Example of formatting Windows physical drive disk 2 for PiStorm with a 200MB FAT32 formatted boot partition and a PiStorm RDB partition (0x76) formatted with Rigid Disk Block using PFS\3 file system:
+Example of formatting Windows physical drive disk 2 with Rigid Disk Block and DOS\7 file system from AmigaOS 3.2 Install .adf file:
 ```
-hst.imager format \disk2 pistorm pfs3
+hst.imager format \disk2 rdb dos7 --file-system-path Install3.2.adf
+```
+
+Example of formatting Windows physical drive disk 2 with Rigid Disk Block and DOS\7 file system from AmigaOS 3.2 .iso file:
+```
+hst.imager format \disk2 rdb dos7 --file-system-path AmigaOS3.2CD.iso
+```
+
+Example of formatting Windows physical drive disk 2 for PiStorm with a 1GB FAT32 formatted boot partition and a PiStorm RDB partition (0x76) formatted with Rigid Disk Block using PFS\3 file system (direct scsi):
+```
+hst.imager format \disk2 pistorm pds3
 ```
 
 ### Compare physical drive and image file
@@ -370,33 +394,6 @@ hst.imager optimize 16gb.img -s 4gb
 Example of optimizing the size of a 16GB img image file to size of Rigid Disk Block:
 ```
 hst.imager optimize 16gb.img -rdb
-```
-
-## Format commands
-
-### Format physical drive or image file
-
-Format physical drive or image file by erasing existing partition tables, initialize Master Boot Record or Guid Partition Table,
-add partition of with FAT or NTFS file system and format the partition.
-
-Example of displaying usage for format physical drive or image file:
-```
-hst.imager format
-```
-
-Example of formatting physical drive 1 with Master Boot Record and FAT32 formatted partition as large as physical drive 1:
-```
-hst.imager format \disk1 mbr fat32
-```
-
-Example of formatting physical drive 1 with Master Boot Record and FAT32 formatted partition with the size of 8GB:
-```
-hst.imager format \disk1 mbr fat32 -s 8gb
-```
-
-Example of formatting physical drive 1 with Guid Partition Table and NTFS formatted partition as large as physical drive 1:
-```
-hst.imager format \disk1 gpt ntfs
 ```
 
 ## File system commands
@@ -553,7 +550,7 @@ Example of displaying usage for initializing a new Master Boot Record:
 hst.imager mbr init
 ```
 
-Example of initializing Master Boot Record on a 4GB vhd image file:
+Example of initializing Master Boot Record in a 4GB vhd image file:
 ```
 hst.imager mbr init 4gb.vhd
 ```
@@ -569,12 +566,12 @@ Example of displaying usage for adding a partition to Master Boot Record:
 hst.imager mbr part add
 ```
 
-Example of adding a FAT32 partition of 100MB to Master Boot Record on a 4GB vhd image file:
+Example of adding a FAT32 partition of 100MB to Master Boot Record in a 4GB vhd image file:
 ```
 hst.imager mbr part add 4gb.vhd FAT32 100mb
 ```
 
-Example of adding a FAT32 partition of remaining space to Master Boot Record on a 4GB vhd image file:
+Example of adding a FAT32 partition of remaining space to Master Boot Record in a 4GB vhd image file:
 ```
 hst.imager mbr part add 4gb.vhd FAT32 *
 ```
@@ -602,7 +599,7 @@ Example of displaying usage for deleting a partition from Master Boot Record:
 hst.imager mbr part del
 ```
 
-Example of delete partition number 1 from Master Boot Record on a 4GB vhd image file:
+Example of delete partition number 1 from Master Boot Record in a 4GB vhd image file:
 ```
 hst.imager mbr part del 4gb.vhd 1
 ```
@@ -625,9 +622,9 @@ Example of displaying usage for formatting a partition in Master Boot Record:
 hst.imager mbr part format
 ```
 
-Example of formatting partition number 1 with label "PC" in Master Boot Record on a 4GB vhd image file:
+Example of formatting partition number 1 with label "Empty" in Master Boot Record in a 4GB vhd image file:
 ```
-hst.imager mbr part format 4gb.vhd 1 PC
+hst.imager mbr part format 4gb.vhd 1 Empty
 ```
 
 ### Import partition from file to Master Boot Record
@@ -637,6 +634,85 @@ Import a partition from a file to Master Boot Record.
 Example of importing a partition from a file to 4GB vhd image file partition 1:
 ```
 hst.imager mbr part import partition1.vhd 4gb.vhd 1 
+```
+
+## Guid Partition Table commands
+
+### Read Guid Partition Table information
+
+Reads Guid Partition Table from disk sectors 0-63 and displays a table with partitions.
+
+Example of displaying usage for reading Guid Partition Table information:
+```
+hst.imager gpt info
+```
+
+Example of reading Guid Partition Table information of a 4GB vhd image file:
+```
+hst.imager gpt info 4gb.vhd
+```
+
+### Initialize Guid Partition Table
+
+Initializes a new Guid Partition Table. Existing Guid Partition Table will be overwritten.
+
+Example of displaying usage for initializing a new Guid Partition Table:
+```
+hst.imager gpt init
+```
+
+Example of initializing Guid Partition Table in a 4GB vhd image file:
+```
+hst.imager gpt init 4gb.vhd
+```
+
+### Add partition to Guid Partition Table
+
+Adds a partition to Guid Partition Table with a defined size.
+
+Automatically select next available start sector, if not defined
+
+Example of displaying usage for adding a partition to Guid Partition Table:
+```
+hst.imager gpt part add
+```
+
+Example of adding a NTFS partition of 500MB to Guid Partition Table with label "Empty" in a 4GB vhd image file:
+```
+hst.imager gpt part add 4gb.vhd NTFS Empty 500mb
+```
+
+Example of adding a NTFS partition of remaining space to Guid Partition Table with label "Empty" in a 4GB vhd image file:
+```
+hst.imager gpt part add 4gb.vhd NTFS Empty *
+```
+
+### Delete partition from Guid Partition Table
+
+Deletes a partition from Guid Partition Table.
+
+Example of displaying usage for deleting a partition from Guid Partition Table:
+```
+hst.imager gpt part del
+```
+
+Example of delete partition number 1 from Guid Partition Table in a 4GB vhd image file:
+```
+hst.imager gpt part del 4gb.vhd 1
+```
+
+### Format partition in Guid Partition Table
+
+Formats a partition in Guid Partition Table.
+
+Example of displaying usage for formatting a partition in Guid Partition Table:
+```
+hst.imager gpt part format
+```
+
+Example of formatting partition number 1 with NTFS file system and label "Empty" in Guid Partition Table in a 4GB vhd image file:
+```
+hst.imager gpt part format 4gb.vhd 1 NTFS Empty
 ```
 
 ## Rigid Disk Block commands
@@ -664,12 +740,12 @@ Example of displaying usage for initializing Rigid Disk Block:
 hst.imager rdb init
 ```
 
-Example of initializing Rigid Disk Block on a 4GB vhd image file:
+Example of initializing Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb init 4gb.vhd
 ```
 
-Example of initializing Rigid Disk Block using cylinders, heads and sectors on a 4GB vhd image file:
+Example of initializing Rigid Disk Block using cylinders, heads and sectors in a 4GB vhd image file:
 ```
 hst.imager rdb init 4gb.vhd -chs 800,16,63
 ```
@@ -714,7 +790,7 @@ Example of displaying usage for updating Rigid Disk Block:
 hst.imager rdb update
 ```
 
-Example of updating flags property to 7 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating flags property to 7 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb update 4gb.vhd --flags 7
 ```
@@ -728,7 +804,7 @@ Example of displaying usage for adding file system to Rigid Disk Block:
 hst.imager rdb fs add
 ```
 
-Example of adding a file system with dos type PDS3 to Rigid Disk Block on a 4GB vhd image file:
+Example of adding a file system with dos type PDS3 to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs add 4gb.vhd pfs3aio PDS3
 ```
@@ -742,7 +818,7 @@ Example of displaying usage for deleting a file system from Rigid Disk Block:
 hst.imager rdb fs del
 ```
 
-Example of deleting file system number 1 from Rigid Disk Block on a 4GB vhd image file:
+Example of deleting file system number 1 from Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs del 4gb.vhd 1
 ```
@@ -756,7 +832,7 @@ Example of displaying usage for exporting a file system from Rigid Disk Block:
 hst.imager rdb fs export
 ```
 
-Example of exporting file system number 1 to file pfs3aio from Rigid Disk Block on a 4GB vhd image file:
+Example of exporting file system number 1 to file pfs3aio from Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs export 4gb.vhd 1 pfs3aio
 ```
@@ -770,22 +846,22 @@ Example of displaying usage for importing file systems to Rigid Disk Block:
 hst.imager rdb fs import
 ```
 
-Example of importing file systems from a Windows physical drive disk 2 to Rigid Disk Block on a 4GB vhd image file:
+Example of importing file systems from a Windows physical drive disk 2 to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs import 4gb.vhd disk2
 ```
 
-Example of importing file systems from a 16GB vhd image file to Rigid Disk Block on a 4GB vhd image file:
+Example of importing file systems from a 16GB vhd image file to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs import 4gb.vhd 16gb.vhd
 ```
 
-Example of importing FastFileSystem with DOS-type DOS3 from Amiga OS 3.1 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
+Example of importing FastFileSystem with DOS-type DOS3 from Amiga OS 3.1 install disk .adf to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs import 4gb.vhd amiga-os-310-install.adf --dos-type DOS3 --name FastFileSystem
 ```
 
-Example of importing FastFileSystem with DOS-type DOS7 from Amiga OS 3.2 install disk .adf to Rigid Disk Block on a 4GB vhd image file:
+Example of importing FastFileSystem with DOS-type DOS7 from Amiga OS 3.2 install disk .adf to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs import 4gb.vhd install3.2.adf --dos-type DOS7 --name FastFileSystem
 ```
@@ -804,12 +880,12 @@ Example of displaying usage for updating a file system in Rigid Disk Block:
 hst.imager rdb fs update
 ```
 
-Example of updating file system number 1 with dos type property to PFS3 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating file system number 1 with dos type property to PFS3 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs update 4gb.vhd 1 --dos-type PFS3
 ```
 
-Example of updating file system number 1 with data from file in Rigid Disk Block on a 4GB vhd image file:
+Example of updating file system number 1 with data from file in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb fs update 4gb.vhd 1 --path pfs3aio
 ```
@@ -835,12 +911,12 @@ Example of displaying usage for add partition to Rigid Disk Block:
 hst.imager rdb part add
 ```
 
-Example of adding a bootable PDS3 partition of 100MB with device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+Example of adding a bootable PDS3 partition of 100MB with device name DH0 to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part add 4gb.vhd DH0 PDS3 100mb --bootable
 ```
 
-Example of adding a PDS3 partition of remaining space with device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+Example of adding a PDS3 partition of remaining space with device name DH0 to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part add 4gb.vhd DH0 PDS3 *
 ```
@@ -854,7 +930,7 @@ Example of displaying usage for deleting a partition from Rigid Disk Block:
 hst.imager rdb part del
 ```
 
-Example of delete partition number 1 from Rigid Disk Block on a 4GB vhd image file:
+Example of delete partition number 1 from Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part del 4gb.vhd 1
 ```
@@ -868,7 +944,7 @@ Example of displaying usage for exporting a partition from Rigid Disk Block:
 hst.imager rdb part export
 ```
 
-Example of exporting partition number 1 to dh0.hdf hard file from Rigid Disk Block on a 4GB vhd image file:
+Example of exporting partition number 1 to dh0.hdf hard file from Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part export 4gb.vhd 1 dh0.hdf
 ```
@@ -882,7 +958,7 @@ Example of displaying usage for formatting a partition in Rigid Disk Block:
 hst.imager rdb part format
 ```
 
-Example of formatting partition number 1 with volume name "Workbench" in Rigid Disk Block on a 4GB vhd image file:
+Example of formatting partition number 1 with volume name "Workbench" in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part format 4gb.vhd 1 Workbench
 ```
@@ -898,7 +974,7 @@ Example of displaying usage for importing a partition to Rigid Disk Block:
 hst.imager rdb part import
 ```
 
-Example of importing partition from dh0.hdf hard file with dos type PDS3 and device name DH0 to Rigid Disk Block on a 4GB vhd image file:
+Example of importing partition from dh0.hdf hard file with dos type PDS3 and device name DH0 to Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part import dh0.hdf 4gb.vhd PDS3 DH0
 ```
@@ -916,12 +992,12 @@ Example of displaying usage for killing a partition in Rigid Disk Block:
 hst.imager rdb part kill
 ```
 
-Example of killing partition number 1 with boot bytes hex values 00000000 in Rigid Disk Block on a 4GB vhd image file:
+Example of killing partition number 1 with boot bytes hex values 00000000 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part kill 4gb.vhd 1 00000000
 ```
 
-Example of restoring partition number 1 with PFS3 boot bytes hex values 50465301 in Rigid Disk Block on a 4GB vhd image file:
+Example of restoring partition number 1 with PFS3 boot bytes hex values 50465301 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part kill 4gb.vhd 1 50465301
 ```
@@ -967,17 +1043,17 @@ Example of displaying usage for updating a partition in Rigid Disk Block:
 hst.imager rdb part update
 ```
 
-Example of updating partition number 1 setting bootable property to true in Rigid Disk Block on a 4GB vhd image file:
+Example of updating partition number 1 setting bootable property to true in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --bootable true
 ```
 
-Example of updating partition number 1 setting max transfer property to 130560 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating partition number 1 setting max transfer property to 130560 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --max-transfer 130560
 ```
 
-Example of updating partition number 1 setting max transfer property to hex value 0x1fe00 in Rigid Disk Block on a 4GB vhd image file:
+Example of updating partition number 1 setting max transfer property to hex value 0x1fe00 in Rigid Disk Block in a 4GB vhd image file:
 ```
 hst.imager rdb part update 4gb.vhd 1 --max-transfer 0x1fe00
 ```

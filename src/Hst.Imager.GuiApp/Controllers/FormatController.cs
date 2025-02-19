@@ -52,8 +52,7 @@ namespace Hst.Imager.GuiApp.Controllers
                     Path = request.Path,
                     FormatType = request.FormatType,
                     FileSystem = request.FileSystem,
-                    AssetAction = request.AssetAction,
-                    AssetPath = request.AssetPath,
+                    FileSystemPath = request.FileSystemPath,
                     Size = request.Size,
                     Byteswap = request.Byteswap
                 };
@@ -82,8 +81,7 @@ namespace Hst.Imager.GuiApp.Controllers
                     Path = request.Path,
                     FormatType = request.FormatType,
                     FileSystem = request.FileSystem,
-                    AssetAction = request.AssetAction,
-                    AssetPath = request.AssetPath,
+                    FileSystemPath = request.FileSystemPath,
                     Size = request.Size,
                     Byteswap = request.Byteswap
                 }

@@ -80,13 +80,7 @@ const rdbFileSystemOptions = [{
     value: "dos7"
 }];
 
-const amigaFormattingAssetActionOptions = [{
-    title: "Download PFS3AIO from aminet.net",
-    value: "DownloadPfs3Aio"
-}, {
-    title: "Select asset file",
-    value: "SelectAssetFile"
-}];
+const pfs3AioUrl = 'https://aminet.net/disk/misc/pfs3aio.lha';
 
 export default function Format() {
     const [openConfirm, setOpenConfirm] = React.useState(false);
@@ -101,9 +95,8 @@ export default function Format() {
     const [fileSystem, setFileSystem] = React.useState('fat32')
     const [fileSystemOptions, setFileSystemOptions] = React.useState(basicFileSystemOptions)
     const [formatAll, setFormatAll] = React.useState(true);
-    const [formattingAssetActionOptions, setFormattingAssetActionOptions] = React.useState([]);
-    const [formattingAssetAction, setFormattingAssetAction] = React.useState(null);
-    const [formattingAssetFilePath, setFormattingAssetFilePath] = React.useState(null);
+    const [downloadPfs3Aio, setDownloadPfs3Aio] = React.useState(true);
+    const [fileSystemPath, setFileSystemPath] = React.useState(pfs3AioUrl);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
@@ -234,8 +227,7 @@ export default function Format() {
             path,
             formatType,
             fileSystem,
-            assetAction: formattingAssetAction === 'SelectAssetFile' ? 'None' : formattingAssetAction,
-            assetPath: formattingAssetFilePath,
+            fileSystemPath,
             size: (size * unitOption.size),
             byteswap
         });
@@ -266,9 +258,8 @@ export default function Format() {
         setPrefillSize(null)
         setPrefillSizeOptions([])
         setConnection(null)
-        setFormattingAssetActionOptions([])
-        setFormattingAssetAction(null)
-        setFormattingAssetFilePath(null)
+        setDownloadPfs3Aio(true)
+        setFileSystemPath(pfs3AioUrl)
     }
 
     const handleUpdate = async () => {
@@ -276,14 +267,11 @@ export default function Format() {
     }
 
     const pathValid = !isNil(path) && path.trim().length > 0
-    const formattingAssetFilePathValid = !isNil(formattingAssetFilePath) && formattingAssetFilePath.trim().length > 0
+    const fileSystemPathValid = formatType === 'mbr' || formatType === 'gpt' ||
+        (!isNil(fileSystemPath) && fileSystemPath.trim().length > 0)
     
-    const formatDisabled = !pathValid ||
-        (formattingAssetAction === 'SelectAssetFile' && !formattingAssetFilePathValid)
+    const formatDisabled = !pathValid || !fileSystemPathValid
 
-    console.log('formatDisabled', formatDisabled, 'formattingAssetAction', formattingAssetAction,
-        'formattingAssetFilePathValid', formattingAssetFilePathValid)
-    
     return (
         <Box>
             <ConfirmDialog
@@ -391,19 +379,16 @@ export default function Format() {
                                 case 'gpt':
                                     setFileSystemOptions(basicFileSystemOptions)
                                     setFileSystem(basicFileSystemOptions[0].value)
-                                    setFormattingAssetActionOptions([])
                                     break;
                                 case 'rdb':
                                 case 'pistorm':
                                     setFileSystemOptions(rdbFileSystemOptions)
                                     setFileSystem(rdbFileSystemOptions[0].value)
-                                    setFormattingAssetActionOptions(amigaFormattingAssetActionOptions)
-                                    setFormattingAssetAction('DownloadPfs3Aio')
-                                    setFormattingAssetFilePath(null)
+                                    setDownloadPfs3Aio(true)
+                                    setFileSystemPath(pfs3AioUrl)
                                     break;
                                 default:
                                     setFileSystemOptions([])
-                                    setFormattingAssetActionOptions([])
                             }
                         }}
                     />
@@ -419,9 +404,9 @@ export default function Format() {
                         options={fileSystemOptions || []}
                         onChange={(value) => {
                             setFileSystem(value)
-                            if (formattingAssetAction === 'DownloadPfs3Aio') {
-                                setFormattingAssetAction('SelectAssetFile')
-                            }
+                            const isPfs3FileSystem = value === 'pds3' || value === 'pfs3'
+                            setDownloadPfs3Aio(isPfs3FileSystem)
+                            setFileSystemPath(isPfs3FileSystem ? pfs3AioUrl : null)
                         }}
                     />
                 </Grid>
@@ -431,39 +416,35 @@ export default function Format() {
                     {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
                         <Grid container spacing={1} direction="row" sx={{ mt: 1 }}>
                             <Grid item xs={12} lg={6}>
-                                <SelectField
-                                    label="Asset action for formatting"
-                                    id="asset-action"
-                                    value={formattingAssetAction || ''}
-                                    options={formattingAssetActionOptions}
-                                    onChange={(value) => {
-                                        setFormattingAssetAction(value)
-                                        if (value === 'DownloadPfs3Aio') {
-                                            setFormattingAssetFilePath(null)
-                                        }
+                                <CheckboxField
+                                    id="download-pfs3aio"
+                                    label="Download pfs3aio from aminet.net"
+                                    value={downloadPfs3Aio}
+                                    onChange={async (checked) => {
+                                        setDownloadPfs3Aio(checked)
+                                        setFileSystemPath(checked ? pfs3AioUrl : null)
                                     }}
                                 />
                             </Grid>
                         </Grid>
                     )}
-                    {(formattingAssetAction === 'SelectAssetFile' &&
-                        (fileSystem === 'pds3' || fileSystem === 'pfs3' || fileSystem === 'dos3' || fileSystem === 'dos7')) && (
+                    {(!downloadPfs3Aio && (fileSystem === 'pds3' || fileSystem === 'pfs3' || fileSystem === 'dos3' || fileSystem === 'dos7')) && (
                         <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
                             <Grid item xs={12} lg={6}>
                                 <TextField
-                                    id="asset-path"
+                                    id="file-system-path"
                                     label={
                                         <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
-                                            <FontAwesomeIcon icon="file" style={{ marginRight: '5px' }} /> Formatting asset file
+                                            <FontAwesomeIcon icon="file" style={{ marginRight: '5px' }} /> File system file
                                         </div>
                                     }
-                                    value={formattingAssetFilePath || ''}
+                                    value={fileSystemPath || ''}
                                     endAdornment={
                                         <BrowseOpenDialog
-                                            id="browse-formatting-asset-file-path"
-                                            title="Select formatting asset file"
+                                            id="browse-file-system-file-path"
+                                            title="Select file system file"
                                             onChange={async (path) => {
-                                                setFormattingAssetFilePath(path)
+                                                setFileSystemPath(path)
                                             }}
                                             fileFilters={[{
                                                 name: 'All files',
@@ -472,7 +453,7 @@ export default function Format() {
                                         />
                                     }
                                     onChange={(event) => {
-                                        setFormattingAssetFilePath(get(event, 'target.value'))
+                                        setFileSystemPath(get(event, 'target.value'))
                                     }}
                                 />
                             </Grid>

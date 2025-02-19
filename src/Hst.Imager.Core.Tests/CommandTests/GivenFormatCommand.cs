@@ -32,7 +32,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size());
+                string.Empty, string.Empty, new Size());
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -78,7 +78,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), 
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size(50, Unit.Percent));
+                string.Empty, string.Empty, new Size(50, Unit.Percent));
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -123,7 +123,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size());
+                string.Empty, string.Empty, new Size());
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -169,7 +169,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper,
                 new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size());
+                string.Empty, string.Empty, new Size());
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -221,7 +221,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size(50, Unit.Percent));
+                string.Empty, string.Empty, new Size(50, Unit.Percent));
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -273,7 +273,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                AssetAction.None, string.Empty, string.Empty, new Size());
+                string.Empty, string.Empty, new Size());
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -314,14 +314,14 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 100.MB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia("pfs3aio", "pfs3aio", data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -332,7 +332,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    AssetAction.None, assetPath, outputDir, new Size());
+                    fileSystemPath, outputDir, new Size());
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -376,14 +376,14 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 2.GB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -394,7 +394,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    AssetAction.None, assetPath, outputDir, new Size());
+                    fileSystemPath, outputDir, new Size());
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -441,14 +441,14 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 100.MB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -460,7 +460,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, new Size(50, Unit.Percent));
+                    fileSystemPath, outputDir, new Size(50, Unit.Percent));
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -504,14 +504,14 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 2.GB();
             const FormatType formatType = FormatType.PiStorm;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
 
             // arrange - test command helper
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -523,7 +523,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, new Size());
+                    fileSystemPath, outputDir, new Size());
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -578,7 +578,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 4.GB();
             const FormatType formatType = FormatType.PiStorm;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
             var size = new Size(50, Unit.Percent);
 
@@ -586,7 +586,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -597,7 +597,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    AssetAction.None, assetPath, outputDir, size);
+                    fileSystemPath, outputDir, size);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -652,7 +652,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 1.GB();
             const FormatType formatType = FormatType.PiStorm;
             const string fileSystem = "pfs3";
-            const string assetPath = "pfs3aio";
+            const string fileSystemPath = "pfs3aio";
             var outputDir = $"{Guid.NewGuid()}-dir";
             var size = new Size(0, Unit.Percent);
 
@@ -660,7 +660,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test pfs3aio file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.Pfs3AioBytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -671,7 +671,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, size);
+                    fileSystemPath, outputDir, size);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -694,7 +694,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 100.MB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "dos7";
-            const string assetPath = "FastFileSystem";
+            const string fileSystemPath = "FastFileSystem";
             var outputDir = $"{Guid.NewGuid()}-dir";
             var size = new Size(0, Unit.Bytes);
             
@@ -702,7 +702,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add fast file system file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.FastFileSystemDos7Bytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos7Bytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -713,7 +713,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, size);
+                    fileSystemPath, outputDir, size);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -756,7 +756,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 100.MB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "dos7";
-            const string assetPath = "FastFileSystem";
+            const string fileSystemPath = "FastFileSystem";
             var outputDir = $"{Guid.NewGuid()}-dir";
             var size = new Size(0, Unit.Bytes);
             
@@ -764,7 +764,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add fast file system file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.FastFileSystemDos3Bytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos3Bytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -775,7 +775,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, size);
+                    fileSystemPath, outputDir, size);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -818,7 +818,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 4.GB();
             const FormatType formatType = FormatType.Rdb;
             const string fileSystem = "dos7";
-            const string assetPath = "FastFileSystem";
+            const string fileSystemPath = "FastFileSystem";
             var outputDir = $"{Guid.NewGuid()}-dir";
             var size = new Size(0, Unit.Bytes);
             
@@ -826,7 +826,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add fast file system file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.FastFileSystemDos3Bytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos3Bytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -837,7 +837,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputDir, size);
+                    fileSystemPath, outputDir, size);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);

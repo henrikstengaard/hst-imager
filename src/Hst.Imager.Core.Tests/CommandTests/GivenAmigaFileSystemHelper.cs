@@ -233,7 +233,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var diskSize = 2.GB();
             const FormatType formatType = FormatType.PiStorm;
             const string fileSystem = "dos7";
-            const string assetPath = "FastFileSystem";
+            const string fileSystemPath = "FastFileSystem";
             const string fileSystemName = "FastFileSystem";
             var outputPath = $"{Guid.NewGuid()}-dir";
 
@@ -241,7 +241,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add fast file system file
-            await testCommandHelper.AddTestMedia(assetPath, assetPath, data: TestHelper.FastFileSystemDos7Bytes);
+            await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos7Bytes);
 
             // arrange - add disk
             testCommandHelper.AddTestMedia(diskPath, diskSize);
@@ -252,7 +252,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    AssetAction.None, assetPath, outputPath, new Models.Size());
+                    fileSystemPath, outputPath, new Models.Size());
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
