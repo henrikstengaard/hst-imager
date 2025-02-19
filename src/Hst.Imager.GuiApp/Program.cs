@@ -37,6 +37,7 @@ namespace Hst.Imager.GuiApp
                     onAppUninstall: (_, _) => RemoveShortcutsForExecutable(mgr));
             }
 #endif
+            var appDataPath = ApplicationDataHelper.GetApplicationDataDir(Constants.AppName);
             var worker = false;
             var baseUrl = string.Empty;
             int processId = 0;
@@ -50,6 +51,11 @@ namespace Hst.Imager.GuiApp
                     return;
                 }
 #endif
+
+                if (args[i].Equals("--app-data-path", StringComparison.OrdinalIgnoreCase))
+                {
+                    appDataPath = args[i + 1];
+                }
 
                 if (args[i].Equals("--worker", StringComparison.OrdinalIgnoreCase))
                 {
@@ -72,21 +78,33 @@ namespace Hst.Imager.GuiApp
 
             var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName))?.DebugMode ?? false;
             var hasDebugEnabled = ApplicationDataHelper.HasDebugEnabled(Constants.AppName) || debugMode;
-            
-            if (worker &&
-                !string.IsNullOrWhiteSpace(baseUrl))
-            {
-                await WorkerBootstrapper.Start(baseUrl, processId, hasDebugEnabled);
-                return;
-            }
 
 #if RELEASE
             SetupReleaseLogging(hasDebugEnabled);
 #else
             SetupDebugLogging();
 #endif
+
             Log.Information("Imager starting");
             Log.Information($"OS: {OperatingSystem.OsDescription}");
+
+            if (worker)
+            {
+                if (string.IsNullOrWhiteSpace(appDataPath))
+                {
+                    Log.Error("Worker requires '--app-data-path' argument is defined!");
+                    return;
+                }
+
+                if (string.IsNullOrWhiteSpace(baseUrl))
+                {
+                    Log.Error("Worker requires '--baseurl' argument is defined!");
+                    return;
+                }
+
+                await WorkerBootstrapper.Start(appDataPath, baseUrl, processId, hasDebugEnabled);
+                return;
+            }
 
             try
             {

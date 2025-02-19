@@ -1,4 +1,11 @@
-﻿namespace Hst.Imager.GuiApp.Models
+﻿using ElectronNET.API;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.GuiApp.Helpers;
+using System.Diagnostics;
+using System.IO;
+using System;
+
+namespace Hst.Imager.GuiApp.Models
 {
     public class AppState
     {
@@ -20,5 +27,21 @@
         {
             Settings = new Settings();
         }
+
+        public static AppState Create(string appDataPath, string baseUrl, bool isAdministrator) => new AppState
+        {
+            AppPath = AppContext.BaseDirectory,
+            AppDataPath = appDataPath,
+            LogsPath = Path.Combine(appDataPath, "logs"),
+            ExecutingFile = WorkerHelper.GetExecutingFile(),
+            BaseUrl = baseUrl,
+            IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(appDataPath),
+            IsAdministrator = isAdministrator,
+            IsElectronActive = HybridSupport.IsElectronActive,
+            UseFake = Debugger.IsAttached,
+            IsWindows = Hst.Core.OperatingSystem.IsWindows(),
+            IsMacOs = Hst.Core.OperatingSystem.IsMacOs(),
+            IsLinux = Hst.Core.OperatingSystem.IsLinux()
+        };
     }
 }

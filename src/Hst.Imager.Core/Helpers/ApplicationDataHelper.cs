@@ -27,14 +27,14 @@
             return appDataDir;
         }
 
-        public static bool IsLicenseAgreed(string appName)
+        public static bool IsLicenseAgreed(string appDataPath)
         {
-            return File.Exists(Path.Combine(GetApplicationDataDir(appName), "license_agreed.txt"));
+            return File.Exists(Path.Combine(appDataPath, "license_agreed.txt"));
         }
 
-        public static async Task AgreeLicense(Assembly assembly, string appName, bool agree)
+        public static async Task AgreeLicense(Assembly assembly, string appDataPath, bool agree)
         {
-            var licenseAgreedPath = Path.Combine(GetApplicationDataDir(appName), "license_agreed.txt");
+            var licenseAgreedPath = Path.Combine(appDataPath, "license_agreed.txt");
 
             if (!agree)
             {

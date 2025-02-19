@@ -76,20 +76,10 @@ namespace Hst.Imager.GuiApp
 
             services.AddHostedService<BackgroundTaskService>();
             services.AddSingleton<IActiveBackgroundTaskList>(new ActiveBackgroundTaskList());
-            services.AddSingleton(new AppState
-            {
-                AppPath = AppContext.BaseDirectory,
-                AppDataPath = ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName),
-                LogsPath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName), "logs"),
-                ExecutingFile = WorkerHelper.GetExecutingFile(),
-                IsLicenseAgreed = ApplicationDataHelper.IsLicenseAgreed(Core.Models.Constants.AppName),
-                IsAdministrator = OperatingSystem.IsAdministrator(),
-                IsElectronActive = HybridSupport.IsElectronActive,
-                UseFake = Debugger.IsAttached,
-                IsWindows = OperatingSystem.IsWindows(),
-                IsMacOs = OperatingSystem.IsMacOs(),
-                IsLinux = OperatingSystem.IsLinux()
-            });
+            services.AddSingleton(AppState.Create(
+                ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName),
+                string.Empty,
+                OperatingSystem.IsAdministrator()));
             services.AddSingleton<PhysicalDriveManagerFactory>();
             services.AddSingleton<WorkerService>();
         }

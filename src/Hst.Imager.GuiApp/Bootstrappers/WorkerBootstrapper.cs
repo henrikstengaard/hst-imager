@@ -21,7 +21,7 @@
 
     public static class WorkerBootstrapper
     {
-        public static async Task Start(string baseUrl, int processId, bool hasDebugEnabled)
+        public static async Task Start(string appDataPath, string baseUrl, int processId, bool hasDebugEnabled)
         {
 #if RELEASE
             SetupReleaseLogging(hasDebugEnabled);
@@ -117,10 +117,7 @@
             var activeBackgroundTaskList = new ActiveBackgroundTaskList();
             var queuedHostedService = new QueuedHostedService(backgroundTaskQueue, activeBackgroundTaskList,
                 loggerFactory.CreateLogger<QueuedHostedService>());
-            var appState = new AppState
-            {
-                IsAdministrator = true
-            };
+            var appState = AppState.Create(appDataPath, baseUrl, true);
 
             var backgroundTaskHandler = new BackgroundTaskHandler(
                 loggerFactory.CreateLogger<BackgroundTaskHandler>(),

@@ -84,7 +84,7 @@
             }
 
             var currentProcessId = Process.GetCurrentProcess().Id;
-            var arguments = $"--worker --baseurl {appState.BaseUrl} --process-id {currentProcessId}";
+            var arguments = $"--worker --app-data-path \"{appState.AppDataPath}\" --baseurl {appState.BaseUrl} --process-id {currentProcessId}";
             logger.LogDebug($"Starting worker '{workerPath}' with arguments '{arguments}'");
 
             var processStartInfo = ElevateHelper.GetElevatedProcessStartInfo(
