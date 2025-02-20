@@ -30,11 +30,16 @@ namespace Hst.Imager.Core.Commands
         private readonly string outputPath;
         private readonly Size size;
 
+        private int commandsExecuted;
+        private int maxCommandsToExecute;
+
         private const long WorkbenchPartitionSize = 1000000000;
         private const long WorkPartitionSize = 64000000000;
         private const long PiStormBootPartitionSize = 1000000000;
 
         private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+
+        public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
         /// <summary>
         /// 
@@ -63,6 +68,8 @@ namespace Hst.Imager.Core.Commands
             this.fileSystemPath = string.IsNullOrWhiteSpace(fileSystemPath) ? Pfs3AioLhaUrl : fileSystemPath;
             this.outputPath = outputPath;
             this.size = size;
+            this.commandsExecuted = 0;
+            this.maxCommandsToExecute = 0;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -107,7 +114,7 @@ namespace Hst.Imager.Core.Commands
 
                 fileSystemPath = await FileSystemHelper.DownloadFile(fileSystemPath, outputPath, Path.GetFileName(fileSystemPath));
             }
-            
+
             OnInformationMessage($"Formatting '{path}'");
 
             OnDebugMessage($"Opening '{path}' as writable");
@@ -148,19 +155,68 @@ namespace Hst.Imager.Core.Commands
                     emptyPartitionTableData.Length, 0, 0);
             }
 
+            // calculate max commands to execute + 1 for erasing partition tables
+            maxCommandsToExecute = CalculateCommandsToExecute(formatType, diskSize) + 1;
+
+            UpdateCommandsExecuted(1);
+
+            Result formatResult;
+
             switch (formatType)
             {
                 case FormatType.Mbr:
-                    return await FormatMbrDisk(diskSize, mbrFileSystem, token);
+                    formatResult = await FormatMbrDisk(diskSize, mbrFileSystem, token);
+                    break;
                 case FormatType.Gpt:
-                    return await FormatGptDisk(diskSize, gptFileSystem, token);
+                    formatResult = await FormatGptDisk(diskSize, gptFileSystem, token);
+                    break;
                 case FormatType.Rdb:
-                    return await FormatRdbDisk(diskSize, rdbFileSystem, path, 0, token);
+                    formatResult = await FormatRdbDisk(diskSize, rdbFileSystem, path, 0, token);
+                    break;
                 case FormatType.PiStorm:
-                    return await FormatPiStormDisk(diskSize, rdbFileSystem, token);
+                    formatResult = await FormatPiStormDisk(diskSize, rdbFileSystem, token);
+                    break;
                 default:
-                    return new Result(new Error($"Unsupported format type '{formatType}'"));
+                    formatResult = new Result(new Error($"Unsupported format type '{formatType}'"));
+                    break;
             }
+
+            UpdatePercentComplete(100);
+
+            return formatResult;
+        }
+
+        private int CalculateCommandsToExecute(FormatType formatType, long diskSize)
+        {
+            switch (formatType)
+            {
+                case FormatType.Mbr:
+                case FormatType.Gpt:
+                    // 3 commands: mbr/gpt init command, mbr/gpt part add command and mbr/gpt part format commands
+                    return 3;
+                case FormatType.Rdb:
+                case FormatType.PiStorm:
+                    var formatSize = diskSize.ResolveSize(size).ToSectorSize();
+
+                    // 2 commands: rdb init command and rdb fs add command
+                    // 2 commands: rdb part add command and rdb part format command for workbench
+                    // 2 command for each 2gb: rdb part add command and rdb part format for each work partition, assuming worst case of max 2gb partition size.
+                    var formatRdbCommands = 4 + (Math.Ceiling((double)formatSize / 2.GB()) * 2);
+
+                    if (formatType == FormatType.Rdb)
+                    {
+                        return Convert.ToInt32(formatRdbCommands);
+                    }
+
+                    // 2 commands: mbr part add command and mbr part format command for pistorm boot.
+                    // 1 command for each 128gb: mbr part add command for each pistorm rdb disk
+                    var formatPiStormRdbCommands = 2 + (Math.Ceiling((double)formatSize / 128.GB()) * (formatRdbCommands + 1));
+
+                    return Convert.ToInt32(formatPiStormRdbCommands);
+                default:
+                    return 0;
+            }
+
         }
 
         private async Task<bool> MediaPathExists(string mediaPath)
@@ -238,6 +294,8 @@ namespace Hst.Imager.Core.Commands
                 return new Result(mbrInitResult.Error);
             }
 
+            UpdateCommandsExecuted(1);
+
             var partitionSize = diskSize.ResolveSize(size).ToSectorSize();
             long? startSector = 2048;
             long? endSector = partitionSize / 512;
@@ -255,11 +313,17 @@ namespace Hst.Imager.Core.Commands
                 return new Result(mbrPartAddResult.Error);
             }
 
+            UpdateCommandsExecuted(1);
+
             var mbrPartFormatCommand = new MbrPartFormatCommand(loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives,
                 path, 1, "Empty", fileSystem.ToUpper());
             AddMessageEvents(mbrPartFormatCommand);
 
-            return await mbrPartFormatCommand.Execute(cancellationToken);
+            var mbrPartFormatResult = await mbrPartFormatCommand.Execute(cancellationToken);
+
+            UpdateCommandsExecuted(1);
+
+            return mbrPartFormatResult;
         }
 
         private async Task<Result> FormatGptDisk(long diskSize, FormatGptFileSystem gptFileSystem, CancellationToken cancellationToken)
@@ -272,6 +336,8 @@ namespace Hst.Imager.Core.Commands
             {
                 return new Result(gptInitResult.Error);
             }
+
+            UpdateCommandsExecuted(1);
 
             var partitionSize = diskSize.ResolveSize(size).ToSectorSize();
             long? startSector = 2048;
@@ -287,6 +353,8 @@ namespace Hst.Imager.Core.Commands
                 return new Result(gptPartAddResult.Error);
             }
 
+            UpdateCommandsExecuted(1);
+
             var gptPartType = GetGptPartType(gptFileSystem);
 
             var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(),
@@ -294,7 +362,11 @@ namespace Hst.Imager.Core.Commands
                 path, 1, gptPartType, "Empty");
             AddMessageEvents(gptPartFormatCommand);
 
-            return await gptPartFormatCommand.Execute(cancellationToken);
+            var gptPartFormatResult = await gptPartFormatCommand.Execute(cancellationToken);
+
+            UpdateCommandsExecuted(1);
+
+            return gptPartFormatResult;
         }
 
         private static GptPartType GetGptPartType(FormatGptFileSystem gptFileSystem)
@@ -308,8 +380,21 @@ namespace Hst.Imager.Core.Commands
             };
         }
 
+        /// <summary>
+        /// Determine if FastFileSystem version supports partitions larger than 2GB.
+        /// FastFileSystem with AmigaOS 3.5 and newer supports partitions larger than 2GB.
+        /// </summary>
+        /// <param name="version">Version to check.</param>
+        /// <returns>True if version supports partitions larger than 2GB. Otherwise false.</returns>
         private static bool HasFastFileSystem2GbLimit(int version) => version < 45;
 
+        /// <summary>
+        /// Determine if FastFileSystem version and revision supports DOS7 long filenames.
+        /// FastFileSystem with AmigaOS 3.1.4 and newer supports DOS7 long filenames.
+        /// </summary>
+        /// <param name="version">Version to check.</param>
+        /// <param name="revision">Revision to check.</param>
+        /// <returns>True if version and revision supports DOS7 long filenames. Otherwise false.</returns>
         private static bool HasFastFileSystemDos7Support(int version, int revision)
         {
             if (version > 46)
@@ -379,6 +464,8 @@ namespace Hst.Imager.Core.Commands
                 return new Result<int>(rdbInitResult.Error);
             }
 
+            UpdateCommandsExecuted(1);
+
             // add pfs3 filesystem
             var rdbFsAddCommand = new RdbFsAddCommand(loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper, physicalDrives,
                 rdbPath, fileSystemPath, dosType, string.Empty, null, null);
@@ -389,6 +476,8 @@ namespace Hst.Imager.Core.Commands
             {
                 return new Result<int>(rdbFsAddResult.Error);
             }
+
+            UpdateCommandsExecuted(1);
 
             string partitionName;
             RdbPartAddCommand rdbPartAddCommand;
@@ -417,6 +506,8 @@ namespace Hst.Imager.Core.Commands
                     return new Result<int>(rdbPartAddResult.Error);
                 }
 
+                UpdateCommandsExecuted(1);
+
                 // format workbench partition
                 rdbPartFormatCommand = new RdbPartFormatCommand(loggerFactory.CreateLogger<RdbPartFormatCommand>(), commandHelper,
                 physicalDrives, rdbPath, 1, "Workbench", false, string.Empty, dosType);
@@ -427,6 +518,8 @@ namespace Hst.Imager.Core.Commands
                 {
                     return new Result<int>(rdbPartFormatResult.Error);
                 }
+
+                UpdateCommandsExecuted(1);
 
                 partitionNumber++;
             }
@@ -462,6 +555,8 @@ namespace Hst.Imager.Core.Commands
                     return new Result<int>(rdbPartAddResult.Error);
                 }
 
+                UpdateCommandsExecuted(1);
+
                 // format work partition
                 rdbPartFormatCommand = new RdbPartFormatCommand(loggerFactory.CreateLogger<RdbPartFormatCommand>(),
                     commandHelper,
@@ -477,6 +572,8 @@ namespace Hst.Imager.Core.Commands
                 {
                     return new Result<int>(rdbPartFormatResult.Error);
                 }
+
+                UpdateCommandsExecuted(1);
 
                 partitionNumber++;
             }
@@ -522,6 +619,8 @@ namespace Hst.Imager.Core.Commands
                 return new Result(mbrPartAddResult.Error);
             }
 
+            UpdateCommandsExecuted(1);
+
             // format pistorm boot partition
             var mbrPartFormatCommand = new MbrPartFormatCommand(loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives,
     path, 1, "Empty", MbrPartType.Fat32Lba.ToString());
@@ -532,6 +631,8 @@ namespace Hst.Imager.Core.Commands
             {
                 return new Result(mbrPartFormatResult.Error);
             }
+
+            UpdateCommandsExecuted(1);
 
             // calculate number of pistorm disks
             var piStormDiskSize = formatSize > 128.GB() ? 128.GB() : formatSize;
@@ -568,6 +669,8 @@ namespace Hst.Imager.Core.Commands
                     return new Result(mbrPartAddResult.Error);
                 }
 
+                UpdateCommandsExecuted(1);
+
                 // format pistorm mbr partition
                 var piStormRdbPath = Path.Combine(path, "mbr", (i + 2).ToString());
                 var formatRdbDiskResult = await FormatRdbDisk(partitionSize, formatRdbFileSystem,
@@ -584,6 +687,31 @@ namespace Hst.Imager.Core.Commands
             }
 
             return new Result();
+        }
+
+        private void UpdateCommandsExecuted(int commands)
+        {
+            commandsExecuted += commands;
+
+            var percentComplete = Math.Round((100d / maxCommandsToExecute) * commandsExecuted);
+
+            if (percentComplete < 0)
+            {
+                percentComplete = 0;
+            }
+
+            if (percentComplete > 100)
+            {
+                percentComplete = 100;
+            }
+
+            UpdatePercentComplete(percentComplete);
+        }
+
+        private void UpdatePercentComplete(double percentComplete)
+        {
+            DataProcessed?.Invoke(this,
+                new DataProcessedEventArgs(false, percentComplete, 0, 0, 0, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0));
         }
 
         private void AddMessageEvents(CommandBase command)

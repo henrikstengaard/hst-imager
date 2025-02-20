@@ -39,7 +39,9 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 {
                     Title = formatBackgroundTask.Title,
                     IsComplete = false,
-                    PercentComplete = 50
+                    HasError = false,
+                    ErrorMessage = null,
+                    PercentComplete = 0
                 }, context.Token);
 
                 var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
@@ -50,7 +52,28 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     formatBackgroundTask.FileSystemPath,
                     appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes));
-
+                formatCommand.DataProcessed += async (_, args) =>
+                {
+                    await progressHubContext.SendProgress(new Progress
+                    {
+                        Title = formatBackgroundTask.Title,
+                        IsComplete = false,
+                        PercentComplete = args.PercentComplete,
+                        BytesPerSecond = args.BytesPerSecond,
+                        BytesProcessed = args.BytesProcessed,
+                        BytesRemaining = args.BytesRemaining,
+                        BytesTotal = args.BytesTotal,
+                        MillisecondsElapsed = args.PercentComplete > 0
+                            ? (long)args.TimeElapsed.TotalMilliseconds
+                            : new long?(),
+                        MillisecondsRemaining = args.PercentComplete > 0
+                            ? (long)args.TimeRemaining.TotalMilliseconds
+                            : new long?(),
+                        MillisecondsTotal = args.PercentComplete > 0
+                            ? (long)args.TimeTotal.TotalMilliseconds
+                            : new long?()
+                    }, context.Token);
+                };
                 var result = await formatCommand.Execute(context.Token);
 
                 await Task.Delay(500, context.Token);

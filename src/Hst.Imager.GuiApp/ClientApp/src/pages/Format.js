@@ -415,7 +415,7 @@ export default function Format() {
                 <React.Fragment>
                     {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
                         <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>
-                            <Grid item xs={12}>
+                            <Grid item xs={12} lg={6}>
                                 <CheckboxField
                                     id="download-pfs3aio"
                                     label="Download pfs3aio from aminet.net"
@@ -429,8 +429,8 @@ export default function Format() {
                         </Grid>
                     )}
                     {(!downloadPfs3Aio && (fileSystem === 'pds3' || fileSystem === 'pfs3' || fileSystem === 'dos3' || fileSystem === 'dos7')) && (
-                        <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
-                            <Grid item xs={12}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+                            <Grid item xs={12} lg={6}>
                                 <TextField
                                     id="file-system-path"
                                     label={
