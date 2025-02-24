@@ -34,13 +34,20 @@ Hst Imager supports following operating systems:
 - macOS
 - Linux
 
-## Administrator privileges
-
-Hst Imager starts without administrator privileges allowing it to be used for image files.
-
-When using a command that requires access to physical drives, Hst Imager will shown a popup for "Hst.Imager.GuiApp.exe" requesting administrator privileges to access physical drives.
-
 ## Installation
+
+To install Hst Imager, here's an overview of operating systems, architecture and which asset to download and install:
+| Operating System | Architecture | Asset | Description |
+|---|---|---|---|
+| Windows | 64-bit | hst-imager_gui_windows_x64_setup.exe | Setup version of Hst Imager. |
+| Windows | 64-bit | hst-imager_gui_windows_x64_portable.exe | Portable version of Hst Imager without setup. |
+| Windows | 64-bit | hst-imager_gui_windows_x64.zip | Zipped version of Hst Imager. |
+| MacOS | M1+ 64-bit | hst-imager_gui_macos_arm64.dmg | Apple Disk Image file version of Hst Imager for Mac with M1+ CPU's. |
+| MacOS | Intel 64-bit | hst-imager_gui_macos_x64.dmg | Apple Disk Image file version of Hst Imager for Mac with Intel CPU's. |
+| Linux | 64-bit | hst-imager_gui_linux_x64.AppImage | AppImage click-to-run version of Hst Imager for 64-bit Linux distros. |
+| Linux | 64-bit | hst-imager_gui_linux_amd64.deb | Debian package version Hst Imager for 64-bit Linux distros. |
+| Linux | ARM 64-bit | hst-imager_gui_linux_arm64.AppImage | AppImage click-to-run version of Hst Imager for ARM 64-bit Linux distros. |
+| Linux | ARM 64-bit | hst-imager_gui_linux_arm64.deb | Debian package version Hst Imager for ARM 64-bit Linux distros. |
 
 ### Windows 64-bit
 
@@ -82,6 +89,12 @@ Install Hst Imager for Linux 64-bit with following steps:
 4. Open Hst Imager in show applications.
 
 Hst Imager for 64-bit Linux is now starting and ready to use.
+
+## Administrator privileges
+
+Hst Imager starts without administrator privileges allowing it to be used for image files.
+
+When using a command that requires access to physical drives, Hst Imager will shown a popup for "Hst.Imager.GuiApp.exe" requesting administrator privileges to access physical drives.
 
 ### Format physical drive or image file
 

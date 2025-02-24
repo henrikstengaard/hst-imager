@@ -79,20 +79,55 @@ Hst Imager supports following operating systems:
 
 ## Installation
 
-- Download latest Hst Imager console version from [releases](https://github.com/henrikstengaard/hst-imager/releases).
-- Extract Hst Imager console zip file.
+To install Hst Imager console, here's an overview of operating systems, architecture and which asset to download and install:
+| Operating System | Architecture | Asset |
+|---|---|---|
+| Windows | 64-bit | hst-imager_console_windows_x64.zip |
+| Windows | ARM 64-bit | hst-imager_console_windows_arm64.zip |
+| Windows | 32-bit | hst-imager_console_windows_x86.zip |
+| MacOS | M1+ 64-bit | hst-imager_console_macos_arm64.zip |
+| MacOS | Intel 64-bit | hst-imager_console_macos_x64.zip |
+| Linux | 64-bit | hst-imager_console_linux_x64.zip |
+| Linux | ARM 64-bit | hst-imager_console_linux_arm64.zip |
+| Linux | ARM 32-bit | hst-imager_console_linux_arm.zip |
+
+Hst Imager console can be installed with following steps:
+1. Download latest Hst Imager console version from [releases](https://github.com/henrikstengaard/hst-imager/releases).
+2. Extract Hst Imager console zip file.
 
 Hst Imager is now ready to use.
 
+**MacOS installation requires codesign as described in next section!**
+
+### MacOS codesign
+
+Hst Imager console is not signed with an Apple developer certificate and will not run unless it's signed.
+
+Hst Imager can be signed with following steps:
+1. Open Terminal.
+2. Change directory to where Hst Imager console is downloaded and extracted, e.g.:
+```
+cd ~/Downloads/hst-imager_v1.2.240-c26d3fb_console_macos_arm64
+```
+3. Run following command to sign Hst Imager using codesign: 
+```
+sudo codesign -s - -f hst.imager
+```
+
 ## Usage
 
-Hst Imager console application is invoked from the command line using the `hst.imager` command.
+Hst Imager console application can be run from the command line using the `hst.imager` command.
 
-Invoking `hst.imager` command without any arguments, will display available commands and options.
+Running `hst.imager` command without any arguments, will display available commands and options.
 
 Example of displaying usage:
 ```
 hst.imager
+```
+
+Example of displaying usage on MacOS and Linux:
+```
+./hst.imager
 ```
 
 The command line options for the Hst Imager console application are listed in the following sections.
@@ -101,7 +136,7 @@ The command line options for the Hst Imager console application are listed in th
 
 Commands accessing physical drives requires administrator privileges:
 - Windows: Run `hst.imager` command from Command Prompt started as Administrator.
-- macOS and Linux: Run `hst.imager` command from Terminal or shell with sudo, e.g. `sudo hst.imager list` to list physical drives.
+- macOS and Linux: Run `./hst.imager` command from Terminal or shell with sudo, e.g. `sudo ./hst.imager list` to list physical drives.
 
 Hst Imager will only allow access to removable or USB attached physical drives.
 
