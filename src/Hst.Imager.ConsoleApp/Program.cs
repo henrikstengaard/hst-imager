@@ -13,12 +13,13 @@
     using Serilog;
     using Serilog.Core;
     using Serilog.Events;
+    using Serilog.Sinks.SystemConsole.Themes;
 
     public static class Program
     {
         private static LoggerConfiguration loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(AppState.Instance.LoggingLevelSwitch)
-            .WriteTo.Console();
+            .WriteTo.Console(theme: AnsiConsoleTheme.None);
 
         private static void AddLogFile(FileInfo fileInfo)
         {
