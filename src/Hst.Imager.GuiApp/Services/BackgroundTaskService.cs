@@ -17,8 +17,8 @@
         private readonly IHubContext<WorkerHub> workerHubContext;
         private readonly IHubContext<ErrorHub> errorHubContext;
         private readonly WorkerService workerService;
-        private const int RetryWaitMilliseconds = 500;
-        private const int MaxWaitMilliseconds = 30000;
+        private const int RetryWaitMilliseconds = 1000;
+        private const int MaxWaitMilliseconds = 60000;
 
         public BackgroundTaskService(
             ILoggerFactory loggerFactory,

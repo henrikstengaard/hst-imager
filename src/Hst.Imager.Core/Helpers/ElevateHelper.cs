@@ -23,8 +23,6 @@
             }
 
             return args;
-            //args.Add($"\"{Path.GetFileName(command)}\"");
-            //return string.Join("; ", args);
         }
 
         public static string[] GetBashArgs(string command, string arguments = null, bool escapeQuotes = false)
@@ -105,6 +103,66 @@
             };
         }
 
+        private static string CreateMacOsScript(string prompt, string command,
+            string arguments = null, string workingDirectory = null,
+            bool sudo = false, bool showWindow = false)
+        {
+            var scriptLines = new string[]{
+                command.StartsWith("/") ? command : $"./{command}",
+                string.IsNullOrWhiteSpace(arguments) ? string.Empty : $"{arguments}",
+                !showWindow ? ">/dev/null &" : string.Empty
+            };
+
+            var script = string.Join(" ", scriptLines);
+
+            if (!sudo)
+            {
+                return script;
+            }
+
+            var sudoScriptLines = new List<string>
+            {
+                $"echo '{prompt}'"
+            };
+
+            if (!string.IsNullOrWhiteSpace(workingDirectory))
+            {
+                sudoScriptLines.Add($"cd '{workingDirectory}'");
+            }
+
+            sudoScriptLines.Add($"sudo zsh -c '{script}'; exit");
+
+            return string.Join("; ", sudoScriptLines);
+        }
+
+        private static string CreateMacOsOsaScriptArgsWithAdministratorPrompt(string script, string prompt) => 
+            $"-e \"do shell script \\\"{script}\\\" with prompt \\\"{prompt}\\\" with administrator privileges\"";
+
+        private static string CreateMacOsOsaScriptArgsWithTerminalWindow(string script) => string.Join(" ",
+        [
+            // open new terminal window
+            "-e \"tell application \\\"Terminal\\\"\"",
+
+            // bring application to the front
+            "-e \"activate\"",
+            
+            // run script
+            $"-e \"set w to do script \\\"{script}\\\"\"",
+
+            // repeat until script is done
+            "-e \"repeat\"",
+            "-e \"delay 1\"",
+            "-e \"if not busy of w then exit repeat\"",
+            "-e \"end repeat\"",
+
+            // close terminal window
+            "-e \"set windowId to id of front window\"",
+            "-e \"close window id windowId\"",
+
+            // end open new terminal window
+            "-e \"end tell\""
+        ]);
+
         /// <summary>
         /// create mac os osascript process start info to run command with administrator privileges
         /// </summary>
@@ -114,23 +172,21 @@
         /// <param name="workingDirectory"></param>
         /// <param name="showWindow"></param>
         /// <returns></returns>
-        public static ProcessStartInfo CreateMacOsOsascriptProcessStartInfo(string prompt, string command,
-            string arguments = null, string workingDirectory = null, bool showWindow = false)
+        public static ProcessStartInfo CreateMacOsProcessStartInfoWithAdministratorPrompt(string prompt, string command,
+            string arguments = null, string workingDirectory = null)
         {
-            var script =
-                $"sudo \\\"{(command.StartsWith("/") ? command : $"./{command}")}\\\"{(string.IsNullOrWhiteSpace(arguments) ? string.Empty : $" {arguments}")}";
+            var script = CreateMacOsScript(prompt, command, arguments, workingDirectory, false, false);
 
-            var args =
-                $"-e 'do shell script \"{script}\" with prompt \"{prompt}\" with administrator privileges'";
+            var osaScriptArgs = CreateMacOsOsaScriptArgsWithAdministratorPrompt(script, prompt);
 
             return new ProcessStartInfo("/usr/bin/osascript")
             {
                 RedirectStandardOutput = false,
                 RedirectStandardError = false,
-                CreateNoWindow = !showWindow,
-                WindowStyle = showWindow ? ProcessWindowStyle.Normal : ProcessWindowStyle.Hidden,
+                CreateNoWindow = true, // create window is not supported with macos
+                WindowStyle = ProcessWindowStyle.Normal,
                 UseShellExecute = true,
-                Arguments = args,
+                Arguments = osaScriptArgs,
                 WorkingDirectory = workingDirectory ?? string.Empty
             };
         }
@@ -143,55 +199,22 @@
         /// <param name="arguments"></param>
         /// <param name="workingDirectory"></param>
         /// <returns></returns>
-        public static ProcessStartInfo CreateMacOsOsascriptSudoProcessStartInfo(string prompt, string command,
-            string arguments = null, string workingDirectory = null)
+        public static ProcessStartInfo CreateMacOsProcessStartInfoWithSudo(string prompt, string command,
+            string arguments = null, string workingDirectory = null, bool showWindow = false)
         {
-            var scriptLines = new List<string>
-            {
-                $"echo '{prompt}'"
-            };
+            var script = CreateMacOsScript(prompt, command, arguments, workingDirectory,
+                true, showWindow);
 
-            if (!string.IsNullOrWhiteSpace(workingDirectory))
-            {
-                scriptLines.Add($"cd '{workingDirectory}'");
-            }
-
-            scriptLines.Add(
-                $"sudo bash -c '{(command.StartsWith("/") ? command : $"./{command}")}{(string.IsNullOrWhiteSpace(arguments) ? string.Empty : $" {arguments}")} >/dev/null &'");
-            
-            var script = string.Join("; ", scriptLines);
-
-            var args = new[]
-            {
-                // open new terminal window
-                "-e \"tell application \\\"Terminal\\\"\"",
-                "-e \"activate\"",
-
-                // set tab
-                $"-e \"set tabId to do script \\\"{script}\\\"\"",
-
-                // get window for tab 1
-                "-e \"set windowId to the id of window 1 where its tab 1 = tabId\"",
-
-                // wait until tabid is complete (not busy)
-                "-e \"repeat\"",
-                "-e \"delay 0.1\"",
-                "-e \"if not busy of tabId then exit repeat\"",
-                "-e \"end repeat\"",
-
-                // close window and terminal
-                "-e \"close window id windowId\"",
-                "-e \"end tell\""
-            };
+            var osaScriptArgs = CreateMacOsOsaScriptArgsWithTerminalWindow(script);
 
             return new ProcessStartInfo("/usr/bin/osascript")
             {
                 RedirectStandardOutput = false,
                 RedirectStandardError = false,
-                CreateNoWindow = false,
+                CreateNoWindow = true, // create window is not supported with macos
                 WindowStyle = ProcessWindowStyle.Normal,
                 UseShellExecute = true,
-                Arguments = string.Join(" ", args),
+                Arguments = osaScriptArgs,
                 WorkingDirectory = workingDirectory ?? string.Empty
             };
         }
@@ -231,8 +254,8 @@
             else if (OperatingSystem.IsMacOs())
             {
                 processStartInfo = osaScriptSudo
-                    ? CreateMacOsOsascriptSudoProcessStartInfo(prompt, command, arguments, workingDirectory)
-                    : CreateMacOsOsascriptProcessStartInfo(prompt, command, arguments, workingDirectory);
+                    ? CreateMacOsProcessStartInfoWithSudo(prompt, command, arguments, workingDirectory, showWindow)
+                    : CreateMacOsProcessStartInfoWithAdministratorPrompt(prompt, command, arguments, workingDirectory);
             }
             else if (OperatingSystem.IsLinux())
             {

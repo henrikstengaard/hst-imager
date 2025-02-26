@@ -6,7 +6,7 @@
     public class GivenElevateHelper
     {
         [Fact]
-        public void WhenCreateWindowsRunasProcessStartInfoThenArgumentsWillElevateCommand()
+        public void When_CreateWindowsRunasProcessStartInfo_Then_ArgumentsWillElevateCommand()
         {
             var command = "hst-imager";
             var arguments = string.Empty;
@@ -21,7 +21,7 @@
         }
 
         [Fact]
-        public void WhenCreateLinuxPkExecProcessStartInfoThenArgumentsWillElevateCommand()
+        public void When_CreateLinuxPkExecProcessStartInfo_Then_ArgumentsWillElevateCommand()
         {
             var command = "hst-imager";
             var arguments = "--worker";
@@ -39,7 +39,7 @@
         }
 
         [Fact]
-        public void WhenCreateMacOsOsascriptProcessStartInfoThenArgumentsWillElevateCommand()
+        public void When_CreateMacOsProcessStartInfoWithAdministratorPrompt_Then_ArgumentsWillElevateCommand()
         {
             var prompt = "Hst Imager";
             var command = "hst-imager";
@@ -47,55 +47,55 @@
             var workingDirectory =
                 "/home/hst";
             var processStartInfo =
-                ElevateHelper.CreateMacOsOsascriptProcessStartInfo(prompt, command, arguments, workingDirectory);
+                ElevateHelper.CreateMacOsProcessStartInfoWithAdministratorPrompt(prompt, command, arguments, workingDirectory);
             
             Assert.Equal("/usr/bin/osascript", processStartInfo.FileName);
             Assert.Equal(workingDirectory, processStartInfo.WorkingDirectory);
             Assert.Equal(
-                $"-e 'do shell script \"sudo \\\"./{command}\\\" {arguments}\" with prompt \"{prompt}\" with administrator privileges'",
+                $"-e \"do shell script \\\"./{command} {arguments} >/dev/null &\\\" with prompt \\\"{prompt}\\\" with administrator privileges\"",
                 processStartInfo.Arguments);
             Assert.Equal(string.Empty, processStartInfo.Verb);
         }
         
         [Fact]
-        public void WhenCreateMacOsOsascriptProcessStartInfoWithoutWorkingDirectoryThenArgumentsWillElevateCommand()
+        public void When_CreateMacOsProcessStartInfoWithPromptAndNoWorkingDirectory_Then_ArgumentsWillElevateCommand()
         {
             var prompt = "Hst Imager";
             var command = "/home/hst/hst-imager";
             var arguments = "--worker";
             var workingDirectory = string.Empty;
             var processStartInfo =
-                ElevateHelper.CreateMacOsOsascriptProcessStartInfo(prompt, command, arguments, workingDirectory);
+                ElevateHelper.CreateMacOsProcessStartInfoWithAdministratorPrompt(prompt, command, arguments, workingDirectory);
             
             Assert.Equal("/usr/bin/osascript", processStartInfo.FileName);
             Assert.Equal(string.Empty, processStartInfo.WorkingDirectory);
             Assert.Equal(
-                $"-e 'do shell script \"sudo \\\"{command}\\\" {arguments}\" with prompt \"{prompt}\" with administrator privileges'",
+                $"-e \"do shell script \\\"{command} {arguments} >/dev/null &\\\" with prompt \\\"{prompt}\\\" with administrator privileges\"",
                 processStartInfo.Arguments);
             Assert.Equal(string.Empty, processStartInfo.Verb);
         }
         
         [Fact]
-        public void WhenCreateMacOsOsascriptSudoProcessStartInfoWithoutWorkingDirectoryThenArgumentsWillElevateCommand()
+        public void When_CreateMacOsProcessStartInfoWithSudoAndNoWorkingDirectory_Then_ArgumentsWillElevateCommand()
         {
             var prompt = "Hst Imager";
             var command = "/home/hst/hst-imager";
             var arguments = "--worker";
             var workingDirectory = string.Empty;
             var processStartInfo =
-                ElevateHelper.CreateMacOsOsascriptSudoProcessStartInfo(prompt, command, arguments, workingDirectory);
+                ElevateHelper.CreateMacOsProcessStartInfoWithSudo(prompt, command, arguments, workingDirectory);
 
-            var script = $"echo '{prompt}'; sudo bash -c '{command} {arguments} >/dev/null &'";
+            var script = $"echo '{prompt}'; sudo zsh -c '{command} {arguments} >/dev/null &'; exit";
             var osaScriptArgs = new[]
             {
                 "-e \"tell application \\\"Terminal\\\"\"",
                 "-e \"activate\"",
-                $"-e \"set tabId to do script \\\"{script}\\\"\"",
-                "-e \"set windowId to the id of window 1 where its tab 1 = tabId\"",
+                $"-e \"set w to do script \\\"{script}\\\"\"",
                 "-e \"repeat\"",
-                "-e \"delay 0.1\"",
-                "-e \"if not busy of tabId then exit repeat\"",
+                "-e \"delay 1\"",
+                "-e \"if not busy of w then exit repeat\"",
                 "-e \"end repeat\"",
+                "-e \"set windowId to id of front window\"",
                 "-e \"close window id windowId\"",
                 "-e \"end tell\""
             };
