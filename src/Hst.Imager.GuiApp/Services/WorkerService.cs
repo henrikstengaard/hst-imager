@@ -7,6 +7,7 @@
     using System.IO;
     using System.Linq;
     using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Threading.Tasks;
     using Helpers;
     using Hst.Core;
@@ -25,6 +26,15 @@
         private readonly BlockingCollection<Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask> queue;
         private static readonly object LockObject = new();
         
+        private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+        {
+            WriteIndented = true,
+            Converters =
+            {
+                new JsonStringEnumConverter()
+            }
+        };
+
         private int workerProcessId;
 
         public WorkerService(ILogger<WorkerService> logger, AppState appState, IHubContext<ErrorHub> errorHubContext)
@@ -118,7 +128,7 @@
                 this.queue.Add(new Hst.Imager.Core.Models.BackgroundTasks.BackgroundTask
                 {
                     Type = backgroundTask.GetType().Name,
-                    Payload = JsonSerializer.Serialize(backgroundTask),
+                    Payload = JsonSerializer.Serialize(backgroundTask, JsonSerializerOptions),
                     CancelAll = cancelAll
                 });
             }
@@ -137,7 +147,7 @@
                 backgroundTasks.Add(backgroundTask);
             } while (this.queue.Count > 0);
 
-            logger.LogDebug($"Dequeued background tasks '{(string.Join(",", backgroundTasks.Select(x => JsonSerializer.Serialize(x))))}'");
+            logger.LogDebug($"Dequeued background tasks '{(string.Join(",", backgroundTasks.Select(x => JsonSerializer.Serialize(x, JsonSerializerOptions))))}'");
             
             return Task.FromResult(backgroundTasks.AsEnumerable());
         }

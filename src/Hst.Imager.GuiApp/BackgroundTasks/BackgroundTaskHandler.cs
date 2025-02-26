@@ -2,6 +2,7 @@
 {
     using System;
     using System.Text.Json;
+    using System.Text.Json.Serialization;
     using System.Threading.Tasks;
     using Core;
     using Hst.Imager.Core.Models.BackgroundTasks;
@@ -22,6 +23,15 @@
         private readonly ActiveBackgroundTaskList activeBackgroundTaskList;
         private readonly BackgroundTaskQueue backgroundTaskQueue;
         private readonly AppState appState;
+
+        private static readonly JsonSerializerOptions JsonSerializerOptions = new()
+        {
+            WriteIndented = true,
+            Converters =
+            {
+                new JsonStringEnumConverter()
+            }
+        };
 
         public BackgroundTaskHandler(ILogger<BackgroundTaskHandler> logger,
             ILoggerFactory loggerFactory,
@@ -87,23 +97,23 @@
             switch (backgroundTask.Type)
             {
                 case nameof(InfoBackgroundTask):
-                    return JsonSerializer.Deserialize<InfoBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<InfoBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(ListBackgroundTask):
-                    return JsonSerializer.Deserialize<ListBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<ListBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(ReadBackgroundTask):
-                    return JsonSerializer.Deserialize<ReadBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<ReadBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(WriteBackgroundTask):
-                    return JsonSerializer.Deserialize<WriteBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<WriteBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(CompareBackgroundTask):
-                    return JsonSerializer.Deserialize<CompareBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<CompareBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(ConvertBackgroundTask):
-                    return JsonSerializer.Deserialize<ConvertBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<ConvertBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(BlankBackgroundTask):
-                    return JsonSerializer.Deserialize<BlankBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<BlankBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(OptimizeBackgroundTask):
-                    return JsonSerializer.Deserialize<OptimizeBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<OptimizeBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(FormatBackgroundTask):
-                    return JsonSerializer.Deserialize<FormatBackgroundTask>(backgroundTask.Payload);
+                    return JsonSerializer.Deserialize<FormatBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 default:
                     logger.LogError($"Background task '{backgroundTask.Type}' not supported");
                     return null;
