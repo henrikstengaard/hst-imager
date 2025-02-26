@@ -47,6 +47,7 @@
 
             if (disposing)
             {
+                Stream?.Close();
                 Stream?.Dispose();
                 Stream = null;
             }

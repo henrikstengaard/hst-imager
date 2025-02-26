@@ -2,6 +2,9 @@ using System.IO;
 
 namespace Hst.Imager.Core;
 
+/// <summary>
+/// Media stream is used to control the medias stream length.
+/// </summary>
 public class MediaStream : Stream
 {
     protected readonly Stream Stream;
@@ -20,6 +23,7 @@ public class MediaStream : Stream
         {
             return;
         }
+        
         Stream.Flush();
     }
 

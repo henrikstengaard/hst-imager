@@ -16,7 +16,9 @@
 
         public override Stream Open()
         {
-            "diskutil".RunProcess($"unmountDisk {Path}");
+            // use diskutil to unmount disk, force required if disk has multiple mounted partitions
+            "diskutil".RunProcess($"unmountDisk force {Path}");
+            
             return new MacOsMediaStream(File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read),
                 Path, Size);
         }
