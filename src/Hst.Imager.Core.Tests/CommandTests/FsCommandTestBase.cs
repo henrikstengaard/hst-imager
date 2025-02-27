@@ -338,7 +338,7 @@ public class FsCommandTestBase : CommandTestBase
         builder.AddDirectory("dir1");
         builder.AddFile(Path.Combine("dir1", "file3.txt"), Array.Empty<byte>());
         builder.AddFile(@"dir1\test.txt", Array.Empty<byte>());
-        builder.AddDirectory("dir1/dir2"));
+        builder.AddDirectory("dir1/dir2");
         builder.AddFile(Path.Combine("dir1", "dir2", "file4.txt"), Array.Empty<byte>());
         builder.Build(path);
     }
