@@ -319,19 +319,27 @@ public class FsCommandTestBase : CommandTestBase
         }
     }
 
+    /// <summary>
+    /// Build an iso 9660 with directories and files for testing.
+    /// It deliberately uses a mix of backslash and forward slash to
+    /// test iterating the iso9660 behaves the same on different 
+    /// perating systems.
+    /// </summary>
+    /// <param name="path">Path with built iso9660 file.</param>
     protected void CreateIso9660WithDirectoriesAndFiles(string path)
     {
         var builder = new DiscUtils.Iso9660.CDBuilder
         {
             UseJoliet = true
         };
+
         builder.AddFile("file1.txt", Array.Empty<byte>());
         builder.AddFile("file2.txt", Array.Empty<byte>());
         builder.AddDirectory("dir1");
-        builder.AddFile(@"dir1\file3.txt", Array.Empty<byte>());
+        builder.AddFile(Path.Combine("dir1", "file3.txt"), Array.Empty<byte>());
         builder.AddFile(@"dir1\test.txt", Array.Empty<byte>());
-        builder.AddDirectory(@"dir1\dir2");
-        builder.AddFile(@"dir1\dir2\file4.txt", Array.Empty<byte>());
+        builder.AddDirectory("dir1/dir2"));
+        builder.AddFile(Path.Combine("dir1", "dir2", "file4.txt"), Array.Empty<byte>());
         builder.Build(path);
     }
 

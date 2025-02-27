@@ -42,4 +42,14 @@ public static class MediaPath
     /// Iso9660 uses backslash as directory path separator.
     /// </summary>
     public static IMediaPath Iso9660Path => BackslashMediaPath;
+
+    public static IMediaPath GenericMediaPath => new GenericMediaPath();
+
+    /// <summary>
+    /// Resolve media path based on directory separator char.
+    /// </summary>
+    /// <param name="directorySeparatorChar">The directory separator char.</param>
+    /// <returns>Backslash media path, if directory separator char is backslash. Otherwise forward slash media path.</returns>
+    public static IMediaPath Resolve(string directorySeparatorChar) =>
+        directorySeparatorChar == "\\" ? BackslashMediaPath : ForwardSlashMediaPath;
 }

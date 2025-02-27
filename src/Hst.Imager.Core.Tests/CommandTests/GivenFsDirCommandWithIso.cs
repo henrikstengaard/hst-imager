@@ -290,7 +290,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 var expectedDirNames = new[]
                 {
                     "dir1",
-                    "dir1\\dir2"
+                    Path.Combine("dir1", "dir2")
                 };
                 var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir).Select(x => x.Name).ToList();
                 Assert.Equal(expectedDirNames, dirNames);
@@ -298,9 +298,9 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // assert - files are listed
                 var expectedFileNames = new[]
                 {
-                    "dir1\\dir2\\file4.txt",
-                    "dir1\\file3.txt",
-                    "dir1\\test.txt",
+                    Path.Combine("dir1", "dir2", "file4.txt"),
+                    Path.Combine("dir1", "file3.txt"),
+                    Path.Combine("dir1", "test.txt"),
                     "file1.txt",
                     "file2.txt"
                 };
@@ -352,7 +352,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 var expectedDirNames = new[]
                 {
                     "dir1",
-                    "dir1\\dir2"
+                    Path.Combine("dir1", "dir2")
                 };
                 var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir).Select(x => x.Name).ToList();
                 Assert.Equal(expectedDirNames, dirNames);
@@ -360,9 +360,9 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // assert - files are listed
                 var expectedFileNames = new[]
                 {
-                    "dir1\\dir2\\file4.txt",
-                    "dir1\\file3.txt",
-                    "dir1\\test.txt",
+                    Path.Combine("dir1", "dir2", "file4.txt"),
+                    Path.Combine("dir1", "file3.txt"),
+                    Path.Combine("dir1", "test.txt"),
                     "file1.txt",
                     "file2.txt"
                 };
@@ -527,7 +527,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // assert - files are listed
                 var expectedFileNames = new[]
                 {
-                    "dir2\\file4.txt",
+                    Path.Combine("dir2", "file4.txt"),
                     "file3.txt",
                     "test.txt",
                 };
@@ -586,7 +586,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // assert - files are listed
                 var expectedFileNames = new[]
                 {
-                    "dir2\\file4.txt",
+                    Path.Combine("dir2", "file4.txt"),
                     "file3.txt",
                     "test.txt"
                 };

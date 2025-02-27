@@ -88,7 +88,8 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public string[] GetPathComponents(string path)
     {
-        return path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
+        return (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
     }
 
     public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;

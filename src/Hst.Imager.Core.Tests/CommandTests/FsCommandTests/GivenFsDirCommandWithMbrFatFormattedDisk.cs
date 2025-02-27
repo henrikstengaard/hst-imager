@@ -211,7 +211,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedDirNames = new[]
             {
                     "dir1",
-                    "dir1\\dir2"
+                    Path.Combine("dir1", "dir2")
                 };
             var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir)
                 .OrderBy(x => x.Name.Length)
@@ -224,10 +224,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedFileNames = new[]
             {
                     "file1.txt",
-                    "dir1\\file2.txt",
-                    "dir1\\dir2\\data.bin",
-                    "dir1\\dir2\\file3.txt",
-                    "dir1\\dir2\\file4.txt"
+                    Path.Combine("dir1", "file2.txt"),
+                    Path.Combine("dir1", "dir2", "data.bin"),
+                    Path.Combine("dir1", "dir2", "file3.txt"),
+                    Path.Combine("dir1", "dir2", "file4.txt")
                 };
             var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File)
                 .OrderBy (x => x.Name.Length)
@@ -275,7 +275,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedDirNames = new[]
             {
                 "dir1",
-                "dir1\\dir2"
+                Path.Combine("dir1", "dir2")
             };
             var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir)
                 .OrderBy(x => x.Name.Length)
@@ -288,9 +288,9 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedFileNames = new[]
             {
                 "file1.txt",
-                "dir1\\file2.txt",
-                "dir1\\dir2\\file3.txt",
-                "dir1\\dir2\\file4.txt"
+                Path.Combine("dir1", "file2.txt"),
+                Path.Combine("dir1", "dir2", "file3.txt"),
+                Path.Combine("dir1", "dir2", "file4.txt")
             };
             var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File)
                 .OrderBy(x => x.Name.Length)
@@ -462,9 +462,9 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedFileNames = new[]
             {
                 "file2.txt",
-                "dir2\\data.bin",
-                "dir2\\file3.txt",
-                "dir2\\file4.txt"
+                Path.Combine("dir2", "data.bin"),
+                Path.Combine("dir2", "file3.txt"),
+                Path.Combine("dir2", "file4.txt")
             };
             var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File)
                 .OrderBy(x => x.Name.Length)
@@ -524,8 +524,8 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             var expectedFileNames = new[]
             {
                 "file2.txt",
-                "dir2\\file3.txt",
-                "dir2\\file4.txt"
+                Path.Combine("dir2", "file3.txt"),
+                Path.Combine("dir2", "file4.txt")
             };
             var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File)
                 .OrderBy(x => x.Name.Length)

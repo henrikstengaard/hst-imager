@@ -72,27 +72,5 @@ namespace Hst.Imager.Core.Tests.CompressionTests
             zipStream.Position = 0;
             var zipArchive = new ZipArchive(zipStream);
         }
-
-        [Fact]
-        public async Task Test()
-        {
-            //var zipPath = Path.Combine("TestData", "Zip", "amiga.zip");
-            var zipPath = "C:\\Projects\\hst\\amiga_emulator_metadata\\dc-pcx11.zip";
-            //var zipPath = "c:\\Users\\hst\\Downloads\\16gb_os31_hstwb_whdload_menus_aga_2021-10-08.zip";
-            var zipStream = File.OpenRead(zipPath);
-
-            var zipArchive = new ZipArchive(zipStream);
-
-            zipStream.Position = 0;
-            var zipArchiveReader = new ZipArchiveReader(zipStream);
-
-            // act - read zip headers
-            var zipHeaders = new List<IZipHeader>();
-            IZipHeader zipHeader;
-            while ((zipHeader = await zipArchiveReader.Read()) != null)
-            {
-                zipHeaders.Add(zipHeader);
-            }
-        }
     }
 }

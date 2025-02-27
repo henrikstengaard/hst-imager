@@ -31,7 +31,7 @@ public class FileSystemEntryIterator : IEntryIterator
     public FileSystemEntryIterator(Media media, IFileSystem fileSystem, string rootPath, bool recursive)
     {
         this.media = media;
-        this.mediaPath = CreateMediaPath(fileSystem);
+        this.mediaPath = MediaPath.GenericMediaPath;
         this.rootPath = rootPath;
         this.recursive = recursive;
         this.fileSystem = fileSystem;
@@ -283,28 +283,6 @@ public class FileSystemEntryIterator : IEntryIterator
         }
     }
 
-    private static IMediaPath CreateMediaPath(IFileSystem fileSystem)
-    {
-        switch (fileSystem)
-        {
-            case ExtFileSystem extFileSystem:
-                return new ForwardSlashMediaPath();
-            case FatFileSystem fatFileSystem:
-            default:
-                return new BackslashMediaPath();
-        }
-    }
-
-    private OperatingSystemEnum GetOperatingSystem()
-    {
-        return fileSystem switch
-        {
-            ExtFileSystem => OperatingSystemEnum.Linux,
-            FatFileSystem => OperatingSystemEnum.Windows,
-            _ => OperatingSystemEnum.Other
-        };
-    }
-    
     private static string Format(UnixFileSystemInfo unixFileSystemInfo)
     {
         var unixAttributes = "rwxrwxrwx";

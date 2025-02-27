@@ -24,7 +24,7 @@
         {
             if (!OperatingSystem.IsWindows())
             {
-                throw new NotSupportedException("Windows physical drive manager is not running on Windows environment");
+                return Task.FromResult(Enumerable.Empty<IPhysicalDrive>());
             }
 
             var physicalDrives = GetPhysicalDrivesUsingKernel32().ToList();

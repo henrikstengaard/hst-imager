@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using DiscUtils;
+using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
@@ -14,6 +15,7 @@ public class FileSystemEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer;
     private readonly Media media;
+    private readonly IMediaPath mediaPath;
     private readonly string[] pathComponents;
     private readonly IFileSystem fileSystem;
     private string currentDirPath;
@@ -24,6 +26,7 @@ public class FileSystemEntryWriter : IEntryWriter
     {
         this.buffer = new byte[4096];
         this.media = media;
+        this.mediaPath = PathComponents.MediaPath.GenericMediaPath;
         this.pathComponents = pathComponents;
         this.fileSystem = fileSystem;
         this.currentDirPath = string.Empty;
@@ -63,7 +66,7 @@ public class FileSystemEntryWriter : IEntryWriter
 
         CreateFileSystemDirectory(fullPathComponents);
 
-        var dirPath = string.Join("\\", fullPathComponents);
+        var dirPath = mediaPath.Join(fullPathComponents);
         currentDirPath = dirPath;
 
         return Task.CompletedTask;
@@ -74,14 +77,14 @@ public class FileSystemEntryWriter : IEntryWriter
         for (var i = 1; i <= pathComponents.Length; i++)
         {
             var dirPathComponents = pathComponents.Take(i);
-            var dirPath = string.Join("\\", dirPathComponents).ToLower();
+            var dirPath = mediaPath.Join(dirPathComponents.ToArray()).ToLower();
 
             if (dirPathsCreated.Contains(dirPath))
             {
                 continue;
             }
 
-            fileSystem.CreateDirectory(string.Join("\\", pathComponents.Take(i)));
+            fileSystem.CreateDirectory(mediaPath.Join(pathComponents.Take(i).ToArray()));
 
             dirPathsCreated.Add(dirPath);
         }
@@ -94,7 +97,7 @@ public class FileSystemEntryWriter : IEntryWriter
         var dirPathComponents = fullPathComponents.Length <= 1 
             ? Array.Empty<string>()
             : fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
-        var dirPath = string.Join("\\", dirPathComponents);
+        var dirPath = mediaPath.Join(dirPathComponents);
 
         if (dirPathComponents.Length > 0 && !currentDirPath.Equals(dirPath))
         {
@@ -103,7 +106,7 @@ public class FileSystemEntryWriter : IEntryWriter
             currentDirPath = dirPath;
         }
 
-        var fullPath = string.Join("\\", fullPathComponents);
+        var fullPath = mediaPath.Join(fullPathComponents);
 
         await using var entryStream = fileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);
         int bytesRead;

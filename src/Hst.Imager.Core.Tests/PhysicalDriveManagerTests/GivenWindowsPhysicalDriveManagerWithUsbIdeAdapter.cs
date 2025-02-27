@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Hst.Imager.Core.PhysicalDrives;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using OperatingSystem = Hst.Core.OperatingSystem;
 
 namespace Hst.Imager.Core.Tests.PhysicalDriveManagerTests;
 
@@ -24,7 +25,16 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
     {
         // act - get physical drives
         var physicalDrives = (await windowsPhysicalDriveManager.GetPhysicalDrives()).ToList();
+
+        // end test, if not windows operating system
+        if (!OperatingSystem.IsWindows())
+        {
+            // assert - no physical drives
+            Assert.Empty(physicalDrives);
             
+            return;
+        }    
+        
         // assert - 1 physical drive
         Assert.Single(physicalDrives);
             
@@ -41,7 +51,16 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
     {
         // act - get physical drives
         var physicalDrives = (await windowsPhysicalDriveManager.GetPhysicalDrives(true)).ToList();
+
+        // end test, if not windows operating system
+        if (!OperatingSystem.IsWindows())
+        {
+            // assert - no physical drives
+            Assert.Empty(physicalDrives);
             
+            return;
+        }    
+
         // assert - 2 physical drives
         Assert.Equal(2, physicalDrives.Count);
             

@@ -201,7 +201,7 @@
             {
                 FullPath = path,
                 MediaPath = testMedia.Path,
-                DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "//",
+                DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/",
                 FileSystemPath = path.Length > testMedia.Path.Length ? path.Substring(testMedia.Path.Length + 1) : path,
                 Modifiers = ModifierEnum.None,
                 ByteSwap = false

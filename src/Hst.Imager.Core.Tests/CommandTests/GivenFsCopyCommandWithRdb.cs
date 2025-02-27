@@ -50,7 +50,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var dir2Path = Path.Combine(dir1Path, "dir2_");
             var expectedFiles = new[]
             {
-                Path.Combine(dir2Path, "_AUX"),
+                Path.Combine(dir2Path, $"{(OperatingSystem.IsWindows() ? "_" : string.Empty)}AUX"),
                 Path.Combine(dir2Path, "file1_"),
                 Path.Combine(dir2Path, "file2_"),
                 Path.Combine(dir2Path, "file3_"),
@@ -103,7 +103,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var expectedFiles = new[]
             {
                 Path.Combine(destPath, "_UAEFSDB.___"),
-                Path.Combine(dir2Path, "__uae___AUX"),
+                Path.Combine(dir2Path, $"{(OperatingSystem.IsWindows() ? "__uae___" : string.Empty)}AUX"),
                 Path.Combine(dir2Path, "__uae___file1_"),
                 Path.Combine(dir2Path, "__uae___file2_"),
                 Path.Combine(dir2Path, "__uae___file3_"),
@@ -115,6 +115,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Path.Combine(dir2Path, "file8+"),
                 Path.Combine(dir1Path, "_UAEFSDB.___")
             };
+            Array.Sort(expectedFiles);
             var actualFiles = Directory.GetFiles(destPath, "*", SearchOption.AllDirectories);
             Array.Sort(actualFiles);
             Assert.Equal(expectedFiles, actualFiles);
@@ -148,9 +149,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             normalNames = uaeFsDbNodes.Select(x => x.NormalName).OrderBy(x => x).ToArray();
             Array.Sort(amigaNames);
             Array.Sort(normalNames);
-            Assert.Equal(new []
+            var expectedAmigaNames = (OperatingSystem.IsWindows() ? new []{ "AUX" } : Array.Empty<string>())
+                .Concat(new []
             {
-                "AUX",
                 "file1\\",
                 "file2*",
                 "file3?",
@@ -159,10 +160,12 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 "file6>",
                 "file7|",
                 "file8+"
-            }, amigaNames);
-            Assert.Equal(new []
+            }).ToArray();
+            Array.Sort(expectedAmigaNames);
+            Assert.Equal(expectedAmigaNames, amigaNames);
+            var expectedNormalNames = (OperatingSystem.IsWindows() ? new []{ "__uae___AUX" } : Array.Empty<string>())
+                .Concat(new []
             {
-                "__uae___AUX",
                 "__uae___file1_",
                 "__uae___file2_",
                 "__uae___file3_",
@@ -171,7 +174,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 "__uae___file6_",
                 "__uae___file7_",
                 "file8+"
-            }, normalNames);
+            }).ToArray();
+            Array.Sort(expectedNormalNames);
+            Assert.Equal(expectedNormalNames, normalNames);
             
             // assert - file1\ uae metafile matches protection bits and comment
             var file1UaeFsDbNode = uaeFsDbNodes.FirstOrDefault(x => x.AmigaName == "file1\\");
@@ -221,11 +226,16 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // assert - directories and files copied from src matches expected uae metafile paths
             var dir1Path = Path.Combine(destPath, "dir1");
             var dir2Path = Path.Combine(dir1Path, "dir2%2a");
-            var expectedFiles = new[]
+            var expectedFiles = (OperatingSystem.IsWindows() ? new []
+            {
+                Path.Combine(dir2Path, "%41%55%58"), // AUX
+                Path.Combine(dir2Path, "%41%55%58.uaem") // AUX
+            } : new []
+            {
+                Path.Combine(dir2Path, "AUX")
+            }).Concat(new []
             {
                 Path.Combine(dir1Path, "dir2%2a.uaem"),
-                Path.Combine(dir2Path, "%41%55%58"), // AUX
-                Path.Combine(dir2Path, "%41%55%58.uaem"), // AUX
                 Path.Combine(dir2Path, "file1%5c"),
                 Path.Combine(dir2Path, "file1%5c.uaem"),
                 Path.Combine(dir2Path, "file2%2a"),
@@ -242,18 +252,22 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Path.Combine(dir2Path, "file7%7c.uaem"),
                 Path.Combine(dir2Path, "file8+"),
                 Path.Combine(dir2Path, "file8+.uaem")
-            };
+            }).ToArray();
+            Array.Sort(expectedFiles);
             var actualFiles = Directory.GetFiles(dir1Path, "*", SearchOption.AllDirectories);
             Array.Sort(actualFiles);
             Assert.Equal(expectedFiles, actualFiles);
 
             // assert - directories and files copied from src matches expected decoded uae metafile paths
             var dir2DecodedPath = Path.Combine(dir1Path, "dir2*");
-            var expectedDecodedFiles = new[]
+            var expectedDecodedFiles = (OperatingSystem.IsWindows() ? new []
+            {
+                Path.Combine(dir2DecodedPath, "AUX.uaem")
+            } : Array.Empty<string>()).Concat(new []
             {
                 Path.Combine(dir1Path, "dir2*.uaem"),
                 Path.Combine(dir2DecodedPath, "AUX"),
-                Path.Combine(dir2DecodedPath, "AUX.uaem"),
+                //Path.Combine(dir2DecodedPath, "AUX.uaem"),
                 Path.Combine(dir2DecodedPath, "file1\\"),
                 Path.Combine(dir2DecodedPath, "file1\\.uaem"),
                 Path.Combine(dir2DecodedPath, "file2*"),
@@ -270,7 +284,8 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Path.Combine(dir2DecodedPath, "file7|.uaem"),
                 Path.Combine(dir2DecodedPath, "file8+"),
                 Path.Combine(dir2DecodedPath, "file8+.uaem")
-            };
+            }).ToArray();
+            Array.Sort(expectedDecodedFiles);
             var actualDecodedFiles = actualFiles.Select(UaeMetafileHelper.DecodeFilename).ToArray();
             Array.Sort(actualDecodedFiles);
             Assert.Equal(expectedDecodedFiles, actualDecodedFiles);
@@ -353,10 +368,10 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Array.Sort(actualDirs);
             Assert.Equal(expectedDirs, actualDirs);
 
-            var expectedFiles = new[]
+            var expectedFiles = new []
             {
                 Path.Combine(destPath, "_UAEFSDB.___"),
-                Path.Combine(dir2Path, "__uae___AUX"),
+                Path.Combine(dir2Path, $"{(OperatingSystem.IsWindows() ? "__uae___" : string.Empty )}AUX"),
                 Path.Combine(dir2Path, "__uae___file1_"),
                 Path.Combine(dir2Path, "__uae___file2_"),
                 Path.Combine(dir2Path, "__uae___file3_"),
@@ -368,6 +383,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Path.Combine(dir2Path, "file8+"),
                 Path.Combine(dir1Path, "_UAEFSDB.___")
             };
+            Array.Sort(expectedFiles);
             var actualFiles = Directory.GetFiles(destPath, "*", SearchOption.AllDirectories);
             Array.Sort(actualFiles);
             Assert.Equal(expectedFiles, actualFiles);
@@ -579,6 +595,12 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
     public async Task When_ResolveMediaWithImg_Then_PathsAndModifersMatch(string path, ModifierEnum expectedModifiers,
         string expectedFileSystemPath, bool expectedByteSwap)
     {
+        if (!OperatingSystem.IsWindows())
+        {
+            path = path.Replace("\\", "/");
+            expectedFileSystemPath = expectedFileSystemPath.Replace("\\", "/");
+        }
+
         var imgPath = Path.GetFullPath($"{Guid.NewGuid()}.img");
 
         // arrange - test command helper
@@ -613,6 +635,13 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
     public void When_ResolveMediaWithPhysicalDrive_Then_PathsAndModifersMatch(string path, string expectedFileSystemPath, bool expectedByteSwap)
     {
         var physicalDrivePath = "\\\\.\\PhysicalDrive4";
+
+        if (!OperatingSystem.IsWindows())
+        {
+            path = path.Replace("\\", "/");
+            expectedFileSystemPath = expectedFileSystemPath.Replace("\\", "/");
+            physicalDrivePath = physicalDrivePath.Replace("\\", "/");
+        }
 
         // arrange - test command helper
         var testCommandHelper = new TestCommandHelper();
