@@ -15,6 +15,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     public class FormatBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<FormatBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
@@ -26,6 +27,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             IPhysicalDriveManager physicalDriveManager,
             AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<FormatBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubConnection = progressHubConnection;
             this.physicalDriveManager = physicalDriveManager;
@@ -98,6 +100,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing format command");
+
                 await progressHubConnection.UpdateProgress(new Progress
                 {
                     Title = formatBackgroundTask.Title,

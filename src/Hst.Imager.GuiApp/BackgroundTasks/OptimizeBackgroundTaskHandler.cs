@@ -13,14 +13,17 @@
 
     public class OptimizeBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<OptimizeBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly AppState appState;
 
         public OptimizeBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            IHubContext<ProgressHub> progressHubContext, AppState appState)
+            IHubContext<ProgressHub> progressHubContext,
+            AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<OptimizeBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
             this.appState = appState;
@@ -73,6 +76,8 @@
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing optimize command");
+
                 await progressHubContext.SendProgress(new Progress
                 {
                     Title = optimizeBackgroundTask.Title,

@@ -13,14 +13,17 @@
 
     public class ConvertBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<ConvertBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly AppState appState;
 
         public ConvertBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            IHubContext<ProgressHub> progressHubContext, AppState appState)
+            IHubContext<ProgressHub> progressHubContext,
+            AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<ConvertBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
             this.appState = appState;
@@ -72,6 +75,8 @@
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing convert command");
+
                 await progressHubContext.SendProgress(new Progress
                 {
                     Title = convertBackgroundTask.Title,

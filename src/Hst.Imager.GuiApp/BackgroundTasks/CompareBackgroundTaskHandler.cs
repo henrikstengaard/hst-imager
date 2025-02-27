@@ -14,6 +14,7 @@
 
     public class CompareBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<CompareBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
@@ -23,6 +24,7 @@
             ILoggerFactory loggerFactory,
             HubConnection progressHubConnection, IPhysicalDriveManager physicalDriveManager, AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<CompareBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubConnection = progressHubConnection;
             this.physicalDriveManager = physicalDriveManager;
@@ -84,6 +86,8 @@
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing compare command");
+
                 await progressHubConnection.UpdateProgress(new Progress
                 {
                     Title = compareBackgroundTask.Title,

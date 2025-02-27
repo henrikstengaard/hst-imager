@@ -13,6 +13,7 @@
 
     public class WriteBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<WriteBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
@@ -21,8 +22,10 @@
         public WriteBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
             HubConnection progressHubConnection,
-            IPhysicalDriveManager physicalDriveManager, AppState appState)
+            IPhysicalDriveManager physicalDriveManager,
+            AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<WriteBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubConnection = progressHubConnection;
             this.physicalDriveManager = physicalDriveManager;
@@ -84,6 +87,8 @@
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing write command");
+
                 await progressHubConnection.UpdateProgress(new Progress
                 {
                     Title = writeBackgroundTask.Title,

@@ -13,6 +13,7 @@
 
     public class ReadBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<ReadBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly HubConnection progressHubConnection;
         private readonly IPhysicalDriveManager physicalDriveManager;
@@ -20,8 +21,11 @@
 
         public ReadBackgroundTaskHandler(
             ILoggerFactory loggerFactory,
-            HubConnection progressHubConnection, IPhysicalDriveManager physicalDriveManager, AppState appState)
+            HubConnection progressHubConnection,
+            IPhysicalDriveManager physicalDriveManager,
+            AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<ReadBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubConnection = progressHubConnection;
             this.physicalDriveManager = physicalDriveManager;
@@ -84,6 +88,8 @@
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing read command");
+
                 await progressHubConnection.UpdateProgress(new Progress
                 {
                     Title = readBackgroundTask.Title,

@@ -15,13 +15,17 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     public class ImageFileFormatBackgroundTaskHandler : IBackgroundTaskHandler
     {
+        private readonly ILogger<ImageFileFormatBackgroundTaskHandler> logger;
         private readonly ILoggerFactory loggerFactory;
         private readonly IHubContext<ProgressHub> progressHubContext;
         private readonly AppState appState;
 
-        public ImageFileFormatBackgroundTaskHandler(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
+        public ImageFileFormatBackgroundTaskHandler(
+            ILoggerFactory loggerFactory,
+            IHubContext<ProgressHub> progressHubContext,
             AppState appState)
         {
+            this.logger = loggerFactory.CreateLogger<ImageFileFormatBackgroundTaskHandler>();
             this.loggerFactory = loggerFactory;
             this.progressHubContext = progressHubContext;
             this.appState = appState;
@@ -89,6 +93,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             }
             catch (Exception e)
             {
+                logger.LogError(e, "An unexpected error occured while executing format command");
+
                 await progressHubContext.SendProgress(new Progress
                 {
                     Title = formatBackgroundTask.Title,
