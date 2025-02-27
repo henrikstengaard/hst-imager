@@ -48,6 +48,10 @@ public class GivenFsExtractCommandWithLzw : FsCommandTestBase
             
             // assert - extract
             var expectedText = await File.ReadAllTextAsync(Path.Combine("TestData", "Lzw", "test.txt"), cancellationTokenSource.Token);
+            if (OperatingSystem.IsWindows())
+            {
+                expectedText = expectedText.Replace("\r\n", "\n");
+            }
             var actualText = Encoding.UTF8.GetString(await File.ReadAllBytesAsync(srcFile, cancellationTokenSource.Token));
             Assert.Equal(expectedText, actualText);
         }
