@@ -15,6 +15,7 @@ namespace Hst.Imager.Core.Tests
     using Models;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
+    using System.Text;
 
     public class GivenWriteCommand : CommandTestBase
     {
@@ -114,7 +115,12 @@ namespace Hst.Imager.Core.Tests
                 Assert.True(result.IsSuccess);
 
                 // arrange - get source bytes uncompressed
-                var sourceBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Xz", "test.txt"), cancellationTokenSource.Token);
+                var sourceText = await File.ReadAllTextAsync(Path.Combine("TestData", "Xz", "test.txt"), cancellationTokenSource.Token);
+                if (OperatingSystem.IsWindows())
+                {
+                    sourceText = sourceText.Replace("\r\n", "\n");
+                }
+                var sourceBytes = Encoding.UTF8.GetBytes(sourceText);
 
                 // assert - data processed is 100 percent complete and has processed all uncompressed 
                 Assert.NotNull(dataProcessedEventArgs);
