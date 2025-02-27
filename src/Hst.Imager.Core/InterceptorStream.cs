@@ -41,11 +41,6 @@ public class InterceptorStream : Stream
                 return;
             }
 
-            if (baseStream != null && baseStream.CanWrite)
-            {
-                baseStream.Flush();
-            }
-
             baseStream?.Dispose();
 
             closeHandler?.Invoke();
