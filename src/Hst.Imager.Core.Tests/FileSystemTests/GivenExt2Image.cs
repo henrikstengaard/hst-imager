@@ -24,7 +24,7 @@ public class GivenExt2Image
     public async Task WhenReadExtFileSystemInfoFromFileThenExtVersionIsExt2()
     {
         // arrange
-        var partitionBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Ext", "ext2.img"));
+        var partitionBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "ext", "ext2.img"));
 
         // act
         var info = await ExtFileSystemReader.Read(new MemoryStream(partitionBytes));

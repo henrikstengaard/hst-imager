@@ -24,7 +24,7 @@ public class GivenExt4Image
     public async Task WhenReadExtFileSystemInfoFromFileThenExtVersionIsExt4()
     {
         // arrange
-        var partitionBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "Ext", "ext4.img"));
+        var partitionBytes = await File.ReadAllBytesAsync(Path.Combine("TestData", "ext", "ext4.img"));
 
         // act
         var info = await ExtFileSystemReader.Read(new MemoryStream(partitionBytes));
