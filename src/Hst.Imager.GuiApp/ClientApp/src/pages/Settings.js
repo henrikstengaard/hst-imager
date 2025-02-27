@@ -54,6 +54,8 @@ export default function Settings() {
         debugMode
     } = settings
     
+    const isDebugModeDisabled = isMacOs && macOsElevateMethod === 'OsascriptAdministrator';
+
     return (
         <React.Fragment>
             <Title
@@ -67,7 +69,12 @@ export default function Settings() {
                         disabled={!isMacOs}
                         value={macOsElevateMethod || ''}
                         options={macOsElevateMethodOptions}
-                        onChange={async (value) => await saveSettings({ name: 'macOsElevateMethod', value })}
+                        onChange={async (value) => {
+                            if (value === 'OsascriptAdministrator') {
+                                set(settings, 'debugMode', false);
+                            }
+                            await saveSettings({ name: 'macOsElevateMethod', value })
+                        }}
                     />
                 </Grid>
             </Grid>
@@ -77,6 +84,7 @@ export default function Settings() {
                         <CheckboxField
                             id="debug-mode"
                             label="Debug mode (applied after restart of app)"
+                            disabled={isDebugModeDisabled}
                             value={debugMode}
                             onChange={async (checked) => await saveSettings({ name: 'debugMode', value: checked })}
                         />
