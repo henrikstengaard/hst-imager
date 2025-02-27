@@ -1,0 +1,44 @@
+name: Build and test
+
+on: 
+    push:
+      branches: '**'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            6.0.x
+            8.0.x
+
+      - name: Restore tool
+        working-directory: ./src
+        shell: pwsh
+        run: dotnet tool restore
+
+      - name: Restore dependencies
+        working-directory: ./src
+        shell: pwsh
+        run: dotnet restore
+          
+      - name: Build
+        working-directory: ./src
+        shell: pwsh
+        run: dotnet build
+          
+      - name: Test
+        working-directory: ./src
+        shell: pwsh
+        run: dotnet test --no-build --verbosity normal
