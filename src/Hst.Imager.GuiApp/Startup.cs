@@ -93,6 +93,13 @@ namespace Hst.Imager.GuiApp
             logger.LogDebug($"Base url = '{appState.BaseUrl}'");
             logger.LogDebug($"AppPath = '{appState.AppPath}'");
 
+            // write base url to console, if debugger is attached.
+            // used by vscode launch.json to open browser.
+            if (Debugger.IsAttached)
+            {
+                Console.WriteLine($"Base url = '{appState.BaseUrl}'");
+            }
+
 #if BACKEND
             app.UseCors("AllowLocalhost");
 #endif
