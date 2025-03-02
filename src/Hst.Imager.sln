@@ -14,6 +14,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHubWorkflows", "GitHubWorkflows", "{0F77FBC1-964C-4DB6-89FA-DFE7E3A96833}"
 	ProjectSection(SolutionItems) = preProject
 		..\.github\workflows\build-and-release.yml = ..\.github\workflows\build-and-release.yml
+		..\.github\workflows\build-and-test.yml = ..\.github\workflows\build-and-test.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Properties", "Properties", "{00B7130C-07B2-464C-A62C-D7AA646DC58D}"
