@@ -9,7 +9,7 @@
   "build": {
     "appId": "com.Hst.Imager.GuiApp.app",
     "productName": "Hst Imager",
-    "copyright": "Copyright © 2024",
+    "copyright": "Copyright © 2025",
     "buildVersion": "0.1.0",
     "compression": "maximum",
     "directories": {
