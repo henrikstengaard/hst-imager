@@ -64,6 +64,12 @@
                 }
             }
 
+            var tenPercentOfSize = (double)size / 10;
+            var sendDataProcessedWhenBytesProcessed = tenPercentOfSize;
+
+            var processedDataSendStopwatch = new Stopwatch();
+            processedDataSendStopwatch.Start();
+
             // copy right to left, if source and destination are the same,
             // destination offset is higher than source offset and
             // destination offset is less than source offset + size to copy
@@ -198,6 +204,14 @@
                 srcOffset += copyRightToLeft ? -srcDecrementStep : srcIncrementStep;
                 destOffset += copyRightToLeft ? -destDecrementStep : destIncrementStep;
 
+                if (bytesProcessed >= sendDataProcessedWhenBytesProcessed &&
+                    processedDataSendStopwatch.Elapsed.TotalMilliseconds < timer.Interval)
+                {
+                    processedDataSendStopwatch.Reset();
+                    sendDataProcessed = true;
+                    sendDataProcessedWhenBytesProcessed += tenPercentOfSize;
+                }
+                
                 OnDataProcessed(size == 0, percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining,
                     timeTotal, bytesPerSecond);
                 endOfStream = size == 0 ? bytesRead == 0 : bytesRead == 0 || bytesProcessed >= size;
@@ -205,6 +219,7 @@
 
             timer.Stop();
             stopwatch.Stop();
+            processedDataSendStopwatch.Stop();
 
             sendDataProcessed = true;
             OnDataProcessed(size == 0, 100, bytesProcessed, 0, size, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);

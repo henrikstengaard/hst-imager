@@ -3,8 +3,8 @@
     using System;
     using System.Threading.Tasks;
     using Extensions;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Core.Commands;
     using Hst.Imager.Core.Models;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.AspNetCore.SignalR.Client;
@@ -50,7 +50,8 @@
                             ? System.IO.Path.Combine(writeBackgroundTask.SourcePath, "+bs")
                             : writeBackgroundTask.SourcePath,
                         writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
-                        writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force);
+                        writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force,
+                        writeBackgroundTask.SkipZeroFilled);
                 writeCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

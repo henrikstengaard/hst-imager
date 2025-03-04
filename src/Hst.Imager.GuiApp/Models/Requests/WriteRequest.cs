@@ -18,12 +18,14 @@
         public bool Force { get; set; }
         public int Retries { get; set; }
         public bool Byteswap { get; set; }
+        public bool SkipZeroFilled { get; set; }
 
         public WriteRequest()
         {
             Verify = false;
             Force = false;
             Retries = 5;
+            SkipZeroFilled = true;
         }
     }
 }

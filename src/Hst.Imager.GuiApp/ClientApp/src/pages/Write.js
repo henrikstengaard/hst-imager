@@ -60,6 +60,7 @@ export default function Write() {
     const [sourcePath, setSourcePath] = React.useState(null)
     const [verify, setVerify] = React.useState(false)
     const [force, setForce] = React.useState(false)
+    const [skipZeroFilled, setSkipZeroFilled] = React.useState(true)
     const [retries, setRetries] = React.useState(5)
     const [writeAll, setWriteAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
@@ -180,7 +181,8 @@ export default function Write() {
             retries,
             verify,
             force,
-            byteswap
+            byteswap,
+            skipZeroFilled
         });
     }
 
@@ -210,6 +212,7 @@ export default function Write() {
         setSourcePath(null)
         setVerify(false)
         setForce(false)
+        setSkipZeroFilled(true)
         setRetries(5)
         setPrefillSize(null)
         setPrefillSizeOptions([])
@@ -231,7 +234,7 @@ export default function Write() {
                 text="Write"
                 description="Write image file to physical disk."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="source-path"
@@ -273,7 +276,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <MediaSelectField
                         label={
@@ -288,7 +291,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="byteswap"
@@ -303,7 +306,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="write-all"
@@ -317,7 +320,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="Prefill size to write"
@@ -333,7 +336,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" sx={{mt: 0}}>
                 <Grid item xs={8} lg={4}>
                     <TextField
                         label="Size"
@@ -362,7 +365,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={2} lg={2}>
                     <TextField
                         label="Write retries"
@@ -389,8 +392,16 @@ export default function Write() {
                         onChange={(checked) => setVerify(checked)}
                     />
                 </Grid>
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="skip-zero-filled"
+                        label="Skip unused sectors"
+                        value={skipZeroFilled}
+                        onChange={(checked) => setSkipZeroFilled(checked)}
+                    />
+                </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
                         <Stack direction="row" spacing={2} sx={{mt: 1}}>
@@ -419,7 +430,7 @@ export default function Write() {
                 </Grid>
             </Grid>
             {get(sourceMedia, 'diskInfo') && (
-                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
                             Source file

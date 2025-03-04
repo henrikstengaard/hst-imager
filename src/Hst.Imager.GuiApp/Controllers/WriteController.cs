@@ -34,7 +34,8 @@
                 Verify = request.Verify,
                 Force = request.Force,
                 Retries = request.Retries,
-                Byteswap = request.Byteswap
+                Byteswap = request.Byteswap,
+                SkipZeroFilled = request.SkipZeroFilled
             };
 
             await workerService.EnqueueAsync([writeBackgroundTask], true);

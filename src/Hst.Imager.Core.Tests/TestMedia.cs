@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Core.IO;
@@ -31,11 +30,6 @@ public class TestMedia
 
     public async Task<byte[]> ReadData()
     {
-        if (Stream.Length > 10.MB())
-        {
-            throw new InvalidOperationException("Use stream property to read large amount of data");
-        }
-        
         Stream.Position = 0;
         return await Stream.ReadBytes((int)Stream.Length);
     }

@@ -122,7 +122,12 @@
                 new[] { "--force", "-f" },
                 description: "Force write to ignore write errors.",
                 getDefaultValue: () => false);
-            
+
+            var skipUnusedSectorsOption = new Option<bool>(
+                new[] { "--skip-unused-sectors" },
+                description: "Skip unused sectors.",
+                getDefaultValue: () => true);
+
             var writeCommand = new Command("write", "Write image file to physical drive.");
             writeCommand.AddArgument(sourceArgument);
             writeCommand.AddArgument(destinationArgument);
@@ -130,8 +135,9 @@
             writeCommand.AddOption(retriesOption);
             writeCommand.AddOption(verifyOption);
             writeCommand.AddOption(forceOption);
+            writeCommand.AddOption(skipUnusedSectorsOption);
             writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption,
-                retriesOption, verifyOption, forceOption);
+                retriesOption, verifyOption, forceOption, skipUnusedSectorsOption);
 
             return writeCommand;
         }

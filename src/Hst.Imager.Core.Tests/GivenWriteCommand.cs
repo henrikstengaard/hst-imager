@@ -37,7 +37,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false);
+                    sourcePath, destinationPath, new Size(), 0, false, false, false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -75,7 +75,8 @@ namespace Hst.Imager.Core.Tests
                 // act - write vhd media to physical drive
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper,
-                    new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(data.Length, Unit.Bytes), 0, false, false);
+                    new List<IPhysicalDrive>(), sourcePath, destinationPath,
+                    new Size(data.Length, Unit.Bytes), 0, false, false, false);
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
                 Assert.True(result.IsSuccess);
             }
@@ -108,7 +109,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -164,7 +165,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -214,7 +215,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -264,7 +265,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -314,7 +315,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -343,7 +344,103 @@ namespace Hst.Imager.Core.Tests
                 }
             }
         }
-        
+
+        [Fact]
+        public async Task When_WriteSrcImgToDestPhysicalDrive_Then_SrcAndDestAreIdentical()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
+            var testCommandHelper = new TestCommandHelper();
+            var imageSize = 50.MB();
+            const bool skipZeroFilled = false;
+
+            // arrange - create source image bytes
+            var sourceImageBytes = new byte[imageSize];
+            Array.Fill<byte>(sourceImageBytes, 2, 0, 512);
+
+            // arrange - create destination physical drive bytes
+            var destinationPhysicalDriveBytes = new byte[imageSize];
+            Array.Fill<byte>(destinationPhysicalDriveBytes, 1);
+            
+            // arrange - create source image media
+            await testCommandHelper.AddTestMedia(sourcePath, sourcePath, sourceImageBytes);
+
+            // arrange - create destination physical drive
+            await testCommandHelper.AddTestMedia(destinationPath, destinationPath, destinationPhysicalDriveBytes);
+
+            // act - write source image media to destination physical drive
+            var cancellationTokenSource = new CancellationTokenSource();
+            var writeCommand =
+                new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled);
+            var dataProcessedEventArgs = new List<DataProcessedEventArgs>();
+            writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs.Add(args); };
+            var result = await writeCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - data processed is not empty and has more than 10 data processed events
+            Assert.NotEmpty(dataProcessedEventArgs);
+            Assert.True(dataProcessedEventArgs.Count > 10);
+            
+            // arrange - get actual destination bytes
+            var actualDestinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
+            
+            // assert - data written to physical drive file is identical to source image bytes
+            Assert.True(sourceImageBytes.SequenceEqual(actualDestinationBytes));
+        }
+
+        [Fact]
+        public async Task When_WriteSrcImgToDestPhysicalDriveSkippingZeroFilled_Then_OnlyUsedSectorsAreWritten()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
+            var testCommandHelper = new TestCommandHelper();
+            var imageSize = 50.MB();
+            const bool skipZeroFilled = true;
+            
+            // arrange - create source image bytes
+            var sourceImageBytes = new byte[imageSize];
+            Array.Fill<byte>(sourceImageBytes, 2, 0, 512);
+
+            // arrange - create destination physical drive bytes
+            var destinationPhysicalDriveBytes = new byte[imageSize];
+            Array.Fill<byte>(destinationPhysicalDriveBytes, 1);
+            
+            // arrange - create source image media
+            await testCommandHelper.AddTestMedia(sourcePath, sourcePath, sourceImageBytes);
+
+            // arrange - create destination physical drive
+            await testCommandHelper.AddTestMedia(destinationPath, destinationPath, destinationPhysicalDriveBytes);
+
+            // act - write source image media to destination physical drive
+            var cancellationTokenSource = new CancellationTokenSource();
+            var writeCommand =
+                new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled);
+            var dataProcessedEventArgs = new List<DataProcessedEventArgs>();
+            writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs.Add(args); };
+            var result = await writeCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - data processed is not empty and has more than 10 data processed events
+            Assert.NotEmpty(dataProcessedEventArgs);
+            Assert.True(dataProcessedEventArgs.Count > 10);
+            
+            // arrange - create expected destination bytes with 512 first bytes from source image file
+            // and remaining bytes from destination physical drive
+            var expectedDestinationBytes = new byte[imageSize];
+            Array.Copy(destinationPhysicalDriveBytes, 0, expectedDestinationBytes, 0, destinationPhysicalDriveBytes.Length);
+            Array.Copy(sourceImageBytes, 0, expectedDestinationBytes, 0, 512);
+
+            // arrange - get actual destination bytes
+            var actualDestinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
+            
+            // assert - data written to physical drive file is identical to expected destination bytes
+            Assert.True(expectedDestinationBytes.SequenceEqual(actualDestinationBytes));
+        }
+
         private static async Task AssertTestMediaIsIdenticalToUncompressedImg(TestMedia testMedia)
         {
             // open zip compressed img path as source stream
@@ -397,7 +494,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false);
+                    sourcePath, destinationPath, new Size(), 0, false, false, false);
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             
             // assert - write failed and returned write size too large error

@@ -13,6 +13,7 @@
         public bool Force { get; set; }
         public int Retries { get; set; }
         public bool Byteswap { get; set; }
+        public bool SkipZeroFilled { get; set; }
 
         [JsonIgnore]
         public CancellationToken Token { get; set; }
@@ -22,6 +23,7 @@
             Verify = false;
             Force = false;
             Retries = 5;
+            SkipZeroFilled = true;
         }
     }
 }

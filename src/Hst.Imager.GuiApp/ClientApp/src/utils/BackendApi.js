@@ -95,9 +95,6 @@ export class BackendApi {
         }
     }
 
-    async updateUserPool({ userPoolId, userPool } = {}) {
-
-    }
     async updateInfo({ path, sourceType, byteswap }) {
         return await this.send({
             method: 'POST',
@@ -216,7 +213,7 @@ export class BackendApi {
         }
     }
 
-    async startWrite({ title, sourcePath, destinationPath, size, retries, verify, force, byteswap }) {
+    async startWrite({ title, sourcePath, destinationPath, size, retries, verify, force, byteswap, skipZeroFilled }) {
         const response = await fetch(`${this.baseUrl}api/write`, {
             method: 'POST',
             headers: {
@@ -231,7 +228,8 @@ export class BackendApi {
                 retries,
                 verify,
                 force,
-                byteswap
+                byteswap,
+                skipZeroFilled
             })
         });
         

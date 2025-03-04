@@ -234,13 +234,14 @@ namespace Hst.Imager.ConsoleApp
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool verify, bool force)
+        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool verify,
+            bool force, bool skipZeroFilled)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, verify, force);
+                destinationPath, ParseSize(size), retries, verify, force, skipZeroFilled);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);

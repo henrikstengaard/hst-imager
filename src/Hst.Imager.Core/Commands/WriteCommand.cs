@@ -21,6 +21,7 @@
         private readonly int retries;
         private readonly bool verify;
         private readonly bool force;
+        private readonly bool skipZeroFilled;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
@@ -30,7 +31,7 @@
 
         public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, bool verify, bool force)
+            string destinationPath, Size size, int retries, bool verify, bool force, bool skipZeroFilled)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -41,6 +42,7 @@
             this.retries = retries;
             this.verify = verify;
             this.force = force;
+            this.skipZeroFilled = skipZeroFilled;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -101,7 +103,7 @@
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
 
-            var result = await streamCopier.Copy(token, sourceStream, destinationStream, writeSize);
+            var result = await streamCopier.Copy(token, sourceStream, destinationStream, writeSize, skipZeroFilled: skipZeroFilled);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
