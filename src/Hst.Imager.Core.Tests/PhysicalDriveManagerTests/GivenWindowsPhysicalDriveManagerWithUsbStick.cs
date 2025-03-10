@@ -15,8 +15,10 @@ public class GivenWindowsPhysicalDriveManagerWithUsbStick
         new NullLogger<TestWindowsPhysicalDriveManager>(),
         new List<IPhysicalDrive>
         {
-            new WindowsPhysicalDrive("\\disk0", "FixedMedia", "17", "Micron_2450_MTFDKBA1T0TFK", 1024209543168, false, new []{ "C" }),
-            new WindowsPhysicalDrive("\\disk1", "RemovableMedia", "BusTypeUsb", "SanDisk' Cruzer Fit", 15682240512, true, new []{ "D" }),
+            new WindowsPhysicalDrive("\\disk0", "FixedMedia", "17", "Micron_2450_MTFDKBA1T0TFK", 
+                1024209543168, false, false, new []{ "C" }),
+            new WindowsPhysicalDrive("\\disk1", "RemovableMedia", "BusTypeUsb", "SanDisk' Cruzer Fit", 
+                15682240512, true, false, new []{ "D" }),
         }
     );
     

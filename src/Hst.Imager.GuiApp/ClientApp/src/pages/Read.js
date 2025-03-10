@@ -57,9 +57,6 @@ export default function Read() {
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [destinationPath, setDestinationPath] = React.useState(null)
-    const [verify, setVerify] = React.useState(false)
-    const [force, setForce] = React.useState(false)
-    const [retries, setRetries] = React.useState(5)
     const [readAll, setReadAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
@@ -177,9 +174,6 @@ export default function Read() {
             sourcePath: sourceMedia.path,
             destinationPath,
             size: (size * unitOption.size),
-            retries,
-            verify,
-            force,
             byteswap
         });
     }
@@ -207,9 +201,6 @@ export default function Read() {
         setSize(0)
         setUnit('bytes')
         setDestinationPath(null)
-        setVerify(false)
-        setForce(false)
-        setRetries(5)
         setPrefillSize(null)
         setPrefillSizeOptions([])
         setConnection(null)
@@ -282,7 +273,7 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="byteswap"
@@ -297,7 +288,7 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="read-all"
@@ -311,80 +302,56 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Prefill size to read"
-                        id="prefill-size"
-                        emptyLabel="None available"
-                        disabled={readAll}
-                        value={prefillSize || ''}
-                        options={prefillSizeOptions || []}
-                        onChange={(value) => {
-                            setSize(value)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type={readAll ? "text" : "number"}
-                        disabled={readAll}
-                        value={readAll ? '' : size}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        disabled={readAll}
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={2} lg={2}>
-                    <TextField
-                        label="Read retries"
-                        id="retries"
-                        type="number"
-                        value={retries}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setRetries(event.target.value)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="force"
-                        label="Force read and ignore errors"
-                        value={force}
-                        onChange={(checked) => setForce(checked)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="verify"
-                        label="Verify while reading"
-                        value={verify}
-                        onChange={(checked) => setVerify(checked)}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            {!readAll && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                        <Grid item xs={12} lg={6}>
+                            <SelectField
+                                label="Prefill size to read"
+                                id="prefill-size"
+                                emptyLabel="None available"
+                                disabled={readAll}
+                                value={prefillSize || ''}
+                                options={prefillSizeOptions || []}
+                                onChange={(value) => {
+                                    setSize(value)
+                                    setUnit('bytes')
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={readAll ? "text" : "number"}
+                                disabled={readAll}
+                                value={readAll ? '' : size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                                onKeyDown={async (event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+                                    setOpenConfirm(true)
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                disabled={readAll}
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
                         <Stack direction="row" spacing={2} sx={{mt: 1}}>

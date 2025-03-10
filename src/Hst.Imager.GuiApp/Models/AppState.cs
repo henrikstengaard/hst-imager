@@ -4,6 +4,7 @@ using Hst.Imager.GuiApp.Helpers;
 using System.Diagnostics;
 using System.IO;
 using System;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.GuiApp.Models
 {

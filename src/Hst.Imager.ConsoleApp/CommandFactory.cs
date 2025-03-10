@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.ConsoleApp
+﻿using Hst.Imager.ConsoleApp.Commands;
+
+namespace Hst.Imager.ConsoleApp
 {
     using System.CommandLine;
     using System.IO;
@@ -8,15 +10,15 @@
     public static class CommandFactory
     {
         public static readonly Option<FileInfo> LogFileOption = new(
-            new[] { "--log-file" },
+            ["--log-file"],
             description: "Write log file.");
 
         public static readonly Option<bool> VerboseOption = new(
-            new[] { "--verbose" },
+            ["--verbose"],
             description: "Verbose output.");
 
         public static readonly Option<FormatEnum> FormatOption = new(
-            new[] { "--format", "-f" },
+            ["--format", "-f"],
             description: "Format of output.",
             getDefaultValue: () => FormatEnum.Table);
         
@@ -45,11 +47,12 @@
             rootCommand.AddCommand(RdbCommandFactory.CreateRdbCommand());
             rootCommand.AddCommand(FsCommandFactory.CreateFsCommand());
             rootCommand.AddCommand(AdfCommandFactory.CreateAdfCommand());
+            rootCommand.AddCommand(SettingsCommandFactory.CreateSettingsCommand());
 
             return rootCommand;
         }
 
-        public static Command CreateScriptCommand()
+        private static Command CreateScriptCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
@@ -62,17 +65,17 @@
             return scriptCommand;
         }
 
-        public static Command CreateInfoCommand()
+        private static Command CreateInfoCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
             var showUnallocatedOption = new Option<bool>(
-                new[] { "--unallocated", "-u" },
+                ["--unallocated", "-u"],
                 description: "Show unallocated.",
                 getDefaultValue: () => true);
-            
+
             var command = new Command("info", "Display info about physical drive or image file.");
             command.AddArgument(pathArgument);
             command.AddOption(showUnallocatedOption);
@@ -81,21 +84,15 @@
             return command;
         }
 
-        public static Command CreateListCommand()
+        private static Command CreateListCommand()
         {
-            var allOption = new Option<bool>(
-                new[] { "--all", "-a" },
-                description: "Show all physical drives.",
-                getDefaultValue: () => false);
-            
             var listCommand = new Command("list", "Display list of physical drives.");
-            listCommand.AddOption(allOption);
-            listCommand.SetHandler(CommandHandler.List, allOption);
+            listCommand.SetHandler(CommandHandler.List);
 
             return listCommand;
         }
 
-        public static Command CreateWriteCommand()
+        private static Command CreateWriteCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
@@ -106,25 +103,25 @@
                 description: "Path to destination physical drive.");
 
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size of image file to write.");
 
-            var retriesOption = new Option<int>(
-                new[] { "--retries", "-r" },
+            var retriesOption = new Option<int?>(
+                ["--retries", "-r"],
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
 
-            var verifyOption = new Option<bool>(
-                new[] { "--verify", "-v" },
+            var verifyOption = new Option<bool?>(
+                ["--verify", "-v"],
                 description: "Verify data written.");
             
-            var forceOption = new Option<bool>(
-                new[] { "--force", "-f" },
+            var forceOption = new Option<bool?>(
+                ["--force", "-f"],
                 description: "Force write to ignore write errors.",
                 getDefaultValue: () => false);
 
-            var skipUnusedSectorsOption = new Option<bool>(
-                new[] { "--skip-unused-sectors" },
+            var skipUnusedSectorsOption = new Option<bool?>(
+                ["--skip-unused-sectors"],
                 description: "Skip unused sectors.",
                 getDefaultValue: () => true);
 
@@ -142,7 +139,7 @@
             return writeCommand;
         }
 
-        public static Command CreateReadCommand()
+        private static Command CreateReadCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
@@ -153,25 +150,25 @@
                 description: "Path to destination image file.");
 
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size of physical drive to read.");
 
-            var retriesOption = new Option<int>(
-                new[] { "--retries", "-r" },
+            var retriesOption = new Option<int?>(
+                ["--retries", "-r"],
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
             
-            var verifyOption = new Option<bool>(
-                new[] { "--verify", "-v" },
+            var verifyOption = new Option<bool?>(
+                ["--verify", "-v"],
                 description: "Verify data read.");
 
-            var forceOption = new Option<bool>(
-                new[] { "--force", "-f" },
+            var forceOption = new Option<bool?>(
+                ["--force", "-f"],
                 description: "Force read to ignore read errors.",
                 getDefaultValue: () => false);
             
             var startOption = new Option<long?>(
-                new[] { "--start", "-st" },
+                ["--start", "-st"],
                 description: "Start offset.");
             
             var readCommand = new Command("read", "Read physical drive to image file.");
@@ -188,7 +185,7 @@
             return readCommand;
         }
 
-        public static Command CreateConvertCommand()
+        private static Command CreateConvertCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
@@ -199,11 +196,11 @@
                 description: "Path to destination image file.");
 
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size of image file convert.");
 
             var verifyOption = new Option<bool>(
-                new[] { "--verify", "-v" },
+                ["--verify", "-v"],
                 description: "Verify data converted.");
             
             var convertCommand = new Command("convert", "Convert image file.");
@@ -216,7 +213,7 @@
             return convertCommand;
         }
 
-        public static Command CreateFormatCommand()
+        private static Command CreateFormatCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
@@ -250,7 +247,7 @@
             return command;
         }
 
-        public static Command CreateBlankCommand()
+        private static Command CreateBlankCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
@@ -261,7 +258,7 @@
                 description: "Size of image file.");
 
             var compatibleSizeOption = new Option<bool>(
-                new[] { "--compatible", "-c" },
+                ["--compatible", "-c"],
                 description: "Make size compatible by reducing it with 5%.",
                 getDefaultValue: () => false);
 
@@ -274,18 +271,18 @@
             return blankCommand;
         }
 
-        public static Command CreateOptimizeCommand()
+        private static Command CreateOptimizeCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Source",
                 description: "Path to image file.");
 
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size to optimize to.");
 
             var partitionTableOption = new Option<PartitionTable>(
-                new[] { "--partition-table", "-pt" },
+                ["--partition-table", "-pt"],
                 description: "Optimize to size of partition table.",
                 getDefaultValue: () => PartitionTable.None);
             
@@ -298,7 +295,7 @@
             return convertCommand;
         }
 
-        public static Command CreateCompareCommand()
+        private static Command CreateCompareCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
@@ -309,16 +306,16 @@
                 description: "Path to destination physical drive or image file.");
 
             var sizeOption = new Option<string>(
-                new[] { "--size", "-s" },
+                ["--size", "-s"],
                 description: "Size to verify.");
             
-            var retriesOption = new Option<int>(
-                new[] { "--retries", "-r" },
+            var retriesOption = new Option<int?>(
+                ["--retries", "-r"],
                 description: "Number of retries to try read or write data.",
                 getDefaultValue: () => 5);
             
-            var forceOption = new Option<bool>(
-                new[] { "--force", "-f" },
+            var forceOption = new Option<bool?>(
+                ["--force", "-f"],
                 description: "Force compare to ignore read errors.",
                 getDefaultValue: () => false);
             
@@ -333,7 +330,7 @@
             return convertCommand;
         }
 
-        public static Command CreateBlockCommand()
+        private static Command CreateBlockCommand()
         {
             var command = new Command("block", "Block.");
             command.AddCommand(CreateBlockReadCommand());
@@ -341,7 +338,7 @@
             return command;
         }
 
-        public static Command CreateBlockReadCommand()
+        private static Command CreateBlockReadCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
@@ -352,20 +349,20 @@
                 description: "Output path to write sectors.");
 
             var blockSizeOption = new Option<int>(
-                new[] { "--block-size", "-bs" },
+                ["--block-size", "-bs"],
                 description: "Block size.",
                 getDefaultValue: () => 512);
 
             var usedOption = new Option<bool>(
-                new[] { "--used", "-u" },
+                ["--used", "-u"],
                 description: "Only used blocks.");
             
             var startOption = new Option<long?>(
-                new[] { "--start", "-s" },
+                ["--start", "-s"],
                 description: "Start offset.");
 
             var endOption = new Option<long?>(
-                new[] { "--end", "-e" },
+                ["--end", "-e"],
                 description: "End offset.");
             
             var blankCommand = new Command("read", "Read blocks to file per block.");
@@ -380,20 +377,20 @@
 
             return blankCommand;
         }
-        
-        public static Command CreateBlockViewCommand()
+
+        private static Command CreateBlockViewCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
                 description: "Path to physical drive or image file.");
 
             var blockSizeOption = new Option<int>(
-                new[] { "--block-size", "-bs" },
+                ["--block-size", "-bs"],
                 description: "Block size.",
                 getDefaultValue: () => 512);
 
             var startOption = new Option<long?>(
-                new[] { "--start", "-s" },
+                ["--start", "-s"],
                 description: "Start offset.");
 
             var blankCommand = new Command("view", "View block as hex.");

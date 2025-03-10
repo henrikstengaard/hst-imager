@@ -48,7 +48,7 @@ export default function About() {
             </Alert>
             
             <Typography sx={{ mt: 1 }}>
-                Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time. To support future development and appreciate your use of Hst Imager, please make a donation via <Link href="#" onClick={async (event) => openUrl(event, payPalDonateUrl)}>PayPal donate</Link>.
+                Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time.
             </Typography>
 
             <Typography sx={{ mt: 1 }}>

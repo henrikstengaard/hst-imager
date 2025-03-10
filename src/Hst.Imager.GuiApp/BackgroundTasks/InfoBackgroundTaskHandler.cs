@@ -35,7 +35,8 @@
                 return;
             }
 
-            var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
+            var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
+                appState.Settings.AllPhysicalDrives);
 
             var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();

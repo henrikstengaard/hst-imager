@@ -40,7 +40,8 @@
 
             try
             {
-                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives()).ToList();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(
+                    appState.Settings.AllPhysicalDrives)).ToList();
 
                 var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var verifyCommand =
@@ -49,7 +50,7 @@
                             ? System.IO.Path.Combine(compareBackgroundTask.SourcePath, "+bs")
                             : compareBackgroundTask.SourcePath,
                         compareBackgroundTask.DestinationPath, new Size(compareBackgroundTask.Size, Unit.Bytes), 
-                        compareBackgroundTask.Retries, compareBackgroundTask.Force);
+                        appState.Settings.Retries, appState.Settings.Force);
                 verifyCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

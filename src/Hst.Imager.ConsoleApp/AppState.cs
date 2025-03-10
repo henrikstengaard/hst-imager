@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Linq;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.ConsoleApp
 {
@@ -17,6 +18,7 @@ namespace Hst.Imager.ConsoleApp
         public readonly LoggingLevelSwitch LoggingLevelSwitch;
         public readonly Version Version;
         public readonly DateTime BuildDate;
+        public Settings Settings { get; set; }
 
         private AppState()
         {
@@ -30,6 +32,7 @@ namespace Hst.Imager.ConsoleApp
                 : Path.GetDirectoryName(executingFile);
             Version = assembly.GetName().Version;
             BuildDate = GetBuildDate(assembly);
+            Settings = new Settings();
         }
 
         public static AppState Instance => AppStateInstance.Value;

@@ -45,6 +45,10 @@
 
         protected virtual IEnumerable<IPhysicalDrive> GetPhysicalDrivesUsingKernel32()
         {
+            var systemDriveLetter = Environment.SystemDirectory.Substring(0, 2);
+
+            logger.LogDebug($"System drive '{systemDriveLetter}'");
+            
             // iterate drive letters and get their relation to physical drives
             var physicalDriveLettersIndex = new Dictionary<uint, List<string>>();
             var drives = DriveInfo.GetDrives().ToList();
@@ -78,7 +82,7 @@
 
                     physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     // ignore
                 }
@@ -113,12 +117,14 @@
 
                     var driveLetters =
                         physicalDriveLettersIndex.TryGetValue(i, out var value) ? value : new List<string>();
+                    var systemDrive = driveLetters.Contains(systemDriveLetter);
                     var physicalDrive = new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType,
                         storagePropertyQueryResult.BusType, name, size,
-                        IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), driveLetters);
+                        IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), 
+                        systemDrive, driveLetters);
                     physicalDrives.Add(physicalDrive);
                     logger.LogDebug(
-                        $"Physical drive: Path '{physicalDrive.Path}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");
+                        $"Physical drive: Path '{physicalDrive.Path}', SystemDrive '{systemDrive}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");
                 }
                 catch (Win32Exception e)
                 {
@@ -208,7 +214,7 @@
 
             return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.InterfaceType,
                 wmicDiskDrive.Model,
-                size, false, driveLetters);
+                size, false, false, driveLetters);
         }
 
         protected virtual async Task<string> GetWmicDiskDriveListCsv()

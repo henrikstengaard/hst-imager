@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.ConsoleApp
+﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.ConsoleApp
 {
     using System.CommandLine.Builder;
     using System.CommandLine.Parsing;
@@ -19,7 +22,7 @@
     {
         private static LoggerConfiguration loggerConfig = new LoggerConfiguration()
             .MinimumLevel.ControlledBy(AppState.Instance.LoggingLevelSwitch)
-            .WriteTo.Console(theme: AnsiConsoleTheme.None);
+            .WriteTo.Console(theme: ConsoleTheme.None);
 
         private static void AddLogFile(FileInfo fileInfo)
         {
@@ -52,6 +55,8 @@
                     ? "Run Command Prompt or PowerShell as Administrator and run Hst Imager with same arguments."
                     : "Run Hst Imager with sudo and same arguments.");
             }
+
+            AppState.Instance.Settings = await ApplicationDataHelper.ReadSettings<Settings>(Core.Models.Constants.AppName);
 
             var rootCommand = CommandFactory.CreateRootCommand();
 

@@ -7,8 +7,6 @@ using Hst.Imager.GuiApp.Models;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System;
-using Hst.Imager.GuiApp.Hubs;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
@@ -52,7 +50,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     PercentComplete = 0
                 }, context.Token);
 
-                var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
+                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
+                    appState.Settings.AllPhysicalDrives);
 
                 var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var formatCommand = new FormatCommand(loggerFactory.CreateLogger<FormatCommand>(), loggerFactory,

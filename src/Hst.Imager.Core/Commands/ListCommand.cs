@@ -13,12 +13,10 @@ namespace Hst.Imager.Core.Commands
     public class ListCommand : CommandBase
     {
         private readonly IEnumerable<IPhysicalDrive> physicalDrives;
-        private readonly bool all;
 
-        public ListCommand(ILogger<ListCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives, bool all)
+        public ListCommand(ILogger<ListCommand> logger, ICommandHelper commandHelper, IEnumerable<IPhysicalDrive> physicalDrives)
         {
             this.physicalDrives = physicalDrives;
-            this.all = all;
         }
 
         public event EventHandler<ListReadEventArgs> ListRead;

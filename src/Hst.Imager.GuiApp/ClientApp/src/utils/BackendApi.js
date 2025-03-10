@@ -140,8 +140,6 @@ export class BackendApi {
                 sourcePath,
                 destinationPath,
                 size,
-                retries,
-                force,
                 byteswap
             })
         });
@@ -201,9 +199,6 @@ export class BackendApi {
                 sourcePath,
                 destinationPath,
                 size,
-                retries,
-                verify,
-                force,
                 byteswap
             })
         });
@@ -225,11 +220,7 @@ export class BackendApi {
                 sourcePath,
                 destinationPath,
                 size,
-                retries,
-                verify,
-                force,
-                byteswap,
-                skipZeroFilled
+                byteswap
             })
         });
         

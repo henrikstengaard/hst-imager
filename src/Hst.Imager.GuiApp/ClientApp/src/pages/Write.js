@@ -58,10 +58,6 @@ export default function Write() {
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [sourcePath, setSourcePath] = React.useState(null)
-    const [verify, setVerify] = React.useState(false)
-    const [force, setForce] = React.useState(false)
-    const [skipZeroFilled, setSkipZeroFilled] = React.useState(true)
-    const [retries, setRetries] = React.useState(5)
     const [writeAll, setWriteAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
@@ -178,11 +174,7 @@ export default function Write() {
             sourcePath,
             destinationPath: destinationMedia.path,
             size: (size * unitOption.size),
-            retries,
-            verify,
-            force,
-            byteswap,
-            skipZeroFilled
+            byteswap
         });
     }
 
@@ -210,10 +202,6 @@ export default function Write() {
         setSize(0)
         setUnit('bytes')
         setSourcePath(null)
-        setVerify(false)
-        setForce(false)
-        setSkipZeroFilled(true)
-        setRetries(5)
         setPrefillSize(null)
         setPrefillSizeOptions([])
         setConnection(null)
@@ -234,7 +222,7 @@ export default function Write() {
                 text="Write"
                 description="Write image file to physical disk."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="source-path"
@@ -276,7 +264,7 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <MediaSelectField
                         label={
@@ -320,87 +308,55 @@ export default function Write() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Prefill size to write"
-                        id="prefill-size"
-                        emptyLabel="None available"
-                        disabled={writeAll}
-                        value={prefillSize || ''}
-                        options={prefillSizeOptions || []}
-                        onChange={(value) => {
-                            setSize(value)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" sx={{mt: 0}}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type={writeAll ? "text" : "number"}
-                        disabled={writeAll}
-                        value={writeAll ? '' : size}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        disabled={writeAll}
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={2} lg={2}>
-                    <TextField
-                        label="Write retries"
-                        id="retries"
-                        type="number"
-                        value={retries}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setRetries(event.target.value)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="force"
-                        label="Force write and ignore errors"
-                        value={force}
-                        onChange={(checked) => setForce(checked)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="verify"
-                        label="Verify while writing"
-                        value={verify}
-                        onChange={(checked) => setVerify(checked)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="skip-zero-filled"
-                        label="Skip unused sectors"
-                        value={skipZeroFilled}
-                        onChange={(checked) => setSkipZeroFilled(checked)}
-                    />
-                </Grid>
-            </Grid>
+            {!writeAll && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                        <Grid item xs={12} lg={6}>
+                            <SelectField
+                                label="Prefill size to write"
+                                id="prefill-size"
+                                emptyLabel="None available"
+                                disabled={writeAll}
+                                value={prefillSize || ''}
+                                options={prefillSizeOptions || []}
+                                onChange={(value) => {
+                                    setSize(value)
+                                    setUnit('bytes')
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={writeAll ? "text" : "number"}
+                                disabled={writeAll}
+                                value={writeAll ? '' : size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                                onKeyDown={async (event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+                                    setOpenConfirm(true)
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                disabled={writeAll}
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
             <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">

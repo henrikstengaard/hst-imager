@@ -5,24 +5,31 @@
     using System.IO;
     using System.Linq;
     using Apis;
-    using Hst.Imager.Core.Commands;
+    using Commands;
 
     public class WindowsPhysicalDrive : GenericPhysicalDrive
     {
         public readonly string BusType;
         public readonly List<string> DriveLetters;
+        public readonly bool SystemDrive;
         private bool scanDriveLetters;
 
         public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, bool removable,
-            IEnumerable<string> driveLetters) : base(path, type, name, size, removable)
+            bool systemDrive, IEnumerable<string> driveLetters) : base(path, type, name, size, removable)
         {
             this.BusType = busType;
             this.DriveLetters = driveLetters.ToList();
+            this.SystemDrive = systemDrive;
             this.scanDriveLetters = false;
         }
 
         public override Stream Open()
         {
+            if (SystemDrive)
+            {
+                throw new IOException("System drive cannot be opened.");
+            }
+            
             if (scanDriveLetters)
             {
                 ScanDriveLetters();

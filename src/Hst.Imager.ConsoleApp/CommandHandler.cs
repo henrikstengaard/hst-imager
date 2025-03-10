@@ -1,4 +1,6 @@
-﻿using Hst.Imager.Core.Commands.GptCommands;
+﻿using System.Text;
+using Hst.Imager.Core.Commands.GptCommands;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.ConsoleApp
 {
@@ -45,7 +47,7 @@ namespace Hst.Imager.ConsoleApp
             return new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator);
         }
 
-        private static async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
+        private static async Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives()
         {
             if (!User.IsAdministrator)
             {
@@ -54,7 +56,7 @@ namespace Hst.Imager.ConsoleApp
 
             var physicalDriveManager =
                 new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>()).Create();
-            return (await physicalDriveManager.GetPhysicalDrives(all)).ToList();
+            return (await physicalDriveManager.GetPhysicalDrives(AppState.Instance.Settings.AllPhysicalDrives)).ToList();
         }
 
         private static readonly Regex IntRegex =
@@ -144,6 +146,55 @@ namespace Hst.Imager.ConsoleApp
             Log.Logger.Information("Done");
         }
 
+        public static Task SettingsList()
+        {
+            var settings = AppState.Instance.Settings;
+            
+            var listTable = new Table
+            {
+                Columns =
+                [
+                    new Column { Name = "Name" },
+                    new Column { Name = "Value" }
+                ],
+                Rows = 
+                [
+                    new Row { Columns = ["All physical drives", settings.AllPhysicalDrives.ToString()] },
+                    new Row { Columns = ["Verify", settings.Verify.ToString()] },
+                    new Row { Columns = ["Force", settings.Force.ToString()] },
+                    new Row { Columns = ["Retries", settings.Retries.ToString(CultureInfo.InvariantCulture)] },
+                    new Row { Columns = ["Skip unused sectors", settings.SkipUnusedSectors.ToString()] }
+                ]
+            };
+
+            var outputBuilder = new StringBuilder();
+            outputBuilder.AppendLine("Settings:");
+            outputBuilder.AppendLine();
+            outputBuilder.Append(TablePresenter.Present(listTable));
+
+            Log.Logger.Information(outputBuilder.ToString());
+
+            return Task.CompletedTask;
+        }
+
+        public static async Task SettingsUpdate(bool? allPhysicalDrives)
+        {
+            var settingsUpdated = false;
+            
+            if (allPhysicalDrives.HasValue)
+            {
+                AppState.Instance.Settings.AllPhysicalDrives = allPhysicalDrives.Value;
+                settingsUpdated = true;
+            }
+
+            if (!settingsUpdated)
+            {
+                return;
+            }
+
+            await ApplicationDataHelper.WriteSettings(Core.Models.Constants.AppName, AppState.Instance.Settings);
+        }
+
         public static async Task Script(string path)
         {
             var lines = await File.ReadAllLinesAsync(path);
@@ -166,8 +217,7 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task Info(string path, bool showUnallocated)
         {
-            var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
-                path);
+            var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(), path);
             command.DiskInfoRead += (_, args) =>
             {
                 Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo, showUnallocated));
@@ -175,9 +225,9 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task List(bool all)
+        public static async Task List()
         {
-            var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives(all), all);
+            var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives());
             command.ListRead += (_, args) => { Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos)); };
             await Execute(command);
         }
@@ -198,18 +248,24 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task Optimize(string path, string size, PartitionTable partitionTable)
         {
-            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size), partitionTable);
+            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size),
+                partitionTable);
             await Execute(command);
         }
 
-        public static async Task Read(string sourcePath, string destinationPath, string size, int retries, bool verify, bool force, 
-            long? start)
+        public static async Task Read(string sourcePath, string destinationPath, string size, int? retries, bool? verify,
+            bool? force, long? start)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, verify, force, start);
+                destinationPath,
+                ParseSize(size),
+                retries ?? AppState.Instance.Settings.Retries,
+                verify ?? AppState.Instance.Settings.Verify,
+                force ?? AppState.Instance.Settings.Force,
+                start);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -219,13 +275,15 @@ namespace Hst.Imager.ConsoleApp
 
         }
 
-        public static async Task Compare(string sourcePath, string destinationPath, string size, int retries, bool force)
+        public static async Task Compare(string sourcePath, string destinationPath, string size, int? retries, bool? force)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new CompareCommand(GetLogger<CompareCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, force);
+                destinationPath, ParseSize(size),
+                retries ?? AppState.Instance.Settings.Retries,
+                force ?? AppState.Instance.Settings.Force);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -234,14 +292,18 @@ namespace Hst.Imager.ConsoleApp
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Write(string sourcePath, string destinationPath, string size, int retries, bool verify,
-            bool force, bool skipZeroFilled)
+        public static async Task Write(string sourcePath, string destinationPath, string size, int? retries, bool? verify,
+            bool? force, bool? skipUnusedSectors)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size), retries, verify, force, skipZeroFilled);
+                destinationPath, ParseSize(size),
+                retries ?? AppState.Instance.Settings.Retries,
+                verify ?? AppState.Instance.Settings.Verify,
+                force ?? AppState.Instance.Settings.Force,
+                skipUnusedSectors ?? AppState.Instance.Settings.SkipUnusedSectors);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
@@ -260,7 +322,8 @@ namespace Hst.Imager.ConsoleApp
             string fileSystemPath, string size)
         {
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
-                GetCommandHelper(), await GetPhysicalDrives(), path, formatType, fileSystem, fileSystemPath,
+                GetCommandHelper(), await GetPhysicalDrives(), path,
+                formatType, fileSystem, fileSystemPath,
                 AppState.Instance.AppPath, ParseSize(size)));
         }
 

@@ -41,7 +41,8 @@
 
             try
             {
-                var physicalDrives = await physicalDriveManager.GetPhysicalDrives();
+                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
+                    appState.Settings.AllPhysicalDrives);
 
                 var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var writeCommand =
@@ -50,8 +51,8 @@
                             ? System.IO.Path.Combine(writeBackgroundTask.SourcePath, "+bs")
                             : writeBackgroundTask.SourcePath,
                         writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
-                        writeBackgroundTask.Retries, writeBackgroundTask.Verify, writeBackgroundTask.Force,
-                        writeBackgroundTask.SkipZeroFilled);
+                        appState.Settings.Retries, appState.Settings.Verify, appState.Settings.Force,
+                        appState.Settings.SkipUnusedSectors);
                 writeCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

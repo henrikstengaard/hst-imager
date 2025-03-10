@@ -64,8 +64,6 @@ export default function Verify() {
     const [unit, setUnit] = React.useState('bytes')
     const [destinationPath, setDestinationPath] = React.useState(null)
     const [sourceType, setSourceType] = React.useState('ImageFile')
-    const [force, setForce] = React.useState(false)
-    const [retries, setRetries] = React.useState(5)
     const [compareAll, setCompareAll] = React.useState(true);
     const [prefillSize, setPrefillSize] = React.useState(null)
     const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
@@ -212,8 +210,6 @@ export default function Verify() {
             sourcePath,
             destinationPath,
             size: (size * unitOption.size),
-            retries,
-            force,
             byteswap
         });
     }
@@ -239,8 +235,6 @@ export default function Verify() {
         setUnit('bytes')
         setDestinationPath(null)
         setSourceType('ImageFile')
-        setForce(false)
-        setRetries(5)
         setPrefillSize(null)
         setPrefillSizeOptions([])
         setConnection(null)
@@ -377,7 +371,7 @@ export default function Verify() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="byteswap"
@@ -392,7 +386,7 @@ export default function Verify() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
                         id="compare-all"
@@ -406,72 +400,56 @@ export default function Verify() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Prefill size to compare"
-                        id="prefill-size"
-                        emptyLabel="None available"
-                        disabled={compareAll}
-                        value={prefillSize || ''}
-                        options={prefillSizeOptions || []}
-                        onChange={(value) => {
-                            setSize(value)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type={compareAll ? "text" : "number"}
-                        disabled={compareAll}
-                        value={compareAll ? '' : size}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        disabled={compareAll}
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={2} lg={2}>
-                    <TextField
-                        label="Read retries"
-                        id="retries"
-                        type="number"
-                        value={retries}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setRetries(event.target.value)}
-                    />
-                </Grid>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="force"
-                        label="Force compare and ignore errors"
-                        value={force}
-                        onChange={(checked) => setForce(checked)}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            {!compareAll && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                        <Grid item xs={12} lg={6}>
+                            <SelectField
+                                label="Prefill size to compare"
+                                id="prefill-size"
+                                emptyLabel="None available"
+                                disabled={compareAll}
+                                value={prefillSize || ''}
+                                options={prefillSizeOptions || []}
+                                onChange={(value) => {
+                                    setSize(value)
+                                    setUnit('bytes')
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={compareAll ? "text" : "number"}
+                                disabled={compareAll}
+                                value={compareAll ? '' : size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                                onKeyDown={async (event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+                                    setOpenConfirm(true)
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                disabled={compareAll}
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
                         <Stack direction="row" spacing={1} sx={{mt: 1}}>

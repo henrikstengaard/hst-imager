@@ -33,11 +33,12 @@
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            var physicalDrives = (await physicalDriveManager.GetPhysicalDrives()).ToList();
+            var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(
+                appState.Settings.AllPhysicalDrives)).ToList();
 
             var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
             var logger = loggerFactory.CreateLogger<InfoCommand>();
-            var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives, false);
+            var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
 
             listCommand.ListRead += async (_, args) =>
             {

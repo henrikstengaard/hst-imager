@@ -31,11 +31,7 @@
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath,
                 Size = request.Size,
-                Verify = request.Verify,
-                Force = request.Force,
-                Retries = request.Retries,
-                Byteswap = request.Byteswap,
-                SkipZeroFilled = request.SkipZeroFilled
+                Byteswap = request.Byteswap
             };
 
             await workerService.EnqueueAsync([writeBackgroundTask], true);
