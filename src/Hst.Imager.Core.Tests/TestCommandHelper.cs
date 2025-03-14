@@ -97,11 +97,42 @@
             return data;
         }
 
+        /// <summary>
+        /// Overrides get physical drive media to prevent access to physical drives while running unit tests.
+        /// </summary>
+        /// <param name="physicalDrives">List of physical drives.</param>
+        /// <param name="path">Path to physical drive.</param>
+        /// <param name="modifiers">Modifiers to use.</param>
+        /// <param name="writeable">Get writeable media.</param>
+        /// <returns>Media.</returns>
+        /// <exception cref="ArgumentNullException">Null exception thrown, if path is null.</exception>
         public override Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             ModifierEnum? modifiers = null, bool writeable = false)
         {
-            // return writable file, if path is equal physical drive path. otherwise null
-            return path == PhysicalDrivePath ? GetWritableFileMedia(path, modifiers) : Task.FromResult(new Result<Media>((Media)null));
+            ArgumentNullException.ThrowIfNull(path);
+
+            if (path != PhysicalDrivePath)
+            {
+                return Task.FromResult(new Result<Media>((Media)null));
+            }
+
+            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+
+            if (testMedia == null)
+            {
+                return Task.FromResult(new Result<Media>((Media)null));
+            }
+
+            var stream = testMedia.Stream;
+            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
+            {
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
+                    Media.MediaType.Raw, false, stream, false)));
+            }
+            
+            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
+            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, Media.MediaType.Vhd, 
+                false, disk, false, stream)));
         }
 
         public override async Task<Result<Media>> GetReadableFileMedia(string path, ModifierEnum? modifiers = null)
