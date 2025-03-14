@@ -45,6 +45,11 @@ export const createMasterBootRecordParts = ({ media, humanReadable = true }) => 
             ]
         }]
     }
+    
+    const formatBiosType = (id) => {
+        const idIntValue = parseInt(id);
+        return `0x${idIntValue.toString(16)}`;
+    }
 
     const parts = get(mbrPartitionTablePart, 'parts')
     const partitionsPart = parts ? {
@@ -82,7 +87,7 @@ export const createMasterBootRecordParts = ({ media, humanReadable = true }) => 
             return {
                 values: [
                     partition.partitionNumber || '',
-                    partition.biosType,
+                    formatBiosType(partition.biosType),
                     partition.partitionType,
                     partition.fileSystem,
                     humanReadable ? formatBytes(partition.size) : partition.size,

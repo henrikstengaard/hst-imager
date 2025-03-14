@@ -69,7 +69,7 @@
                         Columns = new[]
                         {
                             x.PartitionNumber.HasValue ? x.PartitionNumber.ToString() : string.Empty,
-                            x.BiosType.ToString(),
+                            FormatBiosType(x.BiosType),
                             x.PartitionType,
                             x.FileSystem,
                             x.Size.FormatBytes(),
@@ -91,6 +91,13 @@
             outputBuilder.Append(InfoPresenter.PresentInfo(mbrPartitionTablePart, showUnallocated));
             
             return outputBuilder.ToString();
+        }
+
+        private static string FormatBiosType(string biosType)
+        {
+            return int.TryParse(biosType, out var biosTypeIntValue)
+                ? string.Concat("0x", biosTypeIntValue.ToString("x"))
+                : biosType;
         }
     }
 }
