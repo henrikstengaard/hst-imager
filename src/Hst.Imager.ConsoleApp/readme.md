@@ -20,7 +20,7 @@ This tool can be used to create new blank images or create images of physical dr
 Hst Imager console comes with following features:
 - List physical drives.
 - Read information from physical drive or image file.
-- Read physical drive to image file.
+- Read disk to image file.
 - Write image file to physical drive.
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
@@ -227,16 +227,41 @@ Example of display information about an 4GB vhd image file:
 hst.imager info 4gb.vhd
 ```
 
-### Read physical drive to image file
+### Read disk to image file
 
-Reads physical drive to an image file. Physical drives requires administrator privileges. Supports reading to compressed gzip and zip image files using extensions: .gz and .zip.
+Reads disk or part of (partition or custom) from a physical drive or an image file to an image file. 
+This allows the entire disk to be read, a partition or a custom part of the disk providing a start offset and size to read.
+
+**Physical drives requires administrator privileges.**
+
+Supports reading to compressed gzip and zip image files using extensions: .gz and .zip.
 
 Example of displaying usage for reading a physical drive to an image file:
 ```
 hst.imager read \disk2 4gb.img
 ```
 
-Example of displaying usage for reading a physical drive to an gzip compressed image file:
+Example of reading a Master Boot Record partition 2 from a physical drive to an image file:
+```
+hst.imager read \disk2\mbr\2 part2.img
+```
+
+Example of reading a Master Boot Record partition 2 from a 4gb image to an image file:
+```
+hst.imager read 4gb.img\mbr\2 part2.img
+```
+
+Example of reading a Guid Partition Table partition 2 from a physical drive to an image file:
+```
+hst.imager read \disk2\gpt\2 part2.img
+```
+
+Example of reading a Rigid Disk Block partition 2 from a physical drive to an image file:
+```
+hst.imager read \disk2\rdb\2 part2.img
+```
+
+Example of reading a physical drive to an gzip compressed image file:
 ```
 hst.imager read \disk2 4gb.img.gz
 ```

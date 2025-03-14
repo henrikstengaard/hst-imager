@@ -187,7 +187,7 @@ export class BackendApi {
         }
     }
 
-    async startRead({ title, sourcePath, destinationPath, size, retries, verify, force, byteswap }) {
+    async startRead({ title, sourcePath, destinationPath, startOffset, size, byteswap }) {
         const response = await fetch(`${this.baseUrl}api/read`, {
             method: 'POST',
             headers: {
@@ -198,6 +198,7 @@ export class BackendApi {
                 title,
                 sourcePath,
                 destinationPath,
+                startOffset,
                 size,
                 byteswap
             })
@@ -208,7 +209,7 @@ export class BackendApi {
         }
     }
 
-    async startWrite({ title, sourcePath, destinationPath, size, retries, verify, force, byteswap, skipZeroFilled }) {
+    async startWrite({ title, sourcePath, destinationPath, size, byteswap }) {
         const response = await fetch(`${this.baseUrl}api/write`, {
             method: 'POST',
             headers: {

@@ -82,7 +82,7 @@
 
                     physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     // ignore
                 }

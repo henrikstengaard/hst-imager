@@ -368,7 +368,7 @@ namespace Hst.Imager.Core.Tests
                 }
             }
         }
-        
+
         [Fact]
         public async Task WhenReadPhysicalDriveToGZipCompressedImgThenDataIsIdentical()
         {
@@ -442,12 +442,12 @@ namespace Hst.Imager.Core.Tests
 
             return uncompressedStream.ToArray();
         }
-        
+
         private static async Task<byte[]> UncompressGZipData(byte[] data)
         {
             await using var uncompressedStream = new MemoryStream();
             await using var compressedStream = new MemoryStream(data);
-            
+
             await using var gZipStream = new GZipStream(compressedStream, CompressionMode.Decompress);
 
             var buffer = new byte[1024 * 1024];

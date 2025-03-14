@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests
+﻿using System;
+
+namespace Hst.Imager.Core.Tests
 {
     using System.IO;
     using System.Linq;
@@ -28,6 +30,59 @@
         public static readonly byte[] Pfs3AioBytes = new byte[]{ 0x0, 0x0, 0x03, 0xf3 }.Concat(Encoding.ASCII.GetBytes(
             "$VER: pfs3aio 0.1 (01/01/22)")).ToArray();
 
+        public static async Task CreateRdbDisk(TestCommandHelper testCommandHelper, string path, 
+            long diskSize = 10 * 1024 * 1024)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
+
+            rigidDiskBlock.AddFileSystem(Pfs3DosType, await System.IO.File.ReadAllBytesAsync(Pfs3AioPath));
+            await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+        }
+
+        public static async Task AddRdbDiskPartition(TestCommandHelper testCommandHelper, string path, 
+            long partitionSize = 0, byte[] data = null)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            // read rigid disk block
+            var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+
+            var dataSize = data?.Length ?? 0;
+            var size = partitionSize > 0 ? partitionSize : dataSize;
+            
+            // add partition to rigid disk block
+            var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+            rigidDiskBlock = rigidDiskBlock.AddPartition(Pfs3DosType, $"DH{partitionBlocks.Count}", size, bootable: partitionBlocks.Count == 0);
+
+            // write rigid disk block
+            await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+            
+            // return if no data
+            if (data == null || data.Length == 0)
+            {
+                return;
+            }
+            
+            var partitionBlock = rigidDiskBlock.PartitionBlocks.Last();
+
+            // calculate cylinders and cylinder size
+            var cylinders = partitionBlock.HighCyl - partitionBlock.LowCyl + 1;
+            var cylinderSize = rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
+
+            // calculate start offset
+            var startOffset = (long)partitionBlock.LowCyl * cylinderSize;
+            
+            stream.Seek(startOffset, SeekOrigin.Begin);
+            
+            await stream.WriteAsync(data.AsMemory(0, (int)Math.Min(cylinders * cylinderSize, size)));
+        }
+        
         public static async Task CreatePfs3FormattedDisk(TestCommandHelper testCommandHelper, string path, 
             long diskSize = 10 * 1024 * 1024)
         {

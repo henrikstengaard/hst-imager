@@ -50,9 +50,9 @@
                         readBackgroundTask.Byteswap
                             ? System.IO.Path.Combine(readBackgroundTask.SourcePath, "+bs")
                             : readBackgroundTask.SourcePath,
-                        readBackgroundTask.DestinationPath, 
+                        readBackgroundTask.DestinationPath,
                         new Size(readBackgroundTask.Size, Unit.Bytes), appState.Settings.Retries,
-                        appState.Settings.Verify, appState.Settings.Force, 0);
+                        appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset);
                 readCommand.DataProcessed += async (_, args) =>
                 {
                     await progressHubConnection.UpdateProgress(new Progress

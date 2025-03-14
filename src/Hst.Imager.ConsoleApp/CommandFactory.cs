@@ -171,7 +171,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--start", "-st"],
                 description: "Start offset.");
             
-            var readCommand = new Command("read", "Read physical drive to image file.");
+            var readCommand = new Command("read", "Read disk to image file.");
             readCommand.AddArgument(sourceArgument);
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);

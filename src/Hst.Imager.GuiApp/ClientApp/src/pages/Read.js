@@ -17,6 +17,7 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import {formatBytes} from "../utils/Format";
 
 const unitOptions = [{
     title: 'GB',
@@ -57,17 +58,24 @@ export default function Read() {
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [destinationPath, setDestinationPath] = React.useState(null)
-    const [readAll, setReadAll] = React.useState(true);
-    const [prefillSize, setPrefillSize] = React.useState(null)
-    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
+    const [startOffset, setStartOffset] = React.useState(0);
+    const [readPartPath, setReadPartPath] = React.useState(null)
+    const [readPartPathOptions, setReadPartPathOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
     const {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
 
+    const readPartPathOption = readPartPathOptions.find(x => x.value === readPartPath)
+    const formattedReadPartPath = readPartPathOption ? (readPartPath === 'custom'
+        ? `- Start offset ${startOffset}`
+        : ` ${readPartPathOption.title}`) : '';
+
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
+    const formattedSize = unitOption ? (readPartPath === 'custom'
+        ? ` with size ${size} ${unitOption.title}`
+        : '') : '';
 
     const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -108,41 +116,90 @@ export default function Read() {
         newConnection.on("Info", (media) => {
             setSourceMedia(media)
 
-            // default set size and unit to largest comparable size
-            setReadAll(true)
+            // default start offset, size and unit set to largest readable size
+            setStartOffset(0)
             setSize(0)
             setUnit('bytes')
 
             // no media, reset
             if (isNil(media)) {
-                setPrefillSize(null)
-                setPrefillSizeOptions([])
+                setReadPartPath(null)
+                setReadPartPathOptions([])
                 return
             }
 
-            // get and sort partition tables
-            const partitionTables = get(media, 'diskInfo.partitionTables') || []
-
-            // add select prefill option, if any partition tables are present                        
-            const newPrefillSizeOptions = [{
-                title: 'Select size to prefill',
-                value: 'prefill'
-            },{
-                title: `Disk (${media.diskSize} bytes)`,
-                value: media.diskSize
+            // build new read part path options                        
+            const newReadPartPathOptions = [{
+                title: `Disk (${formatBytes(media.diskSize)})`,
+                value: media.path
             }]
 
-            // add partition tables as prefill size options
-            for (let i = 0; i < partitionTables.length; i++) {
-                const partitionTableSize = get(partitionTables[i], 'size') || 0
-                newPrefillSizeOptions.push({
-                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                    value: partitionTableSize
+            const directoryPathSeparator = media.path.startsWith('/') ? '/' : '\\'
+            
+            const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart');
+            if (gptPartitionTablePart) {
+                newReadPartPathOptions.push({
+                    title: `Guid Partition Table (${formatBytes(gptPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'gpt'
+                })
+
+                gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newReadPartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
+                    })
                 })
             }
 
-            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-            setPrefillSizeOptions(newPrefillSizeOptions)
+            const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart');
+            if (mbrPartitionTablePart) {
+                newReadPartPathOptions.push({
+                    title: `Master Boot Record (${formatBytes(mbrPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'mbr'
+                })
+
+                mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newReadPartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
+                    })
+                })
+            }
+
+            const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart');
+            if (rdbPartitionTablePart) {
+                newReadPartPathOptions.push({
+                    title: `Rigid Disk Block (${formatBytes(rdbPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'rdb'
+                })
+
+                rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newReadPartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
+                    })
+                })
+            }
+
+            newReadPartPathOptions.push({
+                title: 'Custom',
+                value: 'custom'
+            })
+            
+            setReadPartPath(newReadPartPathOptions.length > 0 ? newReadPartPathOptions[0].value : null)
+            setReadPartPathOptions(newReadPartPathOptions)
         });
 
         newConnection.on('List', async (medias) => {
@@ -170,9 +227,10 @@ export default function Read() {
     
     const handleRead = async () => {
         await backendApi.startRead({
-            title: `Reading disk '${sourceMedia.name}' to file '${destinationPath}'${formattedSize}`,
-            sourcePath: sourceMedia.path,
+            title: `Reading disk '${sourceMedia.name}${formattedReadPartPath}' to file '${destinationPath}'${formattedSize}`,
+            sourcePath: isNil(readPartPath) || readPartPath === 'custom' ? sourceMedia.path : readPartPath,
             destinationPath,
+            startOffset,
             size: (size * unitOption.size),
             byteswap
         });
@@ -201,8 +259,8 @@ export default function Read() {
         setSize(0)
         setUnit('bytes')
         setDestinationPath(null)
-        setPrefillSize(null)
-        setPrefillSizeOptions([])
+        setReadPartPath(null)
+        setReadPartPathOptions([])
         setConnection(null)
     }
     
@@ -214,12 +272,12 @@ export default function Read() {
                 id="confirm-read"
                 open={openConfirm}
                 title="Read"
-                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}' to file '${destinationPath}'${formattedSize}?`}
+                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}${formattedReadPartPath}' to file '${destinationPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Read"
-                description="Read physical disk to image file."
+                description="Reads disk or part of (partition or custom) from physical drive or image file to an image file."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
@@ -239,7 +297,61 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                <Grid item xs={12} lg={6}>
+                    <SelectField
+                        label="Part of disk to read"
+                        id="read-part-path"
+                        emptyLabel="None available"
+                        value={readPartPath || ''}
+                        options={readPartPathOptions || []}
+                        onChange={(value) => {
+                            setReadPartPath(value)
+                            setStartOffset(0);
+                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                            setUnit('bytes')
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            {readPartPath === 'custom' && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                        <Grid item xs={12} lg={6}>
+                            <TextField
+                                label="Start offset"
+                                id="start-offset"
+                                type={"number"}
+                                value={startOffset}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setStartOffset(event.target.value)}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={"number"}
+                                value={size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="destination-file"
@@ -288,69 +400,6 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="read-all"
-                        label="Read entire disk"
-                        value={readAll}
-                        onChange={(checked) => {
-                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
-                            setUnit('bytes')
-                            setReadAll(checked)
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {!readAll && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                        <Grid item xs={12} lg={6}>
-                            <SelectField
-                                label="Prefill size to read"
-                                id="prefill-size"
-                                emptyLabel="None available"
-                                disabled={readAll}
-                                value={prefillSize || ''}
-                                options={prefillSizeOptions || []}
-                                onChange={(value) => {
-                                    setSize(value)
-                                    setUnit('bytes')
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={readAll ? "text" : "number"}
-                                disabled={readAll}
-                                value={readAll ? '' : size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
-                                onKeyDown={async (event) => {
-                                    if (event.key !== 'Enter') {
-                                        return
-                                    }
-                                    setOpenConfirm(true)
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                disabled={readAll}
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
-                        </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">

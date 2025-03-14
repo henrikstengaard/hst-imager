@@ -19,7 +19,7 @@ export default function Start() {
 
     const actions = [{
         title: 'Read',
-        description: 'Read physical disk to image file.',
+        description: 'Reads disk or part of (partition or custom) from physical drive or image file to an image file.',
         url: '/read',
         icon: 'upload'
     },{

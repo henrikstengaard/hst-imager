@@ -12,8 +12,11 @@
 
         [Required]
         public string DestinationPath { get; set; }
+
+        public long StartOffset { get; set; }
         
         public long Size { get; set; }
+
         public bool Byteswap { get; set; }
     }
 }

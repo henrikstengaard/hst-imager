@@ -30,6 +30,7 @@
                 Title = request.Title,
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath,
+                StartOffset = request.StartOffset,
                 Size = request.Size,
                 Byteswap = request.Byteswap
             };

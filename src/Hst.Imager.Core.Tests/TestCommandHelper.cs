@@ -18,7 +18,9 @@
     {
         public readonly List<TestMedia> TestMedias;
         public readonly RigidDiskBlock RigidDiskBlock;
-        public static readonly string PhysicalDrivePath = "physical-drive";
+        public static readonly string PhysicalDrivePath = Hst.Core.OperatingSystem.IsWindows() 
+            ? @"\\.\PhysicalDrive0"
+            : "/dev/disk0";
 
         public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null) : base(new NullLogger<ICommandHelper>(), true)
         {
@@ -191,6 +193,11 @@
                 throw new ArgumentNullException(nameof(path));
             }
 
+            if (path.StartsWith(PhysicalDrivePath, StringComparison.OrdinalIgnoreCase))
+            {
+                return base.ResolveMedia(path);
+            }
+
             var testMedia = TestMedias.FirstOrDefault(x => path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
             {
@@ -202,7 +209,9 @@
                 FullPath = path,
                 MediaPath = testMedia.Path,
                 DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/",
-                FileSystemPath = path.Length > testMedia.Path.Length ? path.Substring(testMedia.Path.Length + 1) : path,
+                FileSystemPath = path.Length > testMedia.Path.Length && path != PhysicalDrivePath 
+                    ? path.Substring(testMedia.Path.Length + 1)
+                    : path,
                 Modifiers = ModifierEnum.None,
                 ByteSwap = false
             });
