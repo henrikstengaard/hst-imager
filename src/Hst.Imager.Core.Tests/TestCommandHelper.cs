@@ -219,15 +219,7 @@
 
         public override Result<MediaResult> ResolveMedia(string path)
         {
-            if (path == null)
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-
-            if (path.StartsWith(PhysicalDrivePath, StringComparison.OrdinalIgnoreCase))
-            {
-                return base.ResolveMedia(path);
-            }
+            ArgumentNullException.ThrowIfNull(path);
 
             var testMedia = TestMedias.FirstOrDefault(x => path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
@@ -235,14 +227,17 @@
                 return base.ResolveMedia(path);
             }
             
+            var directorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/";
+            var fileSystemPath = path.StartsWith(testMedia.Path, StringComparison.OrdinalIgnoreCase) && path.Length > testMedia.Path.Length
+                ? path.Substring(testMedia.Path.Length + 1)
+                : string.Empty;
+            
             return new Result<MediaResult>(new MediaResult
             {
                 FullPath = path,
                 MediaPath = testMedia.Path,
-                DirectorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/",
-                FileSystemPath = path.Length > testMedia.Path.Length && path != PhysicalDrivePath 
-                    ? path.Substring(testMedia.Path.Length + 1)
-                    : path,
+                DirectorySeparatorChar = directorySeparatorChar,
+                FileSystemPath = fileSystemPath,
                 Modifiers = ModifierEnum.None,
                 ByteSwap = false
             });
