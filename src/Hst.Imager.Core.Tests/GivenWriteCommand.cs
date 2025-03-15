@@ -184,14 +184,7 @@ namespace Hst.Imager.Core.Tests
             }
             finally
             {
-                if (File.Exists(sourcePath))
-                {
-                    File.Delete(sourcePath);
-                }
-                if (File.Exists(destinationPath))
-                {
-                    File.Delete(destinationPath);
-                }
+                TestHelper.DeletePaths(sourcePath);
             }
         }
 
@@ -234,14 +227,7 @@ namespace Hst.Imager.Core.Tests
             }
             finally
             {
-                if (File.Exists(sourcePath))
-                {
-                    File.Delete(sourcePath);
-                }
-                if (File.Exists(destinationPath))
-                {
-                    File.Delete(destinationPath);
-                }
+                TestHelper.DeletePaths(sourcePath);
             }
         }
 
@@ -284,14 +270,7 @@ namespace Hst.Imager.Core.Tests
             }
             finally
             {
-                if (File.Exists(sourcePath))
-                {
-                    File.Delete(sourcePath);
-                }
-                if (File.Exists(destinationPath))
-                {
-                    File.Delete(destinationPath);
-                }
+                TestHelper.DeletePaths(sourcePath);
             }
         }
 
@@ -334,14 +313,7 @@ namespace Hst.Imager.Core.Tests
             }
             finally
             {
-                if (File.Exists(sourcePath))
-                {
-                    File.Delete(sourcePath);
-                }
-                if (File.Exists(destinationPath))
-                {
-                    File.Delete(destinationPath);
-                }
+                TestHelper.DeletePaths(sourcePath);
             }
         }
 
