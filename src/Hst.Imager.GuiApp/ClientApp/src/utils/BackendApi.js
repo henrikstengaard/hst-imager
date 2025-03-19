@@ -187,7 +187,7 @@ export class BackendApi {
         }
     }
 
-    async startRead({ title, sourcePath, destinationPath, startOffset, size, byteswap }) {
+    async startRead({ title, readPhysicalDisk, sourcePath, destinationPath, startOffset, size, byteswap }) {
         const response = await fetch(`${this.baseUrl}api/read`, {
             method: 'POST',
             headers: {
@@ -196,6 +196,7 @@ export class BackendApi {
             },
             body: JSON.stringify({
                 title,
+                readPhysicalDisk,
                 sourcePath,
                 destinationPath,
                 startOffset,
@@ -209,7 +210,7 @@ export class BackendApi {
         }
     }
 
-    async startWrite({ title, sourcePath, destinationPath, size, byteswap }) {
+    async startWrite({ title, writePhysicalDisk, sourcePath, destinationPath, startOffset, size, byteswap }) {
         const response = await fetch(`${this.baseUrl}api/write`, {
             method: 'POST',
             headers: {
@@ -218,8 +219,10 @@ export class BackendApi {
             },
             body: JSON.stringify({
                 title,
+                writePhysicalDisk,
                 sourcePath,
                 destinationPath,
+                startOffset,
                 size,
                 byteswap
             })

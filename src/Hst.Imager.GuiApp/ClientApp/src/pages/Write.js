@@ -17,6 +17,12 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import {formatBytes} from "../utils/Format";
+import FormControl from "@mui/material/FormControl";
+import FormLabel from "@mui/material/FormLabel";
+import RadioGroup from "@mui/material/RadioGroup";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import Radio from "@mui/material/Radio";
 
 const unitOptions = [{
     title: 'GB',
@@ -36,39 +42,37 @@ const unitOptions = [{
     size: 1
 }]
 
-const formatPartitionTableType = (partitionTableType) => {
-    switch (partitionTableType) {
-        case 'GuidPartitionTable':
-            return 'Guid Partition Table'
-        case 'MasterBootRecord':
-            return 'Master Boot Record'
-        case 'RigidDiskBlock':
-            return 'Rigid Disk Block'
-        default:
-            return ''
-    }
-}
+let getInfoTarget = '';
 
 export default function Write() {
     const [openConfirm, setOpenConfirm] = React.useState(false);
+    const [sourcePath, setSourcePath] = React.useState(null)
     const [sourceMedia, setSourceMedia] = React.useState(null)
+    const [destinationPath, setDestinationPath] = React.useState(null)
     const [destinationMedia, setDestinationMedia] = React.useState(null)
+    const [destinationType, setDestinationType] = React.useState('ImageFile')
     const [medias, setMedias] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
-    const [sourcePath, setSourcePath] = React.useState(null)
-    const [writeAll, setWriteAll] = React.useState(true);
-    const [prefillSize, setPrefillSize] = React.useState(null)
-    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
+    const [startOffset, setStartOffset] = React.useState(0);
+    const [writePartPath, setWritePartPath] = React.useState(null)
+    const [writePartPathOptions, setWritePartPathOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
     const {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
 
+    const writePartPathOption = writePartPathOptions.find(x => x.value === writePartPath)
+    const formattedWritePartPath = writePartPathOption ? (writePartPath === 'custom'
+        ? ` - Start offset ${startOffset}`
+        : ` ${writePartPathOption.title}`) : '';
+
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
+    const formattedSize = unitOption ? (writePartPath === 'custom'
+        ? ` with size ${size} ${unitOption.title}`
+        : '') : '';
 
     const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -90,8 +94,9 @@ export default function Write() {
         await getMedias()
     }, [backendApi])
 
-    const getInfo = React.useCallback(async (path, byteswap) => {
-        await backendApi.updateInfo({ path, sourceType: 'ImageFile', byteswap });
+    const getInfo = React.useCallback(async (target, path, type, byteswap) => {
+        getInfoTarget = target;
+        await backendApi.updateInfo({ path, sourceType: type, byteswap });
     }, [backendApi])
 
     React.useEffect(() => {
@@ -99,60 +104,119 @@ export default function Write() {
             return
         }
 
-        getMedias()
-        
         const newConnection = new HubConnectionBuilder()
             .withUrl(`${backendBaseUrl}hubs/result`)
             .withAutomaticReconnect()
             .build();
 
         newConnection.on("Info", (media) => {
-            setSourceMedia(media)
+            if (getInfoTarget === 'Source') {
+                setSourceMedia(media);
+                return;
+            }
 
-            // default set size and unit to largest comparable size
-            setWriteAll(true)
+            if (getInfoTarget !== 'Destination') {
+                return;
+            }
+
+            setDestinationMedia(media)
+
+            // default start offset, size and unit set to largest writable size
+            setStartOffset(0)
             setSize(0)
             setUnit('bytes')
 
             // no media, reset
             if (isNil(media)) {
-                setPrefillSize(null)
-                setPrefillSizeOptions([])
+                setWritePartPath(null)
+                setWritePartPathOptions([])
                 return
             }
 
-            // get and sort partition tables
-            const partitionTables = get(media, 'diskInfo.partitionTables') || []
-
-            // add select prefill option, if any partition tables are present                        
-            const newPrefillSizeOptions = [{
-                title: 'Select size to prefill',
-                value: 'prefill'
-            },{
-                title: `Disk (${media.diskSize} bytes)`,
-                value: media.diskSize
+            // build new write part path options                        
+            const newWritePartPathOptions = [{
+                title: `Disk (${formatBytes(media.diskSize)})`,
+                value: media.path
             }]
 
-            // add partition tables as prefill size options
-            for (let i = 0; i < partitionTables.length; i++) {
-                const partitionTableSize = get(partitionTables[i], 'size') || 0
-                newPrefillSizeOptions.push({
-                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                    value: partitionTableSize
+            const directoryPathSeparator = media.path.startsWith('/') ? '/' : '\\'
+
+            const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart');
+            if (gptPartitionTablePart) {
+                newWritePartPathOptions.push({
+                    title: `Guid Partition Table (${formatBytes(gptPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'gpt'
+                })
+
+                gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newWritePartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
+                    })
                 })
             }
 
-            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-            setPrefillSizeOptions(newPrefillSizeOptions)
+            const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart');
+            if (mbrPartitionTablePart) {
+                newWritePartPathOptions.push({
+                    title: `Master Boot Record (${formatBytes(mbrPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'mbr'
+                })
+
+                mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newWritePartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
+                    })
+                })
+            }
+
+            const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart');
+            if (rdbPartitionTablePart) {
+                newWritePartPathOptions.push({
+                    title: `Rigid Disk Block (${formatBytes(rdbPartitionTablePart.size)})`,
+                    value: media.path + directoryPathSeparator + 'rdb'
+                })
+
+                rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                    const type = part.partitionType === part.fileSystem
+                        ? part.partitionType
+                        : `${part.partitionType}, ${part.fileSystem}`;
+
+                    newWritePartPathOptions.push({
+                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                        value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
+                    })
+                })
+            }
+            newWritePartPathOptions.push({
+                title: 'Custom',
+                value: 'custom'
+            })
+
+            setWritePartPath(newWritePartPathOptions.length > 0 ? newWritePartPathOptions[0].value : null)
+            setWritePartPathOptions(newWritePartPathOptions)
         });
 
         newConnection.on('List', async (medias) => {
-            const newMedia = getMedia({medias: medias, path: get(destinationMedia, 'path')});
-
             setMedias(medias || [])
-            if (newMedia) {
-                setDestinationMedia(newMedia)
+
+            const newMedia = getMedia({medias: medias, path: get(destinationMedia, 'path')});
+            if (!newMedia) {
+                return;
             }
+
+            const newPath = get(newMedia, 'path');
+            setDestinationPath(newPath)
+            await getInfo('Destination', newPath, 'PhysicalDisk', byteswap)
         })
 
         newConnection.start();
@@ -166,13 +230,15 @@ export default function Write() {
 
             connection.stop();
         };
-    }, [backendBaseUrl, connection, destinationMedia, getMedia, getMedias, setConnection])
+    }, [backendBaseUrl, byteswap, connection, destinationMedia, destinationPath, getInfo, getMedia, getMedias, setConnection, sourcePath])
     
     const handleWrite = async () => {
         await backendApi.startWrite({
-            title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}`,
+            title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}`,
+            writePhysicalDisk: destinationType === 'PhysicalDisk',
             sourcePath,
-            destinationPath: destinationMedia.path,
+            destinationPath: isNil(writePartPath) || writePartPath === 'custom' ? destinationMedia.path : writePartPath,
+            startOffset,
             size: (size * unitOption.size),
             byteswap
         });
@@ -195,15 +261,16 @@ export default function Write() {
             connection.stop()
         }
         setOpenConfirm(false)
+        setSourcePath(null)
         setSourceMedia(null)
+        setDestinationPath(null)
         setDestinationMedia(null)
         setMedias([])
         setByteswap(false)
         setSize(0)
         setUnit('bytes')
-        setSourcePath(null)
-        setPrefillSize(null)
-        setPrefillSizeOptions([])
+        setWritePartPath(null)
+        setWritePartPathOptions([])
         setConnection(null)
     }
     
@@ -215,12 +282,12 @@ export default function Write() {
                 id="confirm-write"
                 open={openConfirm}
                 title="Write"
-                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}'${formattedSize}?`}
+                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Write"
-                description="Write image file to physical disk."
+                description="Write image file or part of (partition or custom) to a disk."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
@@ -238,7 +305,7 @@ export default function Write() {
                                 title="Select source image file"
                                 onChange={async (path) => {
                                     setSourcePath(path)
-                                    await getInfo(path, byteswap)
+                                    await getInfo('Source', path, 'ImageFile', byteswap)
                                 }}
                                 fileFilters = {[{
                                     name: 'Hard disk image files',
@@ -259,26 +326,150 @@ export default function Write() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            await getInfo(sourcePath, byteswap)
+                            await getInfo('Source', sourcePath, 'ImageFile', byteswap)
                         }}
                     />
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
-                    <MediaSelectField
-                        label={
-                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination disk
-                            </div>
-                        }
-                        id="destination-media"
-                        medias={medias || []}
-                        path={get(destinationMedia, 'path') || ''}
-                        onChange={(media) => setDestinationMedia(media)}
+                    <FormControl>
+                        <FormLabel id="destination-type-label">Destination</FormLabel>
+                        <RadioGroup
+                            row
+                            aria-labelledby="destination-type-label"
+                            name="destination-type"
+                            value={destinationType || ''}
+                            onChange={async (event) => {
+                                getInfoTarget = 'Destination';
+                                const value = get(event, 'target.value');
+                                setDestinationType(value);
+                                setDestinationPath(null);
+                                setDestinationMedia(null);
+                                setWritePartPath(null);
+                                setWritePartPathOptions([]);
+                                if (value === 'PhysicalDisk') {
+                                    getMedias();
+                                }
+                            }}
+                        >
+                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
+                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
+                        </RadioGroup>
+                    </FormControl>
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid item xs={12} lg={6}>
+                    {destinationType === 'ImageFile' && (
+                        <TextField
+                            id="destination-image-path"
+                            label={
+                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination image file
+                                </div>
+                            }
+                            value={destinationPath || ''}
+                            endAdornment={
+                                <BrowseOpenDialog
+                                    id="browse-destination-image-path"
+                                    title="Select destination image file"
+                                    onChange={async (path) => {
+                                        setDestinationPath(path)
+                                        await getInfo('Destination', path, 'ImageFile', byteswap)
+                                    }}
+                                    fileFilters = {[{
+                                        name: 'Hard disk image files',
+                                        extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
+                                    }, {
+                                        name: 'All files',
+                                        extensions: ['*']
+                                    }]}
+                                />
+                            }
+                            onChange={(event) => {
+                                setDestinationPath(get(event, 'target.value'))
+                                if (destinationMedia) {
+                                    setDestinationMedia(null)
+                                }
+                            }}
+                            onKeyDown={async (event) => {
+                                if (event.key !== 'Enter') {
+                                    return
+                                }
+                                await getInfo('Destination', destinationPath, 'ImageFile', byteswap)
+                            }}
+                        />
+                    )}
+                    {destinationType === 'PhysicalDisk' && (
+                        <MediaSelectField
+                            label={
+                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination disk
+                                </div>
+                            }
+                            id="destination-disk"
+                            medias={medias || []}
+                            path={get(destinationMedia, 'path') || ''}
+                            onChange={(media) => setDestinationMedia(media)}
+                        />
+                    )}
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                <Grid item xs={12} lg={6}>
+                    <SelectField
+                        label={`Part of destination ${destinationType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to write to`}
+                        id="write-part-path"
+                        emptyLabel="None available"
+                        value={writePartPath || ''}
+                        options={writePartPathOptions || []}
+                        onChange={(value) => {
+                            setWritePartPath(value)
+                            setStartOffset(0);
+                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                            setUnit('bytes')
+                        }}
                     />
                 </Grid>
             </Grid>
+            {writePartPath === 'custom' && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                        <Grid item xs={12} lg={6}>
+                            <TextField
+                                label="Start offset"
+                                id="start-offset"
+                                type={"number"}
+                                value={startOffset}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setStartOffset(event.target.value)}
+                            />
+                        </Grid>
+                    </Grid>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={"number"}
+                                value={size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
             <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
@@ -288,75 +479,12 @@ export default function Write() {
                         onChange={async (checked) => {
                             setByteswap(checked)
                             if (sourceMedia) {
-                                await getInfo(sourceMedia.path, checked)
+                                await getInfo('Source', sourceMedia.path, 'ImageFile', checked)
                             }
                         }}
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="write-all"
-                        label="Write entire file"
-                        value={writeAll}
-                        onChange={(checked) => {
-                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
-                            setUnit('bytes')
-                            setWriteAll(checked)
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {!writeAll && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                        <Grid item xs={12} lg={6}>
-                            <SelectField
-                                label="Prefill size to write"
-                                id="prefill-size"
-                                emptyLabel="None available"
-                                disabled={writeAll}
-                                value={prefillSize || ''}
-                                options={prefillSizeOptions || []}
-                                onChange={(value) => {
-                                    setSize(value)
-                                    setUnit('bytes')
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={writeAll ? "text" : "number"}
-                                disabled={writeAll}
-                                value={writeAll ? '' : size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
-                                onKeyDown={async (event) => {
-                                    if (event.key !== 'Enter') {
-                                        return
-                                    }
-                                    setOpenConfirm(true)
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                disabled={writeAll}
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
-                        </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
             <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">

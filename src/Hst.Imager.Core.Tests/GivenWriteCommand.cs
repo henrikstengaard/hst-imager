@@ -37,7 +37,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false, false);
+                    sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -76,7 +76,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand = new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(), sourcePath, destinationPath,
-                    new Size(data.Length, Unit.Bytes), 0, false, false, false);
+                    new Size(data.Length, Unit.Bytes), 0, false, false, false, 0);
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
                 Assert.True(result.IsSuccess);
             }
@@ -109,7 +109,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -165,7 +165,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -208,7 +208,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -251,7 +251,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -294,7 +294,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var writeCommand =
                     new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false, false, false);
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -345,7 +345,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled);
+                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled, 0);
             var dataProcessedEventArgs = new List<DataProcessedEventArgs>();
             writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs.Add(args); };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -390,7 +390,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled);
+                    sourcePath, destinationPath, new Size(), 0, false, false, skipZeroFilled, 0);
             var dataProcessedEventArgs = new List<DataProcessedEventArgs>();
             writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs.Add(args); };
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
@@ -466,7 +466,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var writeCommand =
                 new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false, false, false);
+                    sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             
             // assert - write failed and returned write size too large error

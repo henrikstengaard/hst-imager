@@ -8,6 +8,9 @@
         public string Title { get; set; }
 
         [Required]
+        public bool ReadPhysicalDisk { get; set; }
+
+        [Required]
         public string SourcePath { get; set; }
 
         [Required]

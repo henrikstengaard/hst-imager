@@ -8,5 +8,5 @@ export default function useDebounce(callback, delay) {
 
     const debouncedFunc = debounce((...args) => callbackRef.current(...args), delay);
     
-    return useCallback(debouncedFunc,[]);
+    return useCallback(debouncedFunc,[debouncedFunc]);
 }

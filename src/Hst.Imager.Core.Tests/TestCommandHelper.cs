@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.Collections.Generic;
@@ -30,31 +32,32 @@
 
         public async Task<byte[]> ReadMediaData(string path)
         {
-            var testMedia = GetTestMedia(path);
-            if (testMedia != null)
+            var mediaResult = await GetReadableMedia([], path);
+            if (!mediaResult.IsSuccess)
             {
-                return await testMedia.ReadData();
+                throw new IOException($"Unable to get readable media '{path}'");
             }
 
-            var mediaResult = await GetReadableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
+            var stream = MediaHelper.GetStreamFromMedia(media);
+            stream.Position = 0;
+            
             return await stream.ReadBytes((int)stream.Length);
         }
 
         public async Task WriteMediaData(string path, byte[] data)
         {
-            var testMedia = GetTestMedia(path);
-            if (testMedia != null)
+            var mediaResult = await GetWritableMedia([], path, size: data.Length, create: true);
+            if (!mediaResult.IsSuccess)
             {
-                await testMedia.WriteData(data);
-                return;
+                throw new IOException($"Unable to get readable media '{path}'");
             }
 
-            var destinationMediaResult = await GetWritableMedia(new List<IPhysicalDrive>(), path, size: data.Length, create: true);
-            using var destinationMedia = destinationMediaResult.Value;
-            var destinationStream = destinationMedia.Stream;
-            await destinationStream.WriteAsync(data, 0, data.Length);
+            using var media = mediaResult.Value;
+            var stream = MediaHelper.GetStreamFromMedia(media);
+            stream.Position = 0;
+
+            await stream.WriteAsync(data, 0, data.Length);
         }
 
         public TestMedia GetTestMedia(string path)

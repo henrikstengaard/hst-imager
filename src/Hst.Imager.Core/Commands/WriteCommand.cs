@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -22,6 +24,7 @@
         private readonly bool verify;
         private readonly bool force;
         private readonly bool skipZeroFilled;
+        private readonly long? start;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
@@ -31,7 +34,7 @@
 
         public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, bool verify, bool force, bool skipZeroFilled)
+            string destinationPath, Size size, int retries, bool verify, bool force, bool skipZeroFilled, long? start)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -43,6 +46,7 @@
             this.verify = verify;
             this.force = force;
             this.skipZeroFilled = skipZeroFilled;
+            this.start = start;
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
@@ -53,43 +57,76 @@
 
             OnDebugMessage($"Opening '{sourcePath}' as readable");
 
-            var physicalDrivesList = physicalDrives.ToList();
             var sourceMediaResult = await commandHelper.GetReadableFileMedia(sourcePath);
             if (sourceMediaResult.IsFaulted)
             {
                 return new Result(sourceMediaResult.Error);
             }
 
-            using var sourceMedia = sourceMediaResult.Value;
-            var sourceStream = sourceMedia.Stream;
+            // get src media and stream
+            using var srcMedia = sourceMediaResult.Value;
+            var srcStream = MediaHelper.GetStreamFromMedia(srcMedia);
 
-            var sourceSize = sourceMedia.Size;
-            OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
+            var srcSize = srcMedia.Size;
+            OnDebugMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
             var writeSize = Convert
-                .ToInt64(size.Value == 0 ? sourceSize : size.Value)
+                .ToInt64(size.Value == 0 ? srcSize : size.Value)
                 .ResolveSize(size);
             OnInformationMessage($"Size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
 
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
-            var destinationMediaResult =
-                await commandHelper.GetPhysicalDriveMedia(physicalDrivesList, destinationPath, writeable: true);
-            if (destinationMediaResult.IsFaulted)
+            // resolve media for destination path
+            var destResolveMediaResult = commandHelper.ResolveMedia(destinationPath);
+            if (destResolveMediaResult.IsFaulted)
             {
-                return new Result(destinationMediaResult.Error);
+                return new Result(destResolveMediaResult.Error);
             }
 
-            using var destinationMedia = destinationMediaResult.Value;
+            OnDebugMessage($"Media Path: '{destResolveMediaResult.Value.MediaPath}'");
+            OnDebugMessage($"Virtual Path: '{destResolveMediaResult.Value.FileSystemPath}'");             
 
-            if (writeSize > destinationMedia.Size)
+            var physicalDrivesList = physicalDrives.ToList();
+
+            var destMediaResult =
+                await commandHelper.GetWritableMedia(physicalDrivesList, destResolveMediaResult.Value.MediaPath, destResolveMediaResult.Value.Modifiers);
+            if (destMediaResult.IsFaulted)
+            {
+                return new Result(destMediaResult.Error);
+            }
+
+            // get dest media and stream
+            using var destMedia = destMediaResult.Value;
+            var destStream = MediaHelper.GetStreamFromMedia(destMedia);
+
+            // read disk info
+            var diskInfo = await commandHelper.ReadDiskInfo(destMedia);
+
+            // get start offset and source size
+            var startOffsetAndSizeResult = GetStartOffsetAndSize(destResolveMediaResult.Value.FileSystemPath, diskInfo);
+            if (startOffsetAndSizeResult.IsFaulted)
+            {
+                return new Result(startOffsetAndSizeResult.Error);
+            }
+            
+            var (destStartOffset, destSize) = startOffsetAndSizeResult.Value;
+
+            OnDebugMessage($"Destination start offset '{destStartOffset}'");
+            OnDebugMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
+
+            // add destination start offset, if defined
+            if (start.HasValue)
+            {
+                destStartOffset += start.Value;
+            }
+            
+            if (writeSize > destSize)
             {
                 return new Result(
-                    new WriteSizeTooLargeError(destinationMedia.Size, writeSize,
-                        $"Write size {writeSize.FormatBytes()} ({writeSize} bytes) is too large for media size {destinationMedia.Size.FormatBytes()} ({destinationMedia.Size} bytes)"));
+                    new WriteSizeTooLargeError(destSize, writeSize,
+                        $"Source size {writeSize.FormatBytes()} ({writeSize} bytes) is too large for destination size {destSize.FormatBytes()} ({destSize} bytes)"));
             }
-
-            var destinationStream = destinationMedia.Stream;
 
             var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
@@ -103,7 +140,8 @@
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
 
-            var result = await streamCopier.Copy(token, sourceStream, destinationStream, writeSize, skipZeroFilled: skipZeroFilled);
+            var result = await streamCopier.Copy(token, srcStream, destStream, writeSize, 0L, 
+                destStartOffset, skipZeroFilled);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
@@ -134,5 +172,71 @@
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
 
         private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);
+        
+                private static Result<Tuple<long, long>> GetStartOffsetAndSize(string path, DiskInfo diskInfo)
+        {
+            var pathComponents = string.IsNullOrEmpty(path)
+                ? []
+                : path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).ToArray();
+
+            if (pathComponents.Length == 0)
+            {
+                return new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.Size));
+            }
+            
+            switch (pathComponents[0])
+            {
+                case "gpt":
+                    if (diskInfo.GptPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Guid Partition Table not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.GptPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.GptPartitionTablePart);
+                case "mbr":
+                    if (diskInfo.MbrPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Master Boot Record not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.MbrPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.MbrPartitionTablePart);
+                case "rdb":
+                    if (diskInfo.RdbPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Rigid Disk Block not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.RdbPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.RdbPartitionTablePart);
+                default:
+                    return new Result<Tuple<long, long>>(new Error($"Unsupported path '{path}'"));
+            }
+        }
+
+        private static Result<Tuple<long, long>> GetPartitionStartOffsetAndSize(string path, string[] pathComponents,
+            PartitionTablePart partitionTablePart)
+        {
+            if (pathComponents.Length == 0)
+            {
+                return new Result<Tuple<long, long>>(new Error($"Partition number not found in path '{path}'"));
+            }
+            
+            if (pathComponents.Length > 1 ||
+                !int.TryParse(pathComponents[0], out var partitionNumber))
+            {
+                return new Result<Tuple<long, long>>(new Error($"Invalid partition number in path '{path}'"));
+            }
+
+            var partition = partitionTablePart.Parts.FirstOrDefault(x => x.PartitionNumber == partitionNumber);
+            
+            return partition == null 
+                ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
+                : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
+        }
     }
 }

@@ -100,11 +100,11 @@ namespace Hst.Imager.ConsoleApp
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
-                description: "Path to destination physical drive.");
+                description: "Path to destination image file or physical drive.");
 
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
-                description: "Size of image file to write.");
+                description: "Size to write.");
 
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
@@ -124,8 +124,12 @@ namespace Hst.Imager.ConsoleApp
                 ["--skip-unused-sectors"],
                 description: "Skip unused sectors.",
                 getDefaultValue: () => true);
+            
+            var startOption = new Option<long?>(
+                ["--start", "-st"],
+                description: "Destination start offset.");
 
-            var writeCommand = new Command("write", "Write image file to physical drive.");
+            var writeCommand = new Command("write", "Write image file to disk.");
             writeCommand.AddArgument(sourceArgument);
             writeCommand.AddArgument(destinationArgument);
             writeCommand.AddOption(sizeOption);
@@ -133,8 +137,9 @@ namespace Hst.Imager.ConsoleApp
             writeCommand.AddOption(verifyOption);
             writeCommand.AddOption(forceOption);
             writeCommand.AddOption(skipUnusedSectorsOption);
+            writeCommand.AddOption(startOption);
             writeCommand.SetHandler(CommandHandler.Write, sourceArgument, destinationArgument, sizeOption,
-                retriesOption, verifyOption, forceOption, skipUnusedSectorsOption);
+                retriesOption, verifyOption, forceOption, skipUnusedSectorsOption, startOption);
 
             return writeCommand;
         }
@@ -143,7 +148,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
-                description: "Path to source physical drive.");
+                description: "Path to source image file or physical drive.");
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
@@ -151,7 +156,7 @@ namespace Hst.Imager.ConsoleApp
 
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
-                description: "Size of physical drive to read.");
+                description: "Size to read.");
 
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
@@ -169,7 +174,7 @@ namespace Hst.Imager.ConsoleApp
             
             var startOption = new Option<long?>(
                 ["--start", "-st"],
-                description: "Start offset.");
+                description: "Source start offset.");
             
             var readCommand = new Command("read", "Read disk to image file.");
             readCommand.AddArgument(sourceArgument);

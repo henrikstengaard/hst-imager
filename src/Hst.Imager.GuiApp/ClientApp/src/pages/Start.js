@@ -19,12 +19,12 @@ export default function Start() {
 
     const actions = [{
         title: 'Read',
-        description: 'Reads disk or part of (partition or custom) from physical drive or image file to an image file.',
+        description: 'Reads a disk or part of (partition or custom) to an image file.',
         url: '/read',
         icon: 'upload'
     },{
         title: 'Write',
-        description: 'Write image file to physical disk.',
+        description: 'Write image file or part of (partition or custom) to a disk.',
         url: '/write',
         icon: 'download'
     },{
@@ -54,7 +54,7 @@ export default function Start() {
         icon: 'compress'
     }, {
         title: 'Format',
-        description: 'Format image file or physical disk.',
+        description: 'Format a disk.',
         url: '/format',
         icon: 'eraser'
     // },{

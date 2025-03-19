@@ -1,4 +1,4 @@
-﻿using DiscUtils.Streams;
+﻿using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -72,12 +72,9 @@ namespace Hst.Imager.Core.Commands
                 return new Result(srcMediaResult.Error);
             }
             
+            // get src media and stream
             using var srcMedia = srcMediaResult.Value;
-            
-            var srcDisk = srcMedia is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(srcMedia.Stream, Ownership.None);
-            var srcStream = srcDisk.Content;
+            var srcStream = MediaHelper.GetStreamFromMedia(srcMedia);
 
             // read disk info
             var diskInfo = await commandHelper.ReadDiskInfo(srcMedia);
@@ -112,8 +109,10 @@ namespace Hst.Imager.Core.Commands
             {
                 return new Result(destMediaResult.Error);
             }
+            
+            // get dest media and stream
             using var destMedia = destMediaResult.Value;
-            var destStream = destMedia.Stream;
+            var destStream = MediaHelper.GetStreamFromMedia(destMedia);
 
             var isVhd = commandHelper.IsVhd(destinationPath);
             var isZip = commandHelper.IsZip(destinationPath);

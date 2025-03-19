@@ -1,4 +1,6 @@
 ﻿using System;
+using DiscUtils.Partitions;
+using DiscUtils.Streams;
 
 namespace Hst.Imager.Core.Tests
 {
@@ -185,6 +187,139 @@ namespace Hst.Imager.Core.Tests
                     System.IO.Directory.Delete(path, true);
                 }
             }
+        }
+        
+        public static async Task CreateGptDisk(TestCommandHelper testCommandHelper, string path,
+            long diskSize)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            GuidPartitionTable.Initialize(disk);
+        }
+
+        public static async Task AddGptDiskPartition(TestCommandHelper testCommandHelper, string path,
+            long partitionSize = 0, byte[] data = null)
+        {
+            if (partitionSize == 0 && data == null)
+            {
+                throw new ArgumentException("Partition size or data must be provided");
+            }
+                
+            var dataSize = data?.Length ?? 0;
+                
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+                
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var guidPartitionTable = new GuidPartitionTable(disk);
+
+            var size = partitionSize > 0 ? partitionSize : dataSize; 
+            var sectors = Convert.ToInt64(Math.Ceiling((double)size / 512));
+                
+            var startSector = guidPartitionTable.Partitions.Count == 0
+                ? guidPartitionTable.FirstUsableSector
+                : guidPartitionTable.Partitions.Max(x => x.LastSector) + 1;
+            var endSector = startSector + sectors - 1;
+                
+            var partitionIndex = guidPartitionTable.Create(startSector, endSector,
+                GuidPartitionTypes.WindowsBasicData, 0, "Empty");
+
+            if (data == null || data.Length == 0)
+            {
+                return;
+            }
+                
+            var partition = guidPartitionTable.Partitions[partitionIndex];
+
+            await using var partitionStream = partition.Open();
+
+            partitionStream.Position = 0;
+            await partitionStream.WriteAsync(data.AsMemory(0, (int)size));
+        }
+        
+        public static async Task CreateMbrDisk(TestCommandHelper testCommandHelper, string path,
+            long diskSize)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            BiosPartitionTable.Initialize(disk);
+        }
+
+        public static async Task AddMbrDiskPartition(TestCommandHelper testCommandHelper, string path,
+            long partitionSize = 0, byte[] data = null)
+        {
+            if (partitionSize == 0 && data == null)
+            {
+                throw new ArgumentException("Partition size or data must be provided");
+            }
+                
+            var dataSize = data?.Length ?? 0;
+                
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+                
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var biosPartitionTable = new BiosPartitionTable(disk);
+
+            var size = partitionSize > 0 ? partitionSize : dataSize; 
+            var sectors = Convert.ToInt64(Math.Ceiling((double)size / 512));
+                
+            var startSector = biosPartitionTable.Partitions.Count == 0
+                ? 1
+                : biosPartitionTable.Partitions.Max(x => x.LastSector) + 1;
+            var endSector = startSector + sectors - 1;
+                
+            var partitionIndex = biosPartitionTable.CreatePrimaryBySector(startSector, endSector,
+                BiosPartitionTypes.Fat32Lba, biosPartitionTable.Partitions.Count == 0);
+
+            if (data == null || data.Length == 0)
+            {
+                return;
+            }
+                
+            var partition = biosPartitionTable.Partitions[partitionIndex];
+
+            await using var partitionStream = partition.Open();
+
+            partitionStream.Position = 0;
+            await partitionStream.WriteAsync(data.AsMemory(0, (int)size));
+        }
+
+        
+        public static async Task WriteData(TestCommandHelper testCommandHelper, string path, long offset, byte[] data)
+        {
+            var mediaResult = await testCommandHelper.GetWritableMedia([], path, size: data.Length);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+            
+            using var media = mediaResult.Value;
+            
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+            var stream = disk.Content;
+            
+            stream.Position = offset;
+            await stream.WriteAsync(data);
         }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.GuiApp.BackgroundTasks
+﻿using Hst.Imager.GuiApp.Extensions;
+
+namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System;
     using System.Text.Json;
@@ -12,18 +14,17 @@
     using Services;
     using BackgroundTask = Core.Models.BackgroundTasks.BackgroundTask;
 
-    public class BackgroundTaskHandler
+    public class BackgroundTaskHandler(
+        ILogger<BackgroundTaskHandler> logger,
+        ILoggerFactory loggerFactory,
+        HubConnection progressHubConnection,
+        HubConnection errorHubConnection,
+        HubConnection resultHubConnection,
+        IPhysicalDriveManager physicalDriveManager,
+        ActiveBackgroundTaskList activeBackgroundTaskList,
+        BackgroundTaskQueue backgroundTaskQueue,
+        AppState appState)
     {
-        private readonly ILogger<BackgroundTaskHandler> logger;
-        private readonly ILoggerFactory loggerFactory;
-        private readonly HubConnection progressHubConnection;
-        private readonly HubConnection errorHubConnection;
-        private readonly HubConnection resultHubConnection;
-        private readonly IPhysicalDriveManager physicalDriveManager;
-        private readonly ActiveBackgroundTaskList activeBackgroundTaskList;
-        private readonly BackgroundTaskQueue backgroundTaskQueue;
-        private readonly AppState appState;
-
         private static readonly JsonSerializerOptions JsonSerializerOptions = new()
         {
             WriteIndented = true,
@@ -32,26 +33,6 @@
                 new JsonStringEnumConverter()
             }
         };
-
-        public BackgroundTaskHandler(ILogger<BackgroundTaskHandler> logger,
-            ILoggerFactory loggerFactory,
-            HubConnection progressHubConnection,
-            HubConnection errorHubConnection,
-            HubConnection resultHubConnection,
-            IPhysicalDriveManager physicalDriveManager,
-            ActiveBackgroundTaskList activeBackgroundTaskList,
-            BackgroundTaskQueue backgroundTaskQueue, AppState appState)
-        {
-            this.logger = logger;
-            this.loggerFactory = loggerFactory;
-            this.progressHubConnection = progressHubConnection;
-            this.errorHubConnection = errorHubConnection;
-            this.resultHubConnection = resultHubConnection;
-            this.physicalDriveManager = physicalDriveManager;
-            this.activeBackgroundTaskList = activeBackgroundTaskList;
-            this.backgroundTaskQueue = backgroundTaskQueue;
-            this.appState = appState;
-        }
 
         public async Task Handle(BackgroundTask backgroundTask)
         {
@@ -128,16 +109,34 @@
                     errorHubConnection, physicalDriveManager, appState),
                 InfoBackgroundTask => new InfoBackgroundTaskHandler(loggerFactory,
                     resultHubConnection, errorHubConnection, physicalDriveManager, appState),
-                ReadBackgroundTask => new ReadBackgroundTaskHandler(loggerFactory, progressHubConnection,
-                    physicalDriveManager, appState),
-                WriteBackgroundTask => new WriteBackgroundTaskHandler(loggerFactory, progressHubConnection,
-                    physicalDriveManager, appState),
+                ReadBackgroundTask => CreateReadBackgroundTaskHandler(),
+                WriteBackgroundTask => CreateWriteBackgroundTaskHandler(),
                 CompareBackgroundTask => new CompareBackgroundTaskHandler(loggerFactory,
                     progressHubConnection, physicalDriveManager, appState),
                 FormatBackgroundTask => new FormatBackgroundTaskHandler(loggerFactory,
                     progressHubConnection, physicalDriveManager, appState),
                 _ => null
             };
+        }
+
+        private IBackgroundTaskHandler CreateReadBackgroundTaskHandler()
+        {
+            var handler = new ReadBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.ProgressUpdated += async (_, args) =>
+            {
+                await progressHubConnection.UpdateProgress(args.Progress);
+            };
+            return handler;
+        }
+        
+        private IBackgroundTaskHandler CreateWriteBackgroundTaskHandler()
+        {
+            var handler = new WriteBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.ProgressUpdated += async (_, args) =>
+            {
+                await progressHubConnection.UpdateProgress(args.Progress);
+            };
+            return handler;
         }
     }
 }

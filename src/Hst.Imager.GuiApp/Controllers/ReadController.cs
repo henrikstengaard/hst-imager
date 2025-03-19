@@ -1,4 +1,12 @@
-﻿namespace Hst.Imager.GuiApp.Controllers
+﻿using Hst.Imager.Core.PhysicalDrives;
+using Hst.Imager.GuiApp.BackgroundTasks;
+using Hst.Imager.GuiApp.Extensions;
+using Hst.Imager.GuiApp.Hubs;
+using Hst.Imager.GuiApp.Models;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
+
+namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
     using Hst.Imager.Core.Models.BackgroundTasks;
@@ -8,14 +16,14 @@
 
     [ApiController]
     [Route("api/read")]
-    public class ReadController : ControllerBase
+    public class ReadController(
+        ILoggerFactory loggerFactory,
+        IHubContext<ProgressHub> progressHubContext,
+        AppState appState,
+        IBackgroundTaskQueue backgroundTaskQueue,
+        WorkerService workerService)
+        : ControllerBase
     {
-        private readonly WorkerService workerService;
-
-        public ReadController(WorkerService workerService)
-        {
-            this.workerService = workerService;
-        }
 
         [HttpPost]
         public async Task<IActionResult> Post(ReadRequest request)
@@ -28,6 +36,7 @@
             var readBackgroundTask = new ReadBackgroundTask
             {
                 Title = request.Title,
+                ReadPhysicalDisk = request.ReadPhysicalDisk,
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath,
                 StartOffset = request.StartOffset,
@@ -35,6 +44,18 @@
                 Byteswap = request.Byteswap
             };
 
+            if (!workerService.IsRunning() && !request.ReadPhysicalDisk)
+            {
+                var staticPhysicalDriveManager = new StaticPhysicalDriveManager([]);
+                var handler = new ReadBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager,
+                    appState);
+                handler.ProgressUpdated += async (_, args) => await progressHubContext.SendProgress(args.Progress);
+
+                await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, readBackgroundTask);
+
+                return Ok();
+            }
+            
             await workerService.EnqueueAsync([readBackgroundTask], true);
 
             return Ok();
