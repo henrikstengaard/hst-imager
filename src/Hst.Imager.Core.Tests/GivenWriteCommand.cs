@@ -351,9 +351,8 @@ namespace Hst.Imager.Core.Tests
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
-            // assert - data processed is not empty and has more than 10 data processed events
+            // assert - data processed is not empty
             Assert.NotEmpty(dataProcessedEventArgs);
-            Assert.True(dataProcessedEventArgs.Count > 10);
             
             // arrange - get actual destination bytes
             var actualDestinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
@@ -396,21 +395,22 @@ namespace Hst.Imager.Core.Tests
             var result = await writeCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
-            // assert - data processed is not empty and has more than 10 data processed events
+            // assert - data processed is not empty
             Assert.NotEmpty(dataProcessedEventArgs);
-            Assert.True(dataProcessedEventArgs.Count > 10);
             
-            // arrange - create expected destination bytes with 512 first bytes from source image file
+            // arrange - create expected destination bytes with 1024 * 1024 first bytes from source image file
             // and remaining bytes from destination physical drive
+            // reason for 1024 * 1024 is steam copiers buffer size
             var expectedDestinationBytes = new byte[imageSize];
+            const int bufferSize = 1024 * 1024;
             Array.Copy(destinationPhysicalDriveBytes, 0, expectedDestinationBytes, 0, destinationPhysicalDriveBytes.Length);
-            Array.Copy(sourceImageBytes, 0, expectedDestinationBytes, 0, 512);
+            Array.Copy(sourceImageBytes, 0, expectedDestinationBytes, 0, bufferSize);
 
             // arrange - get actual destination bytes
             var actualDestinationBytes = await testCommandHelper.GetTestMedia(destinationPath).ReadData();
             
             // assert - data written to physical drive file is identical to expected destination bytes
-            Assert.True(expectedDestinationBytes.SequenceEqual(actualDestinationBytes));
+            Assert.Equal(expectedDestinationBytes, actualDestinationBytes);
         }
 
         private static async Task AssertTestMediaIsIdenticalToUncompressedImg(TestMedia testMedia)

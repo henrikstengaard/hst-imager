@@ -1,10 +1,8 @@
 ﻿namespace Hst.Imager.Core
 {
     using System;
-    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
-    using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
     using Helpers;
@@ -19,7 +17,7 @@
         private readonly int retries;
         private readonly bool force;
         private readonly System.Timers.Timer timer;
-        private bool sendDataProcessed;
+        private DataProcessedEventArgs dataProcessedEventArgs;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
@@ -29,15 +27,22 @@
         {
             this.verify = verify;
             this.bufferSize = bufferSize;
-            this.buffer = new byte[this.bufferSize];
-            this.verifyBuffer = new byte[this.bufferSize];
+            buffer = new byte[this.bufferSize];
+            verifyBuffer = new byte[this.bufferSize];
             this.retries = retries;
             this.force = force;
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
-            timer.Elapsed += (_, _) => sendDataProcessed = true;
-            sendDataProcessed = false;
+            timer.Elapsed += (_, _) =>
+            {
+                if (dataProcessedEventArgs == null)
+                {
+                    return;
+                }
+                DataProcessed?.Invoke(this, dataProcessedEventArgs);
+            };
+            dataProcessedEventArgs = null;
         }
 
         public async Task<Result> Copy(CancellationToken token, Stream source, Stream destination, long size,
@@ -64,12 +69,6 @@
                 }
             }
 
-            var tenPercentOfSize = (double)size / 10;
-            var sendDataProcessedWhenBytesProcessed = tenPercentOfSize;
-
-            var processedDataSendStopwatch = new Stopwatch();
-            processedDataSendStopwatch.Start();
-
             // copy right to left, if source and destination are the same,
             // destination offset is higher than source offset and
             // destination offset is less than source offset + size to copy
@@ -82,7 +81,6 @@
             var srcOffset = sourceOffset + (copyRightToLeft ? startOffset : 0);
             var destOffset = destinationOffset + (copyRightToLeft ? startOffset : 0);
 
-            sendDataProcessed = true;
             OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
             
             timer.Start();
@@ -129,27 +127,12 @@
                     srcRetry++;
                 } while (srcReadFailed && srcRetry <= retries);
                 
-                var dataSectors = skipZeroFilled
-                    ? DataSectorReader.Read(this.buffer, 512, bytesRead, !skipZeroFilled).ToList()
-                    : new List<Sector>
-                    {
-                        new Sector
-                        {
-                            Start = 0,
-                            End = bytesRead - 1,
-                            Size = bytesRead,
-                            IsZeroFilled = false
-                        }
-                    };
-
-                foreach (var dataSector in dataSectors)
+                // write if not skipping zero filled or if buffer is not zero filled
+                if (!skipZeroFilled || !DataSectorReader.IsZeroFilled(this.buffer, 0, bytesRead))
                 {
-                    var sectorSize = size > 0 && bytesProcessed + dataSector.Start + dataSector.Size > size
-                        ? (int)(size - (bytesProcessed + dataSector.Start))
-                        : dataSector.Size;
-
-                    var sectorData = new byte[sectorSize];
-                    Array.Copy(this.buffer,  dataSector.Start, sectorData, 0, sectorSize);
+                    var writeBytes = size > 0 && bytesProcessed + bytesRead > size
+                        ? (int)(size - (bytesProcessed + bytesRead))
+                        : bytesRead;
                     
                     bool destWriteFailed;
                     var destRetry = 0;
@@ -159,16 +142,16 @@
                         {
                             if (destination.CanSeek)
                             {
-                                destination.Seek(destOffset + dataSector.Start, SeekOrigin.Begin);
+                                destination.Seek(destOffset, SeekOrigin.Begin);
                             }
 
-                            await destination.WriteAsync(sectorData, 0, sectorData.Length, token);
+                            await destination.WriteAsync(buffer, 0, writeBytes, token);
                             destWriteFailed = false;
                                 
                             if (verify && !await Verify(this.buffer, destination,
-                                    destOffset + dataSector.Start, sectorSize, token))
+                                    destOffset, writeBytes, token))
                             {
-                                OnDestError(destOffset + dataSector.Start, sectorSize, "Verify error");
+                                OnDestError(destOffset, writeBytes, "Verify error");
                                 destWriteFailed = true;
                             }
                         }
@@ -180,7 +163,7 @@
                                 throw;
                             }
 
-                            OnDestError(destOffset + dataSector.Start, sectorSize, e.ToString());
+                            OnDestError(destOffset, writeBytes, e.ToString());
                         }
 
                         destRetry++;
@@ -204,24 +187,17 @@
                 srcOffset += copyRightToLeft ? -srcDecrementStep : srcIncrementStep;
                 destOffset += copyRightToLeft ? -destDecrementStep : destIncrementStep;
 
-                if (bytesProcessed >= sendDataProcessedWhenBytesProcessed &&
-                    processedDataSendStopwatch.Elapsed.TotalMilliseconds < timer.Interval)
-                {
-                    processedDataSendStopwatch.Reset();
-                    sendDataProcessed = true;
-                    sendDataProcessedWhenBytesProcessed += tenPercentOfSize;
-                }
-                
-                OnDataProcessed(size == 0, percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining,
-                    timeTotal, bytesPerSecond);
+                var indeterminate = size == 0;
+                dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size,
+                    timeElapsed,
+                    timeRemaining, timeTotal, bytesPerSecond);
+
                 endOfStream = size == 0 ? bytesRead == 0 : bytesRead == 0 || bytesProcessed >= size;
             } while (!endOfStream);
 
             timer.Stop();
             stopwatch.Stop();
-            processedDataSendStopwatch.Stop();
 
-            sendDataProcessed = true;
             OnDataProcessed(size == 0, 100, bytesProcessed, 0, size, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
 
             return new Result();
@@ -251,15 +227,9 @@
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
-            if (!sendDataProcessed)
-            {
-                return;
-            }
-
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
-            sendDataProcessed = false;
         }
         
         private void OnSrcError(long offset, int count, string errorMessage)
