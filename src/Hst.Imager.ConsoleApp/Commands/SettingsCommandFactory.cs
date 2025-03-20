@@ -26,12 +26,42 @@ public static class SettingsCommandFactory
     {
         var allOption = new Option<bool?>(
             ["--all-physical-drives"],
-            description: "Use all physical drives.",
-            getDefaultValue: () => false);
+            description: "Use all physical drives.");
             
+        var retriesOption = new Option<int?>(
+            ["--retries", "-r"],
+            description: "Number of retries to try read or write data.");
+
+        var verifyOption = new Option<bool?>(
+            ["--verify", "-v"],
+            description: "Verify while reading and writing.");
+            
+        var forceOption = new Option<bool?>(
+            ["--force", "-f"],
+            description: "Force and ignore errors when retries are exceeded.");
+
+        var skipUnusedSectorsOption = new Option<bool?>(
+            ["--skip-unused-sectors"],
+            description: "Skip unused sectors.");
+        
         var command = new Command("update", "Update settings.");
         command.AddOption(allOption);
-        command.SetHandler(CommandHandler.SettingsUpdate, allOption);
+        command.AddOption(retriesOption);
+        command.AddOption(forceOption);
+        command.AddOption(verifyOption);
+        command.AddOption(skipUnusedSectorsOption);
+        command.AddValidator(validate =>
+        {
+            if (validate.FindResultFor(allOption) is null &&
+                validate.FindResultFor(retriesOption) is null &&
+                validate.FindResultFor(forceOption) is null &&
+                validate.FindResultFor(verifyOption) is null &&
+                validate.FindResultFor(skipUnusedSectorsOption) is null)
+            {
+                validate.ErrorMessage = "At least one option must be specified";
+            }
+        });
+        command.SetHandler(CommandHandler.SettingsUpdate, allOption, retriesOption, forceOption, verifyOption, skipUnusedSectorsOption);
 
         return command;
     }

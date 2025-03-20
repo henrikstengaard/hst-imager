@@ -245,7 +245,15 @@
             command.AddOption(dosTypeArgument);
             command.AddOption(fileSystemNameOption);
             command.AddOption(fileSystemPathOption);
-
+            command.AddValidator(validate =>
+            {
+                if (validate.FindResultFor(dosTypeArgument) is null &&
+                    validate.FindResultFor(fileSystemNameOption) is null &&
+                    validate.FindResultFor(fileSystemPathOption) is null)
+                {
+                    validate.ErrorMessage = "At least one option must be specified";
+                }
+            });
             return command;
         }
 
@@ -369,7 +377,7 @@
 
             var partitionNumberArgument = new Argument<int>(
                 name: "PartitionNumber",
-                description: "Partition number to delete.");
+                description: "Partition number to update.");
 
             var dosTypeOption = new Option<string>(
                 new[] { "--dos-type", "-dt" },
@@ -451,7 +459,23 @@
             command.AddOption(bootableOption);
             command.AddOption(bootPriorityOption);
             command.AddOption(fileSystemBlockSizeOption);
-
+            command.AddValidator(validate =>
+            {
+                if (validate.FindResultFor(nameOption) is null &&
+                    validate.FindResultFor(dosTypeOption) is null &&
+                    validate.FindResultFor(reservedOption) is null &&
+                    validate.FindResultFor(preAllocOption) is null &&
+                    validate.FindResultFor(buffersOption) is null &&
+                    validate.FindResultFor(maxTransferOption) is null &&
+                    validate.FindResultFor(maskOption) is null &&
+                    validate.FindResultFor(noMountOption) is null &&
+                    validate.FindResultFor(bootableOption) is null &&
+                    validate.FindResultFor(bootPriorityOption) is null &&
+                    validate.FindResultFor(fileSystemBlockSizeOption) is null)
+                {
+                    validate.ErrorMessage = "At least one option must be specified";
+                }
+            });
             return command;
         }
 
@@ -689,6 +713,17 @@
             command.AddOption(diskProductOption);
             command.AddOption(diskRevisionOption);
             command.AddOption(diskVendorOption);
+            command.AddValidator(validate =>
+            {
+                if (validate.FindResultFor(flagsOption) is null &&
+                    validate.FindResultFor(hostIdOption) is null &&
+                    validate.FindResultFor(diskProductOption) is null &&
+                    validate.FindResultFor(diskRevisionOption) is null &&
+                    validate.FindResultFor(diskVendorOption) is null)
+                {
+                    validate.ErrorMessage = "At least one option must be specified";
+                }
+            });
             
             return command;
         }

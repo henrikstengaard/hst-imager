@@ -148,36 +148,12 @@ namespace Hst.Imager.ConsoleApp
 
         public static Task SettingsList()
         {
-            var settings = AppState.Instance.Settings;
-            
-            var listTable = new Table
-            {
-                Columns =
-                [
-                    new Column { Name = "Name" },
-                    new Column { Name = "Value" }
-                ],
-                Rows = 
-                [
-                    new Row { Columns = ["All physical drives", settings.AllPhysicalDrives.ToString()] },
-                    new Row { Columns = ["Verify", settings.Verify.ToString()] },
-                    new Row { Columns = ["Force", settings.Force.ToString()] },
-                    new Row { Columns = ["Retries", settings.Retries.ToString(CultureInfo.InvariantCulture)] },
-                    new Row { Columns = ["Skip unused sectors", settings.SkipUnusedSectors.ToString()] }
-                ]
-            };
-
-            var outputBuilder = new StringBuilder();
-            outputBuilder.AppendLine("Settings:");
-            outputBuilder.AppendLine();
-            outputBuilder.Append(TablePresenter.Present(listTable));
-
-            Log.Logger.Information(outputBuilder.ToString());
+            Log.Logger.Information(SettingsPresenter.PresentSettings(AppState.Instance.Settings));
 
             return Task.CompletedTask;
         }
 
-        public static async Task SettingsUpdate(bool? allPhysicalDrives)
+        public static async Task SettingsUpdate(bool? allPhysicalDrives, int? retries, bool? force, bool? verify, bool? skipUnusedSectors)
         {
             var settingsUpdated = false;
             
@@ -187,6 +163,32 @@ namespace Hst.Imager.ConsoleApp
                 settingsUpdated = true;
             }
 
+            if (retries.HasValue)
+            {
+                AppState.Instance.Settings.Retries = retries.Value;
+                settingsUpdated = true;
+            }
+
+            if (force.HasValue)
+            {
+                AppState.Instance.Settings.Force = force.Value;
+                settingsUpdated = true;
+            }
+
+            if (verify.HasValue)
+            {
+                AppState.Instance.Settings.Verify = verify.Value;
+                settingsUpdated = true;
+            }
+
+            if (skipUnusedSectors.HasValue)
+            {
+                AppState.Instance.Settings.SkipUnusedSectors = skipUnusedSectors.Value;
+                settingsUpdated = true;
+            }
+            
+            Log.Logger.Information(SettingsPresenter.PresentSettings(AppState.Instance.Settings));
+            
             if (!settingsUpdated)
             {
                 return;
