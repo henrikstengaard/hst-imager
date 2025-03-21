@@ -65,7 +65,7 @@ namespace Hst.Imager.Core.Commands
             this.path = path;
             this.formatType = formatType;
             this.fileSystem = fileSystem;
-            this.fileSystemPath = string.IsNullOrWhiteSpace(fileSystemPath) ? Pfs3AioLhaUrl : fileSystemPath;
+            this.fileSystemPath = fileSystemPath;
             this.outputPath = outputPath;
             this.size = size;
             this.commandsExecuted = 0;
@@ -105,6 +105,14 @@ namespace Hst.Imager.Core.Commands
                 {
                     return new Result(new Error($"Assert path '{fileSystemPath}' not found"));
                 }
+            }
+
+            // set file system path to pfs3aio url, if pfs3 or pds3 file system and file system path is not set
+            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+                (rdbFileSystem == FormatRdbFileSystem.Pfs3 || rdbFileSystem == FormatRdbFileSystem.Pds3) &&
+                string.IsNullOrWhiteSpace(fileSystemPath))
+            {
+                fileSystemPath = Pfs3AioLhaUrl;
             }
 
             if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
