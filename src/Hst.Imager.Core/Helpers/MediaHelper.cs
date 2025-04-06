@@ -4,11 +4,11 @@ using DiscUtils.Streams;
 using Hst.Amiga.RigidDiskBlocks;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models;
-using SharpCompress.Compressors.Xz;
 using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Hst.Core;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -179,6 +179,81 @@ namespace Hst.Imager.Core.Helpers
             }
 
             return media.Stream;
+        }
+        
+        public static async Task<Result<Tuple<long, long>>> GetStartOffsetAndSize(ICommandHelper commandHelper, Media media, string path)
+        {
+            // return start offset 0 an media size if media is compressed raw or compressed vhd
+            if (media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd)
+            {
+                return new Result<Tuple<long, long>>(new Tuple<long, long>(0, media.Size));
+            }
+            
+            // read disk info
+            var diskInfo = await commandHelper.ReadDiskInfo(media);            
+            
+            var pathComponents = string.IsNullOrEmpty(path)
+                ? []
+                : path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).ToArray();
+
+            if (pathComponents.Length == 0)
+            {
+                return new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.Size));
+            }
+            
+            switch (pathComponents[0])
+            {
+                case "gpt":
+                    if (diskInfo.GptPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Guid Partition Table not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.GptPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.GptPartitionTablePart);
+                case "mbr":
+                    if (diskInfo.MbrPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Master Boot Record not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.MbrPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.MbrPartitionTablePart);
+                case "rdb":
+                    if (diskInfo.RdbPartitionTablePart == null)
+                    {
+                        return new Result<Tuple<long, long>>(new Error("Rigid Disk Block not found"));
+                    }
+
+                    return pathComponents.Length == 1
+                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.RdbPartitionTablePart.Size))
+                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.RdbPartitionTablePart);
+                default:
+                    return new Result<Tuple<long, long>>(new Error($"Unsupported path '{path}'"));
+            }
+        }
+        
+        private static Result<Tuple<long, long>> GetPartitionStartOffsetAndSize(string path, string[] pathComponents,
+            PartitionTablePart partitionTablePart)
+        {
+            if (pathComponents.Length == 0)
+            {
+                return new Result<Tuple<long, long>>(new Error($"Partition number not found in path '{path}'"));
+            }
+            
+            if (pathComponents.Length > 1 ||
+                !int.TryParse(pathComponents[0], out var partitionNumber))
+            {
+                return new Result<Tuple<long, long>>(new Error($"Invalid partition number in path '{path}'"));
+            }
+
+            var partition = partitionTablePart.Parts.FirstOrDefault(x => x.PartitionNumber == partitionNumber);
+            
+            return partition == null 
+                ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
+                : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
         }
     }
 

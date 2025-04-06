@@ -27,8 +27,17 @@
 
             // act - compare source img to destination img
             var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false);
+                new CompareCommand(new NullLogger<CompareCommand>(),
+                    testCommandHelper,
+                    new List<IPhysicalDrive>(),
+                    sourcePath,
+                    0,
+                    destinationPath,
+                    0,
+                    new Size(),
+                    0,
+                    false,
+                    false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
@@ -61,8 +70,18 @@
             await testCommandHelper.WriteMediaData(destinationPath, sourceBytes);
 
             // act - compare source img to destination img
-            var compareCommand = new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false);
+            var compareCommand = new CompareCommand(
+                new NullLogger<CompareCommand>(),
+                testCommandHelper,
+                new List<IPhysicalDrive>(),
+                sourcePath, 
+                0,
+                destinationPath,
+                0,
+                new Size(), 
+                0, 
+                false,
+                false);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -83,9 +102,18 @@
             var cancellationTokenSource = new CancellationTokenSource();
 
             // act - compare source img to destination img
-            var compareCommand = new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), 0, false);
+            var compareCommand = new CompareCommand(
+                new NullLogger<CompareCommand>(),
+                testCommandHelper,
+                new List<IPhysicalDrive>(),
+                sourcePath,
+                0,
+                destinationPath,
+                0,
+                new Size(size, Unit.Bytes),
+                0,
+                false,
+                false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
@@ -123,8 +151,18 @@
 
             // act - compare source img to destination img
             var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false);
+                new CompareCommand(
+                    new NullLogger<CompareCommand>(),
+                    testCommandHelper,
+                    new List<IPhysicalDrive>(),
+                    sourcePath,
+                    0,
+                    destinationPath,
+                    0,
+                    new Size(),
+                    0,
+                    false,
+                    false);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.False(result.IsSuccess);
             Assert.Equal(typeof(ByteNotEqualError), result.Error.GetType());
@@ -152,14 +190,24 @@
 
             // act - compare source img to destination img
             var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false);
+                new CompareCommand(
+                    new NullLogger<CompareCommand>(),
+                    testCommandHelper,
+                    new List<IPhysicalDrive>(),
+                    sourcePath,
+                    0,
+                    destinationPath,
+                    0,
+                    new Size(),
+                    0,
+                    false,
+                    false);
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
         }
 
         [Fact]
-        public async Task WhenComparingSourceLargerThanDestinationAndCompareSizeIsDestinationSizeThenReadDataIsIdentical()
+        public async Task When_ComparingSourceLargerThanDestination_Then_ErrorIsReturned()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
@@ -177,14 +225,30 @@
 
             // act - compare source img to destination img
             var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(destinationSize, Unit.Bytes), 0, false);
+                new CompareCommand(
+                    new NullLogger<CompareCommand>(),
+                    testCommandHelper,
+                    new List<IPhysicalDrive>(),
+                    sourcePath,
+                    0,
+                    destinationPath,
+                    0,
+                    new Size(destinationSize, Unit.Bytes),
+                    0,
+                    false,
+                    false);
+            
+            // act - execute compare command
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(result.IsSuccess);
+
+            // assert - compare command returned error
+            Assert.True(result.IsFaulted);
+            Assert.NotNull(result.Error);
+            Assert.IsType<CompareSizeTooLargeError>(result.Error);
         }
         
         [Fact]
-        public async Task WhenComparingSourceLargerThanDestinationThenLargestComparableSizeOfDataIsIdentical()
+        public async Task When_ComparingSourceSmallerThanDestination_Then_DataIsIdentical()
         {
             // arrange
             var sourcePath = $"{Guid.NewGuid()}.img";
@@ -192,28 +256,41 @@
             var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             var testDataBytes = testCommandHelper.CreateTestData(ImageSize);
-            var destinationSize = testDataBytes.Length;
 
             // create source
-            await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
+            await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes);
 
             // create destination
-            await testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes);
+            await testCommandHelper.AddTestMedia(destinationPath, data: testDataBytes.Concat(testDataBytes).ToArray());
 
             // act - compare source img to destination img
             var compareCommand =
-                new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                    sourcePath, destinationPath, new Size(), 0, false);
+                new CompareCommand(
+                    new NullLogger<CompareCommand>(),
+                    testCommandHelper,
+                    new List<IPhysicalDrive>(),
+                    sourcePath,
+                    0,
+                    destinationPath,
+                    0,
+                    new Size(),
+                    0,
+                    false,
+                    false);
             var bytesProcessed = 0L;
             compareCommand.DataProcessed += (_, args) =>
             {
                 bytesProcessed = args.BytesProcessed;
             };
+            
+            // act - execute compare command
             var result = await compareCommand.Execute(cancellationTokenSource.Token);
+
+            // assert - compare command succeeded
             Assert.True(result.IsSuccess);
             
             // assert - bytes processed comparing is equal to destination size
-            Assert.Equal(destinationSize, bytesProcessed);
+            Assert.Equal(testDataBytes.Length, bytesProcessed);
         }
 
         [Fact]
@@ -235,8 +312,18 @@
                 // act - compare zip compressed img media and gzip compressed img media
                 var cancellationTokenSource = new CancellationTokenSource();
                 var compareCommand =
-                    new CompareCommand(new NullLogger<CompareCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
-                        sourcePath, destinationPath, new Size(), 0, false);
+                    new CompareCommand(
+                        new NullLogger<CompareCommand>(),
+                        testCommandHelper,
+                        new List<IPhysicalDrive>(),
+                        sourcePath,
+                        0,
+                        destinationPath,
+                        0,
+                        new Size(),
+                        0,
+                        false,
+                        false);
                 DataProcessedEventArgs dataProcessedEventArgs = null;
                 compareCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
                 var result = await compareCommand.Execute(cancellationTokenSource.Token);

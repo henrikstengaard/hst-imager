@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Hst.Imager.Core.Commands.GptCommands;
+﻿using Hst.Imager.Core.Commands.GptCommands;
 using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.ConsoleApp
@@ -277,15 +276,20 @@ namespace Hst.Imager.ConsoleApp
 
         }
 
-        public static async Task Compare(string sourcePath, string destinationPath, string size, int? retries, bool? force)
+        public static async Task Compare(string sourcePath, string destinationPath, long? srcStartOffset,
+            long? destStartOffset, string size, bool? skipUnusedSectors, int? retries, bool? force)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             var command = new CompareCommand(GetLogger<CompareCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
                 sourcePath,
-                destinationPath, ParseSize(size),
+                srcStartOffset ?? 0,
+                destinationPath,
+                destStartOffset ?? 0,
+                ParseSize(size),
                 retries ?? AppState.Instance.Settings.Retries,
-                force ?? AppState.Instance.Settings.Force);
+                force ?? AppState.Instance.Settings.Force,
+                skipUnusedSectors ?? AppState.Instance.Settings.SkipUnusedSectors);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);

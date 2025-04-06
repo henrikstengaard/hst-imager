@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO.Compression;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
+using Hst.Imager.Core.Commands;
 
 namespace Hst.Imager.Core.Tests
 {
@@ -301,6 +303,127 @@ namespace Hst.Imager.Core.Tests
             await partitionStream.WriteAsync(data.AsMemory(0, (int)size));
         }
 
+        public static async Task<PartInfo> GetMbrPartitionPart(TestCommandHelper testCommandHelper, string path,
+            int partitionNumber)
+        {
+            var mediaResult = await testCommandHelper.GetReadableMedia([], path);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+            
+            using var media = mediaResult.Value;
+
+            var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+            
+            if (diskInfo == null || diskInfo.MbrPartitionTablePart == null)
+            {
+                throw new IOException("No MBR partition table found");
+            }
+            
+            var part = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x => 
+                x.PartitionNumber == partitionNumber);
+            
+            if (part == null)
+            {
+                throw new IOException($"Partition {partitionNumber} not found");
+            }
+
+            return part;
+        }
+
+        public static async Task<PartInfo> GetGptPartitionPart(TestCommandHelper testCommandHelper, string path,
+            int partitionNumber)
+        {
+            var mediaResult = await testCommandHelper.GetReadableMedia([], path);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+            
+            using var media = mediaResult.Value;
+
+            var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+            
+            if (diskInfo == null || diskInfo.GptPartitionTablePart == null)
+            {
+                throw new IOException("No GPT partition table found");
+            }
+            
+            var part = diskInfo.GptPartitionTablePart.Parts.FirstOrDefault(x => 
+                x.PartitionNumber == partitionNumber);
+            
+            if (part == null)
+            {
+                throw new IOException($"Partition {partitionNumber} not found");
+            }
+
+            return part;
+        }
+
+        public static async Task<PartInfo> GetRdbPartitionPart(TestCommandHelper testCommandHelper, string path,
+            int partitionNumber)
+        {
+            var mediaResult = await testCommandHelper.GetReadableMedia([], path);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+            
+            using var media = mediaResult.Value;
+
+            var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+            
+            if (diskInfo == null || diskInfo.RdbPartitionTablePart == null)
+            {
+                throw new IOException("No RDB partition table found");
+            }
+            
+            var part = diskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(x => 
+                x.PartitionNumber == partitionNumber);
+            
+            if (part == null)
+            {
+                throw new IOException($"Partition {partitionNumber} not found");
+            }
+
+            return part;
+        }
+
+        public static async Task<byte[]> ReadData(TestCommandHelper testCommandHelper, string path, long offset = 0,
+            int length = 0)
+        {
+            var mediaResult = await testCommandHelper.GetReadableMedia([], path);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+            
+            using var media = mediaResult.Value;
+            
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+            var stream = disk.Content;
+            stream.Position = offset;
+            
+            var buffer = new byte[1024 * 1024];
+            var readStream = new MemoryStream();
+
+            int readBytes;
+            int bytesRead;
+            do
+            {
+                readBytes = length == 0 || readStream.Length + buffer.Length < length
+                    ? buffer.Length
+                    : length - (int)readStream.Length;
+                bytesRead = await stream.ReadAsync(buffer, 0, readBytes);
+                await readStream.WriteAsync(buffer, 0, bytesRead);
+            } while (readBytes > 0 && bytesRead > 0);
+            
+            return readStream.ToArray();
+        }
         
         public static async Task WriteData(TestCommandHelper testCommandHelper, string path, long offset, byte[] data)
         {
@@ -320,6 +443,19 @@ namespace Hst.Imager.Core.Tests
             
             stream.Position = offset;
             await stream.WriteAsync(data);
+        }
+
+        public static async Task<byte[]> CreateZipCompressedImgData(byte[] data)
+        {
+            using var zipStream = new MemoryStream();
+            using (var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Create))
+            {
+                var zipArchiveEntry = zipArchive.CreateEntry("disk.img", CompressionLevel.Fastest);
+                await using var entryStream = zipArchiveEntry.Open();
+                await entryStream.WriteAsync(data);
+            }
+            
+            return zipStream.ToArray();
         }
     }
 }

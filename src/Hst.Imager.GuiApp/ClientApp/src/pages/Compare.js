@@ -2,11 +2,6 @@ import React from 'react'
 import Box from "@mui/material/Box";
 import Title from "../components/Title";
 import Grid from "@mui/material/Grid";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Radio from "@mui/material/Radio";
 import TextField from "../components/TextField";
 import {FontAwesomeIcon} from "@fortawesome/react-fontawesome";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
@@ -22,6 +17,7 @@ import Media from "../components/Media";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import {getPartPathOptions} from "../utils/MediaHelper";
 
 const unitOptions = [{
     title: 'GB',
@@ -41,40 +37,54 @@ const unitOptions = [{
     size: 1
 }]
 
-const formatPartitionTableType = (partitionTableType) => {
-    switch (partitionTableType) {
-        case 'GuidPartitionTable':
-            return 'Guid Partition Table'
-        case 'MasterBootRecord':
-            return 'Master Boot Record'
-        case 'RigidDiskBlock':
-            return 'Rigid Disk Block'
-        default:
-            return ''
-    }
-}
+const typeOptions = [{
+    title: 'Image file',
+    value: 'ImageFile'
+}, {
+    title: 'Physical disk',
+    value: 'PhysicalDisk'
+}]
+
+let updateTarget = '';
 
 export default function Verify() {
     const [openConfirm, setOpenConfirm] = React.useState(false);
-    const [sourceMedia, setSourceMedia] = React.useState(null)
+    const [sourceType, setSourceType] = React.useState('ImageFile')
     const [sourcePath, setSourcePath] = React.useState(null)
+    const [sourceMedia, setSourceMedia] = React.useState(null)
+    const [srcStartOffset, setSrcStartOffset] = React.useState(0);
+    const [srcPartPath, setSrcPartPath] = React.useState(null)
+    const [srcPartPathOptions, setSrcPartPathOptions] = React.useState([])
     const [byteswap, setByteswap] = React.useState(false);
     const [medias, setMedias] = React.useState(null)
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
+    const [destinationType, setDestinationType] = React.useState('ImageFile')
     const [destinationPath, setDestinationPath] = React.useState(null)
-    const [sourceType, setSourceType] = React.useState('ImageFile')
-    const [compareAll, setCompareAll] = React.useState(true);
-    const [prefillSize, setPrefillSize] = React.useState(null)
-    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
+    const [destinationMedia, setDestinationMedia] = React.useState(null)
+    const [destStartOffset, setDestStartOffset] = React.useState(0);
+    const [destPartPath, setDestPartPath] = React.useState(null)
+    const [destPartPathOptions, setDestPartPathOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
     const {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
 
+    const srcPartPathOption = srcPartPathOptions.find(x => x.value === srcPartPath)
+    const formattedSrcPartPath = srcPartPathOption ? (srcPartPath === 'custom'
+        ? ` - Start offset ${srcStartOffset}`
+        : ` - ${srcPartPathOption.title}`) : '';
+
+    const destPartPathOption = destPartPathOptions.find(x => x.value === destPartPath)
+    const formattedDestPartPath = destPartPathOption ? (destPartPath === 'custom'
+        ? ` - Start offset ${destStartOffset}`
+        : ` - ${destPartPathOption.title}`) : '';
+
     const unitOption = unitOptions.find(x => x.value === unit)
-    const formattedSize = size === 0 ? '' : ` with size ${size} ${unitOption.title}`
+    const formattedSize = unitOption ? (srcPartPath === 'custom'
+        ? ` with size ${size} ${unitOption.title}`
+        : '') : '';
 
     const getMedia = React.useCallback(({medias, path}) => {
         if (medias === null || medias.length === 0) {
@@ -96,8 +106,9 @@ export default function Verify() {
         await getMedias()
     }, [backendApi])
 
-    const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
-        await backendApi.updateInfo({ path, sourceType, byteswap });
+    const getInfo = React.useCallback(async (target, path, type, byteswap) => {
+        updateTarget = target;
+        await backendApi.updateInfo({ path, sourceType: type, byteswap });
     }, [backendApi])
 
     React.useEffect(() => {
@@ -111,54 +122,74 @@ export default function Verify() {
             .build();
 
         newConnection.on("Info", (media) => {
-            setSourceMedia(media)
-
-            // default set size and unit to largest comparable size
-            setCompareAll(true)
+            // default start offset, size and unit set to largest comparable size
             setSize(0)
             setUnit('bytes')
 
             // no media, reset
             if (isNil(media)) {
-                setPrefillSize(null)
-                setPrefillSizeOptions([])
+                switch(updateTarget) {
+                    case 'Source':
+                        setSrcStartOffset(0)
+                        setSrcPartPath(null)
+                        setSrcPartPathOptions([])
+                        break;
+                    case 'Destination':
+                        setDestStartOffset(0)
+                        setDestPartPath(null)
+                        setDestPartPathOptions([])
+                        break;
+                    default:
+                        console.error('Invalid update target', updateTarget)
+                        break;
+                }
+
                 return
             }
 
-            // get and sort partition tables
-            const partitionTables = get(media, 'diskInfo.partitionTables') || []
+            const newPartPathOptions = getPartPathOptions(media);
 
-            // add select prefill option, if any partition tables are present                        
-            const newPrefillSizeOptions = [{
-                title: 'Select size to prefill',
-                value: 'prefill'
-            },{
-                title: `Disk (${media.diskSize} bytes)`,
-                value: media.diskSize
-            }]
-
-            // add partition tables as prefill size options
-            for (let i = 0; i < partitionTables.length; i++) {
-                const partitionTableSize = get(partitionTables[i], 'size') || 0
-                newPrefillSizeOptions.push({
-                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                    value: partitionTableSize
-                })
+            switch(updateTarget)
+            {
+                case 'Source':
+                    setSourceMedia(media);
+                    setSrcStartOffset(0);
+                    setSrcPartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null);
+                    setSrcPartPathOptions(newPartPathOptions);
+                    break;
+                case 'Destination':
+                    setDestinationMedia(media);
+                    setDestStartOffset(0);
+                    setDestPartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null);
+                    setDestPartPathOptions(newPartPathOptions);
+                    break;
+                default:
+                    console.error('Invalid update target', updateTarget)
+                    break;
             }
-
-            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-            setPrefillSizeOptions(newPrefillSizeOptions)
         });
 
         newConnection.on('List', async (medias) => {
+            setMedias(medias || [])
+
             const newMedia = getMedia({medias: medias, path: sourcePath});
+            if (!newMedia) {
+                return;
+            }
+
             const newPath = get(newMedia, 'path');
 
-            setMedias(medias || [])
-            if (newMedia) {
-                setSourcePath(newPath)
-                setSourceMedia(newMedia)
-                await getInfo(newPath, sourceType, byteswap)
+            switch (updateTarget) {
+                case 'Source':
+                    setSourcePath(newPath)
+                    setSourceMedia(newMedia)
+                    await getInfo('Source', newPath, sourceType, byteswap)
+                    break
+                case 'Destination':
+                    setDestinationPath(newPath)
+                    setDestinationMedia(newMedia)
+                    await getInfo('Destination', newPath, destinationType, false)
+                    break
             }
         })
 
@@ -174,41 +205,16 @@ export default function Verify() {
             connection.stop();
         };
     }, [backendBaseUrl, byteswap, connection, getInfo, getMedia, setConnection, sourcePath, sourceType])
-
-    const handleSourceTypeChange = async (value) => {
-        setSourceType(value)
-        switch (value) {
-            case 'PhysicalDisk':
-                if (medias === null) {
-                    setSourcePath(null)
-                    setSourceMedia(null)
-                    await getMedias()
-                    return
-                }
-
-                const newMedia = getMedia({medias: medias, path: sourcePath});
-                const newPath = get(newMedia, 'path');
-
-                setSourcePath(newPath)
-                setSourceMedia(newMedia)
-                if (value === 'PhysicalDisk' && newMedia) {
-                    await getInfo(newPath, sourceType, byteswap)
-                }
-
-                break
-            default:
-                setSourcePath(null)
-                setSourceMedia(null)
-                break
-        }
-    }
     
     const handleCompare = async () => {
         await backendApi.startCompare({
-            title: `Comparing ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and file '${destinationPath}'${formattedSize}`,
+            title: `Comparing source ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}${formattedSrcPartPath}' and destination ${(destinationType === 'ImageFile' ? 'file' : 'disk')}  '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedDestPartPath}'${formattedSize}`,
+            comparePhysicalDisk: sourceType === 'PhysicalDisk' || destinationType === 'PhysicalDisk',
             sourceType,
-            sourcePath,
-            destinationPath,
+            sourcePath: isNil(srcPartPath) || srcPartPath === 'custom' ? sourcePath : srcPartPath,
+            sourceStartOffset: srcStartOffset,
+            destinationPath: isNil(destPartPath) || destPartPath === 'custom' ? destinationPath : destPartPath,
+            destinationStartOffset: destStartOffset,
             size: (size * unitOption.size),
             byteswap
         });
@@ -227,16 +233,20 @@ export default function Verify() {
             connection.stop()
         }
         setOpenConfirm(false)
-        setSourceMedia(null)
+        setSourceType('ImageFile')
         setSourcePath(null)
+        setSourceMedia(null)
+        setSrcStartOffset(0)
+        setSrcPartPath(null)
+        setSrcPartPathOptions([])
         setByteswap(false)
         setMedias(null)
         setSize(0)
         setUnit('bytes')
         setDestinationPath(null)
-        setSourceType('ImageFile')
-        setPrefillSize(null)
-        setPrefillSizeOptions([])
+        setDestStartOffset(0)
+        setDestPartPath(null)
+        setDestPartPathOptions([])
         setConnection(null)
     }
     
@@ -244,7 +254,7 @@ export default function Verify() {
         await backendApi.updateList()
     }
 
-    const compareDisabled = isNil(sourcePath) || isNil(destinationPath)
+    const compareDisabled = isNil(sourceMedia) || isNil(destinationMedia)
     
     return (
         <Box>
@@ -252,31 +262,37 @@ export default function Verify() {
                 id="confirm-compare"
                 open={openConfirm}
                 title="Compare"
-                description={`Do you want to compare '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}' and '${destinationPath}'${formattedSize}?`}
+                description={`Do you want to compare '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}${formattedSrcPartPath}' and '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedDestPartPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Compare"
                 description="Compare an image file or physical disk against an image file comparing them byte by byte."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
-                    <FormControl>
-                        <FormLabel id="source-type-label">Source</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-labelledby="source-type-label"
-                            name="source-type"
-                            value={sourceType || ''}
-                            onChange={(event) => handleSourceTypeChange(event.target.value)}
-                        >
-                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
-                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
-                        </RadioGroup>
-                    </FormControl>
+                    <SelectField
+                        label="Source"
+                        id="source"
+                        emptyLabel="None available"
+                        value={sourceType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => {
+                            setSourceType(value);
+                            setSourcePath(null);
+                            setSourceMedia(null);
+                            setSrcPartPath(null);
+                            setSrcPartPathOptions([]);
+                            if (value !== 'PhysicalDisk') {
+                                return
+                            }
+                            updateTarget = 'Source';
+                            getMedias();
+                        }}
+                    />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     {sourceType === 'ImageFile' && (
                         <TextField
@@ -292,8 +308,11 @@ export default function Verify() {
                                     id="browse-source-image-path"
                                     title="Select source file"
                                     onChange={async (path) => {
-                                        setSourcePath(path)
-                                        await getInfo(path, sourceType, byteswap)
+                                        if (sourceMedia) {
+                                            setSourceMedia(null)
+                                        }
+                                        setSourcePath(path);
+                                        await getInfo('Source', path, sourceType, byteswap);
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -314,7 +333,7 @@ export default function Verify() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo(sourcePath, sourceType, byteswap)
+                                await getInfo('Source', sourcePath, sourceType, byteswap)
                             }}
                         />
                     )}
@@ -331,46 +350,184 @@ export default function Verify() {
                             onChange={async (media) => {
                                 setSourcePath(media)
                                 setSourceMedia(media.path)
-                                await getInfo(media.path, sourceType, byteswap)
+                                await getInfo('Source', media.path, sourceType, byteswap)
                             }}                        
                         />
                     )}
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
-                    <TextField
-                        id="destination-path"
-                        label={
-                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination file
-                            </div>
-                        }
-                        value={destinationPath || ''}
-                        endAdornment={
-                            <BrowseOpenDialog
-                                id="browse-destination-path"
-                                title="Select destination image file"
-                                onChange={(path) => setDestinationPath(path)}
-                                fileFilters = {[{
-                                    name: 'Hard disk image files',
-                                    extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
-                                }, {
-                                    name: 'All files',
-                                    extensions: ['*']
-                                }]}
-                            />
-                        }
-                        onChange={(event) => setDestinationPath(get(event, 'target.value'))}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}                    
+                    <SelectField
+                        label={`Part of source ${sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to compare against`}
+                        id="read-part-path"
+                        emptyLabel="None available"
+                        value={srcPartPath || ''}
+                        options={srcPartPathOptions || []}
+                        onChange={(value) => {
+                            setSrcPartPath(value)
+                            setSrcStartOffset(0);
+                            console.log(sourceMedia);
+                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                            setUnit('bytes')
+                        }}
                     />
                 </Grid>
             </Grid>
+            {srcPartPath === 'custom' && (
+                    <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                        <Grid item xs={12} lg={6}>
+                            <TextField
+                                label="Source start offset"
+                                id="src-start-offset"
+                                type={"number"}
+                                value={srcStartOffset}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSrcStartOffset(event.target.value)}
+                            />
+                        </Grid>
+                    </Grid>
+            )}
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                <Grid item xs={12} lg={6}>
+                    <SelectField
+                        label="Destination"
+                        id="destination"
+                        emptyLabel="None available"
+                        value={destinationType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => {
+                            setDestinationType(value);
+                            setDestinationPath(null);
+                            setDestinationMedia(null);
+                            setDestPartPath(null);
+                            setDestPartPathOptions([]);
+                            if (value === 'PhysicalDisk') {
+                                updateTarget = 'Destination';
+                                getMedias();
+                            }
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                <Grid item xs={12} lg={6}>
+                    {destinationType === 'ImageFile' && (
+                        <TextField
+                            id="destination-path"
+                            label={
+                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination file
+                                </div>
+                            }
+                            value={destinationPath || ''}
+                            endAdornment={
+                                <BrowseOpenDialog
+                                    id="browse-destination-path"
+                                    title="Select destination image file"
+                                    onChange={async (path) => {
+                                        setDestinationPath(path)
+                                        setDestStartOffset(0);
+                                        setDestPartPath(null);
+                                        setDestPartPathOptions([])
+                                        await getInfo('Destination', path, 'ImageFile', byteswap)
+                                    }}
+                                    fileFilters = {[{
+                                        name: 'Hard disk image files',
+                                        extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
+                                    }, {
+                                        name: 'All files',
+                                        extensions: ['*']
+                                    }]}
+                                />
+                            }
+                            onChange={async (event) => setDestinationPath(get(event, 'target.value'))}
+                            onKeyDown={async (event) => {
+                                if (event.key !== 'Enter') {
+                                    return
+                                }
+                                setDestStartOffset(0);
+                                setDestPartPath(null);
+                                setDestPartPathOptions([])
+                                await getInfo('Destination', destinationPath, 'ImageFile', byteswap)
+                            }}
+                        />
+                    )}
+                    {destinationType === 'PhysicalDisk' && (
+                        <MediaSelectField
+                            id="destination-media-path"
+                            label={
+                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination disk
+                                </div>
+                            }
+                            medias={medias || []}
+                            path={destinationPath || ''}
+                            onChange={async (media) => {
+                                setDestinationPath(media.path)
+                                setDestinationMedia(null)
+                                await getInfo('Destination', media.path, destinationType, false)
+                            }}
+                        />
+                    )}
+                </Grid>
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                <Grid item xs={12} lg={6}>
+                    <SelectField
+                        label={`Part of destination image file to compare against`}
+                        id="dest-part-path"
+                        emptyLabel="None available"
+                        value={destPartPath || ''}
+                        options={destPartPathOptions || []}
+                        onChange={(value) => {
+                            setDestPartPath(value);
+                            setDestStartOffset(0);
+                            //setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                            //setUnit('bytes')
+                        }}
+                    />
+                </Grid>
+            </Grid>
+            {destPartPath === 'custom' && (
+                <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                    <Grid item xs={12} lg={6}>
+                        <TextField
+                            label="Destination start offset"
+                            id="dest-start-offset"
+                            type={"number"}
+                            value={destStartOffset}
+                            inputProps={{min: 0, style: { textAlign: 'right' }}}
+                            onChange={(event) => setDestStartOffset(event.target.value)}
+                        />
+                    </Grid>
+                </Grid>
+            )}
+            {(srcPartPath === 'custom' || destPartPath === 'custom') && (
+                <React.Fragment>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label="Size"
+                                id="size"
+                                type={"number"}
+                                value={size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label="Unit"
+                                id="unit"
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
+                </React.Fragment>
+            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12}>
                     <CheckboxField
@@ -380,75 +537,12 @@ export default function Verify() {
                         onChange={async (checked) => {
                             setByteswap(checked)
                             if (sourceMedia) {
-                                await getInfo(sourceMedia.path, sourceType, checked)
+                                await getInfo('Source', sourceMedia.path, sourceType, checked)
                             }
                         }}
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="compare-all"
-                        label="Largest comparable size (smallest of source and destination)"
-                        value={compareAll}
-                        onChange={(checked) => {
-                            setSize(checked ? 0 : get(sourceMedia, 'diskSize') || 0)
-                            setUnit('bytes')
-                            setCompareAll(checked)
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {!compareAll && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                        <Grid item xs={12} lg={6}>
-                            <SelectField
-                                label="Prefill size to compare"
-                                id="prefill-size"
-                                emptyLabel="None available"
-                                disabled={compareAll}
-                                value={prefillSize || ''}
-                                options={prefillSizeOptions || []}
-                                onChange={(value) => {
-                                    setSize(value)
-                                    setUnit('bytes')
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                    <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={compareAll ? "text" : "number"}
-                                disabled={compareAll}
-                                value={compareAll ? '' : size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
-                                onKeyDown={async (event) => {
-                                    if (event.key !== 'Enter') {
-                                        return
-                                    }
-                                    setOpenConfirm(true)
-                                }}
-                            />
-                        </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                disabled={compareAll}
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
-                        </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
@@ -491,5 +585,5 @@ export default function Verify() {
                 </Grid>
             )}
         </Box>
-    )        
+    )
 }

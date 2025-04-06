@@ -14,6 +14,7 @@
                 Name = mediaInfo.Name,
                 DiskSize = mediaInfo.DiskSize,
                 IsPhysicalDrive = mediaInfo.IsPhysicalDrive,
+                Type = mediaInfo.Type,
                 DiskInfo = mediaInfo.DiskInfo?.ToViewModel()
             };
 

@@ -17,13 +17,13 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
-import {formatBytes} from "../utils/Format";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Radio from "@mui/material/Radio";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
+import {getPartPathOptions} from "../utils/MediaHelper";
 
 const unitOptions = [{
     title: 'GB',
@@ -65,7 +65,7 @@ export default function Read() {
     const readPartPathOption = readPartPathOptions.find(x => x.value === readPartPath)
     const formattedReadPartPath = readPartPathOption ? (readPartPath === 'custom'
         ? ` - Start offset ${startOffset}`
-        : ` ${readPartPathOption.title}`) : '';
+        : ` - ${readPartPathOption.title}`) : '';
 
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = unitOption ? (readPartPath === 'custom'
@@ -121,78 +121,10 @@ export default function Read() {
                 return
             }
 
-            // build new read part path options                        
-            const newReadPartPathOptions = [{
-                title: `Disk (${formatBytes(media.diskSize)})`,
-                value: media.path
-            }]
-
-            const directoryPathSeparator = media.path.startsWith('/') ? '/' : '\\'
+            const newPartPathOptions = getPartPathOptions(media);
             
-            const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart');
-            if (gptPartitionTablePart) {
-                newReadPartPathOptions.push({
-                    title: `Guid Partition Table (${formatBytes(gptPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'gpt'
-                })
-
-                gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newReadPartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-
-            const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart');
-            if (mbrPartitionTablePart) {
-                newReadPartPathOptions.push({
-                    title: `Master Boot Record (${formatBytes(mbrPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'mbr'
-                })
-
-                mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newReadPartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-
-            const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart');
-            if (rdbPartitionTablePart) {
-                newReadPartPathOptions.push({
-                    title: `Rigid Disk Block (${formatBytes(rdbPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'rdb'
-                })
-
-                rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newReadPartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-
-            newReadPartPathOptions.push({
-                title: 'Custom',
-                value: 'custom'
-            })
-            
-            setReadPartPath(newReadPartPathOptions.length > 0 ? newReadPartPathOptions[0].value : null)
-            setReadPartPathOptions(newReadPartPathOptions)
+            setReadPartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null)
+            setReadPartPathOptions(newPartPathOptions)
         });
 
         newConnection.on('List', async (medias) => {
@@ -278,7 +210,6 @@ export default function Read() {
                 text="Read"
                 description="Reads a disk or part of (partition or custom) to an image file."
             />
-
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <FormControl>

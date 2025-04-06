@@ -7,7 +7,9 @@
     {
         public string Title { get; set; }
         public string SourcePath { get; set; }
+        public long SourceStartOffset { get; set; }
         public string DestinationPath { get; set; }
+        public long DestinationStartOffset { get; set; }
         public long Size { get; set; }
         public bool Byteswap { get; set; }
 

@@ -123,8 +123,7 @@ namespace Hst.Imager.Core.Commands
             
             if (writeSize > destSize)
             {
-                return new Result(
-                    new WriteSizeTooLargeError(destSize, writeSize,
+                return new Result(new WriteSizeTooLargeError(destSize, writeSize,
                         $"Source size {writeSize.FormatBytes()} ({writeSize} bytes) is too large for destination size {destSize.FormatBytes()} ({destSize} bytes)"));
             }
 

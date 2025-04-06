@@ -310,10 +310,23 @@ namespace Hst.Imager.ConsoleApp
                 name: "Destination",
                 description: "Path to destination physical drive or image file.");
 
+            var srcStartOffsetOption = new Option<long?>(
+                ["--source-start"],
+                description: "Source start offset.");
+
+            var destStartOffsetOption = new Option<long?>(
+                ["--destination-start"],
+                description: "Destination start offset.");
+            
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
                 description: "Size to verify.");
             
+            var skipUnusedSectorsOption = new Option<bool?>(
+                ["--skip-unused-sectors"],
+                description: "Skip unused sectors.",
+                getDefaultValue: () => true);
+
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
                 description: "Number of retries to try read or write data.",
@@ -324,13 +337,18 @@ namespace Hst.Imager.ConsoleApp
                 description: "Force compare to ignore read errors.",
                 getDefaultValue: () => false);
             
-            var convertCommand = new Command("compare", "Compare source and destination.");
+            var convertCommand = new Command("compare", "Compare source and destination physical drive or image file.");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
+            convertCommand.AddOption(srcStartOffsetOption);
+            convertCommand.AddOption(destStartOffsetOption);
+            convertCommand.AddOption(skipUnusedSectorsOption);
             convertCommand.AddOption(sizeOption);
             convertCommand.AddOption(retriesOption);
             convertCommand.AddOption(forceOption);
-            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, sizeOption, retriesOption, forceOption);
+            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, 
+                srcStartOffsetOption, destStartOffsetOption, sizeOption,
+                skipUnusedSectorsOption, retriesOption, forceOption);
 
             return convertCommand;
         }

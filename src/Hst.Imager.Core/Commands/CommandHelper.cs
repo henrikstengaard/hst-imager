@@ -93,7 +93,6 @@ namespace Hst.Imager.Core.Commands
         public virtual async Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
             ModifierEnum? modifiers = null)
         {
-            var fileSystemPath = string.Empty;
             if (modifiers == null)
             {
                 var mediaResult = ResolveMedia(path);
@@ -103,7 +102,6 @@ namespace Hst.Imager.Core.Commands
                 }
 
                 path = mediaResult.Value.MediaPath;
-                fileSystemPath = mediaResult.Value.FileSystemPath;
                 modifiers = mediaResult.Value.Modifiers;
             }
 

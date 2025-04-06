@@ -1,5 +1,6 @@
 ﻿using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
+using Hst.Imager.Core.PhysicalDrives;
 
 namespace Hst.Imager.ConsoleApp
 {
@@ -48,7 +49,7 @@ namespace Hst.Imager.ConsoleApp
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 
             if ((args.Any() && args[0].Equals("list", System.StringComparison.OrdinalIgnoreCase)) ||
-                (!User.IsAdministrator && ArgsHelper.HasPhysicalDrivePaths(args)))
+                (!User.IsAdministrator && PhysicalDriveHelper.HasPhysicalDrivePaths(args)))
             {
                 Log.Logger.Warning("Command or arguments used requires administrator privileges to access physical drives!");
                 Log.Logger.Warning(OperatingSystem.IsWindows()

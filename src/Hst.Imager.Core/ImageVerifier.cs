@@ -15,7 +15,7 @@
         private readonly bool force;
         private readonly int bufferSize;
         private readonly System.Timers.Timer timer;
-        private bool sendDataProcessed;
+        private DataProcessedEventArgs dataProcessedEventArgs;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
@@ -29,26 +29,33 @@
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
-            timer.Elapsed += (_, _) => sendDataProcessed = true;
-            sendDataProcessed = false;
+            timer.Elapsed += (_, _) =>
+            {
+                if (dataProcessedEventArgs == null)
+                {
+                    return;
+                }
+                DataProcessed?.Invoke(this, dataProcessedEventArgs);
+            };
+            dataProcessedEventArgs = null;
         }
 
-        public async Task<Result> Verify(CancellationToken token, Stream source, Stream destination, long size)
+        public async Task<Result> Verify(CancellationToken token, Stream source, long sourceOffset, Stream destination,
+            long destinationOffset, long size, bool skipZeroFilled = false)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
             if (source.CanSeek)
             {
-                source.Seek(0, SeekOrigin.Begin);
+                source.Seek(sourceOffset, SeekOrigin.Begin);
             }
 
             if (destination.CanSeek)
             {
-                destination.Seek(0, SeekOrigin.Begin);
+                destination.Seek(destinationOffset, SeekOrigin.Begin);
             }
 
-            sendDataProcessed = true;
             OnDataProcessed(size == 0, 0, 0, size, size, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
             
             timer.Start();
@@ -56,8 +63,9 @@
             var srcBuffer = new byte[bufferSize];
             var destBuffer = new byte[bufferSize];
 
-            long offset = 0;
+            long bytesProcessed = 0;
             var srcBytesRead = 0;
+            bool endOfStream;
             do
             {
                 if (token.IsCancellationRequested)
@@ -67,7 +75,7 @@
 
                 var verifyBytes = size == 0
                     ? bufferSize
-                    : Convert.ToInt32(offset + bufferSize > size ? size - offset : bufferSize);
+                    : Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
                 
                 bool srcReadFailed;
                 var srcRetry = 0;
@@ -77,7 +85,7 @@
                     {
                         if (source.CanSeek)
                         {
-                            source.Seek(offset, SeekOrigin.Begin);
+                            source.Seek(sourceOffset, SeekOrigin.Begin);
                         }
 
                         srcBytesRead = await source.ReadAsync(srcBuffer, 0, verifyBytes, token);
@@ -91,7 +99,7 @@
                             throw;
                         }
                         
-                        OnSrcError(offset, verifyBytes, e.ToString());
+                        OnSrcError(bytesProcessed, verifyBytes, e.ToString());
                     }
 
                     srcRetry++;
@@ -106,7 +114,7 @@
                     {
                         if (destination.CanSeek)
                         {
-                            destination.Seek(offset, SeekOrigin.Begin);
+                            destination.Seek(destinationOffset, SeekOrigin.Begin);
                         }
 
                         destBytesRead = await destination.ReadAsync(destBuffer, 0, verifyBytes, token);
@@ -120,7 +128,7 @@
                             throw;
                         }
 
-                        OnDestError(offset, verifyBytes, e.ToString());
+                        OnDestError(bytesProcessed, verifyBytes, e.ToString());
                     }
 
                     destRetry++;
@@ -137,38 +145,48 @@
                     verifyBytes = Math.Min(minBytesRead, verifyBytes);
                 }
 
-                if (verifyBytes < bufferSize && offset + verifyBytes != size)
+                if (verifyBytes < bufferSize && bytesProcessed + verifyBytes != size)
                 {
-                    return new Result(new SizeNotEqualError(offset, offset + verifyBytes, size));
+                    return new Result(new SizeNotEqualError(bytesProcessed, bytesProcessed + verifyBytes, size));
                 }
 
-                for (var i = 0; i < verifyBytes; i++)
+                // compare, if not skipping zero filled or if src buffer is not zero filled.
+                // skip zero filled doesn't apply to dest buffer.
+                if (!skipZeroFilled ||
+                    !DataSectorReader.IsZeroFilled(srcBuffer, 0, verifyBytes))
                 {
-                    if (srcBuffer[i] == destBuffer[i])
+                    for (var i = 0; i < verifyBytes; i++)
                     {
-                        continue;
-                    }
+                        if (srcBuffer[i] == destBuffer[i])
+                        {
+                            continue;
+                        }
 
-                    return new Result(new ByteNotEqualError(offset + i, srcBuffer[i], destBuffer[i]));
+                        return new Result(new ByteNotEqualError(bytesProcessed + i, srcBuffer[i], destBuffer[i]));
+                    }
                 }
 
-                offset += verifyBytes;
-                var bytesRemaining = size - offset;
-                var percentComplete = offset == 0 ? 0 : Math.Round((double)100 / size * offset, 1);
+                bytesProcessed += verifyBytes;
+                var bytesRemaining = size - bytesProcessed;
+                var percentComplete = bytesProcessed == 0 ? 0 : Math.Round((double)100 / size * bytesProcessed, 1);
                 var timeElapsed = stopwatch.Elapsed;
                 var timeRemaining = TimeHelper.CalculateTimeRemaining(percentComplete, timeElapsed);
                 var timeTotal = timeElapsed + timeRemaining;
-                var bytesPerSecond = Convert.ToInt64(offset / timeElapsed.TotalSeconds);
+                var bytesPerSecond = Convert.ToInt64(bytesProcessed / timeElapsed.TotalSeconds);
 
-                OnDataProcessed(size == 0, percentComplete, offset, bytesRemaining, size, timeElapsed, timeRemaining, timeTotal,
+                sourceOffset += srcBytesRead;
+                destinationOffset += srcBytesRead;
+                
+                var indeterminate = size == 0;
+                dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining, timeTotal,
                     bytesPerSecond);
-            } while (srcBytesRead == bufferSize && offset < size);
+                endOfStream = srcBytesRead == 0 || bytesProcessed >= size;
+            } while (!endOfStream);
 
             timer.Stop();
             stopwatch.Stop();
             
-            sendDataProcessed = true;
-            OnDataProcessed(size == 0, 100, offset, 0, offset, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
+            OnDataProcessed(size == 0, 100, bytesProcessed, 0, bytesProcessed, stopwatch.Elapsed, TimeSpan.Zero, stopwatch.Elapsed, 0);
             
             return new Result();
         }
@@ -176,15 +194,9 @@
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
-            if (!sendDataProcessed)
-            {
-                return;
-            }
-            
             DataProcessed?.Invoke(this,
                 new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
                     timeRemaining, timeTotal, bytesPerSecond));
-            sendDataProcessed = false;
         }
         
         private void OnSrcError(long offset, int count, string errorMessage)

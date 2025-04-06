@@ -22,6 +22,7 @@ Hst Imager console comes with following features:
 - Read information from physical drive or image file.
 - Read disk to image file.
 - Write image file to physical drive.
+- Compare physical drive and image file.
 - Convert image file between .img/.hdf and .vhd.
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
@@ -367,7 +368,7 @@ hst.imager format \disk2 pistorm pds3
 
 ### Compare physical drive and image file
 
-Compares physical drive or image file and physical drive image file are identical. Physical drives requires administrator privileges. Supports comparing from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
+Compares physical drive and image file and check if they are identical. Physical drives requires administrator privileges. Supports comparing from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
 
 Example of displaying usage for writing an image file to a physical drive:
 ```
@@ -392,6 +393,26 @@ hst.imager compare 4gb.vhd 4gb.img
 Example of comparing 4GB vhd image file and 4GB gzip compressed img image file:
 ```
 hst.imager compare 4gb.vhd 4gb.img.gz
+```
+
+Example of comparing Master Boot Record partition 2 on a physical drive and an image file:
+```
+hst.imager compare \disk2\mbr\2 part2.img
+```
+
+Example of comparing Master Boot Record partition 2 on a 4gb image and an image file:
+```
+hst.imager compare 4gb.img\mbr\2 part2.img
+```
+
+Example of comparing Guid Partition Table partition 2 on a physical drive and an image file:
+```
+hst.imager compare \disk2\gpt\2 part2.img
+```
+
+Example of comparing Rigid Disk Block partition 2 on a physical drive and an image file:
+```
+hst.imager compare \disk2\rdb\2 part2.img
 ```
 
 ### Convert an image file

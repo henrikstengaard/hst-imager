@@ -45,6 +45,7 @@ Hst Imager Gui comes with following features:
 - Read information from physical drive or image file (supports writing .rar, .zip, .gz, .xz compressed image files).
 - Read disk to image file (supports writing to .zip, .gz, compressed image files).
 - Write image file to physical drive (supports reading from .rar, .zip, .gz, .xz compressed image files).
+- Compare physical drive and image file.
 - Convert image file between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.

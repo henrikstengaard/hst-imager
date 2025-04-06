@@ -1,8 +1,8 @@
-﻿namespace Hst.Imager.ConsoleApp
-{
-    using Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Commands;
 
-    public static class ArgsHelper
+namespace Hst.Imager.Core.PhysicalDrives
+{
+    public static class PhysicalDriveHelper
     {
         public static bool HasPhysicalDrivePaths(params string[] args)
         {

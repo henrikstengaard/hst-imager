@@ -17,12 +17,12 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
-import {formatBytes} from "../utils/Format";
 import FormControl from "@mui/material/FormControl";
 import FormLabel from "@mui/material/FormLabel";
 import RadioGroup from "@mui/material/RadioGroup";
 import FormControlLabel from "@mui/material/FormControlLabel";
 import Radio from "@mui/material/Radio";
+import {getPartPathOptions} from "../utils/MediaHelper";
 
 const unitOptions = [{
     title: 'GB',
@@ -42,7 +42,7 @@ const unitOptions = [{
     size: 1
 }]
 
-let getInfoTarget = '';
+let updateTarget = '';
 
 export default function Write() {
     const [openConfirm, setOpenConfirm] = React.useState(false);
@@ -67,7 +67,7 @@ export default function Write() {
     const writePartPathOption = writePartPathOptions.find(x => x.value === writePartPath)
     const formattedWritePartPath = writePartPathOption ? (writePartPath === 'custom'
         ? ` - Start offset ${startOffset}`
-        : ` ${writePartPathOption.title}`) : '';
+        : ` - ${writePartPathOption.title}`) : '';
 
     const unitOption = unitOptions.find(x => x.value === unit)
     const formattedSize = unitOption ? (writePartPath === 'custom'
@@ -95,7 +95,7 @@ export default function Write() {
     }, [backendApi])
 
     const getInfo = React.useCallback(async (target, path, type, byteswap) => {
-        getInfoTarget = target;
+        updateTarget = target;
         await backendApi.updateInfo({ path, sourceType: type, byteswap });
     }, [backendApi])
 
@@ -110,12 +110,12 @@ export default function Write() {
             .build();
 
         newConnection.on("Info", (media) => {
-            if (getInfoTarget === 'Source') {
+            if (updateTarget === 'Source') {
                 setSourceMedia(media);
                 return;
             }
 
-            if (getInfoTarget !== 'Destination') {
+            if (updateTarget !== 'Destination') {
                 return;
             }
 
@@ -133,77 +133,10 @@ export default function Write() {
                 return
             }
 
-            // build new write part path options                        
-            const newWritePartPathOptions = [{
-                title: `Disk (${formatBytes(media.diskSize)})`,
-                value: media.path
-            }]
+            const newPartPathOptions = getPartPathOptions(media);
 
-            const directoryPathSeparator = media.path.startsWith('/') ? '/' : '\\'
-
-            const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart');
-            if (gptPartitionTablePart) {
-                newWritePartPathOptions.push({
-                    title: `Guid Partition Table (${formatBytes(gptPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'gpt'
-                })
-
-                gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newWritePartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-
-            const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart');
-            if (mbrPartitionTablePart) {
-                newWritePartPathOptions.push({
-                    title: `Master Boot Record (${formatBytes(mbrPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'mbr'
-                })
-
-                mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newWritePartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-
-            const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart');
-            if (rdbPartitionTablePart) {
-                newWritePartPathOptions.push({
-                    title: `Rigid Disk Block (${formatBytes(rdbPartitionTablePart.size)})`,
-                    value: media.path + directoryPathSeparator + 'rdb'
-                })
-
-                rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-                    const type = part.partitionType === part.fileSystem
-                        ? part.partitionType
-                        : `${part.partitionType}, ${part.fileSystem}`;
-
-                    newWritePartPathOptions.push({
-                        title: `- Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                        value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
-                    })
-                })
-            }
-            newWritePartPathOptions.push({
-                title: 'Custom',
-                value: 'custom'
-            })
-
-            setWritePartPath(newWritePartPathOptions.length > 0 ? newWritePartPathOptions[0].value : null)
-            setWritePartPathOptions(newWritePartPathOptions)
+            setWritePartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null)
+            setWritePartPathOptions(newPartPathOptions)
         });
 
         newConnection.on('List', async (medias) => {
@@ -341,7 +274,7 @@ export default function Write() {
                             name="destination-type"
                             value={destinationType || ''}
                             onChange={async (event) => {
-                                getInfoTarget = 'Destination';
+                                updateTarget = 'Destination';
                                 const value = get(event, 'target.value');
                                 setDestinationType(value);
                                 setDestinationPath(null);

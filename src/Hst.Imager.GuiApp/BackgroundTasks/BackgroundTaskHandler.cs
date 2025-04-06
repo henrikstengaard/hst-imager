@@ -111,8 +111,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     resultHubConnection, errorHubConnection, physicalDriveManager, appState),
                 ReadBackgroundTask => CreateReadBackgroundTaskHandler(),
                 WriteBackgroundTask => CreateWriteBackgroundTaskHandler(),
-                CompareBackgroundTask => new CompareBackgroundTaskHandler(loggerFactory,
-                    progressHubConnection, physicalDriveManager, appState),
+                CompareBackgroundTask => CreateCompareBackgroundTaskHandler(),
                 FormatBackgroundTask => new FormatBackgroundTaskHandler(loggerFactory,
                     progressHubConnection, physicalDriveManager, appState),
                 _ => null
@@ -132,6 +131,16 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
         private IBackgroundTaskHandler CreateWriteBackgroundTaskHandler()
         {
             var handler = new WriteBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.ProgressUpdated += async (_, args) =>
+            {
+                await progressHubConnection.UpdateProgress(args.Progress);
+            };
+            return handler;
+        }
+        
+        private IBackgroundTaskHandler CreateCompareBackgroundTaskHandler()
+        {
+            var handler = new CompareBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
             handler.ProgressUpdated += async (_, args) =>
             {
                 await progressHubConnection.UpdateProgress(args.Progress);
