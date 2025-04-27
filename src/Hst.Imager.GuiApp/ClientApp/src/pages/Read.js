@@ -17,13 +17,10 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Radio from "@mui/material/Radio";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import {getPartPathOptions} from "../utils/MediaHelper";
+import IconButton from "@mui/material/IconButton";
+import Accordion from "../components/Accordion";
 
 const unitOptions = [{
     title: 'GB',
@@ -41,6 +38,14 @@ const unitOptions = [{
     title: 'Bytes',
     value: 'bytes',
     size: 1
+}]
+
+const typeOptions = [{
+    title: 'Image file',
+    value: 'ImageFile'
+}, {
+    title: 'Physical disk',
+    value: 'PhysicalDisk'
 }]
 
 export default function Read() {
@@ -61,6 +66,8 @@ export default function Read() {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
+
+    const sourceTypeFormatted = sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file';
 
     const readPartPathOption = readPartPathOptions.find(x => x.value === readPartPath)
     const formattedReadPartPath = readPartPathOption ? (readPartPath === 'custom'
@@ -92,8 +99,8 @@ export default function Read() {
         await getMedias()
     }, [backendApi])
 
-    const getInfo = React.useCallback(async (path, type, byteswap) => {
-        await backendApi.updateInfo({ path, sourceType: type, byteswap });
+    const getInfo = React.useCallback(async (path, byteswap) => {
+        await backendApi.updateInfo({ path, byteswap });
     }, [backendApi])
 
     React.useEffect(() => {
@@ -121,7 +128,7 @@ export default function Read() {
                 return
             }
 
-            const newPartPathOptions = getPartPathOptions(media);
+            const newPartPathOptions = getPartPathOptions({media});
             
             setReadPartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null)
             setReadPartPathOptions(newPartPathOptions)
@@ -137,7 +144,7 @@ export default function Read() {
 
             const newPath = get(newMedia, 'path');
             setSourcePath(newPath)
-            await getInfo(newPath, 'PhysicalDisk', byteswap)
+            await getInfo(newPath, byteswap)
         })
 
         newConnection.start();
@@ -155,8 +162,7 @@ export default function Read() {
     
     const handleRead = async () => {
         await backendApi.startRead({
-            title: `Reading disk '${sourceMedia.name}${formattedReadPartPath}' to file '${destinationPath}'${formattedSize}`,
-            readPhysicalDisk: sourceType === 'PhysicalDisk',
+            title: `Reading source ${sourceTypeFormatted} '${sourceMedia.name}${formattedReadPartPath}' to destination image file '${destinationPath}'${formattedSize}`,
             sourcePath: isNil(readPartPath) || readPartPath === 'custom' ? sourceMedia.path : readPartPath,
             destinationPath,
             startOffset,
@@ -190,12 +196,13 @@ export default function Read() {
         setSize(0)
         setUnit('bytes')
         setDestinationPath(null)
+        setStartOffset(0);
         setReadPartPath(null)
         setReadPartPathOptions([])
         setConnection(null)
     }
     
-    const readDisabled = isNil(sourceMedia) || isNil(destinationPath)
+    const readDisabled = isNil(sourceMedia) || isNil(destinationPath) || destinationPath === ''
 
     return (
         <Box>
@@ -203,43 +210,41 @@ export default function Read() {
                 id="confirm-read"
                 open={openConfirm}
                 title="Read"
-                description={`Do you want to read disk '${sourceMedia === null ? '' : sourceMedia.name}${formattedReadPartPath}' to file '${destinationPath}'${formattedSize}?`}
+                description={`Do you want to read source ${sourceTypeFormatted} '${sourceMedia === null ? '' : sourceMedia.name}${formattedReadPartPath}' to destination image file '${destinationPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Read"
-                description="Reads a disk or part of (partition or custom) to an image file."
+                description="Read an image file, a physical disk or part of to an image file."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
-                    <FormControl>
-                        <FormLabel id="source-type-label">Source</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-labelledby="source-type-label"
-                            name="source-type"
-                            value={sourceType || ''}
-                            onChange={async (event) => {
-                                const value = get(event, 'target.value');
-                                setSourceType(value);
-                                setSourcePath(null);
-                                setSourceMedia(null);
-                                setReadPartPath(null);
-                                setReadPartPathOptions([]);
-                                if (value === 'PhysicalDisk') {
-                                    getMedias();
-                                }
-                            }}
-                        >
-                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
-                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
-                        </RadioGroup>
-                    </FormControl>
+                    <SelectField
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="upload" style={{marginRight: '5px'}} /> Source
+                            </div>
+                        }
+                        id="source"
+                        emptyLabel="None available"
+                        value={sourceType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => {
+                            setSourceType(value);
+                            setSourcePath(null);
+                            setSourceMedia(null);
+                            setReadPartPath(null);
+                            setReadPartPathOptions([]);
+                            if (value === 'PhysicalDisk') {
+                                getMedias();
+                            }
+                        }}
+                    />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    {sourceType === 'ImageFile' && (
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                {sourceType === 'ImageFile' && (
+                    <Grid item xs={12} lg={6}>
                         <TextField
                             id="source-image-path"
                             label={
@@ -254,7 +259,7 @@ export default function Read() {
                                     title="Select source image file"
                                     onChange={async (path) => {
                                         setSourcePath(path)
-                                        await getInfo(path, 'ImageFile', byteswap)
+                                        await getInfo(path, byteswap)
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -275,89 +280,48 @@ export default function Read() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo(sourcePath, 'ImageFile', byteswap)
+                                console.log("get info")
+                                await getInfo(sourcePath, byteswap)
                             }}
                         />
-                    )}
-                    {sourceType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            label={
-                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Source disk
-                                </div>
-                            }
-                            id="source-disk"
-                            medias={medias || []}
-                            path={get(sourceMedia, 'path') || ''}
-                            onChange={async (media) => {
-                                setSourceMedia(media)
-                                await getInfo(media.path, 'PhysicalDisk', byteswap)
-                            }}
-                        />
-                    )}
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label={`Part of source ${sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to read from`}
-                        id="read-part-path"
-                        emptyLabel="None available"
-                        value={readPartPath || ''}
-                        options={readPartPathOptions || []}
-                        onChange={(value) => {
-                            setReadPartPath(value)
-                            setStartOffset(0);
-                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {readPartPath === 'custom' && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
-                        <Grid item xs={12} lg={6}>
-                            <TextField
-                                label="Start offset"
-                                id="start-offset"
-                                type={"number"}
-                                value={startOffset}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setStartOffset(event.target.value)}
-                            />
-                        </Grid>
                     </Grid>
-                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={"number"}
-                                value={size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
+                )}
+                {sourceType === 'PhysicalDisk' && (
+                    <Grid item xs={12} lg={6}>
+                        <Stack direction="row">
+                            <MediaSelectField
+                                label={
+                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                        <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Source physical disk
+                                    </div>
+                                }
+                                id="source-disk"
+                                medias={medias || []}
+                                path={get(sourceMedia, 'path') || ''}
+                                onChange={async (media) => {
+                                    setSourceMedia(media)
+                                    await getInfo(media.path, byteswap)
+                                }}
                             />
-                        </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
-                        </Grid>
+                            <IconButton
+                                aria-label="refresh"
+                                color="primary"
+                                disableFocusRipple={true}
+                                onClick={async () => handleUpdate()}
+                            >
+                                <FontAwesomeIcon icon="sync-alt" />
+                            </IconButton>
+                        </Stack>
                     </Grid>
-                </React.Fragment>
-            )}
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                )}
+            </Grid>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="destination-file"
                         label={
                             <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination file
+                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination image file
                             </div>
                         }
                         value={destinationPath || ''}
@@ -385,21 +349,100 @@ export default function Read() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap source sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (sourceMedia) {
-                                await getInfo(sourceMedia.path, checked)
-                            }
-                        }}
-                    />
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                <Grid item xs={12} lg={6}>
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> {`Part of source ${sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to read`}
+                                        </div>
+                                    }
+                                    id="read-part-path"
+                                    disabled={isNil(sourceMedia)}
+                                    emptyLabel="None available"
+                                    value={readPartPath || ''}
+                                    options={readPartPathOptions || []}
+                                    onChange={(value) => {
+                                        setReadPartPath(value)
+                                        setStartOffset(0);
+                                        setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                                        setUnit('bytes')
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="location-crosshairs" style={{marginRight: '5px'}} /> Start offset
+                                        </div>
+                                    }
+                                    id="start-offset"
+                                    disabled={readPartPath !== 'custom'}
+                                    type={"number"}
+                                    value={startOffset}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setStartOffset(event.target.value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={8} lg={4}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                        </div>
+                                    }
+                                    id="size"
+                                    disabled={readPartPath !== 'custom'}
+                                    type={"number"}
+                                    value={size}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSize(event.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={4} lg={2}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                        </div>
+                                    }
+                                    id="unit"
+                                    disabled={readPartPath !== 'custom'}
+                                    value={unit || ''}
+                                    options={unitOptions}
+                                    onChange={(value) => setUnit(value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap source sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (sourceMedia) {
+                                            await getInfo(sourceMedia.path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
+
+
+
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
@@ -411,12 +454,6 @@ export default function Read() {
                             >
                                 Cancel
                             </RedirectButton>
-                            <Button
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
                             <Button
                                 disabled={readDisabled}
                                 icon="upload"
@@ -432,10 +469,10 @@ export default function Read() {
                 <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
-                            Source disk
+                            Source {sourceTypeFormatted}
                         </Typography>
                         <Typography>
-                            Disk information read from source disk.
+                            Disk information read from source {sourceTypeFormatted}.
                         </Typography>
                         <Media media={sourceMedia}/>
                     </Grid>

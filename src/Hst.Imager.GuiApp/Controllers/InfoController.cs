@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.GuiApp.Controllers
+﻿using Hst.Imager.Core.PhysicalDrives;
+using Hst.Imager.GuiApp.Extensions;
+
+namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
     using BackgroundTasks;
@@ -13,27 +16,15 @@
 
     [ApiController]
     [Route("api/info")]
-    public class InfoController : ControllerBase
+    public class InfoController(
+        ILoggerFactory loggerFactory,
+        IHubContext<ResultHub> resultHubContext,
+        IHubContext<ErrorHub> errorHubContext,
+        IBackgroundTaskQueue backgroundTaskQueue,
+        WorkerService workerService,
+        AppState appState)
+        : ControllerBase
     {
-        private readonly ILoggerFactory loggerFactory;
-        private readonly IHubContext<ResultHub> resultHubContext;
-        private readonly IHubContext<ErrorHub> errorHubContext;
-        private readonly IBackgroundTaskQueue backgroundTaskQueue;
-        private readonly WorkerService workerService;
-        private readonly AppState appState;
-
-        public InfoController(ILoggerFactory loggerFactory, IHubContext<ResultHub> resultHubContext,
-            IHubContext<ErrorHub> errorHubContext, IBackgroundTaskQueue backgroundTaskQueue,
-            WorkerService workerService, AppState appState)
-        {
-            this.loggerFactory = loggerFactory;
-            this.resultHubContext = resultHubContext;
-            this.errorHubContext = errorHubContext;
-            this.backgroundTaskQueue = backgroundTaskQueue;
-            this.workerService = workerService;
-            this.appState = appState;
-        }
-
         [HttpPost]
         public async Task<IActionResult> Post(InfoRequest request)
         {
@@ -42,28 +33,28 @@
                 return BadRequest(ModelState);
             }
 
-            if (!workerService.IsRunning() && request.SourceType == InfoRequest.SourceTypeEnum.ImageFile)
+            var infoBackgroundTask = new InfoBackgroundTask
             {
-                var task = new ImageFileInfoBackgroundTask
-                {
-                    Path = request.Path,
-                    Byteswap = request.Byteswap
-                };
-                var handler =
-                    new ImageFileInfoBackgroundTaskHandler(loggerFactory, resultHubContext, errorHubContext, appState);
-                await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
+                Path = request.Path,
+                Byteswap = request.Byteswap
+            };
+
+            var hasPhysicalDrivePaths = PhysicalDriveHelper.HasPhysicalDrivePaths(request.Path);
+
+            if (!workerService.IsRunning() && !hasPhysicalDrivePaths)
+            {
+                var staticPhysicalDriveManager = new StaticPhysicalDriveManager([]);
+                var handler = new InfoBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager, appState);
+                handler.MediaInfoRead += async (_, args) => await resultHubContext.SendInfoResult(
+                    args.MediaInfo?.ToViewModel());
+                handler.ErrorOccurred += async (_, args) => await errorHubContext.SendError(args.Message);
+
+                await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, infoBackgroundTask);
 
                 return Ok();
             }
 
-            await workerService.EnqueueAsync(new[]
-            {
-                new InfoBackgroundTask
-                {
-                    Path = request.Path,
-                    Byteswap = request.Byteswap
-                }
-            });
+            await workerService.EnqueueAsync([infoBackgroundTask]);
 
             return Ok();
         }

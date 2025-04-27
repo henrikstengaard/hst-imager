@@ -36,7 +36,6 @@ namespace Hst.Imager.GuiApp.Controllers
             var readBackgroundTask = new ReadBackgroundTask
             {
                 Title = request.Title,
-                ReadPhysicalDisk = request.ReadPhysicalDisk,
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath,
                 StartOffset = request.StartOffset,
@@ -44,7 +43,10 @@ namespace Hst.Imager.GuiApp.Controllers
                 Byteswap = request.Byteswap
             };
 
-            if (!workerService.IsRunning() && !request.ReadPhysicalDisk)
+            var hasPhysicalDrivePaths = PhysicalDriveHelper.HasPhysicalDrivePaths(request.SourcePath,
+                request.DestinationPath);
+
+            if (!workerService.IsRunning() && !hasPhysicalDrivePaths)
             {
                 var staticPhysicalDriveManager = new StaticPhysicalDriveManager([]);
                 var handler = new ReadBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager,

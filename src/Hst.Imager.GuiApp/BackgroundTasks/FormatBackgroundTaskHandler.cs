@@ -2,35 +2,22 @@
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models.BackgroundTasks;
 using Hst.Imager.Core.Models;
-using Hst.Imager.GuiApp.Extensions;
 using Hst.Imager.GuiApp.Models;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System;
-using Microsoft.AspNetCore.SignalR.Client;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
-    public class FormatBackgroundTaskHandler : IBackgroundTaskHandler
+    public class FormatBackgroundTaskHandler(
+        ILoggerFactory loggerFactory,
+        IPhysicalDriveManager physicalDriveManager,
+        AppState appState)
+        : IBackgroundTaskHandler
     {
-        private readonly ILogger<FormatBackgroundTaskHandler> logger;
-        private readonly ILoggerFactory loggerFactory;
-        private readonly HubConnection progressHubConnection;
-        private readonly IPhysicalDriveManager physicalDriveManager;
-        private readonly AppState appState;
+        private readonly ILogger<FormatBackgroundTaskHandler> logger = loggerFactory.CreateLogger<FormatBackgroundTaskHandler>();
 
-        public FormatBackgroundTaskHandler(
-            ILoggerFactory loggerFactory,
-            HubConnection progressHubConnection,
-            IPhysicalDriveManager physicalDriveManager,
-            AppState appState)
-        {
-            this.logger = loggerFactory.CreateLogger<FormatBackgroundTaskHandler>();
-            this.loggerFactory = loggerFactory;
-            this.progressHubConnection = progressHubConnection;
-            this.physicalDriveManager = physicalDriveManager;
-            this.appState = appState;
-        }
+        public event EventHandler<ProgressEventArgs> ProgressUpdated;
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
@@ -41,29 +28,30 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 
             try
             {
-                await progressHubConnection.UpdateProgress(new Progress
+                OnProgressUpdated(new Progress
                 {
                     Title = formatBackgroundTask.Title,
                     IsComplete = false,
                     HasError = false,
                     ErrorMessage = null,
                     PercentComplete = 0
-                }, context.Token);
+                });
 
                 var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
                     appState.Settings.AllPhysicalDrives);
 
-                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var formatCommand = new FormatCommand(loggerFactory.CreateLogger<FormatCommand>(), loggerFactory,
                     commandHelper, physicalDrives,
-                    string.Concat(formatBackgroundTask.Path, formatBackgroundTask.Byteswap ? "+bs" : string.Empty),
+                    string.Concat(formatBackgroundTask.Byteswap ? "+bs:" : string.Empty, formatBackgroundTask.Path),
                     formatBackgroundTask.FormatType, formatBackgroundTask.FileSystem, 
                     formatBackgroundTask.FileSystemPath,
                     appState.AppDataPath,
-                    new Size(formatBackgroundTask.Size, Unit.Bytes));
-                formatCommand.DataProcessed += async (_, args) =>
+                    new Size(formatBackgroundTask.Size, Unit.Bytes),
+                    formatBackgroundTask.MaxPartitionSize);
+                formatCommand.DataProcessed += (_, args) =>
                 {
-                    await progressHubConnection.UpdateProgress(new Progress
+                    OnProgressUpdated(new Progress
                     {
                         Title = formatBackgroundTask.Title,
                         IsComplete = false,
@@ -74,42 +62,47 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                         BytesTotal = args.BytesTotal,
                         MillisecondsElapsed = args.PercentComplete > 0
                             ? (long)args.TimeElapsed.TotalMilliseconds
-                            : new long?(),
+                            : null,
                         MillisecondsRemaining = args.PercentComplete > 0
                             ? (long)args.TimeRemaining.TotalMilliseconds
-                            : new long?(),
+                            : null,
                         MillisecondsTotal = args.PercentComplete > 0
                             ? (long)args.TimeTotal.TotalMilliseconds
-                            : new long?()
-                    }, context.Token);
+                            : null
+                    });
                 };
 
                 var result = await formatCommand.Execute(context.Token);
 
                 await Task.Delay(500, context.Token);
 
-                await progressHubConnection.UpdateProgress(new Progress
+                OnProgressUpdated(new Progress
                 {
                     Title = formatBackgroundTask.Title,
                     IsComplete = true,
                     HasError = result.IsFaulted,
                     ErrorMessage = result.IsFaulted ? result.Error.Message : null,
                     PercentComplete = 100
-                }, context.Token);
+                });
             }
             catch (Exception e)
             {
                 logger.LogError(e, "An unexpected error occured while executing format command");
 
-                await progressHubConnection.UpdateProgress(new Progress
+                OnProgressUpdated(new Progress
                 {
                     Title = formatBackgroundTask.Title,
                     IsComplete = true,
                     HasError = true,
                     ErrorMessage = e.Message,
                     PercentComplete = 100
-                }, context.Token);
+                });
             }
+        }
+        
+        private void OnProgressUpdated(Progress progress)
+        {
+            ProgressUpdated?.Invoke(this, new ProgressEventArgs(progress));
         }
     }
 }

@@ -1,6 +1,4 @@
-﻿using System.Linq;
-using Hst.Imager.Core;
-using Hst.Imager.Core.PhysicalDrives;
+﻿using Hst.Imager.Core.PhysicalDrives;
 using Hst.Imager.GuiApp.BackgroundTasks;
 using Hst.Imager.GuiApp.Extensions;
 using Hst.Imager.GuiApp.Hubs;
@@ -37,7 +35,6 @@ namespace Hst.Imager.GuiApp.Controllers
             var writeBackgroundTask = new WriteBackgroundTask
             {
                 Title = request.Title,
-                WritePhysicalDisk = request.WritePhysicalDisk,
                 SourcePath = request.SourcePath,
                 DestinationPath = request.DestinationPath,
                 StartOffset = request.StartOffset,
@@ -45,11 +42,13 @@ namespace Hst.Imager.GuiApp.Controllers
                 Byteswap = request.Byteswap
             };
 
-            if (!workerService.IsRunning() && !request.WritePhysicalDisk)
+            var hasPhysicalDrivePaths = PhysicalDriveHelper.HasPhysicalDrivePaths(request.SourcePath,
+                request.DestinationPath);
+
+            if (!workerService.IsRunning() && !hasPhysicalDrivePaths)
             {
                 var staticPhysicalDriveManager = new StaticPhysicalDriveManager([]);
-                var handler = new WriteBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager,
-                    appState);
+                var handler = new WriteBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager, appState);
                 handler.ProgressUpdated += async (_, args) => await progressHubContext.SendProgress(args.Progress);
 
                 await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, writeBackgroundTask);

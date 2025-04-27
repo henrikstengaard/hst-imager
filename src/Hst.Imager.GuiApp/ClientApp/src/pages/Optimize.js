@@ -16,6 +16,8 @@ import Media from "../components/Media";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import Accordion from "../components/Accordion";
+import {formatBytes} from "../utils/Format";
 
 const unitOptions = [{
     title: 'GB',
@@ -35,19 +37,6 @@ const unitOptions = [{
     size: 1
 }]
 
-const formatPartitionTableType = (partitionTableType) => {
-    switch (partitionTableType) {
-        case 'GuidPartitionTable':
-            return 'Guid Partition Table'
-        case 'MasterBootRecord':
-            return 'Master Boot Record'
-        case 'RigidDiskBlock':
-            return 'Rigid Disk Block'
-        default:
-            return ''
-    }
-}
-
 export default function Optimize() {
     const [openConfirm, setOpenConfirm] = React.useState(false)
     const [media, setMedia] = React.useState(null)
@@ -55,14 +44,17 @@ export default function Optimize() {
     const [size, setSize] = React.useState(0)
     const [unit, setUnit] = React.useState('bytes')
     const [path, setPath] = React.useState(null)
-    const [prefillSize, setPrefillSize] = React.useState(null)
-    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
+    const [optimizePartPath, setOptimizePartPath] = React.useState(null)
+    const [optimizePartPathOptions, setOptimizePartPathOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
     const {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
-    
+
+    const unitOption = isNil(unit) ? null : unitOptions.find(x => x.value === unit)
+    const sizeFormatted = size > 0 ? ` to size ${size} ${get(unitOption, 'title')}` : '';
+
     React.useEffect(() => {
         if (connection) {
             return
@@ -73,45 +65,51 @@ export default function Optimize() {
             .withAutomaticReconnect()
             .build();
 
-        newConnection.on("Info", (media) => {
-            setMedia(media)
+        newConnection.on("Info", (newMedia) => {
+            setMedia(newMedia)
+
+            // default start offset, size and unit
+            setSize(0)
+            setUnit('bytes');
 
             // no media, reset
-            if (isNil(media)) {
-                setSize(0)
-                setUnit('bytes')
-                setPrefillSize(null)
-                setPrefillSizeOptions(null)
+            if (isNil(newMedia)) {
+                setOptimizePartPath(null)
+                setOptimizePartPathOptions([])
                 return
             }
 
-            // default set media disk size
-            setSize(media.diskSize)
-            setUnit('bytes')
+            const newPartPathOptions = [{
+                title: `Disk (${formatBytes(newMedia.diskSize)})`,
+                value: newMedia.diskSize
+            }]
 
-            // get and sort partition tables
-            const partitionTables = get(media, 'diskInfo.partitionTables') || []
-
-            // add select prefill option, if any partition tables are present                        
-            const newPrefillSizeOptions = []
-            if (partitionTables.length > 0) {
-                newPrefillSizeOptions.push({
-                    title: 'Select size to prefill',
-                    value: 'prefill'
+            const gptPartitionTablePart = get(newMedia, 'diskInfo.gptPartitionTablePart');
+            if (gptPartitionTablePart) {
+                newPartPathOptions.push({
+                    title: `Guid Partition Table (${formatBytes(gptPartitionTablePart.size)})`,
+                    value: gptPartitionTablePart.size
                 })
             }
 
-            // add partition tables as prefill size options
-            for (let i = 0; i < partitionTables.length; i++) {
-                const partitionTableSize = get(partitionTables[i], 'size') || 0
-                newPrefillSizeOptions.push({
-                    title: `${formatPartitionTableType(partitionTables[i].type)} (${partitionTableSize} bytes)`,
-                    value: partitionTableSize
+            const mbrPartitionTablePart = get(newMedia, 'diskInfo.mbrPartitionTablePart');
+            if (mbrPartitionTablePart) {
+                newPartPathOptions.push({
+                    title: `Master Boot Record (${formatBytes(mbrPartitionTablePart.size)})`,
+                    value: mbrPartitionTablePart.size
                 })
             }
 
-            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-            setPrefillSizeOptions(newPrefillSizeOptions)
+            const rdbPartitionTablePart = get(newMedia, 'diskInfo.rdbPartitionTablePart');
+            if (rdbPartitionTablePart) {
+                newPartPathOptions.push({
+                    title: `Rigid Disk Block (${formatBytes(rdbPartitionTablePart.size)})`,
+                    value: rdbPartitionTablePart.size
+                })
+            }
+
+            setOptimizePartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null)
+            setOptimizePartPathOptions(newPartPathOptions)
         });
 
         newConnection.start();
@@ -136,7 +134,8 @@ export default function Optimize() {
         await backendApi.startOptimize({
             title: `Optimizing image file '${path}'`,
             path,
-            size: (size * unitOption.size)
+            size: (size * unitOption.size),
+            byteswap
         });
     }
 
@@ -150,7 +149,8 @@ export default function Optimize() {
         setSize(0)
         setUnit('bytes')
         setPath(null)
-        setPrefillSizeOptions(null)
+        setOptimizePartPath(null)
+        setOptimizePartPathOptions([])
         setConnection(null)
     }
 
@@ -162,11 +162,6 @@ export default function Optimize() {
         await handleOptimize()
     }
 
-    const handleUpdate = async () => {
-        await getInfo(path, byteswap)
-    }
-    
-    const unitOption = isNil(unit) ? null : unitOptions.find(x => x.value === unit)
     const updateDisabled = isNil(path) || trim(path) === ''
     const optimizeDisabled = updateDisabled || isNil(media)
     
@@ -176,14 +171,14 @@ export default function Optimize() {
                 id="confirm-optimize"
                 open={openConfirm}
                 title="Optimize"
-                description={`Do you want to optimize image file '${path}' to size ${size} ${get(unitOption, 'title')}?`}
+                description={`Do you want to optimize image file '${path}'${sizeFormatted}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Optimize"
                 description="Optimize image file size."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="image-path"
@@ -218,61 +213,77 @@ export default function Optimize() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (media) {
-                                await getInfo(path, checked)
-                            }
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Prefill size to optimize"
-                        id="prefill-size"
-                        emptyLabel="None available"
-                        value={prefillSize || ''}
-                        options={prefillSizeOptions || []}
-                        onChange={(value) => {
-                            setSize(value)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" sx={{mt: 1}}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type="number"
-                        value={size}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="location-crosshairs" style={{marginRight: '5px'}} /> Image size to optimize
+                                        </div>
+                                    }
+                                    id="optimize-part-path"
+                                    disabled={isNil(media)}
+                                    emptyLabel="None available"
+                                    value={optimizePartPath || ''}
+                                    options={optimizePartPathOptions || []}
+                                    onChange={(value) => {
+                                        setOptimizePartPath(value)
+                                        setSize(value === 'custom' ? get(media, 'diskSize') || 0 : value)
+                                        setUnit('bytes')
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 1}}>
+                            <Grid item xs={8} lg={4}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                        </div>
+                                    }
+                                    id="size"
+                                    type="number"
+                                    disabled={isNil(media)}
+                                    value={size}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSize(event.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={4} lg={2}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                        </div>
+                                    }
+                                    id="unit"
+                                    disabled={isNil(media)}
+                                    value={unit || ''}
+                                    options={unitOptions}
+                                    onChange={(value) => setUnit(value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (media) {
+                                            await getInfo(path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
@@ -287,15 +298,8 @@ export default function Optimize() {
                                 Cancel
                             </RedirectButton>
                             <Button
-                                disabled={updateDisabled}
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
-                            <Button
                                 disabled={optimizeDisabled}
-                                icon="magic"
+                                icon="compress"
                                 onClick={async () => setOpenConfirm(true)}
                             >
                                 Optimize image

@@ -19,42 +19,42 @@ export default function Start() {
 
     const actions = [{
         title: 'Read',
-        description: 'Reads a disk or part of (partition or custom) to an image file.',
+        description: 'Read an image file, a physical disk or part of to an image file.',
         url: '/read',
         icon: 'upload'
     },{
         title: 'Write',
-        description: 'Write image file or part of (partition or custom) to a disk.',
+        description: 'Write an image file or part of to an image file or a physical disk.',
         url: '/write',
         icon: 'download'
     },{
         title: 'Info',
-        description: 'Display information about physical disk or image file.',
+        description: 'Display information about an image file or a physical disk.',
         url: '/info',
         icon: 'info'
     },{
         title: 'Convert',
-        description: 'Convert image file from one format to another.',
+        description: 'Convert an image file from one format to another.',
         url: '/convert',
         icon: 'exchange-alt'
     },{
         title: 'Compare',
-        description: 'Compare image file and physical disk.',
+        description: 'Compare an image file and a physical disk byte by byte.',
         url: '/compare',
         icon: 'check'
     },{
         title: 'Blank',
-        description: 'Create blank image file.',
+        description: 'Create a blank image file.',
         url: '/blank',
         icon: 'plus'
     },{
         title: 'Optimize',
-        description: 'Optimize image file.',
+        description: 'Optimize an image file.',
         url: '/optimize',
         icon: 'compress'
     }, {
         title: 'Format',
-        description: 'Format a disk.',
+        description: 'Format an image file or a physical disk.',
         url: '/format',
         icon: 'eraser'
     // },{

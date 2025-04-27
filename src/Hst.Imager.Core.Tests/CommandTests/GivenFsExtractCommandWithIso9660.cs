@@ -22,11 +22,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         {
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 srcPath, destPath, true, false, true);
 
@@ -67,11 +67,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         {
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "dir1"), destPath, true, false, true);
 
@@ -110,11 +110,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         {
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "file*.txt"), destPath, true, false, true);
 
@@ -154,11 +154,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         {
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "file1.txt"), destPath, true, false, true);
 
@@ -195,11 +195,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
         {
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "dir1", "file3.txt"), destPath, true, false, true);
 

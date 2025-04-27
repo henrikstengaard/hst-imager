@@ -24,7 +24,6 @@ public class Iso9660EntryIterator : IEntryIterator
     private readonly Stack<Entry> nextEntries;
     private bool isFirst;
     private Entry currentEntry;
-    private bool disposed;
 
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
@@ -42,22 +41,9 @@ public class Iso9660EntryIterator : IEntryIterator
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 
-    private void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            stream.Dispose();
-        }
-
-        disposed = true;
     }
-
-    public void Dispose() => Dispose(true);
 
     public string RootPath => rootPath;
     

@@ -243,8 +243,8 @@ namespace Hst.Imager.Core.Commands
 
             var name = Path.GetFileName(path);
             var fileMedia = IsVhd(path)
-                ? GetVhdMedia(path, name, byteSwap, false)
-                : await GetFileMedia(path, name, false, modifiers ?? ModifierEnum.None);
+                ? GetVhdMedia(path, name, false, byteSwap)
+                : await GetFileMedia(path, name, false, (ModifierEnum)modifiers);
 
             this.activeMedias.Add(fileMedia);
             return new Result<Media>(fileMedia);
@@ -260,8 +260,10 @@ namespace Hst.Imager.Core.Commands
         {
             var vhdDisk = VirtualDisk.OpenDisk(path, writeable ? FileAccess.ReadWrite : FileAccess.Read);
             vhdDisk.Content.Position = 0;
+
+            // sector stream is only used byteswapping disk media
             return new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                byteSwap, new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true));
+                byteSwap, byteSwap ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: true) : vhdDisk.Content);
         }
 
         private async Task<Media> ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
@@ -320,9 +322,10 @@ namespace Hst.Imager.Core.Commands
             }
 
             // raw stream
+            // sector stream is only used byteswapping disk media
             stream.Position = 0;
             return new Media(path, name, stream.Length, Media.MediaType.Raw, false,
-                new SectorStream(stream, byteSwap: byteSwap, leaveOpen: false), byteSwap);
+                byteSwap ? new SectorStream(stream, byteSwap: true, leaveOpen: false) : stream, byteSwap);
         }
 
         private async Task<Media> ResolveRarMedia(string path, string name, Stream stream, bool byteSwap)
@@ -459,16 +462,14 @@ namespace Hst.Imager.Core.Commands
                 throw new ArgumentNullException(path);
             }
 
-            if (!create && modifiers == null)
+            if (modifiers == null)
             {
-                var mediaResult = ResolveMedia(path);
-                if (mediaResult.IsFaulted)
+                var modifiersResult = ResolveModifiers(path);
+                if (modifiersResult.HasModifiers)
                 {
-                    return Task.FromResult(new Result<Media>(mediaResult.Error));
+                    path = modifiersResult.Path;
+                    modifiers = modifiersResult.Modifiers;
                 }
-
-                path = mediaResult.Value.MediaPath;
-                modifiers = mediaResult.Value.Modifiers;
             }
 
             var byteSwap = modifiers?.HasFlag(ModifierEnum.ByteSwap) ?? false;
@@ -495,7 +496,7 @@ namespace Hst.Imager.Core.Commands
                 if (!IsVhd(path))
                 {
                     var fileStream = CreateWriteableStream(path, true);
-                    var fileMedia = ResolveWritableFileMedia(path, name, fileStream);
+                    var fileMedia = ResolveWritableFileMedia(path, name, fileStream, byteSwap);
                     this.activeMedias.Add(fileMedia);
                     return Task.FromResult(new Result<Media>(fileMedia));
                 }
@@ -524,15 +525,12 @@ namespace Hst.Imager.Core.Commands
                 return Task.FromResult(new Result<Media>(fileMedia));
             }
 
-            var disk = VirtualDisk.OpenDisk(path, FileAccess.ReadWrite);
-            disk.Content.Position = 0;
-            var vhdMedia = new DiskMedia(path, name, disk.Capacity, Media.MediaType.Vhd, false,
-                disk, byteSwap, new SectorStream(disk.Content, leaveOpen: true, byteSwap: byteSwap));
+            var vhdMedia = GetVhdMedia(path, name, true, byteSwap);
             this.activeMedias.Add(vhdMedia);
             return Task.FromResult(new Result<Media>(vhdMedia));
         }
 
-        private Media ResolveWritableFileMedia(string path, string name, Stream stream)
+        private Media ResolveWritableFileMedia(string path, string name, Stream stream, bool byteSwap)
         {
             if (IsZip(path))
             {
@@ -544,6 +542,8 @@ namespace Hst.Imager.Core.Commands
                 }
                 var zipEntry = zipArchive.CreateEntry(filename);
                 var zipEntryStream = zipEntry.Open();
+
+                // create interceptor stream disabling seek, set length and overriding close to dispose zip archive
                 var interceptorStream = new InterceptorStream(zipEntryStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { }, closeHandler: () => zipArchive.Dispose());
                 return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
@@ -553,13 +553,17 @@ namespace Hst.Imager.Core.Commands
             if (IsGZip(path))
             {
                 var gZipStream = new GZipStream(stream, SharpCompress.Compressors.CompressionMode.Compress);
+
+                // create interceptor stream disabling seek and set length
                 var interceptorStream = new InterceptorStream(gZipStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { });
                 return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
                     interceptorStream, false);
             }
 
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, stream, false);
+            // sector stream has leave open set to false, so stream is disposed when media is closed
+            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, 
+                byteSwap ? new SectorStream(stream, leaveOpen: false, byteSwap: true) : stream, byteSwap);
         }
 
         public virtual async Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
@@ -965,6 +969,16 @@ namespace Hst.Imager.Core.Commands
             logger.LogDebug($"Resolving path '{path}'");
 
             var byteSwap = false;
+            
+            var modifiersResult = ResolveModifiers(path);
+
+            if (modifiersResult.HasModifiers)
+            {
+                path = modifiersResult.Path;
+                byteSwap = modifiersResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
+            }
+
+            logger.LogDebug($"Modifiers: '{modifiersResult.Modifiers}'");
 
             var diskPathMatch = Regexs.DiskPathRegex.Match(path);
             var physicalDrivePath = diskPathMatch.Success
@@ -996,17 +1010,8 @@ namespace Hst.Imager.Core.Commands
                             physicalDrivePath.Length - (firstSeparatorIndex + 1))
                         : string.Empty;
 
-                var modifiersResult = ResolveModifiers(fileSystemPath, directorySeparatorChar);
-
-                if (modifiersResult.HasModifiers)
-                {
-                    fileSystemPath = modifiersResult.Path;
-                    byteSwap = modifiersResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
-                }
-
                 logger.LogDebug($"Media Path: '{physicalDriveMediaPath}'");
                 logger.LogDebug($"File system Path: '{fileSystemPath}'");
-                logger.LogDebug($"Modifiers: '{modifiersResult.Modifiers}'");
 
                 return new Result<MediaResult>(new MediaResult
                 {
@@ -1035,17 +1040,8 @@ namespace Hst.Imager.Core.Commands
                             ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
                             : string.Empty;
 
-                    var modifiersResult = ResolveModifiers(fileSystemPath, directorySeparatorChar);
-
-                    if (modifiersResult.HasModifiers)
-                    {
-                        fileSystemPath = modifiersResult.Path;
-                        byteSwap = modifiersResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
-                    }
-
                     logger.LogDebug($"Media Path: '{mediaPath}'");
                     logger.LogDebug($"File system Path: '{fileSystemPath}'");
-                    logger.LogDebug($"Modifiers: '{modifiersResult.Modifiers}'");
 
                     return new Result<MediaResult>(new MediaResult
                     {
@@ -1073,57 +1069,40 @@ namespace Hst.Imager.Core.Commands
             return networkPathMatch.Success ? networkPathMatch.Groups[1].Value : null;
         }
 
-        public ModifierResult ResolveModifiers(string path, string directorySeparatorChar)
+        /// <summary>
+        /// Resolves modifiers in the start of the path, e.g. +bs:/path/to/file.
+        /// </summary>
+        /// <param name="path">Path to resolve modifiers from.</param>
+        /// <returns>Result</returns>
+        public ModifierResult ResolveModifiers(string path)
         {
-            if (path.Length == 0 || path[0] != '+')
+            if (path.Length == 0)
             {
                 return new ModifierResult
                 {
-                    Raw = string.Empty,
                     Path = path,
                     HasModifiers = false,
                     Modifiers = ModifierEnum.None
                 };
             }
 
-            var firstSeparatorIndex = path.IndexOf(directorySeparatorChar);
-            var modifiersText = firstSeparatorIndex == -1
-                ? path
-                : path.Substring(0, firstSeparatorIndex);
+            var modifierMatch = Regexs.ModifiersRegex.Match(path.ToLower());
 
-            var modifierMatches = Regexs.ModifiersRegex.Matches(modifiersText.ToLower());
-
-            if (modifierMatches.Count == 0)
+            if (!modifierMatch.Success)
             {
                 return new ModifierResult
                 {
-                    Raw = string.Empty,
                     Path = path,
                     HasModifiers = false,
                     Modifiers = ModifierEnum.None
                 };
-            }
-
-            var modifiersResult = ModifierEnum.None;
-
-            for (var i = 0; i < modifierMatches.Count; i++)
-            {
-                switch (modifierMatches[i].Value)
-                {
-                    case "+bs":
-                        modifiersResult |= ModifierEnum.ByteSwap;
-                        break;
-                }
             }
 
             return new ModifierResult
             {
-                Raw = modifiersText,
-                Path = firstSeparatorIndex == -1
-                    ? path.Substring(modifiersText.Length, path.Length - modifiersText.Length)
-                    : path.Substring(firstSeparatorIndex + 1, path.Length - firstSeparatorIndex - 1),
-                HasModifiers = modifiersResult != ModifierEnum.None,
-                Modifiers = modifiersResult
+                Path = path.Substring(modifierMatch.Value.Length),
+                HasModifiers = true,
+                Modifiers = ModifierEnum.ByteSwap
             };
         }
 
@@ -1146,6 +1125,11 @@ namespace Hst.Imager.Core.Commands
             }
 
             return $"+{string.Join("+", parts)}";
+        }
+
+        public void Dispose()
+        {
+            ClearActiveMedias();
         }
     }
 }

@@ -26,7 +26,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
     private readonly Stack<Entry> nextEntries;
     private bool isFirst;
     private Entry currentEntry;
-    private bool disposed;
     private readonly IDictionary<string, ZipArchiveEntry> zipEntryIndex;
 
     public ZipArchiveEntryIterator(Stream stream, string rootPath, ZipArchive zipArchive, bool recursive)
@@ -49,22 +48,9 @@ public class ZipArchiveEntryIterator : IEntryIterator
         this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
     }
 
-    private void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            stream.Dispose();
-        }
-
-        disposed = true;
     }
-
-    public void Dispose() => Dispose(true);
 
     public string RootPath => rootPath;
 

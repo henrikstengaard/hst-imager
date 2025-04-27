@@ -21,13 +21,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "file1.txt"), false);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -67,13 +67,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", "test.txt"), false);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -113,13 +113,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", "dir2", "file4.txt"), false);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -159,13 +159,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     zipPath, false);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -209,13 +209,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -253,13 +253,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     zipPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -303,13 +303,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -362,13 +362,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -419,13 +419,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -463,13 +463,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -513,13 +513,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -570,13 +570,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", "dir2"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -613,13 +613,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 await CreateZipWithDirectoriesAndFiles(zipPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(zipPath, "dir1", "dir2"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>

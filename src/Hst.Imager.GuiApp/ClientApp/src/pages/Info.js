@@ -8,11 +8,6 @@ import {get, isNil} from "lodash";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
 import Media from "../components/Media";
 import Stack from "@mui/material/Stack";
-import Radio from '@mui/material/Radio';
-import RadioGroup from '@mui/material/RadioGroup';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import FormControl from '@mui/material/FormControl';
-import FormLabel from '@mui/material/FormLabel';
 import RedirectButton from "../components/RedirectButton";
 import Button from "../components/Button";
 import MediaSelectField from "../components/MediaSelectField";
@@ -20,6 +15,17 @@ import {HubConnectionBuilder} from "@microsoft/signalr";
 import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import IconButton from "@mui/material/IconButton";
+import SelectField from "../components/SelectField";
+import Accordion from "../components/Accordion";
+
+const typeOptions = [{
+    title: 'Image file',
+    value: 'ImageFile'
+}, {
+    title: 'Physical disk',
+    value: 'PhysicalDisk'
+}]
 
 export default function Info() {
     const [loading, setLoading] = React.useState(false)
@@ -55,8 +61,8 @@ export default function Info() {
         return media === null ? medias[0] : media
     }, [])
 
-    const getInfo = React.useCallback(async (path, sourceType, byteswap) => {
-        await backendApi.updateInfo({ path, sourceType, byteswap });
+    const getInfo = React.useCallback(async (path, byteswap) => {
+        await backendApi.updateInfo({ path, byteswap });
     }, [backendApi])
     
     React.useEffect(() => {
@@ -69,8 +75,9 @@ export default function Info() {
             .withAutomaticReconnect()
             .build();
 
-        newConnection.on("Info", (media) => {
-            setMedia(media)
+        newConnection.on("Info", (newMedia) => {
+            console.log('info', newMedia)
+            setMedia(newMedia)
         });
 
         newConnection.on('List', async (medias) => {
@@ -82,7 +89,7 @@ export default function Info() {
 
             if (newMedia) {
                 setPath(newPath)
-                await getInfo(newPath, sourceType, byteswap)
+                await getInfo(newPath, byteswap)
             }
         })
 
@@ -118,38 +125,34 @@ export default function Info() {
         <React.Fragment>
             <Title
                 text="Info"
-                description="Display information about physical disk or image file."
+                description="Display information about an image file or a physical disk."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
-                    <FormControl>
-                        <FormLabel id="source-type-label">Source</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-labelledby="source-type-label"
-                            name="source-type"
-                            value={sourceType || ''}
-                            onChange={async (event) => {
-                                const value = get(event, 'target.value')
-                                
-                                setSourceType(value)
-                                setPath(null)
-                                setMedia(null)
-
-                                if (value === 'PhysicalDisk') {
-                                    getMedias();
-                                }
-                            }}
-                        >
-                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
-                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
-                        </RadioGroup>
-                    </FormControl>
+                    <SelectField
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="upload" style={{marginRight: '5px'}} /> Source
+                            </div>
+                        }
+                        id="source"
+                        emptyLabel="None available"
+                        value={sourceType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => {
+                            setSourceType(value);
+                            setPath(null);
+                            setMedia(null);
+                            if (value === 'PhysicalDisk') {
+                                getMedias();
+                            }
+                        }}
+                    />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    {sourceType === 'ImageFile' && (
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                {sourceType === 'ImageFile' && (
+                    <Grid item xs={12} lg={6}>
                         <TextField
                             id="image-path"
                             label={
@@ -164,7 +167,7 @@ export default function Info() {
                                     title="Select image file"
                                     onChange={async (path) => {
                                         setPath(path)
-                                        await getInfo(path, sourceType, byteswap)
+                                        await getInfo(path, byteswap)
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -185,42 +188,60 @@ export default function Info() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo(path, sourceType, byteswap)
+                                await getInfo(path, byteswap)
                             }}
                         />
-                    )}
-                    {sourceType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            id="media-path"
-                            label={
-                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Physical disk
-                                </div>
-                            }
-                            loading={loading}
-                            medias={medias || []}
-                            path={sourceType === 'PhysicalDisk' ? path || '' : null}
-                            onChange={async (media) => {
-                                setPath(media.path)
-                                await getInfo(media.path, sourceType, byteswap)
-                            }}
-                        />
-                    )}
                     </Grid>
+                )}
+                {sourceType === 'PhysicalDisk' && (
+                    <Grid item xs={12} lg={6}>
+                        <Stack direction="row">
+                            <MediaSelectField
+                                id="media-path"
+                                label={
+                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                        <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Physical disk
+                                    </div>
+                                }
+                                loading={loading}
+                                medias={medias || []}
+                                path={sourceType === 'PhysicalDisk' ? path || '' : null}
+                                onChange={async (media) => {
+                                    setPath(media.path)
+                                    await getInfo(media.path, byteswap)
+                                }}
+                            />
+                            <IconButton
+                                aria-label="refresh"
+                                color="primary"
+                                disableFocusRipple={true}
+                                onClick={async () => handleUpdate()}
+                            >
+                                <FontAwesomeIcon icon="sync-alt" />
+                            </IconButton>
+                        </Stack>
+                    </Grid>
+                )}
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (media) {
-                                await getInfo(path, sourceType, checked)
-                            }
-                        }}
-                    />
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                <Grid item xs={12} lg={6}>
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (media) {
+                                            await getInfo(path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
@@ -235,15 +256,9 @@ export default function Info() {
                                 Cancel
                             </RedirectButton>
                             <Button
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
-                            <Button
                                 disabled={getInfoDisabled}
                                 icon="info"
-                                onClick={async () => await getInfo(path, sourceType, byteswap)}
+                                onClick={async () => await getInfo(path, byteswap)}
                             >
                                 Get info
                             </Button>
@@ -255,10 +270,10 @@ export default function Info() {
                 <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
-                            Source {(sourceType === 'ImageFile' ? 'file' : 'disk')}
+                            Source {(sourceType === 'ImageFile' ? 'image file' : 'physical disk')}
                         </Typography>
                         <Typography>
-                            Disk information read from source {(sourceType === 'ImageFile' ? 'file' : 'disk')}.
+                            Disk information read from source {(sourceType === 'ImageFile' ? 'image file' : 'physical disk')}.
                         </Typography>
                         <Media media={media}/>
                     </Grid>

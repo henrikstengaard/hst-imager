@@ -23,13 +23,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -71,13 +71,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -119,13 +119,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -167,13 +167,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -218,13 +218,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -263,13 +263,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -325,13 +325,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -386,13 +386,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -444,13 +444,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -493,13 +493,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -552,13 +552,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -611,13 +611,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -659,13 +659,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 CreateIso9660WithDirectoriesAndFiles(isoPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>

@@ -132,14 +132,11 @@ namespace Hst.Imager.Core.Helpers
 
         public static async Task<RigidDiskBlock> ReadRigidDiskBlockFromMedia(Media media)
         {
-            if (media is DiskMedia diskMedia)
-            {
-                diskMedia.Disk.Content.Position = 0;
-                return await RigidDiskBlockReader.Read(diskMedia.Disk.Content);
-            }
+            var stream = GetStreamFromMedia(media);
 
-            media.Stream.Position = 0;
-            return await RigidDiskBlockReader.Read(media.Stream);
+            stream.Position = 0;
+            
+            return await RigidDiskBlockReader.Read(stream);
         }
 
         public static async Task WriteRigidDiskBlockToMedia(Media media, RigidDiskBlock rigidDiskBlock)
@@ -175,7 +172,7 @@ namespace Hst.Imager.Core.Helpers
 
             if (media is DiskMedia diskMedia)
             {
-                return diskMedia.Disk.Content;
+                return diskMedia.Stream;
             }
 
             return media.Stream;

@@ -29,13 +29,14 @@ namespace Hst.Imager.Core.Commands
         private string fileSystemPath;
         private readonly string outputPath;
         private readonly Size size;
+        private readonly long maxPartitionSize;
 
         private int commandsExecuted;
         private int maxCommandsToExecute;
 
-        private const long WorkbenchPartitionSize = 1000000000;
-        private const long WorkPartitionSize = 64000000000;
-        private const long PiStormBootPartitionSize = 1000000000;
+        private const long MaxRdbPartitionSize = 137438953472; // [Math]::Pow(2, 37)
+        private const long WorkbenchPartitionSize = 1073741824; // [Math]::Pow(2, 30)
+        private const long PiStormBootPartitionSize = 1073741824; // [Math]::Pow(2, 30)
 
         private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
 
@@ -54,9 +55,10 @@ namespace Hst.Imager.Core.Commands
         /// <param name="fileSystemPath">Path to asset file used to format.</param>
         /// <param name="outputPath">Output path to write file system from media.</param>
         /// <param name="size"></param>
+        /// <param name="maxPartitionSize">Max partition size for RDB and PiStorm.</param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string outputPath, Size size)
+            string fileSystemPath, string outputPath, Size size, long maxPartitionSize)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -68,6 +70,7 @@ namespace Hst.Imager.Core.Commands
             this.fileSystemPath = fileSystemPath;
             this.outputPath = outputPath;
             this.size = size;
+            this.maxPartitionSize = maxPartitionSize;
             this.commandsExecuted = 0;
             this.maxCommandsToExecute = 0;
         }
@@ -105,6 +108,12 @@ namespace Hst.Imager.Core.Commands
                 {
                     return new Result(new Error($"Assert path '{fileSystemPath}' not found"));
                 }
+            }
+
+            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+                maxPartitionSize > MaxRdbPartitionSize)
+            {
+                return new Result(new Error($"Max partition size must be less than {MaxRdbPartitionSize} bytes"));
             }
 
             // set file system path to pfs3aio url, if pfs3 or pds3 file system and file system path is not set
@@ -437,7 +446,7 @@ namespace Hst.Imager.Core.Commands
                 : VersionStringReader.Parse(versionString);
 
             var maxWorkbenchPartitionSize = WorkbenchPartitionSize;
-            var maxWorkPartitionSize = WorkPartitionSize;
+            var maxWorkPartitionSize = maxPartitionSize == 0 ? MaxRdbPartitionSize : maxPartitionSize;
             
             // change dos type to dos3, if fast file system doesn't support dos7 (version 46.13 or higher)
             if (amigaVersion != null &&
@@ -455,7 +464,7 @@ namespace Hst.Imager.Core.Commands
                  dosType.Equals("DOS7", StringComparison.OrdinalIgnoreCase)) &&
                 HasFastFileSystem2GbLimit(amigaVersion.Version))
             {
-                OnInformationMessage($"File system '{fileSystemPath}' with v{amigaVersion.Version}.{amigaVersion.Revision} doesn't partitions larger than 2GB. Max partition size is changed to 2GB, use FastFileSystem from AmigaOS 3.1.4 or newer for larger partitions!");
+                OnInformationMessage($"File system '{fileSystemPath}' with v{amigaVersion.Version}.{amigaVersion.Revision} doesn't support partitions larger than 2GB. Max partition size is changed to 2GB, use FastFileSystem from AmigaOS 3.1.4 or newer for larger partitions!");
 
                 maxWorkbenchPartitionSize = 500.MB();
                 maxWorkPartitionSize = 2.GB();

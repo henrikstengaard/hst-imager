@@ -83,7 +83,7 @@ export default function Blank() {
                 text="Blank"
                 description="Create blank image file."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="image-path"
@@ -110,7 +110,7 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={8} lg={4}>
                     <TextField
                         label="Size"
@@ -137,7 +137,7 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <CheckboxField
                         id="compatible-size"

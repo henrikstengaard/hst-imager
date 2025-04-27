@@ -2,12 +2,13 @@ import React, {Fragment} from "react";
 import TableContainer from "@mui/material/TableContainer";
 import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
-import {TableHead} from "@mui/material";
+import {TableHead, Tooltip} from "@mui/material";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import TableBody from "@mui/material/TableBody";
 import Stack from "@mui/material/Stack";
 import {formatBytes} from "../utils/Format";
+import {isNil} from "lodash";
 
 export default function DiskOverview(props) {
     const {
@@ -64,22 +65,23 @@ export default function DiskOverview(props) {
                                 width={`${(part.percentSize === 0 ? 1 : part.percentSize)}%`}
                                 style={{height: '100%'}}
                             >
-                                <div style={{
-                                    border: `4px solid ${partColor(part)}`,
-                                    backgroundColor: `${partColor(part)}20`,
-                                    width: '100%',
-                                    // minWidth: part.type === 'amiga' ? '100px' : null,
-                                    height: '100%',
-                                    minHeight: '60px',
-                                    textAlign: 'center'
-                                }}>
-                                    {part.type === 'amiga' && (
-                                        <Stack direction="column">
-                                            <span>{part.name}</span>
-                                            <span>{formatBytes(part.size)}</span>
-                                        </Stack>
-                                    )}
-                                </div>
+                                <Tooltip arrow={true} title={`${isNil(part.partitionNumber) ? '' : '#' + part.partitionNumber + ', '}${part.partType === 'PartitionTable' ? formatPartitionTableType(part.partitionTableType) : part.partitionType}, ${formatBytes(part.size)}`}>
+                                    <div style={{
+                                        border: `4px solid ${partColor(part)}`,
+                                        backgroundColor: `${partColor(part)}20`,
+                                        width: '100%',
+                                        height: '100%',
+                                        minHeight: '60px',
+                                        textAlign: 'center'
+                                    }}>
+                                        {part.type === 'amiga' && (
+                                            <Stack direction="column">
+                                                <span>{part.name}</span>
+                                                <span>{formatBytes(part.size)}</span>
+                                            </Stack>
+                                        )}
+                                    </div>
+                                </Tooltip>
                             </td>
                         )}
                     )}

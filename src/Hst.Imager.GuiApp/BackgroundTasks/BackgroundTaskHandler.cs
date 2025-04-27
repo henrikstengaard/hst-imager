@@ -107,15 +107,27 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             {
                 ListBackgroundTask => new ListBackgroundTaskHandler(loggerFactory, resultHubConnection,
                     errorHubConnection, physicalDriveManager, appState),
-                InfoBackgroundTask => new InfoBackgroundTaskHandler(loggerFactory,
-                    resultHubConnection, errorHubConnection, physicalDriveManager, appState),
+                InfoBackgroundTask => CreateInfoBackgroundTaskHandler(),
                 ReadBackgroundTask => CreateReadBackgroundTaskHandler(),
                 WriteBackgroundTask => CreateWriteBackgroundTaskHandler(),
                 CompareBackgroundTask => CreateCompareBackgroundTaskHandler(),
-                FormatBackgroundTask => new FormatBackgroundTaskHandler(loggerFactory,
-                    progressHubConnection, physicalDriveManager, appState),
+                FormatBackgroundTask => CreateFormatBackgroundTaskHandler(),
                 _ => null
             };
+        }
+
+        private IBackgroundTaskHandler CreateInfoBackgroundTaskHandler()
+        {
+            var handler = new InfoBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.MediaInfoRead += async (_, args) =>
+            {
+                await resultHubConnection.SendInfoResult(args.MediaInfo?.ToViewModel());
+            };
+            handler.ErrorOccurred += async (_, args) =>
+            {
+                await errorHubConnection.UpdateError(args.Message);
+            };
+            return handler;
         }
 
         private IBackgroundTaskHandler CreateReadBackgroundTaskHandler()
@@ -141,6 +153,16 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
         private IBackgroundTaskHandler CreateCompareBackgroundTaskHandler()
         {
             var handler = new CompareBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.ProgressUpdated += async (_, args) =>
+            {
+                await progressHubConnection.UpdateProgress(args.Progress);
+            };
+            return handler;
+        }
+        
+        private IBackgroundTaskHandler CreateFormatBackgroundTaskHandler()
+        {
+            var handler = new FormatBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
             handler.ProgressUpdated += async (_, args) =>
             {
                 await progressHubConnection.UpdateProgress(args.Progress);

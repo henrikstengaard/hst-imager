@@ -6,8 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using PathComponents;
+using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
@@ -23,7 +23,6 @@ public class AmigaVolumeEntryIterator : IEntryIterator
     private readonly Stack<Entry> nextEntries;
     private bool isFirst;
     private Entry currentEntry;
-    private bool disposed;
 
     public AmigaVolumeEntryIterator(Stream stream, string rootPath, IFileSystemVolume fileSystemVolume, bool recursive)
     {
@@ -38,22 +37,9 @@ public class AmigaVolumeEntryIterator : IEntryIterator
         this.isFirst = true;
     }
 
-    private void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            stream.Dispose();
-        }
-
-        disposed = true;
     }
-
-    public void Dispose() => Dispose(true);
 
     public string RootPath => rootPath;
 

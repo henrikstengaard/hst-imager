@@ -150,17 +150,28 @@ namespace Hst.Imager.Core.Tests
             {
                 return await base.GetReadableFileMedia(path, modifiers);
             }
+            
+            //
+            var byteSwap = false;
+            var modifierResult = ResolveModifiers(path);
+            if (modifierResult.HasModifiers)
+            {
+                path = modifierResult.Path;
+                byteSwap = modifierResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
+            }
 
             var stream = testMedia.Stream;
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
                 return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
-                    Media.MediaType.Raw, false, stream, false));
+                    Media.MediaType.Raw, false, stream, byteSwap));
             }
-            
-            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
-            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, Media.MediaType.Vhd, 
-                false, disk, false, stream));        
+
+            stream.Position = 0;
+            var vhdDisk = new DiscUtils.Vhd.Disk(stream, Ownership.None);
+            var sectorStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true);
+            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, Media.MediaType.Vhd, 
+                false, vhdDisk, byteSwap, sectorStream));        
         }
 
         public override Task<Result<Media>> GetWritableFileMedia(string path, ModifierEnum? modifiers = null, long? size = null, bool create = false)
@@ -192,12 +203,22 @@ namespace Hst.Imager.Core.Tests
                 return Task.FromResult(new Result<Media>(new Error("Vhd requires size")));
             }
 
+            //
+            var byteSwap = false;
+            var modifierResult = ResolveModifiers(path);
+            if (modifierResult.HasModifiers)
+            {
+                path = modifierResult.Path;
+                byteSwap = modifierResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
+            }
+
             var stream = testMedia.Stream;
-            var disk = create || testMedia.Stream.Length == 0
+            var vhdDisk = create || testMedia.Stream.Length == 0
                 ? DiscUtils.Vhd.Disk.InitializeDynamic(testMedia.Stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
-            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, 
-                Media.MediaType.Vhd, false, disk, false, stream)));
+            var sectorStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true);
+            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, 
+                Media.MediaType.Vhd, false, vhdDisk, false, sectorStream)));
         }
 
         public override Stream CreateWriteableStream(string path, bool create)

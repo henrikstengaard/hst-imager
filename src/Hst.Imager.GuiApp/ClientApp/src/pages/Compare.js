@@ -18,6 +18,8 @@ import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
 import {getPartPathOptions} from "../utils/MediaHelper";
+import Accordion from "../components/Accordion";
+import IconButton from "@mui/material/IconButton";
 
 const unitOptions = [{
     title: 'GB',
@@ -71,6 +73,9 @@ export default function Verify() {
         backendApi
     } = React.useContext(BackendApiStateContext)
 
+    const sourceTypeFormatted = sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file';
+    const destinationTypeFormatted = destinationType === 'PhysicalDisk' ? 'physical disk' : 'image file';
+
     const srcPartPathOption = srcPartPathOptions.find(x => x.value === srcPartPath)
     const formattedSrcPartPath = srcPartPathOption ? (srcPartPath === 'custom'
         ? ` - Start offset ${srcStartOffset}`
@@ -106,9 +111,9 @@ export default function Verify() {
         await getMedias()
     }, [backendApi])
 
-    const getInfo = React.useCallback(async (target, path, type, byteswap) => {
+    const getInfo = React.useCallback(async (target, path, byteswap) => {
         updateTarget = target;
-        await backendApi.updateInfo({ path, sourceType: type, byteswap });
+        await backendApi.updateInfo({ path, byteswap });
     }, [backendApi])
 
     React.useEffect(() => {
@@ -147,7 +152,7 @@ export default function Verify() {
                 return
             }
 
-            const newPartPathOptions = getPartPathOptions(media);
+            const newPartPathOptions = getPartPathOptions({media});
 
             switch(updateTarget)
             {
@@ -183,13 +188,16 @@ export default function Verify() {
                 case 'Source':
                     setSourcePath(newPath)
                     setSourceMedia(newMedia)
-                    await getInfo('Source', newPath, sourceType, byteswap)
+                    await getInfo('Source', newPath, byteswap)
                     break
                 case 'Destination':
                     setDestinationPath(newPath)
                     setDestinationMedia(newMedia)
-                    await getInfo('Destination', newPath, destinationType, false)
+                    await getInfo('Destination', newPath, false)
                     break
+                default:
+                    console.error('Invalid update target', updateTarget)
+                    break;
             }
         })
 
@@ -204,13 +212,11 @@ export default function Verify() {
 
             connection.stop();
         };
-    }, [backendBaseUrl, byteswap, connection, getInfo, getMedia, setConnection, sourcePath, sourceType])
+    }, [backendBaseUrl, byteswap, connection, destinationType, getInfo, getMedia, setConnection, sourcePath, sourceType])
     
     const handleCompare = async () => {
         await backendApi.startCompare({
-            title: `Comparing source ${(sourceType === 'ImageFile' ? 'file' : 'disk')} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}${formattedSrcPartPath}' and destination ${(destinationType === 'ImageFile' ? 'file' : 'disk')}  '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedDestPartPath}'${formattedSize}`,
-            comparePhysicalDisk: sourceType === 'PhysicalDisk' || destinationType === 'PhysicalDisk',
-            sourceType,
+            title: `Comparing source ${sourceTypeFormatted} '${isNil(sourceMedia) ? sourcePath : sourceMedia.name}${formattedSrcPartPath}' and destination ${destinationTypeFormatted} '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedDestPartPath}'${formattedSize}`,
             sourcePath: isNil(srcPartPath) || srcPartPath === 'custom' ? sourcePath : srcPartPath,
             sourceStartOffset: srcStartOffset,
             destinationPath: isNil(destPartPath) || destPartPath === 'custom' ? destinationPath : destPartPath,
@@ -267,12 +273,16 @@ export default function Verify() {
             />
             <Title
                 text="Compare"
-                description="Compare an image file or physical disk against an image file comparing them byte by byte."
+                description="Compare an image file and a physical disk byte by byte."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
-                        label="Source"
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="upload" style={{marginRight: '5px'}} /> Source
+                            </div>
+                        }
                         id="source"
                         emptyLabel="None available"
                         value={sourceType || 'ImageFile' }
@@ -299,7 +309,7 @@ export default function Verify() {
                             id="source-image-path"
                             label={
                                 <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Source file
+                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Source image file
                                 </div>
                             }
                             value={sourcePath || ''}
@@ -312,7 +322,7 @@ export default function Verify() {
                                             setSourceMedia(null)
                                         }
                                         setSourcePath(path);
-                                        await getInfo('Source', path, sourceType, byteswap);
+                                        await getInfo('Source', path, byteswap);
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -333,65 +343,52 @@ export default function Verify() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo('Source', sourcePath, sourceType, byteswap)
+                                await getInfo('Source', sourcePath, byteswap)
                             }}
                         />
                     )}
                     {sourceType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            id="source-media-path"
-                            label={
-                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Source disk
-                                </div>
-                            }
-                            medias={medias || []}
-                            path={sourcePath || ''}
-                            onChange={async (media) => {
-                                setSourcePath(media)
-                                setSourceMedia(media.path)
-                                await getInfo('Source', media.path, sourceType, byteswap)
-                            }}                        
-                        />
+                        <Grid item xs={12} lg={12}>
+                            <Stack direction="row">
+                                <MediaSelectField
+                                    id="source-media-path"
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Source physical disk
+                                        </div>
+                                    }
+                                    medias={medias || []}
+                                    path={sourcePath || ''}
+                                    onChange={async (media) => {
+                                        setSourcePath(media)
+                                        setSourceMedia(media.path)
+                                        await getInfo('Source', media.path, byteswap)
+                                    }}                        
+                                />
+                                <IconButton
+                                    aria-label="refresh"
+                                    color="primary"
+                                    disableFocusRipple={true}
+                                    onClick={async () => {
+                                        updateTarget = 'Source';
+                                        handleUpdate()
+                                    }}
+                                >
+                                    <FontAwesomeIcon icon="sync-alt" />
+                                </IconButton>
+                            </Stack>
+                        </Grid>
                     )}
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
-                        label={`Part of source ${sourceType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to compare against`}
-                        id="read-part-path"
-                        emptyLabel="None available"
-                        value={srcPartPath || ''}
-                        options={srcPartPathOptions || []}
-                        onChange={(value) => {
-                            setSrcPartPath(value)
-                            setSrcStartOffset(0);
-                            console.log(sourceMedia);
-                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
-                            setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {srcPartPath === 'custom' && (
-                    <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
-                        <Grid item xs={12} lg={6}>
-                            <TextField
-                                label="Source start offset"
-                                id="src-start-offset"
-                                type={"number"}
-                                value={srcStartOffset}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSrcStartOffset(event.target.value)}
-                            />
-                        </Grid>
-                    </Grid>
-            )}
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
-                <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label="Destination"
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="download" style={{marginRight: '5px'}} /> Destination
+                            </div>
+                        }
                         id="destination"
                         emptyLabel="None available"
                         value={destinationType || 'ImageFile' }
@@ -417,7 +414,7 @@ export default function Verify() {
                             id="destination-path"
                             label={
                                 <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination file
+                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination image file
                                 </div>
                             }
                             value={destinationPath || ''}
@@ -430,7 +427,7 @@ export default function Verify() {
                                         setDestStartOffset(0);
                                         setDestPartPath(null);
                                         setDestPartPathOptions([])
-                                        await getInfo('Destination', path, 'ImageFile', byteswap)
+                                        await getInfo('Destination', path, byteswap)
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -449,98 +446,171 @@ export default function Verify() {
                                 setDestStartOffset(0);
                                 setDestPartPath(null);
                                 setDestPartPathOptions([])
-                                await getInfo('Destination', destinationPath, 'ImageFile', byteswap)
+                                await getInfo('Destination', destinationPath, byteswap)
                             }}
                         />
                     )}
                     {destinationType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            id="destination-media-path"
-                            label={
-                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination disk
-                                </div>
-                            }
-                            medias={medias || []}
-                            path={destinationPath || ''}
-                            onChange={async (media) => {
-                                setDestinationPath(media.path)
-                                setDestinationMedia(null)
-                                await getInfo('Destination', media.path, destinationType, false)
-                            }}
-                        />
+                        <Grid item xs={12} lg={12}>
+                            <Stack direction="row">
+                                <MediaSelectField
+                                    id="destination-media-path"
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination physical disk
+                                        </div>
+                                    }
+                                    medias={medias || []}
+                                    path={destinationPath || ''}
+                                    onChange={async (media) => {
+                                        setDestinationPath(media.path)
+                                        setDestinationMedia(null)
+                                        await getInfo('Destination', media.path, false)
+                                    }}
+                                />
+                                    <IconButton
+                                        aria-label="refresh"
+                                        color="primary"
+                                        disableFocusRipple={true}
+                                        onClick={async () => {
+                                            updateTarget = 'Destination';
+                                            handleUpdate()
+                                        }}
+                                    >
+                                    <FontAwesomeIcon icon="sync-alt" />
+                                </IconButton>
+                            </Stack>
+                        </Grid>
                     )}
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label={`Part of destination image file to compare against`}
-                        id="dest-part-path"
-                        emptyLabel="None available"
-                        value={destPartPath || ''}
-                        options={destPartPathOptions || []}
-                        onChange={(value) => {
-                            setDestPartPath(value);
-                            setDestStartOffset(0);
-                            //setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
-                            //setUnit('bytes')
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {destPartPath === 'custom' && (
-                <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
-                    <Grid item xs={12} lg={6}>
-                        <TextField
-                            label="Destination start offset"
-                            id="dest-start-offset"
-                            type={"number"}
-                            value={destStartOffset}
-                            inputProps={{min: 0, style: { textAlign: 'right' }}}
-                            onChange={(event) => setDestStartOffset(event.target.value)}
-                        />
-                    </Grid>
-                </Grid>
-            )}
-            {(srcPartPath === 'custom' || destPartPath === 'custom') && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={"number"}
-                                value={size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
-                            />
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> {`Part of source ${sourceTypeFormatted} to compare`}
+                                        </div>
+                                    }
+                                    id="read-part-path"
+                                    disabled={isNil(sourceMedia)}
+                                    emptyLabel="None available"
+                                    value={srcPartPath || ''}
+                                    options={srcPartPathOptions || []}
+                                    onChange={(value) => {
+                                        setSrcPartPath(value)
+                                        setSrcStartOffset(0);
+                                        console.log(sourceMedia);
+                                        setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
+                                        setUnit('bytes')
+                                    }}
+                                />
+                            </Grid>
                         </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="location-crosshairs" style={{marginRight: '5px'}} /> Source start offset
+                                        </div>
+                                    }
+                                    id="src-start-offset"
+                                    disabled={srcPartPath !== 'custom'}
+                                    type={"number"}
+                                    value={srcStartOffset}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSrcStartOffset(event.target.value)}
+                                />
+                            </Grid>
                         </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap source sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (sourceMedia) {
-                                await getInfo('Source', sourceMedia.path, sourceType, checked)
-                            }
-                        }}
-                    />
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> {`Part of destination ${destinationTypeFormatted} to compare`}
+                                        </div>
+                                    }
+                                    id="dest-part-path"
+                                    disabled={isNil(destinationMedia)}
+                                    emptyLabel="None available"
+                                    value={destPartPath || ''}
+                                    options={destPartPathOptions || []}
+                                    onChange={(value) => {
+                                        setDestPartPath(value);
+                                        setDestStartOffset(0);
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="location-crosshairs" style={{marginRight: '5px'}} /> Destination start offset
+                                        </div>
+                                    }
+                                    id="dest-start-offset"
+                                    disabled={destPartPath !== 'custom'}
+                                    type={"number"}
+                                    value={destStartOffset}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setDestStartOffset(event.target.value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={8} lg={4}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                        </div>
+                                    }
+                                    id="size"
+                                    disabled={(srcPartPath !== 'custom' && destPartPath !== 'custom')}
+                                    type={"number"}
+                                    value={size}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSize(event.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={4} lg={2}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                        </div>
+                                    }
+                                    id="unit"
+                                    disabled={(srcPartPath !== 'custom' && destPartPath !== 'custom')}
+                                    value={unit || ''}
+                                    options={unitOptions}
+                                    onChange={(value) => setUnit(value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap source sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (sourceMedia) {
+                                            await getInfo('Source', sourceMedia.path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
@@ -554,12 +624,6 @@ export default function Verify() {
                             >
                                 Cancel
                             </RedirectButton>
-                            <Button
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
                             <Button
                                 disabled={compareDisabled}
                                 icon="check"

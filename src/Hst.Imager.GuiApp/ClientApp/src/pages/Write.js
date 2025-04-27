@@ -17,12 +17,9 @@ import Typography from "@mui/material/Typography";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Radio from "@mui/material/Radio";
 import {getPartPathOptions} from "../utils/MediaHelper";
+import IconButton from "@mui/material/IconButton";
+import Accordion from "../components/Accordion";
 
 const unitOptions = [{
     title: 'GB',
@@ -40,6 +37,14 @@ const unitOptions = [{
     title: 'Bytes',
     value: 'bytes',
     size: 1
+}]
+
+const typeOptions = [{
+    title: 'Image file',
+    value: 'ImageFile'
+}, {
+    title: 'Physical disk',
+    value: 'PhysicalDisk'
 }]
 
 let updateTarget = '';
@@ -63,6 +68,8 @@ export default function Write() {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
+
+    const destinationTypeFormatted = destinationType === 'PhysicalDisk' ? 'physical disk' : 'image file';
 
     const writePartPathOption = writePartPathOptions.find(x => x.value === writePartPath)
     const formattedWritePartPath = writePartPathOption ? (writePartPath === 'custom'
@@ -94,9 +101,9 @@ export default function Write() {
         await getMedias()
     }, [backendApi])
 
-    const getInfo = React.useCallback(async (target, path, type, byteswap) => {
+    const getInfo = React.useCallback(async (target, path, byteswap) => {
         updateTarget = target;
-        await backendApi.updateInfo({ path, sourceType: type, byteswap });
+        await backendApi.updateInfo({ path, byteswap });
     }, [backendApi])
 
     React.useEffect(() => {
@@ -118,7 +125,7 @@ export default function Write() {
             if (updateTarget !== 'Destination') {
                 return;
             }
-
+            
             setDestinationMedia(media)
 
             // default start offset, size and unit set to largest writable size
@@ -133,7 +140,7 @@ export default function Write() {
                 return
             }
 
-            const newPartPathOptions = getPartPathOptions(media);
+            const newPartPathOptions = getPartPathOptions({media});
 
             setWritePartPath(newPartPathOptions.length > 0 ? newPartPathOptions[0].value : null)
             setWritePartPathOptions(newPartPathOptions)
@@ -149,7 +156,7 @@ export default function Write() {
 
             const newPath = get(newMedia, 'path');
             setDestinationPath(newPath)
-            await getInfo('Destination', newPath, 'PhysicalDisk', byteswap)
+            await getInfo('Destination', newPath, byteswap)
         })
 
         newConnection.start();
@@ -167,8 +174,7 @@ export default function Write() {
     
     const handleWrite = async () => {
         await backendApi.startWrite({
-            title: `Writing file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}`,
-            writePhysicalDisk: destinationType === 'PhysicalDisk',
+            title: `Writing source image file '${sourcePath}' to destination ${destinationTypeFormatted} '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedWritePartPath}'${formattedSize}`,
             sourcePath,
             destinationPath: isNil(writePartPath) || writePartPath === 'custom' ? destinationMedia.path : writePartPath,
             startOffset,
@@ -215,12 +221,12 @@ export default function Write() {
                 id="confirm-write"
                 open={openConfirm}
                 title="Write"
-                description={`Do you want to write file '${sourcePath}' to disk '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}?`}
+                description={`Do you want to write source image file '${sourcePath}' to destination ${destinationTypeFormatted} '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Write"
-                description="Write image file or part of (partition or custom) to a disk."
+                description="Write an image file or part of to an image file or a physical disk."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
@@ -228,7 +234,7 @@ export default function Write() {
                         id="source-path"
                         label={
                             <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Source file
+                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Source image file
                             </div>
                         }
                         value={sourcePath || ''}
@@ -238,7 +244,7 @@ export default function Write() {
                                 title="Select source image file"
                                 onChange={async (path) => {
                                     setSourcePath(path)
-                                    await getInfo('Source', path, 'ImageFile', byteswap)
+                                    await getInfo('Source', path, byteswap)
                                 }}
                                 fileFilters = {[{
                                     name: 'Hard disk image files',
@@ -250,6 +256,7 @@ export default function Write() {
                             />
                         }
                         onChange={(event) => {
+                            updateTarget = 'Source';
                             setSourcePath(get(event, 'target.value'))
                             if (sourceMedia) {
                                 setSourceMedia(null)
@@ -259,42 +266,40 @@ export default function Write() {
                             if (event.key !== 'Enter') {
                                 return
                             }
-                            await getInfo('Source', sourcePath, 'ImageFile', byteswap)
+                            await getInfo('Source', sourcePath, byteswap)
                         }}
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
-                    <FormControl>
-                        <FormLabel id="destination-type-label">Destination</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-labelledby="destination-type-label"
-                            name="destination-type"
-                            value={destinationType || ''}
-                            onChange={async (event) => {
-                                updateTarget = 'Destination';
-                                const value = get(event, 'target.value');
-                                setDestinationType(value);
-                                setDestinationPath(null);
-                                setDestinationMedia(null);
-                                setWritePartPath(null);
-                                setWritePartPathOptions([]);
-                                if (value === 'PhysicalDisk') {
-                                    getMedias();
-                                }
-                            }}
-                        >
-                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
-                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
-                        </RadioGroup>
-                    </FormControl>
+                    <SelectField
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="download" style={{marginRight: '5px'}} /> Destination
+                            </div>
+                        }
+                        id="destination"
+                        emptyLabel="None available"
+                        value={destinationType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => {
+                            updateTarget = 'Destination';
+                            setDestinationType(value);
+                            setDestinationPath(null);
+                            setDestinationMedia(null);
+                            setWritePartPath(null);
+                            setWritePartPathOptions([]);
+                            if (value === 'PhysicalDisk') {
+                                getMedias();
+                            }
+                        }}
+                    />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
-                <Grid item xs={12} lg={6}>
-                    {destinationType === 'ImageFile' && (
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                {destinationType === 'ImageFile' && (
+                    <Grid item xs={12} lg={6}>
                         <TextField
                             id="destination-image-path"
                             label={
@@ -309,7 +314,7 @@ export default function Write() {
                                     title="Select destination image file"
                                     onChange={async (path) => {
                                         setDestinationPath(path)
-                                        await getInfo('Destination', path, 'ImageFile', byteswap)
+                                        await getInfo('Destination', path, byteswap)
                                     }}
                                     fileFilters = {[{
                                         name: 'Hard disk image files',
@@ -330,94 +335,129 @@ export default function Write() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                await getInfo('Destination', destinationPath, 'ImageFile', byteswap)
+                                await getInfo('Destination', destinationPath, byteswap)
                             }}
                         />
-                    )}
-                    {destinationType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            label={
-                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination disk
-                                </div>
-                            }
-                            id="destination-disk"
-                            medias={medias || []}
-                            path={get(destinationMedia, 'path') || ''}
-                            onChange={(media) => setDestinationMedia(media)}
-                        />
-                    )}
-                </Grid>
+                    </Grid>
+                )}
+                {destinationType === 'PhysicalDisk' && (
+                    <Grid item xs={12} lg={6}>
+                        <Stack direction="row">
+                            <MediaSelectField
+                                label={
+                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                        <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination physical disk
+                                    </div>
+                                }
+                                id="destination-disk"
+                                medias={medias || []}
+                                path={get(destinationMedia, 'path') || ''}
+                                onChange={(media) => setDestinationMedia(media)}
+                            />
+                            <IconButton
+                                aria-label="refresh"
+                                color="primary"
+                                disableFocusRipple={true}
+                                onClick={async () => handleUpdate()}
+                            >
+                                <FontAwesomeIcon icon="sync-alt" />
+                            </IconButton>
+                        </Stack>
+                    </Grid>
+                )}
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label={`Part of destination ${destinationType === 'PhysicalDisk' ? 'physical disk' : 'image file'} to write to`}
-                        id="write-part-path"
-                        emptyLabel="None available"
-                        value={writePartPath || ''}
-                        options={writePartPathOptions || []}
-                        onChange={(value) => {
-                            setWritePartPath(value)
-                            setStartOffset(0);
-                            setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
-                            setUnit('bytes')
-                        }}
-                    />
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={6}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> {`Part of destination ${destinationTypeFormatted} to write`}
+                                        </div>
+                                    }
+                                    id="write-part-path"
+                                    disabled={isNil(destinationMedia)}
+                                    emptyLabel="None available"
+                                    value={writePartPath || ''}
+                                    options={writePartPathOptions || []}
+                                    onChange={(value) => {
+                                        setWritePartPath(value)
+                                        setStartOffset(0);
+                                        setSize(value === 'custom' ? get(destinationMedia, 'diskSize') || 0 : 0)
+                                        setUnit('bytes')
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                            <Grid item xs={12} lg={6}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="location-crosshairs" style={{marginRight: '5px'}} /> Start offset
+                                        </div>
+                                    }
+                                    id="start-offset"
+                                    disabled={writePartPath !== 'custom'}
+                                    type={"number"}
+                                    value={startOffset}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setStartOffset(event.target.value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0}}>
+                            <Grid item xs={8} lg={4}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                        </div>
+                                    }
+                                    id="size"
+                                    disabled={writePartPath !== 'custom'}
+                                    type={"number"}
+                                    value={size}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSize(event.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={4} lg={2}>
+                                <SelectField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                        </div>
+                                    }
+                                    id="unit"
+                                    disabled={writePartPath !== 'custom'}
+                                    value={unit || ''}
+                                    options={unitOptions}
+                                    onChange={(value) => setUnit(value)}
+                                />
+                            </Grid>
+                        </Grid>
+                        <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap source sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (sourceMedia) {
+                                            await getInfo('Source', sourceMedia.path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
-            {writePartPath === 'custom' && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
-                        <Grid item xs={12} lg={6}>
-                            <TextField
-                                label="Start offset"
-                                id="start-offset"
-                                type={"number"}
-                                value={startOffset}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setStartOffset(event.target.value)}
-                            />
-                        </Grid>
-                    </Grid>
-                    <Grid container spacing={1} direction="row" sx={{mt: 0}}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={"number"}
-                                value={size}
-                                inputProps={{min: 0, style: { textAlign: 'right' }}}
-                                onChange={(event) => setSize(event.target.value)}
-                            />
-                        </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
-                        </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
-            <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap source sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (sourceMedia) {
-                                await getInfo('Source', sourceMedia.path, 'ImageFile', checked)
-                            }
-                        }}
-                    />
-                </Grid>
-            </Grid>
+
             <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
@@ -429,12 +469,6 @@ export default function Write() {
                             >
                                 Cancel
                             </RedirectButton>
-                            <Button
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
                             <Button
                                 disabled={writeDisabled}
                                 icon="download"
@@ -450,10 +484,10 @@ export default function Write() {
                 <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
-                            Source file
+                            Source image file
                         </Typography>
                         <Typography>
-                            Disk information read from source file.
+                            Disk information read from source image file.
                         </Typography>                        
                         <Media media={sourceMedia}/>
                     </Grid>

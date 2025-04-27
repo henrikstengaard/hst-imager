@@ -2,11 +2,6 @@ import React from 'react'
 import Box from "@mui/material/Box";
 import Title from "../components/Title";
 import Grid from "@mui/material/Grid";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import RadioGroup from "@mui/material/RadioGroup";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import Radio from "@mui/material/Radio";
 import TextField from "../components/TextField";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import BrowseOpenDialog from "../components/BrowseOpenDialog";
@@ -22,6 +17,8 @@ import Media from "../components/Media";
 import CheckboxField from "../components/CheckboxField";
 import SelectField from "../components/SelectField";
 import { BackendApiStateContext } from "../components/BackendApiContext";
+import IconButton from "@mui/material/IconButton";
+import Accordion from "../components/Accordion";
 
 const unitOptions = [{
     title: 'GB',
@@ -40,6 +37,14 @@ const unitOptions = [{
     value: 'bytes',
     size: 1
 }];
+
+const typeOptions = [{
+    title: 'Image file',
+    value: 'ImageFile'
+}, {
+    title: 'Physical disk',
+    value: 'PhysicalDisk'
+}]
 
 const formatTypeOptions = [{
     title: "Master Boot Record",
@@ -80,6 +85,32 @@ const rdbFileSystemOptions = [{
     value: "dos7"
 }];
 
+const maxPartitionSizeOptions = [{
+    title: "128 GB",
+    value: "137438953472" // math.pow(2, 37)
+}, {
+    title: "64 GB",
+    value: "68719476736" // math.pow(2, 36)
+}, {
+    title: "32 GB",
+    value: "34359738368" // math.pow(2, 35)
+}, {
+    title: "16 GB",
+    value: "17179869184" // math.pow(2, 34)
+}, {
+    title: "8 GB",
+    value: "8589934592" // math.pow(2, 33)
+}, {
+    title: "4 GB",
+    value: "4294967296" // math.pow(2, 32)
+}, {
+    title: "2 GB",
+    value: "2147483648" // math.pow(2, 31)
+}, {
+    title: "1 GB",
+    value: "1073741824" // math.pow(2, 30)
+}];
+
 const pfs3AioUrl = 'https://aminet.net/disk/misc/pfs3aio.lha';
 
 export default function Format() {
@@ -94,11 +125,9 @@ export default function Format() {
     const [formatType, setFormatType] = React.useState('mbr')
     const [fileSystem, setFileSystem] = React.useState('fat32')
     const [fileSystemOptions, setFileSystemOptions] = React.useState(basicFileSystemOptions)
-    const [formatAll, setFormatAll] = React.useState(true);
+    const [maxPartitionSize, setMaxPartitionSize] = React.useState(maxPartitionSizeOptions[0].value)
     const [downloadPfs3Aio, setDownloadPfs3Aio] = React.useState(true);
     const [fileSystemPath, setFileSystemPath] = React.useState(pfs3AioUrl);
-    const [prefillSize, setPrefillSize] = React.useState(null)
-    const [prefillSizeOptions, setPrefillSizeOptions] = React.useState([])
     const [connection, setConnection] = React.useState(null);
     const {
         backendBaseUrl,
@@ -107,7 +136,7 @@ export default function Format() {
 
     const unitOption = unitOptions.find(x => x.value === unit)
     const sizeFormatted = size === 0 ? '' : `, size ${size} ${unitOption.title}`
-    const sourceTypeFormatted = sourceType === 'ImageFile' ? 'image file' : 'disk'
+    const sourceTypeFormatted = sourceType === 'ImageFile' ? 'image file' : 'physical disk'
     const formatTypeOption = formatTypeOptions.find(x => x.value === formatType)
     const fileSystemOption = fileSystemOptions.find(x => x.value === fileSystem)
 
@@ -146,26 +175,9 @@ export default function Format() {
             .build();
 
         newConnection.on("Info", (newMedia) => {
-            setMedia(newMedia)
-
-            // no media, reset
-            if (isNil(newMedia)) {
-                setPrefillSize(null)
-                setPrefillSizeOptions([])
-                return
-            }
-
-            // add select prefill option with disk size                       
-            const newPrefillSizeOptions = [{
-                title: 'Select size to prefill',
-                value: 'prefill'
-            }, {
-                title: `Disk (${newMedia.diskSize} bytes)`,
-                value: newMedia.diskSize
-            }]
-
-            setPrefillSize(newPrefillSizeOptions.length > 0 ? 'prefill' : null)
-            setPrefillSizeOptions(newPrefillSizeOptions)
+            setMedia(newMedia);
+            setUnit('bytes');
+            setSize(isNil(newMedia) ? 0 : newMedia.diskSize);
         });
 
         newConnection.on('List', async (medias) => {
@@ -229,6 +241,7 @@ export default function Format() {
             fileSystem,
             fileSystemPath,
             size: (size * unitOption.size),
+            maxPartitionSize,
             byteswap
         });
     }
@@ -255,8 +268,6 @@ export default function Format() {
         setSourceType('ImageFile')
         setFormatType('mbr')
         setFileSystem('fat32')
-        setPrefillSize(null)
-        setPrefillSizeOptions([])
         setConnection(null)
         setDownloadPfs3Aio(true)
         setFileSystemPath(pfs3AioUrl)
@@ -283,33 +294,32 @@ export default function Format() {
             />
             <Title
                 text="Format"
-                description="Format a disk."
+                description="Format an image file or a physical disk."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
-                    <FormControl>
-                        <FormLabel id="source-type-label">Source</FormLabel>
-                        <RadioGroup
-                            row
-                            aria-labelledby="source-type-label"
-                            name="source-type"
-                            value={sourceType || ''}
-                            onChange={(event) => handleSourceTypeChange(event.target.value)}
-                        >
-                            <FormControlLabel value="ImageFile" control={<Radio />} label="Image file" />
-                            <FormControlLabel value="PhysicalDisk" control={<Radio />} label="Physical disk" />
-                        </RadioGroup>
-                    </FormControl>
+                    <SelectField
+                        label={
+                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                <FontAwesomeIcon icon="upload" style={{marginRight: '5px'}} /> Source
+                            </div>
+                        }
+                        id="source"
+                        emptyLabel="None available"
+                        value={sourceType || 'ImageFile' }
+                        options={typeOptions}
+                        onChange={(value) => handleSourceTypeChange(value)}
+                    />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
-                <Grid item xs={12} lg={6}>
-                    {sourceType === 'ImageFile' && (
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
+                {sourceType === 'ImageFile' && (
+                    <Grid item xs={12} lg={6}>
                         <TextField
                             id="image-path"
                             label={
                                 <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
-                                    <FontAwesomeIcon icon="file" style={{ marginRight: '5px' }} /> Source file
+                                    <FontAwesomeIcon icon="file" style={{ marginRight: '5px' }} /> Source image file
                                 </div>
                             }
                             value={path || ''}
@@ -334,6 +344,8 @@ export default function Format() {
                                 setPath(get(event, 'target.value'))
                                 if (media) {
                                     setMedia(null)
+                                    setSize(0);
+                                    setUnit('bytes');
                                 }
                             }}
                             onKeyDown={async (event) => {
@@ -343,30 +355,46 @@ export default function Format() {
                                 await getInfo(path, sourceType, byteswap)
                             }}
                         />
-                    )}
-                    {sourceType === 'PhysicalDisk' && (
-                        <MediaSelectField
-                            id="source-media-path"
-                            label={
-                                <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
-                                    <FontAwesomeIcon icon="hdd" style={{ marginRight: '5px' }} /> Source disk
-                                </div>
-                            }
-                            medias={medias || []}
-                            path={path || ''}
-                            onChange={async (media) => {
-                                setPath(media)
-                                setMedia(media.path)
-                                await getInfo(media.path, sourceType, byteswap)
-                            }}
-                        />
-                    )}
-                </Grid>
+                    </Grid>
+                )}
+                {sourceType === 'PhysicalDisk' && (
+                    <Grid item xs={12} lg={6}>
+                        <Stack direction="row">
+                            <MediaSelectField
+                                id="source-media-path"
+                                label={
+                                    <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
+                                        <FontAwesomeIcon icon="hdd" style={{ marginRight: '5px' }} /> Source physical disk
+                                    </div>
+                                }
+                                medias={medias || []}
+                                path={path || ''}
+                                onChange={async (media) => {
+                                    setPath(media)
+                                    setMedia(media.path)
+                                    await getInfo(media.path, sourceType, byteswap)
+                                }}
+                            />
+                            <IconButton
+                                aria-label="refresh"
+                                color="primary"
+                                disableFocusRipple={true}
+                                onClick={async () => handleUpdate()}
+                            >
+                                <FontAwesomeIcon icon="sync-alt" />
+                            </IconButton>
+                        </Stack>
+                    </Grid>
+                )}
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
-                        label="Format type"
+                        label={
+                            <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
+                                <FontAwesomeIcon icon="sliders" style={{ marginRight: '5px' }} /> Format type
+                            </div>
+                        }
                         id="format-type"
                         emptyLabel="None available"
                         value={formatType || ''}
@@ -394,10 +422,14 @@ export default function Format() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
-                        label="File system"
+                        label={
+                            <div style={{ display: 'flex', alignItems: 'center', verticalAlign: 'bottom' }}>
+                                <FontAwesomeIcon icon="sliders" style={{ marginRight: '5px' }} /> File system
+                            </div>
+                        }
                         id="file-system"
                         emptyLabel="None available"
                         value={fileSystem || ''}
@@ -429,7 +461,7 @@ export default function Format() {
                         </Grid>
                     )}
                     {(!downloadPfs3Aio && (fileSystem === 'pds3' || fileSystem === 'pfs3' || fileSystem === 'dos3' || fileSystem === 'dos7')) && (
-                        <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
                             <Grid item xs={12} lg={6}>
                                 <TextField
                                     id="file-system-path"
@@ -462,83 +494,87 @@ export default function Format() {
                 </React.Fragment>
             )}
             <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (media) {
-                                await getInfo(media.path, sourceType, checked)
-                            }
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="format-all"
-                        label={`Format entire ${sourceTypeFormatted}`}
-                        value={formatAll}
-                        onChange={(checked) => {
-                            setSize(checked ? 0 : get(media, 'diskSize') || 0)
-                            setUnit('bytes')
-                            setFormatAll(checked)
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            {!formatAll && (
-                <React.Fragment>
-                    <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 1 }}>
-                        <Grid item xs={12} lg={6}>
-                            <SelectField
-                                label="Prefill size to format"
-                                id="prefill-size"
-                                emptyLabel="None available"
-                                disabled={formatAll}
-                                value={prefillSize || ''}
-                                options={prefillSizeOptions || []}
-                                onChange={(value) => {
-                                    setSize(value)
-                                    setUnit('bytes')
-                                }}
-                            />
-                        </Grid>
-                    </Grid>
-                    <Grid container spacing={1} direction="row" sx={{ mt: 1 }}>
-                        <Grid item xs={8} lg={4}>
-                            <TextField
-                                label="Size"
-                                id="size"
-                                type={formatAll ? "text" : "number"}
-                                disabled={formatAll}
-                                value={formatAll ? '' : size}
-                                inputProps={{ min: 0, style: { textAlign: 'right' } }}
-                                onChange={(event) => setSize(event.target.value)}
-                                onKeyDown={async (event) => {
-                                    if (event.key !== 'Enter') {
-                                        return
+                <Grid item xs={12} lg={6}>
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                            <Grid item xs={12} lg={4}>
+                                <TextField
+                                    label={
+                                        <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                            <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                        </div>
                                     }
-                                    setOpenConfirm(true)
-                                }}
-                            />
+                                    disabled={isNil(media)}
+                                    id="size"
+                                    type={"number"}
+                                    value={size}
+                                    inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                    onChange={(event) => setSize(event.target.value)}
+                                />
+                            </Grid>
+                            <Grid item xs={12} lg={4}>
+                                <Stack direction="row">
+                                    <SelectField
+                                        label={
+                                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                                <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                            </div>
+                                        }
+                                        disabled={isNil(media)}
+                                        id="unit"
+                                        value={unit || ''}
+                                        options={unitOptions}
+                                        onChange={(value) => setUnit(value)}
+                                    />
+                                    <IconButton
+                                        aria-label="reset"
+                                        color="primary"
+                                        disabled={isNil(media)}
+                                        disableFocusRipple={true}
+                                        onClick={async () => {
+                                            setSize(isNil(media) ? 0 : media.diskSize);
+                                            setUnit('bytes');
+                                        }}
+                                    >
+                                        <FontAwesomeIcon icon="rotate-left" />
+                                    </IconButton>
+                                </Stack>
+                            </Grid>
                         </Grid>
-                        <Grid item xs={4} lg={2}>
-                            <SelectField
-                                label="Unit"
-                                id="unit"
-                                disabled={formatAll}
-                                value={unit || ''}
-                                options={unitOptions}
-                                onChange={(value) => setUnit(value)}
-                            />
+                        {(formatType === 'rdb' || formatType === 'pistorm') && (
+                            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
+                                <Grid item xs={12} lg={12}>
+                                    <SelectField
+                                        label="Max partition size"
+                                        id="max-partition-size"
+                                        emptyLabel="None available"
+                                        value={maxPartitionSize || ''}
+                                        options={maxPartitionSizeOptions || []}
+                                        onChange={(value) => {
+                                            setMaxPartitionSize(value);
+                                        }}
+                                    />
+                                </Grid>
+                            </Grid>
+                        )}
+                        <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (media) {
+                                            await getInfo(media.path, sourceType, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
                         </Grid>
-                    </Grid>
-                </React.Fragment>
-            )}
+                    </Accordion>
+                </Grid>
+            </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">
@@ -550,12 +586,6 @@ export default function Format() {
                             >
                                 Cancel
                             </RedirectButton>
-                            <Button
-                                icon="sync-alt"
-                                onClick={async () => handleUpdate()}
-                            >
-                                Update
-                            </Button>
                             <Button
                                 disabled={formatDisabled}
                                 icon="check"

@@ -31,15 +31,14 @@
                 var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
                         appState.Settings.AllPhysicalDrives);
 
-                var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var verifyCommand =
                     new CompareCommand(
                         loggerFactory.CreateLogger<CompareCommand>(),
                         commandHelper,
                         physicalDrives,
-                        compareBackgroundTask.Byteswap
-                            ? System.IO.Path.Combine(compareBackgroundTask.SourcePath, "+bs")
-                            : compareBackgroundTask.SourcePath,
+                        string.Concat(compareBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
+                            compareBackgroundTask.SourcePath),
                         compareBackgroundTask.SourceStartOffset,
                         compareBackgroundTask.DestinationPath,
                         compareBackgroundTask.DestinationStartOffset,

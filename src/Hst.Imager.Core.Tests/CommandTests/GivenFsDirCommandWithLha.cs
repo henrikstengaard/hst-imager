@@ -23,13 +23,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test.txt"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -71,13 +71,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", "test1.txt"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -119,13 +119,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", "test2", "test2.txt"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -167,13 +167,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     tempLhaPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -225,13 +225,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -273,13 +273,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     tempLhaPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -335,13 +335,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -394,13 +394,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -452,13 +452,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -500,13 +500,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -559,13 +559,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", pattern), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -616,13 +616,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", "test2"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -664,13 +664,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
             {
                 File.Copy(lhaPath, tempLhaPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     Path.Combine(tempLhaPath, "test1", "test2"), recursive);
                 fsDirCommand.EntriesRead += (_, e) =>

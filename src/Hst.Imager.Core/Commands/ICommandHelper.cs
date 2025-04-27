@@ -1,11 +1,13 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using System;
+
+namespace Hst.Imager.Core.Commands
 {
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Hst.Core;
     using Models;
 
-    public interface ICommandHelper
+    public interface ICommandHelper : IDisposable
     {
         void ClearActiveMedias();
         Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, ModifierEnum? modifiers = null, bool writeable = false);

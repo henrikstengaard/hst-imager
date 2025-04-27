@@ -95,12 +95,11 @@ export class BackendApi {
         }
     }
 
-    async updateInfo({ path, sourceType, byteswap }) {
+    async updateInfo({ path, byteswap }) {
         return await this.send({
             method: 'POST',
             path: `api/info`,
             data: {
-                sourceType,
                 path,
                 byteswap
             }
@@ -233,7 +232,7 @@ export class BackendApi {
         }
     }
 
-    async startFormat({ title, path, formatType, fileSystem, fileSystemPath, size, byteSwap }) {
+    async startFormat({ title, path, formatType, fileSystem, fileSystemPath, size, maxPartitionSize, byteSwap }) {
         const response = await fetch(`${this.baseUrl}api/format`, {
             method: 'POST',
             headers: {
@@ -247,6 +246,7 @@ export class BackendApi {
                 fileSystem,
                 fileSystemPath,
                 size,
+                maxPartitionSize,
                 byteSwap
             })
         });

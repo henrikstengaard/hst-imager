@@ -16,6 +16,7 @@ import Media from "../components/Media";
 import {HubConnectionBuilder} from "@microsoft/signalr";
 import CheckboxField from "../components/CheckboxField";
 import {BackendApiStateContext} from "../components/BackendApiContext";
+import Accordion from "../components/Accordion";
 
 export default function Convert() {
     const [openConfirm, setOpenConfirm] = React.useState(false)
@@ -65,7 +66,7 @@ export default function Convert() {
     }, [backendBaseUrl, connection, setConnection])
     
     const getInfo = React.useCallback(async (path, byteswap) => {
-        await backendApi.updateInfo({ path, sourceType: 'ImageFile', byteswap });
+        await backendApi.updateInfo({ path, byteswap });
     }, [backendApi])
     
     const handleConvert = async () => {
@@ -100,13 +101,13 @@ export default function Convert() {
                 text="Convert"
                 description="Convert image file from one format to another."
             />
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="source-path"
                         label={
                             <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Source image file
+                                <FontAwesomeIcon icon="upload" style={{marginRight: '5px'}} /> Source image file
                             </div>
                         }
                         value={sourcePath || ''}
@@ -142,13 +143,13 @@ export default function Convert() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
                     <TextField
                         id="destination-path"
                         label={
                             <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination image file
+                                <FontAwesomeIcon icon="download" style={{marginRight: '5px'}} /> Destination image file
                             </div>
                         }
                         value={destinationPath || ''}
@@ -167,28 +168,28 @@ export default function Convert() {
                             />
                         }
                         onChange={(event) => setDestinationPath(get(event, 'target.value'))}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            setOpenConfirm(true)
-                        }}
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12}>
-                    <CheckboxField
-                        id="byteswap"
-                        label="Byteswap source sectors"
-                        value={byteswap}
-                        onChange={async (checked) => {
-                            setByteswap(checked)
-                            if (media) {
-                                await getInfo(media.path, checked)
-                            }
-                        }}
-                    />
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                <Grid item xs={12} lg={6}>
+                    <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
+                        <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+                            <Grid item xs={12}>
+                                <CheckboxField
+                                    id="byteswap"
+                                    label="Byteswap source sectors"
+                                    value={byteswap}
+                                    onChange={async (checked) => {
+                                        setByteswap(checked)
+                                        if (media) {
+                                            await getInfo(media.path, checked)
+                                        }
+                                    }}
+                                />
+                            </Grid>
+                        </Grid>
+                    </Accordion>
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>

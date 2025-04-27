@@ -26,11 +26,11 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
             await CreateDos3FormattedAdf(srcPath);
             await CreateFilesWithWindowsReservedNames(srcPath);
 
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 srcPath, destPath, true, false, true, UaeMetadatas.UaeMetadata.None);
 

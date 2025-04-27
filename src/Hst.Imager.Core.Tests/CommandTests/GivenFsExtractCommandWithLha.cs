@@ -15,64 +15,53 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
     [Fact]
     public async Task WhenExtractingAllRecursivelyFromLhaToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha", "test1", "test2");
+        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
-            EntriesInfo entriesInfo = null;
-
             // arrange - create fs extract command
-            var fsExtractCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, false);
-            fsExtractCommand.EntriesRead += (_, e) =>
-            {
-                entriesInfo = e.EntriesInfo;
-            };
+                srcPath, destPath, true, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            //var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
         
-            //// assert - 5 files was extracted
-            //Assert.Equal(5, files.Length);
+            // assert - 5 files was extracted
+            Assert.Equal(5, files.Length);
 
-            //// assert - test.txt file was extracted
-            //var testTxt = Path.Combine(destPath, "test.txt");
-            //Assert.Equal(testTxt, files.FirstOrDefault(x => x.Equals(testTxt, StringComparison.OrdinalIgnoreCase)));
+            // assert - test.txt file was extracted
+            var testTxt = Path.Combine(destPath, "test.txt");
+            Assert.Equal(testTxt, files.FirstOrDefault(x => x.Equals(testTxt, StringComparison.OrdinalIgnoreCase)));
 
-            //// assert - test1.info file was extracted
-            //var test1Info = Path.Combine(destPath, "test1.info");
-            //Assert.Equal(test1Info, files.FirstOrDefault(x => x.Equals(test1Info, StringComparison.OrdinalIgnoreCase)));
+            // assert - test1.info file was extracted
+            var test1Info = Path.Combine(destPath, "test1.info");
+            Assert.Equal(test1Info, files.FirstOrDefault(x => x.Equals(test1Info, StringComparison.OrdinalIgnoreCase)));
             
-            //// assert - test1.txt file was extracted
-            //var test1Txt = Path.Combine(destPath, "test1", "test1.txt");
-            //Assert.Equal(test1Txt, files.FirstOrDefault(x => x.Equals(test1Txt, StringComparison.OrdinalIgnoreCase)));
+            // assert - test1.txt file was extracted
+            var test1Txt = Path.Combine(destPath, "test1", "test1.txt");
+            Assert.Equal(test1Txt, files.FirstOrDefault(x => x.Equals(test1Txt, StringComparison.OrdinalIgnoreCase)));
 
-            //// assert - test2.info file was extracted
-            //var test2Info = Path.Combine(destPath, "test1", "test2.info");
-            //Assert.Equal(test2Info, files.FirstOrDefault(x => x.Equals(test2Info, StringComparison.OrdinalIgnoreCase)));
+            // assert - test2.info file was extracted
+            var test2Info = Path.Combine(destPath, "test1", "test2.info");
+            Assert.Equal(test2Info, files.FirstOrDefault(x => x.Equals(test2Info, StringComparison.OrdinalIgnoreCase)));
             
-            //// assert - test2.txt file was extracted
-            //var test2Txt = Path.Combine(destPath, "test1", "test2", "test2.txt");
-            //Assert.Equal(test2Txt, files.FirstOrDefault(x => x.Equals(test2Txt, StringComparison.OrdinalIgnoreCase)));
+            // assert - test2.txt file was extracted
+            var test2Txt = Path.Combine(destPath, "test1", "test2", "test2.txt");
+            Assert.Equal(test2Txt, files.FirstOrDefault(x => x.Equals(test2Txt, StringComparison.OrdinalIgnoreCase)));
         }
         finally
         {
             DeletePaths(destPath);
         }
-    }
-
-    private void FsExtractCommand_InformationMessage(object sender, string e)
-    {
-        throw new NotImplementedException();
     }
 
     [Fact]
@@ -83,11 +72,11 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "test1.*"), destPath, true, false, true);
         
@@ -123,11 +112,11 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "test1"), destPath, true, false, true);
         
@@ -167,11 +156,11 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "test.txt"), destPath, true, false, true);
         
@@ -202,11 +191,11 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
-            var fakeCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
-            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), fakeCommandHelper,
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "test1", "test2", "test2.txt"), destPath, true, false, true);
         

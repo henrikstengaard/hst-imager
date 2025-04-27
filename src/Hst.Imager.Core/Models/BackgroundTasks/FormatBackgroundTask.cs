@@ -11,6 +11,7 @@ namespace Hst.Imager.Core.Models.BackgroundTasks
         public string FileSystem { get; set; }
         public string FileSystemPath { get; set; }
         public long Size { get; set; }
+        public long MaxPartitionSize { get; set; }
         public bool Byteswap { get; set; }
 
         [JsonIgnore]

@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.GuiApp.Controllers
+﻿using Hst.Imager.Core.PhysicalDrives;
+using Hst.Imager.GuiApp.Extensions;
+
+namespace Hst.Imager.GuiApp.Controllers
 {
     using System.Threading.Tasks;
     using BackgroundTasks;
@@ -13,22 +16,15 @@
 
     [ApiController]
     [Route("api/optimize")]
-    public class OptimizeController : ControllerBase
+    public class OptimizeController(
+        ILoggerFactory loggerFactory,
+        IHubContext<ProgressHub> progressHubContext,
+        IHubContext<ResultHub> resultHubContext,
+        IHubContext<ErrorHub> errorHubContext,
+        IBackgroundTaskQueue backgroundTaskQueue,
+        AppState appState)
+        : ControllerBase
     {
-        private readonly ILoggerFactory loggerFactory;
-        private readonly IHubContext<ProgressHub> progressHubContext;
-        private readonly IBackgroundTaskQueue backgroundTaskQueue;
-        private readonly AppState appState;
-
-        public OptimizeController(ILoggerFactory loggerFactory, IHubContext<ProgressHub> progressHubContext,
-            IBackgroundTaskQueue backgroundTaskQueue, AppState appState)
-        {
-            this.loggerFactory = loggerFactory;
-            this.progressHubContext = progressHubContext;
-            this.backgroundTaskQueue = backgroundTaskQueue;
-            this.appState = appState;
-        }
-        
         [HttpPost]
         public async Task<IActionResult> Post(OptimizeRequest request)
         {
@@ -37,14 +33,30 @@
                 return BadRequest(ModelState);
             }
             
-            var task = new OptimizeBackgroundTask
+            var optimizeTask = new OptimizeBackgroundTask
             {
                 Title = request.Title,
                 Path = request.Path,
                 Size = request.Size
             };
-            var handler = new OptimizeBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
-            await backgroundTaskQueue.QueueBackgroundWorkItemAsync(handler.Handle, task);
+            var optimizeHandler = new OptimizeBackgroundTaskHandler(loggerFactory, progressHubContext, appState);
+
+            await backgroundTaskQueue.QueueBackgroundWorkItemAsync(optimizeHandler.Handle, optimizeTask);
+            
+            var infoBackgroundTask = new InfoBackgroundTask
+            {
+                Path = request.Path,
+                Byteswap = request.Byteswap
+            };
+
+            var staticPhysicalDriveManager = new StaticPhysicalDriveManager([]);
+            var infoHandler = new InfoBackgroundTaskHandler(loggerFactory, staticPhysicalDriveManager,
+                appState);
+            infoHandler.MediaInfoRead += async (_, args) => await resultHubContext.SendInfoResult(
+                args.MediaInfo?.ToViewModel());;
+            infoHandler.ErrorOccurred += async (_, args) => await errorHubContext.SendError(args.Message);
+
+            await backgroundTaskQueue.QueueBackgroundWorkItemAsync(infoHandler.Handle, infoBackgroundTask);
             
             return Ok();            
         }

@@ -218,7 +218,8 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task Info(string path, bool showUnallocated)
         {
-            var command = new InfoCommand(GetLogger<InfoCommand>(), GetCommandHelper(), await GetPhysicalDrives(), path);
+            using var commandHelper = GetCommandHelper();
+            var command = new InfoCommand(GetLogger<InfoCommand>(), commandHelper, await GetPhysicalDrives(), path);
             command.DiskInfoRead += (_, args) =>
             {
                 Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo, showUnallocated));
@@ -228,7 +229,8 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task List()
         {
-            var command = new ListCommand(GetLogger<ListCommand>(), GetCommandHelper(), await GetPhysicalDrives());
+            using var commandHelper = GetCommandHelper();
+            var command = new ListCommand(GetLogger<ListCommand>(), commandHelper, await GetPhysicalDrives());
             command.ListRead += (_, args) => { Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfos)); };
             await Execute(command);
         }
@@ -237,7 +239,8 @@ namespace Hst.Imager.ConsoleApp
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
-            var command = new ConvertCommand(GetLogger<ConvertCommand>(), GetCommandHelper(), sourcePath,
+            using var commandHelper = GetCommandHelper();
+            var command = new ConvertCommand(GetLogger<ConvertCommand>(), commandHelper, sourcePath,
                 destinationPath, ParseSize(size), verify);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
@@ -247,9 +250,10 @@ namespace Hst.Imager.ConsoleApp
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Optimize(string path, string size, PartitionTable partitionTable)
+        public static async Task Optimize(string path, string size, PartitionTable? partitionTable)
         {
-            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), GetCommandHelper(), path, ParseSize(size),
+            using var commandHelper = GetCommandHelper();
+            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), commandHelper, path, ParseSize(size),
                 partitionTable);
             await Execute(command);
         }
@@ -259,7 +263,8 @@ namespace Hst.Imager.ConsoleApp
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
-            var command = new ReadCommand(GetLogger<ReadCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+            using var commandHelper = GetCommandHelper();
+            var command = new ReadCommand(GetLogger<ReadCommand>(), commandHelper, await GetPhysicalDrives(),
                 sourcePath,
                 destinationPath,
                 ParseSize(size),
@@ -281,7 +286,8 @@ namespace Hst.Imager.ConsoleApp
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
-            var command = new CompareCommand(GetLogger<CompareCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+            using var commandHelper = GetCommandHelper();
+            var command = new CompareCommand(GetLogger<CompareCommand>(), commandHelper, await GetPhysicalDrives(),
                 sourcePath,
                 srcStartOffset ?? 0,
                 destinationPath,
@@ -303,7 +309,8 @@ namespace Hst.Imager.ConsoleApp
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
-            var command = new WriteCommand(GetLogger<WriteCommand>(), GetCommandHelper(), await GetPhysicalDrives(),
+            using var commandHelper = GetCommandHelper();
+            var command = new WriteCommand(GetLogger<WriteCommand>(), commandHelper, await GetPhysicalDrives(),
                 sourcePath,
                 destinationPath, ParseSize(size),
                 retries ?? AppState.Instance.Settings.Retries,
@@ -321,22 +328,26 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task Blank(string path, string size, bool compatibleSize)
         {
-            await Execute(new BlankCommand(GetLogger<BlankCommand>(), GetCommandHelper(), path, ParseSize(size),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new BlankCommand(GetLogger<BlankCommand>(), commandHelper, path, ParseSize(size),
                 compatibleSize));
         }
 
         public static async Task Format(string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string size)
+            string fileSystemPath, string size, long? maxPartitionSize)
         {
-            await Execute(new FormatCommand(GetLogger<FormatCommand>(), ServiceProvider.GetService<ILoggerFactory>(),
-                GetCommandHelper(), await GetPhysicalDrives(), path,
+            using var commandHelper = GetCommandHelper();
+            await Execute(new FormatCommand(GetLogger<FormatCommand>(), 
+                ServiceProvider.GetService<ILoggerFactory>(),
+                commandHelper, await GetPhysicalDrives(), path,
                 formatType, fileSystem, fileSystemPath,
-                AppState.Instance.AppPath, ParseSize(size)));
+                AppState.Instance.AppPath, ParseSize(size), maxPartitionSize ?? 0));
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)
         {
-            var command = new GptInfoCommand(GetLogger<GptInfoCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new GptInfoCommand(GetLogger<GptInfoCommand>(), commandHelper,
                 await GetPhysicalDrives(), path);
             command.GptInfoRead += (_, args) =>
             {
@@ -347,31 +358,36 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task GptInit(string path)
         {
-            await Execute(new GptInitCommand(GetLogger<GptInitCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new GptInitCommand(GetLogger<GptInitCommand>(), commandHelper,
                 await GetPhysicalDrives(), path));
         }
 
         public static async Task GptPartAdd(string path, string type, string name, string size, long? startSector)
         {
-            await Execute(new GptPartAddCommand(GetLogger<GptPartAddCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new GptPartAddCommand(GetLogger<GptPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, type, name, ParseSize(size), startSector, null));
         }
 
         public static async Task GptPartDel(string path, int partitionNumber)
         {
-            await Execute(new GptPartDelCommand(GetLogger<GptPartDelCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new GptPartDelCommand(GetLogger<GptPartDelCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
         public static async Task GptPartFormat(string path, int partitionNumber, GptPartType type, string name)
         {
-            await Execute(new GptPartFormatCommand(GetLogger<GptPartFormatCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new GptPartFormatCommand(GetLogger<GptPartFormatCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, type, name));
         }
 
         public static async Task MbrInfo(string path, bool showUnallocated)
         {
-            var command = new MbrInfoCommand(GetLogger<MbrInfoCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new MbrInfoCommand(GetLogger<MbrInfoCommand>(), commandHelper,
                 await GetPhysicalDrives(), path);
             command.MbrInfoRead += (_, args) =>
             {
@@ -382,31 +398,36 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task MbrInit(string path)
         {
-            await Execute(new MbrInitCommand(GetLogger<MbrInitCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new MbrInitCommand(GetLogger<MbrInitCommand>(), commandHelper,
                 await GetPhysicalDrives(), path));
         }
 
         public static async Task MbrPartAdd(string path, string type, string size, long? startSector, bool active)
         {
-            await Execute(new MbrPartAddCommand(GetLogger<MbrPartAddCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new MbrPartAddCommand(GetLogger<MbrPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, type, ParseSize(size), startSector, null, active));
         }
 
         public static async Task MbrPartDel(string path, int partitionNumber)
         {
-            await Execute(new MbrPartDelCommand(GetLogger<MbrPartDelCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new MbrPartDelCommand(GetLogger<MbrPartDelCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
         public static async Task MbrPartFormat(string path, int partitionNumber, string name, string fileSystem)
         {
-            await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, name, fileSystem));
         }
 
         public static async Task MbrPartExport(string sourcePath, string partition, string destinationPath)
         {
-            var command = new MbrPartExportCommand(GetLogger<MbrPartExportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new MbrPartExportCommand(GetLogger<MbrPartExportCommand>(), commandHelper,
                 await GetPhysicalDrives(), sourcePath, partition, destinationPath);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -414,7 +435,8 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task MbrPartImport(string sourcePath, string destinationPath, string partition)
         {
-            var command = new MbrPartImportCommand(GetLogger<MbrPartImportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new MbrPartImportCommand(GetLogger<MbrPartImportCommand>(), commandHelper,
                 await GetPhysicalDrives(), sourcePath, destinationPath, partition);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -423,7 +445,8 @@ namespace Hst.Imager.ConsoleApp
         public static async Task MbrPartClone(string srcPath, int srcPartitionNumber, string destPath,
             int destPartitionNumber)
         {
-            var command = new MbrPartCloneCommand(GetLogger<MbrPartCloneCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new MbrPartCloneCommand(GetLogger<MbrPartCloneCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, srcPartitionNumber, destPath, destPartitionNumber);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -431,7 +454,8 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbInfo(string path, bool showUnallocated)
         {
-            var command = new RdbInfoCommand(GetLogger<RdbInfoCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new RdbInfoCommand(GetLogger<RdbInfoCommand>(), commandHelper,
                 await GetPhysicalDrives(), path);
             command.RdbInfoRead += (_, args) =>
             {
@@ -442,64 +466,74 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbInit(string path, string size, string name, string chs, int rdbBlockLo)
         {
-            await Execute(new RdbInitCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbInitCommand(GetLogger<RdbInitCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, name, ParseSize(size), chs, rdbBlockLo));
         }
 
         public static async Task RdbResize(string path, string size)
         {
-            await Execute(new RdbResizeCommand(GetLogger<RdbResizeCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbResizeCommand(GetLogger<RdbResizeCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, ParseSize(size)));
         }
 
         public static async Task RdbUpdate(string path, uint? flags, uint? hostId, string diskProduct,
             string diskRevision, string diskVendor)
         {
-            await Execute(new RdbUpdateCommand(GetLogger<RdbUpdateCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbUpdateCommand(GetLogger<RdbUpdateCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, flags, hostId, diskProduct, diskRevision, diskVendor));
         }
 
         public static async Task RdbBackup(string path, string backupPath)
         {
-            await Execute(new RdbBackupCommand(GetLogger<RdbBackupCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbBackupCommand(GetLogger<RdbBackupCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, backupPath));
         }
 
         public static async Task RdbRestore(string backupPath, string path)
         {
-            await Execute(new RdbRestoreCommand(GetLogger<RdbRestoreCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbRestoreCommand(GetLogger<RdbRestoreCommand>(), commandHelper,
                 await GetPhysicalDrives(), backupPath, path));
         }
 
         public static async Task RdbFsAdd(string path, string fileSystemPath, string dosType, string fileSystemName,
             int? version, int? revision)
         {
-            await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbFsAddCommand(GetLogger<RdbFsAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName, version, revision));
         }
 
         public static async Task RdbFsDel(string path, int fileSystemNumber)
         {
-            await Execute(new RdbFsDelCommand(GetLogger<RdbFsDelCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbFsDelCommand(GetLogger<RdbFsDelCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, fileSystemNumber));
         }
 
         public static async Task RdbFsImport(string path, string fileSystemPath, string dosType, string fileSystemName)
         {
-            await Execute(new RdbFsImportCommand(GetLogger<RdbFsImportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbFsImportCommand(GetLogger<RdbFsImportCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, fileSystemPath, dosType, fileSystemName, AppState.Instance.AppPath));
         }
 
         public static async Task RdbFsExport(string path, int fileSystemNumber, string fileSystemPath)
         {
-            await Execute(new RdbFsExportCommand(GetLogger<RdbFsExportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbFsExportCommand(GetLogger<RdbFsExportCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, fileSystemNumber, fileSystemPath));
         }
 
         public static async Task RdbFsUpdate(string path, int fileSystemNumber, string dosType, string fileSystemName,
             string fileSystemPath)
         {
-            await Execute(new RdbFsUpdateCommand(GetLogger<RdbFsUpdateCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbFsUpdateCommand(GetLogger<RdbFsUpdateCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath));
         }
 
@@ -507,7 +541,8 @@ namespace Hst.Imager.ConsoleApp
             uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int? priority,
             int? fileSystemBlockSize)
         {
-            await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
                 ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, priority,
                 fileSystemBlockSize));
@@ -518,7 +553,8 @@ namespace Hst.Imager.ConsoleApp
             int? preAlloc, int? buffers, string maxTransfer, string mask, bool? noMount, bool? bootable,
             int? bootPriority, int? fileSystemBlockSize)
         {
-            await Execute(new RdbPartUpdateCommand(GetLogger<RdbPartUpdateCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbPartUpdateCommand(GetLogger<RdbPartUpdateCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, name, dosType, reserved, preAlloc, buffers,
                 ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, bootPriority,
                 fileSystemBlockSize));
@@ -526,14 +562,16 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartDel(string path, int partitionNumber)
         {
-            await Execute(new RdbPartDelCommand(GetLogger<RdbInitCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbPartDelCommand(GetLogger<RdbInitCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
         public static async Task RdbPartCopy(string sourcePath, int partitionNumber, string destinationPath,
             string name)
         {
-            var command = new RdbPartCopyCommand(GetLogger<RdbPartCopyCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new RdbPartCopyCommand(GetLogger<RdbPartCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath, name);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -541,7 +579,8 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartExport(string sourcePath, int partitionNumber, string destinationPath)
         {
-            var command = new RdbPartExportCommand(GetLogger<RdbPartExportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new RdbPartExportCommand(GetLogger<RdbPartExportCommand>(), commandHelper,
                 await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -550,7 +589,8 @@ namespace Hst.Imager.ConsoleApp
         public static async Task RdbPartImport(string sourcePath, string destinationPath,
             string name, string dosType, int fileSystemBlockSize, bool bootable)
         {
-            var command = new RdbPartImportCommand(GetLogger<RdbPartImportCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new RdbPartImportCommand(GetLogger<RdbPartImportCommand>(), commandHelper,
                 await GetPhysicalDrives(), sourcePath, destinationPath, name, dosType, fileSystemBlockSize, bootable);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -558,19 +598,22 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartFormat(string path, int partitionNumber, string name, bool nonRdb, string chs, string dosType)
         {
-            await Execute(new RdbPartFormatCommand(GetLogger<RdbPartFormatCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbPartFormatCommand(GetLogger<RdbPartFormatCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, name, nonRdb, chs, dosType));
         }
 
         public static async Task RdbPartKill(string path, int partitionNumber, string hexBootBytes)
         {
-            await Execute(new RdbPartKillCommand(GetLogger<RdbPartKillCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new RdbPartKillCommand(GetLogger<RdbPartKillCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, hexBootBytes));
         }
 
         public static async Task RdbPartMove(string path, int partitionNumber, uint startCylinder)
         {
-            var command = new RdbPartMoveCommand(GetLogger<RdbPartMoveCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new RdbPartMoveCommand(GetLogger<RdbPartMoveCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, partitionNumber, startCylinder);
             command.DataProcessed += WriteProcessMessage;
             await Execute(command);
@@ -578,19 +621,22 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task BlockRead(string path, string outputPath, int blockSize, bool used, long? start, long? end)
         {
-            await Execute(new BlockReadCommand(GetLogger<BlockReadCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new BlockReadCommand(GetLogger<BlockReadCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, outputPath, blockSize, used, start, end));
         }
 
         public static async Task BlockView(string path, int blockSize, long? start)
         {
-            await Execute(new BlockViewCommand(GetLogger<BlockViewCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            await Execute(new BlockViewCommand(GetLogger<BlockViewCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, blockSize, start));
         }
         
         public static async Task FsDir(string path, bool recursive, FormatEnum format)
         {
-            var command = new FsDirCommand(GetLogger<FsDirCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, recursive);
             command.EntriesRead += (_, args) =>
             {
@@ -601,14 +647,16 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet, UaeMetadata uaeMetadata)
         {
-            var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata);
             await Execute(command);
         }
 
         public static async Task ArcList(string path, bool recursive)
         {
-            var command = new ArcListCommand(GetLogger<ArcListCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new ArcListCommand(GetLogger<ArcListCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, recursive);
             command.EntriesRead += (_, args) =>
             {
@@ -619,14 +667,16 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet, UaeMetadata uaeMetadata)
         {
-            var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata);
             await Execute(command);
         }
         
         public static async Task AdfCreate(string adfPath, bool format, string name, string dosType, bool recursive)
         {
-            var command = new AdfCreateCommand(GetLogger<AdfCreateCommand>(), GetCommandHelper(),
+            using var commandHelper = GetCommandHelper();
+            var command = new AdfCreateCommand(GetLogger<AdfCreateCommand>(), commandHelper,
                 await GetPhysicalDrives(), adfPath, format, name, dosType, recursive);
             await Execute(command);
         }

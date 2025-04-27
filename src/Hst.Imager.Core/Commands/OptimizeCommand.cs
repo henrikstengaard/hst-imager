@@ -4,29 +4,18 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Hst.Core;
-    using Core;
     using Extensions;
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class OptimizeCommand : CommandBase
+    public class OptimizeCommand(
+        ILogger<OptimizeCommand> logger,
+        ICommandHelper commandHelper,
+        string path,
+        Size size,
+        PartitionTable? partitionTable)
+        : CommandBase
     {
-        private readonly ILogger<OptimizeCommand> logger;
-        private readonly ICommandHelper commandHelper;
-        private readonly string path;
-        private readonly Size size;
-        private readonly PartitionTable partitionTable;
-
-        public OptimizeCommand(ILogger<OptimizeCommand> logger, ICommandHelper commandHelper, string path, Size size,
-            PartitionTable partitionTable)
-        {
-            this.logger = logger;
-            this.commandHelper = commandHelper;
-            this.path = path;
-            this.size = size;
-            this.partitionTable = partitionTable;
-        }
-        
         public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Optimizing image file at '{path}'");
@@ -56,7 +45,10 @@
 
             OnInformationMessage($"Size '{diskInfo.Size}'");
 
-            var optimizedSizeResult = GetOptimizeSize(diskInfo);
+            var optimizedSizeResult = partitionTable.HasValue && partitionTable.Value != PartitionTable.None
+                ? GetDefinedOptimizeSize(diskInfo)
+                : GetAutoOptimizeSize(diskInfo);
+            
             if (optimizedSizeResult.IsFaulted)
             {
                 return new Result(optimizedSizeResult.Error);
@@ -77,8 +69,9 @@
             return new Result();
         }
 
-        private Result<long> GetOptimizeSize(DiskInfo diskInfo)
+        private Result<long> GetDefinedOptimizeSize(DiskInfo diskInfo)
         {
+            // return resolves size if it is not zero
             if (size.Value != 0)
             {
                 return new Result<long>(diskInfo.Size.ResolveSize(size));
@@ -110,8 +103,57 @@
                         ? new Result<long>(new Error("Rigid Disk Block not found"))
                         : new Result<long>(rdbPartitionTable.Size);
                 default:
-                    return new Result<long>(0);
+                    return new Result<long>(new Error(
+                        "Unable to optimize size of image file when no partition table are found"));
             }
+        }
+
+        private Result<long> GetAutoOptimizeSize(DiskInfo diskInfo)
+        {
+            // return resolves size if it is not zero
+            if (size.Value != 0)
+            {
+                return new Result<long>(diskInfo.Size.ResolveSize(size));
+            }
+            
+            // get partition tables
+            var guidPartitionTable = diskInfo.PartitionTables
+                .FirstOrDefault(x => x.Type == PartitionTableType.GuidPartitionTable);
+            var mbrPartitionTable = diskInfo.PartitionTables
+                .FirstOrDefault(x => x.Type == PartitionTableType.MasterBootRecord);
+            var rdbPartitionTable = diskInfo.PartitionTables
+                .FirstOrDefault(x => x.Type == PartitionTableType.RigidDiskBlock);
+
+            // return guid partition table size, if guid partition table is present
+            if (guidPartitionTable != null)
+            {
+                return new Result<long>(guidPartitionTable.Size);
+            }
+            
+            // return master boot record size, if master boot record is present
+            // and rigid disk block is not present
+            if (mbrPartitionTable != null && rdbPartitionTable == null)
+            {
+                return new Result<long>(mbrPartitionTable.Size);
+            }
+
+            // return rigid disk block size, if rigid disk block is present
+            if (rdbPartitionTable != null)
+            {
+                var rdbSize = rdbPartitionTable.Size;
+                
+                // if master boot record is present and is larger than rigid disk block
+                // then use master boot record size
+                if (mbrPartitionTable != null && mbrPartitionTable.Size > rdbSize)
+                {
+                    rdbSize = mbrPartitionTable.Size;
+                }
+
+                return new Result<long>(rdbSize);
+            }
+
+            return new Result<long>(new Error(
+                "Unable to optimize size of image file when no partition table are found"));
         }
     }
 }

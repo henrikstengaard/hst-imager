@@ -8,7 +8,6 @@ namespace Hst.Imager.Core.Models.BackgroundTasks
     public class WriteBackgroundTask : IBackgroundTask
     {
         public string Title { get; set; }
-        public bool WritePhysicalDisk { get; set; }
         public string SourcePath { get; set; }
         public string DestinationPath { get; set; }
         public long StartOffset { get; set; }

@@ -93,7 +93,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories

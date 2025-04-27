@@ -240,14 +240,19 @@ namespace Hst.Imager.ConsoleApp
                 ["--size", "-s"],
                 description: "Size of disk to format.");
 
+            var maxPartitionSizeOption = new Option<long?>(
+                ["--max-partition-size"],
+                description: "Max partition size for RDB disks.");
+            
             var command = new Command("format", "Format physical drive or image file.");
             command.AddArgument(pathArgument);
             command.AddArgument(partitionTableArgument);
             command.AddArgument(fileSystemArgument);
             command.AddOption(fileSystemPathOption);
             command.AddOption(sizeOption);
+            command.AddOption(maxPartitionSizeOption);
             command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument,
-                fileSystemPathOption, sizeOption);
+                fileSystemPathOption, sizeOption, maxPartitionSizeOption);
 
             return command;
         }
@@ -286,10 +291,9 @@ namespace Hst.Imager.ConsoleApp
                 ["--size", "-s"],
                 description: "Size to optimize to.");
 
-            var partitionTableOption = new Option<PartitionTable>(
+            var partitionTableOption = new Option<PartitionTable?>(
                 ["--partition-table", "-pt"],
-                description: "Optimize to size of partition table.",
-                getDefaultValue: () => PartitionTable.None);
+                description: "Optimize to size of partition table.");
             
             var convertCommand = new Command("optimize", "Optimize image file size.");
             convertCommand.AddArgument(pathArgument);

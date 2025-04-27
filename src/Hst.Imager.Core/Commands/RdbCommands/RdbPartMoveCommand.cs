@@ -160,6 +160,8 @@ namespace Hst.Imager.Core.Commands.RdbCommands
 
             await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
+            await stream.FlushAsync(token);
+            
             return new Result();
         }
 

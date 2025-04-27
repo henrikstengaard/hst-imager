@@ -1,5 +1,8 @@
 ﻿namespace Hst.Imager.Core.Commands;
 
+/// <summary>
+/// TODO: Rename to ResolvedMedia
+/// </summary>
 public class MediaResult
 {
     /// <summary>

@@ -189,7 +189,7 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: create);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = MediaHelper.GetStreamFromMedia(media);
 
         var rigidDiskBlock = RigidDiskBlock.Create(diskSize);
 
@@ -207,7 +207,7 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = MediaHelper.GetStreamFromMedia(media);
 
         var rigidDiskBlock = await MediaHelper.ReadRigidDiskBlockFromMedia(media);
 

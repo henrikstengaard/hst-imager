@@ -31,7 +31,16 @@ import {
     faInfo,
     faArrowLeft,
     faTimes,
-    faChartLine
+    faChartLine,
+    fa1,
+    fa2,
+    faSliders,
+    faFileFragment,
+    faRulerHorizontal,
+    faLocationCrosshairs,
+    faScaleBalanced,
+    faGear,
+    faRotateLeft
 } from '@fortawesome/free-solid-svg-icons'
 import Box from '@mui/material/Box'
 import CssBaseline from '@mui/material/CssBaseline'
@@ -61,13 +70,22 @@ library.add(
     faPlus,
     faQuestion,
     faHome,
+    fa1,
+    fa2,
     faSyncAlt,
     faEllipsisH,
     faBan,
     faInfo,
     faArrowLeft,
     faTimes,
-    faChartLine)
+    faChartLine,
+    faSliders,
+    faFileFragment,
+    faRulerHorizontal,
+    faLocationCrosshairs,
+    faScaleBalanced,
+    faGear,
+    faRotateLeft)
 
 export default function App() {
     const appState = React.useContext(AppStateContext)

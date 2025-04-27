@@ -1,7 +1,7 @@
-﻿import {formatBytes} from "./Format";
+import {formatBytes} from "./Format";
 import {get} from "lodash";
 
-export const getPartPathOptions = (media) => {
+export const getPartPathOptions = ({media, includePartitions = true}) => {
     // build part path options based on media  
     const partPathOptions = [{
         title: `Disk (${formatBytes(media.diskSize)})`,
@@ -22,16 +22,18 @@ export const getPartPathOptions = (media) => {
             value: media.path + directoryPathSeparator + 'gpt'
         })
 
-        gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-            const type = part.partitionType === part.fileSystem
-                ? part.partitionType
-                : `${part.partitionType}, ${part.fileSystem}`;
-
-            partPathOptions.push({
-                title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
+        if (includePartitions) {
+            gptPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                const type = part.partitionType === part.fileSystem
+                    ? part.partitionType
+                    : `${part.partitionType}, ${part.fileSystem}`;
+    
+                partPathOptions.push({
+                    title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                    value: media.path + directoryPathSeparator + 'gpt' + directoryPathSeparator + part.partitionNumber
+                })
             })
-        })
+        }
     }
 
     const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart');
@@ -41,16 +43,18 @@ export const getPartPathOptions = (media) => {
             value: media.path + directoryPathSeparator + 'mbr'
         })
 
-        mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-            const type = part.partitionType === part.fileSystem
-                ? part.partitionType
-                : `${part.partitionType}, ${part.fileSystem}`;
+        if (includePartitions) {
+            mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                const type = part.partitionType === part.fileSystem
+                    ? part.partitionType
+                    : `${part.partitionType}, ${part.fileSystem}`;
 
-            partPathOptions.push({
-                title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
+                partPathOptions.push({
+                    title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                    value: media.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
+                })
             })
-        })
+        }
     }
 
     const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart');
@@ -60,16 +64,18 @@ export const getPartPathOptions = (media) => {
             value: media.path + directoryPathSeparator + 'rdb'
         })
 
-        rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
-            const type = part.partitionType === part.fileSystem
-                ? part.partitionType
-                : `${part.partitionType}, ${part.fileSystem}`;
+        if (includePartitions) {
+            rdbPartitionTablePart.parts.filter(part => part.partType === 'Partition').forEach(part => {
+                const type = part.partitionType === part.fileSystem
+                    ? part.partitionType
+                    : `${part.partitionType}, ${part.fileSystem}`;
 
-            partPathOptions.push({
-                title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
-                value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
+                partPathOptions.push({
+                    title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                    value: media.path + directoryPathSeparator + 'rdb' + directoryPathSeparator + part.partitionNumber
+                })
             })
-        })
+        }
     }
 
     partPathOptions.push({

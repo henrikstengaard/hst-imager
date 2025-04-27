@@ -236,54 +236,69 @@ public abstract partial class FsCommandBase : CommandBase
         return Task.FromResult(!File.Exists(path) ? null : new Result<IEntryIterator>(new FileEntryIterator(path)));
     }
 
-    protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
     {
-        if (!await IsZipMedia(mediaResult))
+        if (!await IsZipMedia(resolvedMedia))
         {
             return null;
         }
 
-        var zipStream = File.OpenRead(mediaResult.MediaPath);
-        var zipArchive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mediaResult.Error);
+        }
+        
+        var zipArchive = new ZipArchive(mediaResult.Value.Stream, ZipArchiveMode.Read);
 
-        var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.ZipArchivePath.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new ZipArchiveEntryIterator(zipStream, rootPath, zipArchive,
+        return new Result<IEntryIterator>(new ZipArchiveEntryIterator(mediaResult.Value.Stream, rootPath, zipArchive,
             recursive));
     }
     
-    protected async Task<Result<IEntryIterator>> GetLhaEntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetLhaEntryIterator(MediaResult resolvedMedia, bool recursive)
     {
-        if (!await IsLhaMedia(mediaResult))
+        if (!await IsLhaMedia(resolvedMedia))
         {
             return null;
         }
 
-        var lhaStream = File.OpenRead(mediaResult.MediaPath);
-        var lhaArchive = new LhaArchive(lhaStream, LhaOptions.AmigaLhaOptions);
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mediaResult.Error);
+        }
+        
+        var lhaArchive = new LhaArchive(mediaResult.Value.Stream, LhaOptions.AmigaLhaOptions);
 
-        var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.LhaArchivePath.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new LhaArchiveEntryIterator(lhaStream, rootPath, lhaArchive,
+        return new Result<IEntryIterator>(new LhaArchiveEntryIterator(mediaResult.Value.Stream, rootPath, lhaArchive,
             recursive));
     }
 
-    protected async Task<Result<IEntryIterator>> GetLzxEntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetLzxEntryIterator(MediaResult resolvedMedia, bool recursive)
     {
-        if (!await IsLzxMedia(mediaResult))
+        if (!await IsLzxMedia(resolvedMedia))
         {
             return null;
         }
 
-        var lzxStream = File.OpenRead(mediaResult.MediaPath);
-        var lzxArchive = new LzxArchive(lzxStream, LzxOptions.AmigaLzxOptions);
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mediaResult.Error);
+        }
 
-        var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var lzxArchive = new LzxArchive(mediaResult.Value.Stream, LzxOptions.AmigaLzxOptions);
+
+        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.LzxArchivePath.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new LzxArchiveEntryIterator(lzxStream, rootPath, lzxArchive,
+        return new Result<IEntryIterator>(new LzxArchiveEntryIterator(mediaResult.Value.Stream, rootPath, lzxArchive,
             recursive));
     }
     
@@ -297,41 +312,51 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<IEntryIterator>(new LzwArchiveEntryIterator(mediaResult.MediaPath));
     }
     
-    protected async Task<Result<IEntryIterator>> GetAdfEntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetAdfEntryIterator(MediaResult resolvedMedia, bool recursive)
     {
-        if (!await IsAdfMedia(mediaResult))
+        if (!await IsAdfMedia(resolvedMedia))
         {
             return null;
         }
 
-        var adfStream = File.OpenRead(mediaResult.MediaPath);
-        var fileSystemVolumeResult = await MountAdfFileSystemVolume(adfStream);
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mediaResult.Error);
+        }
+        
+        var fileSystemVolumeResult = await MountAdfFileSystemVolume(mediaResult.Value.Stream);
         if (fileSystemVolumeResult.IsFaulted)
         {
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
         }
 
-        var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.AmigaOsPath.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(adfStream, rootPath,
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(mediaResult.Value.Stream, rootPath,
             fileSystemVolumeResult.Value, recursive));
     }
 
-    protected async Task<Result<IEntryIterator>> GetIso9660EntryIterator(MediaResult mediaResult, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetIso9660EntryIterator(MediaResult resolvedMedia, bool recursive)
     {
-        if (!await IsIso9660Media(mediaResult))
+        if (!await IsIso9660Media(resolvedMedia))
         {
             return null;
         }
 
-        var iso96690Stream = File.OpenRead(mediaResult.MediaPath);
-        var cdReader = new CDReader(iso96690Stream, true);
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(mediaResult.Error);
+        }
 
-        var rootPathComponents = mediaResult.FileSystemPath.Split(mediaResult.DirectorySeparatorChar);
+        var cdReader = new CDReader(mediaResult.Value.Stream, true);
+
+        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.Iso9660Path.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new Iso9660EntryIterator(iso96690Stream, rootPath, cdReader,
+        return new Result<IEntryIterator>(new Iso9660EntryIterator(mediaResult.Value.Stream, rootPath, cdReader,
             recursive));
     }
 

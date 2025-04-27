@@ -23,7 +23,6 @@ public class LhaArchiveEntryIterator : IEntryIterator
     private readonly Stack<Entry> nextEntries;
     private bool isFirst;
     private Entry currentEntry;
-    private bool disposed;
     private readonly IDictionary<string, LzHeader> lhaEntryIndex;
 
     public LhaArchiveEntryIterator(Stream stream, string rootPath, LhaArchive lhaArchive, bool recursive)
@@ -43,22 +42,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 
-    private void Dispose(bool disposing)
+    public void Dispose()
     {
-        if (disposed)
-        {
-            return;
-        }
-
-        if (disposing)
-        {
-            stream.Dispose();
-        }
-
-        disposed = true;
     }
-
-    public void Dispose() => Dispose(true);
 
     public string RootPath => rootPath;
 

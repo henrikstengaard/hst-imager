@@ -28,16 +28,14 @@
 
             try
             {
-                var physicalDrives = readBackgroundTask.ReadPhysicalDisk
-                    ? await physicalDriveManager.GetPhysicalDrives(appState.Settings.AllPhysicalDrives)
-                    : [];
+                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
+                    appState.Settings.AllPhysicalDrives);
 
-                var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
-                        readBackgroundTask.Byteswap
-                            ? System.IO.Path.Combine(readBackgroundTask.SourcePath, "+bs")
-                            : readBackgroundTask.SourcePath,
+                        string.Concat(readBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
+                            readBackgroundTask.SourcePath),
                         readBackgroundTask.DestinationPath,
                         new Size(readBackgroundTask.Size, Unit.Bytes), appState.Settings.Retries,
                         appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset);

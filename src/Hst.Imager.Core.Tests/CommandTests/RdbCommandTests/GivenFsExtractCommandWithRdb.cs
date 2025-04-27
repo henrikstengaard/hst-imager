@@ -27,7 +27,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             try
             {
                 // arrange - test command helper
-                var testCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
 
                 // arrange - source lha file
                 File.Copy(lhaPath, srcPath, true);

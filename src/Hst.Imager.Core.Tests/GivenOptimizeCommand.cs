@@ -25,7 +25,7 @@
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
-                new Models.Size(size, Unit.Bytes), PartitionTable.None);
+                new Size(size, Unit.Bytes), PartitionTable.None);
 
             // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
@@ -49,7 +49,7 @@
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
-                new Models.Size(0, Unit.Bytes), PartitionTable.None);
+                new Size(0, Unit.Bytes), PartitionTable.None);
 
             // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
@@ -73,7 +73,7 @@
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
             var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
-                new Models.Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
+                new Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
 
             // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);

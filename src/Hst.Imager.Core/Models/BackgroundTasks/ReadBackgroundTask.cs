@@ -6,7 +6,6 @@
     public class ReadBackgroundTask : IBackgroundTask
     {
         public string Title { get; set; }
-        public bool ReadPhysicalDisk { get; set; }
         public string SourcePath { get; set; }
         public string DestinationPath { get; set; }
         public long StartOffset { get; set; }

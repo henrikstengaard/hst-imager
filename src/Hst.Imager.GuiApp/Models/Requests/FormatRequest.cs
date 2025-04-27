@@ -5,17 +5,8 @@ namespace Hst.Imager.GuiApp.Models.Requests
 {
     public class FormatRequest
     {
-        public enum SourceTypeEnum
-        {
-            ImageFile,
-            PhysicalDisk
-        }
-
         [Required]
         public string Title { get; set; }
-
-        [Required]
-        public SourceTypeEnum SourceType { get; set; }
 
         [Required]
         public string Path { get; set; }
@@ -28,6 +19,8 @@ namespace Hst.Imager.GuiApp.Models.Requests
         public string FileSystemPath { get; set; }
 
         public long Size { get; set; }
+
+        public long MaxPartitionSize { get; set; }
 
         public bool Byteswap { get; set; }
     }

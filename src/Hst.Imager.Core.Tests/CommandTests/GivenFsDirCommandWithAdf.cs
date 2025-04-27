@@ -24,13 +24,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -73,13 +73,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -122,13 +122,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -171,13 +171,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     adfPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -230,13 +230,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -280,13 +280,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -343,13 +343,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -405,13 +405,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -464,13 +464,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -514,13 +514,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -574,13 +574,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -633,13 +633,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>
@@ -682,13 +682,13 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 await CreateDos3FormattedAdf(adfPath);
                 await CreateDos3AdfFiles(adfPath);
 
-                var fakeCommandHelper = new TestCommandHelper();
+                using var testCommandHelper = new TestCommandHelper();
                 var cancellationTokenSource = new CancellationTokenSource();
 
                 EntriesInfo entriesInfo = null;
 
                 // arrange - create fs dir command
-                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), fakeCommandHelper,
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(),
                     dirPath, recursive);
                 fsDirCommand.EntriesRead += (_, e) =>

@@ -51,7 +51,6 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             {
                 media.Stream.Flush();
             }
-            media.Dispose();
         }
 
         disposed = true;

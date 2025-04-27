@@ -28,16 +28,14 @@
 
             try
             {
-                var physicalDrives = writeBackgroundTask.WritePhysicalDisk
-                    ? await physicalDriveManager.GetPhysicalDrives(appState.Settings.AllPhysicalDrives)
-                    : [];
+                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
+                    appState.Settings.AllPhysicalDrives);
 
-                var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var writeCommand =
                     new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives,
-                        writeBackgroundTask.Byteswap 
-                            ? System.IO.Path.Combine(writeBackgroundTask.SourcePath, "+bs")
-                            : writeBackgroundTask.SourcePath,
+                        string.Concat(writeBackgroundTask.Byteswap ? "+bs:" : string.Empty,
+                            writeBackgroundTask.SourcePath),
                         writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
                         appState.Settings.Retries, appState.Settings.Verify, appState.Settings.Force,
                         appState.Settings.SkipUnusedSectors,  writeBackgroundTask.StartOffset);

@@ -45,9 +45,12 @@
                     PercentComplete = 50
                 }, context.Token);
 
-                var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
-                var optimizeCommand = new OptimizeCommand(loggerFactory.CreateLogger<OptimizeCommand>(),commandHelper, 
-                    optimizeBackgroundTask.Path, new Size(optimizeBackgroundTask.Size, Unit.Bytes), PartitionTable.None);
+                using var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                var optimizeCommand = new OptimizeCommand(
+                    loggerFactory.CreateLogger<OptimizeCommand>(),
+                    commandHelper, 
+                    string.Concat(optimizeBackgroundTask.Byteswap ? "+bs:" : string.Empty, optimizeBackgroundTask.Path),
+                    new Size(optimizeBackgroundTask.Size, Unit.Bytes), PartitionTable.None);
 
                 var result = await optimizeCommand.Execute(context.Token);
                 if (result.IsFaulted)
