@@ -457,7 +457,6 @@ export default function Write() {
                     </Accordion>
                 </Grid>
             </Grid>
-
             <Grid container spacing={0} direction="row" alignItems="center" sx={{mt: 0}}>
                 <Grid item xs={12} lg={6}>
                     <Box display="flex" justifyContent="flex-end">

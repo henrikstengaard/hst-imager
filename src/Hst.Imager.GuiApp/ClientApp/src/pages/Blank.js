@@ -110,35 +110,47 @@ export default function Blank() {
                     />
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
-                <Grid item xs={8} lg={4}>
-                    <TextField
-                        label="Size"
-                        id="size"
-                        type="number"
-                        value={size}
-                        inputProps={{min: 0, style: { textAlign: 'right' }}}
-                        onChange={(event) => setSize(event.target.value)}
-                        onKeyDown={async (event) => {
-                            if (event.key !== 'Enter') {
-                                return
-                            }
-                            await handleBlank()
-                        }}
-                    />
-                </Grid>
-                <Grid item xs={4} lg={2}>
-                    <SelectField
-                        label="Unit"
-                        id="unit"
-                        value={unit || ''}
-                        options={unitOptions}
-                        onChange={(value) => setUnit(value)}
-                    />
+            <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                <Grid item xs={12} lg={6}>
+                    <Grid container spacing={1} direction="row" sx={{mt: 0.3}}>
+                        <Grid item xs={8} lg={4}>
+                            <TextField
+                                label={
+                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                        <FontAwesomeIcon icon="ruler-horizontal" style={{marginRight: '5px'}} /> Size
+                                    </div>
+                                }
+                                id="size"
+                                type="number"
+                                value={size}
+                                inputProps={{min: 0, style: { textAlign: 'right' }}}
+                                onChange={(event) => setSize(event.target.value)}
+                                onKeyDown={async (event) => {
+                                    if (event.key !== 'Enter') {
+                                        return
+                                    }
+                                    await handleBlank()
+                                }}
+                            />
+                        </Grid>
+                        <Grid item xs={4} lg={2}>
+                            <SelectField
+                                label={
+                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                        <FontAwesomeIcon icon="scale-balanced" style={{marginRight: '5px'}} /> Unit
+                                    </div>
+                                }
+                                id="unit"
+                                value={unit || ''}
+                                options={unitOptions}
+                                onChange={(value) => setUnit(value)}
+                            />
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
-                <Grid item xs={12} lg={6}>
+                <Grid item xs={12}>
                     <CheckboxField
                         id="compatible-size"
                         label="Size compatible with various SD/CF-cards, SSD and hard-disk brands"
