@@ -29,15 +29,22 @@
 
             var listTable = new Table
             {
-                Columns = new[]
-                {
+                Columns =
+                [
                     new Column { Name = "Path" },
                     new Column { Name = "Name" },
-                    new Column { Name = "Size", Alignment = ColumnAlignment.Right }
-                },
+                    new Column { Name = "Size", Alignment = ColumnAlignment.Right },
+                    new Column { Name = "System drive" },
+                ],
                 Rows = mediaInfos.Select(x => new Row
                 {
-                    Columns = new[] { Formatters.FormatDiskPath(x.Path), x.Name, x.DiskSize.FormatBytes() }
+                    Columns =
+                    [
+                        Formatters.FormatDiskPath(x.Path),
+                        x.Name,
+                        x.DiskSize.FormatBytes(),
+                        x.SystemDrive.ToString()
+                    ]
                 })
             };
 

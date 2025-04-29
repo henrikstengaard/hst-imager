@@ -11,5 +11,6 @@
         public long DiskSize { get; set; }
         public DiskInfo DiskInfo { get; set; }
         public bool Byteswap { get; set; }
+        public bool SystemDrive { get; set; }
     }
 }

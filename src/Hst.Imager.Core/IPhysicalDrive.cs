@@ -11,9 +11,11 @@
         bool Removable { get; }
         bool Writable { get; }
         bool ByteSwap { get; }
+        bool SystemDrive { get; }
 
         Stream Open();
         void SetWritable(bool writable);
         void SetByteSwap(bool byteSwap);
+        void SetSystemDrive(bool systemDrive);
     }
 }

@@ -77,6 +77,9 @@
       <None Update="TestData\diskutil\diskutil-external-usb-stick.plist">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\diskutil\diskutil-info-boot.plist">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="TestData\diskutil\diskutil-info-disk0.plist">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

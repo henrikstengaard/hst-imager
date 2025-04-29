@@ -29,7 +29,8 @@ namespace Hst.Imager.Core.Commands
                 Name = x.Name,
                 IsPhysicalDrive = true,
                 Type = Media.MediaType.Raw,
-                DiskSize = x.Size
+                DiskSize = x.Size,
+                SystemDrive = x.SystemDrive
             }));
             
             return Task.FromResult(new Result());

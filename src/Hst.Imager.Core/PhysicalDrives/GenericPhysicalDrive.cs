@@ -11,8 +11,9 @@ namespace Hst.Imager.Core.PhysicalDrives
         public bool Removable { get; }
         public bool Writable { get; private set; }
         public bool ByteSwap { get; private set; }
+        public bool SystemDrive { get; private set; }
 
-        public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false, bool writable = false)
+        public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false, bool writable = false, bool systemDrive = false)
         {
             Path = path;
             Type = type;
@@ -20,10 +21,21 @@ namespace Hst.Imager.Core.PhysicalDrives
             Size = size;
             Removable = removable;
             Writable = writable;
+            SystemDrive = systemDrive;
+        }
+
+        public void SetSystemDrive(bool systemDrive)
+        {
+            this.SystemDrive = systemDrive;
         }
 
         public virtual Stream Open()
         {
+            if (SystemDrive)
+            {
+                throw new IOException($"Access to system drive path '{Path}' is not supported!");
+            }
+            
             return new MediaStream(File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read),
                 Size);
         }

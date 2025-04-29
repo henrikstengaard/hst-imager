@@ -11,15 +11,14 @@
     {
         public readonly string BusType;
         public readonly List<string> DriveLetters;
-        public readonly bool SystemDrive;
         private bool scanDriveLetters;
 
         public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, bool removable,
-            bool systemDrive, IEnumerable<string> driveLetters) : base(path, type, name, size, removable)
+            bool systemDrive, IEnumerable<string> driveLetters) : base(path, type, name, size, removable: removable,
+            systemDrive: systemDrive)
         {
             this.BusType = busType;
             this.DriveLetters = driveLetters.ToList();
-            this.SystemDrive = systemDrive;
             this.scanDriveLetters = false;
         }
 
@@ -27,9 +26,9 @@
         {
             if (SystemDrive)
             {
-                throw new IOException("System drive cannot be opened.");
+                throw new IOException($"Access to system drive path '{Path}' is not supported!");
             }
-            
+
             if (scanDriveLetters)
             {
                 ScanDriveLetters();

@@ -46,9 +46,49 @@
         {
             return new DiskUtilDisk
             {
+                Content = GetString(allDisksAndPartitionsDictionary, "Content"),
                 DeviceIdentifier = GetString(allDisksAndPartitionsDictionary, "DeviceIdentifier"),
                 Size = GetLongNumber(allDisksAndPartitionsDictionary, "Size"),
-                Partitions = ParsePartitions(allDisksAndPartitionsDictionary)
+                Partitions = ParsePartitions(allDisksAndPartitionsDictionary),
+                ApfsPhysicalStores = ParseApfsPhysicalStores(allDisksAndPartitionsDictionary)
+            };
+        }
+
+        private static ApfsPhysicalStores ParseApfsPhysicalStores(NSDictionary allDisksAndPartitionsDictionary)
+        {
+            if (!allDisksAndPartitionsDictionary.ContainsKey("APFSPhysicalStores"))
+            {
+                return null;
+            }
+
+            var apfsPhysicalStores = allDisksAndPartitionsDictionary.ObjectForKey("APFSPhysicalStores") as NSArray;
+
+            var deviceIdentifier = string.Empty;
+            foreach (var item in apfsPhysicalStores)
+            {
+                var dict = item as NSDictionary;
+
+                if (dict == null)
+                {
+                    throw new IOException("Invalid APFSPhysicalStores item");
+                }
+
+                if (!dict.ContainsKey("DeviceIdentifier"))
+                {
+                    continue;
+                }
+
+                deviceIdentifier = GetString(dict, "DeviceIdentifier");
+            }
+
+            if (string.IsNullOrWhiteSpace(deviceIdentifier))
+            {
+                return null;
+            }
+
+            return new ApfsPhysicalStores
+            {
+                DeviceIdentifier = deviceIdentifier
             };
         }
 
@@ -82,7 +122,7 @@
                 Size = GetLongNumber(dict, "Size")
             };
         }
-        
+
         public static DiskUtilInfo ParseInfo(Stream stream)
         {
             var pList = PropertyListParser.Parse(stream) as NSDictionary;
@@ -96,9 +136,15 @@
             var busProtocol = GetString(pList, "BusProtocol");
             var ioRegistryEntryName = GetString(pList, "IORegistryEntryName");
             var size = GetLongNumber(pList, "Size");
+            var parentWholeDisk = pList.ContainsKey("ParentWholeDisk")
+                ? GetString(pList, "ParentWholeDisk")
+                : string.Empty;
             var deviceNode = GetString(pList, "DeviceNode");
             var mediaType = GetString(pList, "MediaType");
-            var virtualOrPhysical = GetString(pList, "VirtualOrPhysical");
+
+            var virtualOrPhysical = pList.ContainsKey("VirtualOrPhysical")
+                ? GetString(pList, "VirtualOrPhysical")
+                : mediaType;
 
             return new DiskUtilInfo
             {
@@ -107,6 +153,7 @@
                 IoRegistryEntryName = ioRegistryEntryName,
                 Size = size,
                 DeviceNode = deviceNode,
+                ParentWholeDisk = parentWholeDisk,
                 MediaType = mediaType,
                 DiskType = GetDiskType(virtualOrPhysical)
             };
@@ -118,6 +165,7 @@
             {
                 "physical" => DiskUtilInfo.DiskTypeEnum.Physical,
                 "virtual" => DiskUtilInfo.DiskTypeEnum.Virtual,
+                "generic" => DiskUtilInfo.DiskTypeEnum.Generic,
                 _ => DiskUtilInfo.DiskTypeEnum.Unknown
             };
         }

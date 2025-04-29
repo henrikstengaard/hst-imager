@@ -9,6 +9,7 @@ namespace Hst.Imager.Core.PhysicalDrives
     using System.Text;
     using System.Threading.Tasks;
     using Hst.Core.Extensions;
+    using Hst.Imager.Core.Commands;
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
@@ -35,11 +36,29 @@ namespace Hst.Imager.Core.PhysicalDrives
         {
             VerifyMacOs();
 
+            var bootDiskInfoOutput = await GetDiskUtilInfoDisk("/");
+
+            var bootDiskInfo = DiskUtilReader.ParseInfo(new MemoryStream(Encoding.UTF8.GetBytes(bootDiskInfoOutput)));
+
+            var bootDiskMatch = Regexs.MacOsDiskPathRegex.Match(bootDiskInfo.ParentWholeDisk);
+
+            if (!bootDiskMatch.Success)
+            {
+                throw new IOException($"Invalid boot disk parent whole disk '{bootDiskInfo.ParentWholeDisk}'");
+            }
+
+            var bootDisk = bootDiskMatch.Groups[1].Value;
+
+            this.logger.LogDebug($"Boot disk '{bootDiskInfo.ParentWholeDisk}'");
+
             var listOutput = await GetDiskUtilExternalDisks(all);
 
             var disks = DiskUtilReader.ParseList(new MemoryStream(Encoding.UTF8.GetBytes(listOutput))).ToList();
 
-            var physicalDrives = new List<IPhysicalDrive>();
+            var physicalDrives = new List<MacOsPhysicalDrive>();
+            var physicalDriveIndex = new Dictionary<string, MacOsPhysicalDrive>();
+
+            var apfsParentBootDisks = new List<string>(10);
 
             foreach (var disk in disks)
             {
@@ -48,15 +67,41 @@ namespace Hst.Imager.Core.PhysicalDrives
 
                 var info = DiskUtilReader.ParseInfo(new MemoryStream(Encoding.UTF8.GetBytes(infoOutput)));
 
+                var apfsPhysicalDeviceIdentifier = disk.ApfsPhysicalStores?.DeviceIdentifier ?? string.Empty;
+
+                var apfsDiskMatch = Regexs.MacOsDiskPathRegex.Match(apfsPhysicalDeviceIdentifier);
+
+                var isSystemDrive = disk.DeviceIdentifier.Equals(bootDisk);
+
+                var apfsDisk = apfsDiskMatch.Success ? apfsDiskMatch.Groups[1].Value : string.Empty;
+
+                if (isSystemDrive &&
+                    !string.IsNullOrWhiteSpace(apfsDisk))
+                {
+                    apfsParentBootDisks.Add(apfsDisk);
+                }
+
                 if (info.DiskType != DiskUtilInfo.DiskTypeEnum.Physical)
                 {
                     continue;
                 }
 
-                physicalDrives.Add(new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName,
-                    info.Size, IsRemovable(info.BusProtocol), partitionDevices));
+                var physicalDrive = new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName,
+                    info.Size, IsRemovable(info.BusProtocol), isSystemDrive, partitionDevices);
+                physicalDrives.Add(physicalDrive);
+                physicalDriveIndex[disk.DeviceIdentifier] = physicalDrive;
             }
-            
+
+            foreach (var apfsParentBootDisk in apfsParentBootDisks)
+            {
+                if (!physicalDriveIndex.ContainsKey(apfsParentBootDisk))
+                {
+                    continue;
+                }
+
+                physicalDriveIndex[apfsParentBootDisk].SetSystemDrive(true);
+            }
+
             if (!all)
             {
                 physicalDrives = physicalDrives.Where(x => x.Removable).ToList();

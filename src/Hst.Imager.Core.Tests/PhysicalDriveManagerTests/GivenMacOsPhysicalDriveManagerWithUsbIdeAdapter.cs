@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Imager.Core.PhysicalDrives;
@@ -9,14 +10,22 @@ namespace Hst.Imager.Core.Tests.PhysicalDriveManagerTests;
 
 public class GivenMacOsPhysicalDriveManagerWithUsbIdeAdapter
 {
+    private static string ResolveDisk(string diskName)
+    {
+        return diskName switch
+        {
+            "/" => $"diskutil-info-boot.plist",
+            "disk2" => "diskutil-info-disk2-usb-ide-adapter.plist",
+            _ => $"diskutil-info-{diskName}.plist",
+        };
+    }
+
     // arrange - macos physical drive manager with usb ide adapter
     private readonly TestMacOsPhysicalDriveManager macOsPhysicalDriveManager = new(
         new NullLogger<MacOsPhysicalDriveManager>(),
         all => File.ReadAllText(Path.Combine("TestData", "diskutil",
             all ? "diskutil-all-usb-ide-adapter.plist" : "diskutil-external-usb-ide-adapter.plist")),
-        diskName => File.ReadAllText(Path.Combine("TestData", "diskutil",
-            diskName == "disk2" ? "diskutil-info-disk2-usb-ide-adapter.plist" : $"diskutil-info-{diskName}.plist"))
-    );
+        diskName => File.ReadAllText(Path.Combine("TestData", "diskutil", ResolveDisk(diskName))));
     
     [Fact]
     public async Task WhenGetPhysicalDrivesWithUsbIdeAdapterThenUsbPhysicalDrivesAreReturned()

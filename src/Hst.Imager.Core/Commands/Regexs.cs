@@ -11,6 +11,9 @@ public static class Regexs
         new("^(\\\\\\\\\\.\\\\PHYSICALDRIVE|//\\./PHYSICALDRIVE)(\\d+)", 
             RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
+    public static readonly Regex MacOsDiskPathRegex =
+        new("^(disk\\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
     public static readonly Regex DevicePathRegex =
         new("^/dev", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     

@@ -9,14 +9,22 @@ namespace Hst.Imager.Core.Tests.PhysicalDriveManagerTests;
 
 public class GivenMacOsPhysicalDriveManagerWithUsbStick
 {
+        private static string ResolveDisk(string diskName)
+    {
+        return diskName switch
+        {
+            "/" => $"diskutil-info-boot.plist",
+            "disk2" => "diskutil-info-disk2-usb-stick.plist",
+            _ => $"diskutil-info-{diskName}.plist",
+        };
+    }
+
     // arrange - macos physical drive manager with usb stick
     private readonly TestMacOsPhysicalDriveManager macOsPhysicalDriveManager = new(
         new NullLogger<MacOsPhysicalDriveManager>(),
         all => File.ReadAllText(Path.Combine("TestData", "diskutil",
             all ? "diskutil-all-usb-stick.plist" : "diskutil-external-usb-stick.plist")),
-        diskName => File.ReadAllText(Path.Combine("TestData", "diskutil",
-            diskName == "disk2" ? "diskutil-info-disk2-usb-stick.plist" : $"diskutil-info-{diskName}.plist"))
-    );
+        diskName => File.ReadAllText(Path.Combine("TestData", "diskutil", ResolveDisk(diskName))));
     
     [Fact]
     public async Task WhenGetPhysicalDrivesWithUsbStickThenUsbPhysicalDrivesAreReturned()
