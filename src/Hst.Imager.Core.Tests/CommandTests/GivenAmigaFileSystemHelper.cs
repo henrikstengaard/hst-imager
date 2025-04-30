@@ -119,7 +119,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
         public async Task When_FindFileSystemsInLhaMediaWithoutFastFileSystem_Then_NoFileSystemIsFound()
         {
             // arrange - paths
-            var lhaPath = $"{Guid.NewGuid()}.lha";            var outputPath = $"{Guid.NewGuid()}-dir";
+            var lhaPath = $"{Guid.NewGuid()}.lha";
             const string fileSystemName = "FastFileSystem";
 
             var commandHelper = new TestCommandHelper();

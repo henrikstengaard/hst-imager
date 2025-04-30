@@ -12,14 +12,18 @@ using Xunit;
 
 public class GivenFsExtractCommandWithLha : FsCommandTestBase
 {
+    private readonly string lhaPath = Path.Combine("TestData", "Lha", "amiga.lha");
+
     [Fact]
     public async Task WhenExtractingAllRecursivelyFromLhaToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lhaPath, srcPath);
+
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -60,18 +64,20 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
 
     [Fact]
     public async Task WhenExtractingAllRecursivelyFromLhaWithWildcardToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lhaPath, srcPath);
+
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -100,18 +106,20 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
     
-        [Fact]
+    [Fact]
     public async Task WhenExtractingAllRecursivelyFromLhaSubdirectoryToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lhaPath, srcPath);
+
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -144,18 +152,20 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
 
     [Fact]
     public async Task WhenExtractingAFileFromLhaToLocalDirectoryThenFileIsExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lhaPath, srcPath);
+
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -179,18 +189,20 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
     
     [Fact]
     public async Task WhenExtractingAFileFromLhaSubdirectoryToLocalDirectoryThenFileIsExtracted()
     {
-        var srcPath = Path.Combine("TestData", "Lha", "amiga.lha");
+        var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
 
         try
         {
+            File.Copy(lhaPath, srcPath);
+
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -214,7 +226,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(destPath);
+            DeletePaths(srcPath, destPath);
         }
     }
 }
