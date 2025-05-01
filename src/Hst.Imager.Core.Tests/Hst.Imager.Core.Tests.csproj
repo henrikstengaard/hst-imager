@@ -137,6 +137,9 @@
       <None Update="TestData\Lha\FastFileSystem.lha">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\lsblk\lsblk-ubuntu.json">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>
