@@ -57,7 +57,8 @@ namespace Hst.Imager.ConsoleApp
                     : "Run Hst Imager with sudo and same arguments.");
             }
 
-            AppState.Instance.Settings = await ApplicationDataHelper.ReadSettings<Settings>(Core.Models.Constants.AppName);
+            AppState.Instance.Settings = await ApplicationDataHelper.ReadSettings<Settings>(Core.Models.Constants.AppName)
+                ?? new Settings();
 
             var rootCommand = CommandFactory.CreateRootCommand();
 
