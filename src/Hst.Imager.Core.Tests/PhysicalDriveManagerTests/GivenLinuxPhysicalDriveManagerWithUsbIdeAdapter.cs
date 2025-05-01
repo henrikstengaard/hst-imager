@@ -11,6 +11,7 @@ public class GivenLinuxPhysicalDriveManagerWithUsbIdeAdapter
     // arrange - linux physical drive manager with usb ide adapter
     private readonly TestLinuxPhysicalDriveManager linuxPhysicalDriveManager = new(
         new NullLogger<TestLinuxPhysicalDriveManager>(),
+        "/dev/mmcblk0",
         () => File.ReadAllText(Path.Combine("TestData", "lsblk", "lsblk-raspberry-pi-usb-ide-adapter.json"))
     );
 

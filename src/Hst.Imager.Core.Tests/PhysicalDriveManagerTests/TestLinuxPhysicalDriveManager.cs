@@ -5,16 +5,17 @@ using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.Core.Tests.PhysicalDriveManagerTests;
 
-public class TestLinuxPhysicalDriveManager : LinuxPhysicalDriveManager
+public class TestLinuxPhysicalDriveManager(
+    ILogger<LinuxPhysicalDriveManager> logger,
+    string bootPath,
+    Func<string> lsBlkHandler)
+    : LinuxPhysicalDriveManager(logger)
 {
-    private readonly Func<string> lsBlkHandler;
-
-    public TestLinuxPhysicalDriveManager(ILogger<LinuxPhysicalDriveManager> logger,
-        Func<string> lsBlkHandler) : base(logger)
+    protected override Task<string> GetBootPath()
     {
-        this.lsBlkHandler = lsBlkHandler;
+        return Task.FromResult(bootPath);
     }
-    
+
     protected override void VerifyLinuxOperatingSystem()
     {
         // no verification to allow in unit test context

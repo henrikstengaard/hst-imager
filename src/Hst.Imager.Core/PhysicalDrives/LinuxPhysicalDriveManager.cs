@@ -33,10 +33,22 @@ namespace Hst.Imager.Core.PhysicalDrives
         {
             VerifyLinuxOperatingSystem();
 
+            var bootPath = await GetBootPath();
+            
             var lsBlkJson = await GetLsBlkJson();
 
             var physicalDrives = Parse(lsBlkJson).ToList();
 
+            foreach (var physicalDrive in physicalDrives)
+            {
+                if (!physicalDrive.Path.Equals(bootPath, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    continue;
+                }
+                
+                physicalDrive.SetSystemDrive(true);
+            }
+            
             if (!all)
             {
                 physicalDrives = physicalDrives.Where(x => x.Removable).ToList();
@@ -49,6 +61,13 @@ namespace Hst.Imager.Core.PhysicalDrives
             }
 
             return physicalDrives.ToList();
+        }
+
+        protected virtual async Task<string> GetBootPath()
+        {
+            var output = await "findmnt".RunProcessAsync("-n / | awk '{ print $2 }'");
+            logger.LogDebug(output);
+            return output;
         }
 
         protected virtual async Task<string> GetLsBlkJson()
@@ -64,7 +83,7 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             if (lsBlk.BlockDevices == null)
             {
-                return Enumerable.Empty<IPhysicalDrive>();
+                return [];
             }
 
             var physicalDrives = lsBlk.BlockDevices.Select(x =>

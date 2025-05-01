@@ -16,7 +16,7 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
         new List<IPhysicalDrive>
         {
             new WindowsPhysicalDrive("\\disk0", "FixedMedia", "17", "Micron_2450_MTFDKBA1T0TFK", 
-                1024209543168, false, false, new []{ "C" }),
+                1024209543168, false, true, new []{ "C" }),
             new WindowsPhysicalDrive("\\disk1", "FixedMedia", "BusTypeUsb", "SAMSUNG  SSD_PM830_mSATA", 
                 128035676160, true, false, new []{ "D" }),
         }
@@ -46,6 +46,7 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
         Assert.Equal("SAMSUNG  SSD_PM830_mSATA", physicalDrive.Name);
         Assert.Equal("\\disk1", physicalDrive.Path);
         Assert.Equal(128035676160, physicalDrive.Size);
+        Assert.False(physicalDrive.SystemDrive);
     }
     
     [Fact]
@@ -72,6 +73,7 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
         Assert.Equal("Micron_2450_MTFDKBA1T0TFK", physicalDrive1.Name);
         Assert.Equal("\\disk0", physicalDrive1.Path);
         Assert.Equal(1024209543168, physicalDrive1.Size);
+        Assert.True(physicalDrive1.SystemDrive);
 
         // assert - physical drive 2 is equal
         var physicalDrive2 = physicalDrives[1];
@@ -79,5 +81,6 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
         Assert.Equal("SAMSUNG  SSD_PM830_mSATA", physicalDrive2.Name);
         Assert.Equal("\\disk1", physicalDrive2.Path);
         Assert.Equal(128035676160, physicalDrive2.Size);
+        Assert.False(physicalDrive2.SystemDrive);
     }
 }

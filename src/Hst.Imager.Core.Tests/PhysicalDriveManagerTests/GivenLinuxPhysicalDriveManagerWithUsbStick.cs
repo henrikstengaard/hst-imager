@@ -11,6 +11,7 @@ public class GivenLinuxPhysicalDriveManagerWithUsbStick
     // arrange - linux physical drive manager with usb stick
     private readonly TestLinuxPhysicalDriveManager linuxPhysicalDriveManager = new(
         new NullLogger<TestLinuxPhysicalDriveManager>(),
+        "/dev/mmcblk0",
         () => File.ReadAllText(Path.Combine("TestData", "lsblk", "lsblk-raspberry-pi-usb-stick.json"))
     );
 
@@ -29,6 +30,7 @@ public class GivenLinuxPhysicalDriveManagerWithUsbStick
         Assert.Equal("SanDisk' Cruzer_Fit", physicalDrive.Name);
         Assert.Equal("/dev/sda", physicalDrive.Path);
         Assert.Equal(15682240512, physicalDrive.Size);
+        Assert.False(physicalDrive.SystemDrive);
     }
 
     [Fact]
@@ -46,6 +48,7 @@ public class GivenLinuxPhysicalDriveManagerWithUsbStick
         Assert.Equal("SanDisk' Cruzer_Fit", physicalDrive1.Name);
         Assert.Equal("/dev/sda", physicalDrive1.Path);
         Assert.Equal(15682240512, physicalDrive1.Size);
+        Assert.False(physicalDrive1.SystemDrive);
 
         // assert - physical drive 2 is equal
         var physicalDrive2 = physicalDrives[1];
@@ -53,5 +56,6 @@ public class GivenLinuxPhysicalDriveManagerWithUsbStick
         Assert.Equal(string.Empty, physicalDrive2.Name);
         Assert.Equal("/dev/mmcblk0", physicalDrive2.Path);
         Assert.Equal(30989615104, physicalDrive2.Size);
+        Assert.True(physicalDrive2.SystemDrive);
     }
 }
