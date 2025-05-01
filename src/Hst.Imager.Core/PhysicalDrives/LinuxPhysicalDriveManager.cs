@@ -37,11 +37,13 @@ namespace Hst.Imager.Core.PhysicalDrives
             
             var lsBlkJson = await GetLsBlkJson();
 
-            var physicalDrives = Parse(lsBlkJson).ToList();
+            var physicalDrives = Parse(lsBlkJson)
+                .Where(x => x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase)).ToList();
 
             foreach (var physicalDrive in physicalDrives)
             {
-                if (!physicalDrive.Path.Equals(bootPath, StringComparison.InvariantCultureIgnoreCase))
+                if (!string.IsNullOrWhiteSpace(bootPath) &&
+                    !bootPath.StartsWith(physicalDrive.Path, StringComparison.InvariantCultureIgnoreCase))
                 {
                     continue;
                 }
@@ -65,7 +67,7 @@ namespace Hst.Imager.Core.PhysicalDrives
 
         protected virtual async Task<string> GetBootPath()
         {
-            var output = await "findmnt".RunProcessAsync("-n / | awk '{ print $2 }'");
+            var output = (await "findmnt".RunProcessAsync("--output SOURCE -n /")).Trim();
             logger.LogDebug(output);
             return output;
         }
