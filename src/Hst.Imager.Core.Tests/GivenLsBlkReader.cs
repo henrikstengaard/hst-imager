@@ -69,5 +69,44 @@
             Assert.Null(blockDevice2.Vendor);
             Assert.Null(blockDevice2.Tran);
         }
+
+        [Fact]
+        public async Task WhenParseLsBlkJsonOutputFromUbuntuThenBlockDevicesAreReturned()
+        {
+            var lsBlk = LsBlkReader.ParseLsBlk(await File.ReadAllTextAsync(Path.Combine("TestData", "lsblk",
+                "lsblk-ubuntu.json")));
+            
+            Assert.NotNull(lsBlk);
+            Assert.NotEmpty(lsBlk.BlockDevices);
+
+            var blockDevices = lsBlk.BlockDevices.Where(x => x.Type == "disk").ToList();
+            Assert.Single(blockDevices);
+
+            var diskBlockDevice = blockDevices[0];
+            Assert.Equal("disk", diskBlockDevice.Type);
+            Assert.False(diskBlockDevice.Removable);
+            Assert.Equal("VBOX HARDDISK", diskBlockDevice.Model);
+            Assert.Equal("/dev/sda", diskBlockDevice.Path);
+            Assert.Equal(274877906944, diskBlockDevice.Size);
+            Assert.Equal("ATA     ", diskBlockDevice.Vendor);
+            Assert.Equal("sata", diskBlockDevice.Tran);
+            
+            var children = diskBlockDevice.Children.ToList();
+            Assert.Equal(2, children.Count);
+
+            var children1 = children[0];
+            Assert.Equal("part", children1.Type);
+            Assert.Equal("sda1", children1.Name);
+            Assert.False(children1.Removable);
+            Assert.Equal("/dev/sda1", children1.Path);
+            Assert.Equal(1048576, children1.Size);
+
+            var children2 = children[1];
+            Assert.Equal("part", children2.Type);
+            Assert.Equal("sda2", children2.Name);
+            Assert.False(children2.Removable);
+            Assert.Equal("/dev/sda2", children2.Path);
+            Assert.Equal(274874761216, children2.Size);
+        }
     }
 }

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Hst.Imager.Core.Models
 {
     using System.Text.Json.Serialization;
@@ -51,5 +53,11 @@ namespace Hst.Imager.Core.Models
         /// </summary>
         [JsonPropertyName("tran")]
         public string Tran { get; set; }
+        
+        /// <summary>
+        /// children
+        /// </summary>
+        [JsonPropertyName("children")]
+        public IEnumerable<ChildBlockDevice> Children { get;set; }
     }
 }

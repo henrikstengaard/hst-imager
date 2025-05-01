@@ -1,0 +1,179 @@
+﻿{
+  "blockdevices": [
+    {
+      "type": "loop",
+      "name": "loop0",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop0",
+      "size": 4096,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop1",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop1",
+      "size": 332218368,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop2",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop2",
+      "size": 66842624,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop3",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop3",
+      "size": 77479936,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop4",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop4",
+      "size": 270569472,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop5",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop5",
+      "size": 11673600,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop6",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop6",
+      "size": 541073408,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop7",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop7",
+      "size": 96141312,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop8",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop8",
+      "size": 11292672,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop9",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop9",
+      "size": 46596096,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop10",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop10",
+      "size": 581632,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop11",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop11",
+      "size": 53366784,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop12",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop12",
+      "size": 77475840,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop13",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop13",
+      "size": 66850816,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "loop",
+      "name": "loop14",
+      "rm": false,
+      "model": null,
+      "path": "/dev/loop14",
+      "size": 11354112,
+      "vendor": null,
+      "tran": null
+    },{
+      "type": "disk",
+      "name": "sda",
+      "rm": false,
+      "model": "VBOX HARDDISK",
+      "path": "/dev/sda",
+      "size": 274877906944,
+      "vendor": "ATA     ",
+      "tran": "sata",
+      "children": [
+        {
+          "type": "part",
+          "name": "sda1",
+          "rm": false,
+          "model": null,
+          "path": "/dev/sda1",
+          "size": 1048576,
+          "vendor": null,
+          "tran": null
+        },{
+          "type": "part",
+          "name": "sda2",
+          "rm": false,
+          "model": null,
+          "path": "/dev/sda2",
+          "size": 274874761216,
+          "vendor": null,
+          "tran": null
+        }
+      ]
+    },{
+      "type": "rom",
+      "name": "sr0",
+      "rm": true,
+      "model": "VBOX CD-ROM",
+      "path": "/dev/sr0",
+      "size": 60225536,
+      "vendor": "VBOX    ",
+      "tran": "ata"
+    }
+  ]
+}
