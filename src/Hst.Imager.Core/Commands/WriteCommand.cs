@@ -176,7 +176,7 @@ namespace Hst.Imager.Core.Commands
         {
             var pathComponents = string.IsNullOrEmpty(path)
                 ? []
-                : path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries).ToArray();
+                : path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries).ToArray();
 
             if (pathComponents.Length == 0)
             {
