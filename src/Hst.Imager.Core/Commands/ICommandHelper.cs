@@ -10,6 +10,7 @@ namespace Hst.Imager.Core.Commands
     public interface ICommandHelper : IDisposable
     {
         void ClearActiveMedias();
+        void ClearActivePhysicalDrives();
         Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, ModifierEnum? modifiers = null, bool writeable = false);
         Task<Result<Media>> GetReadableFileMedia(string path, ModifierEnum? modifiers = null);
         Task<Result<Media>> GetWritableFileMedia(string path, ModifierEnum? modifiers = null, long? size = null, bool create = false);

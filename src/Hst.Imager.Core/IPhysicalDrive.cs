@@ -1,8 +1,10 @@
-﻿namespace Hst.Imager.Core
+﻿using System;
+
+namespace Hst.Imager.Core
 {
     using System.IO;
 
-    public interface IPhysicalDrive
+    public interface IPhysicalDrive : IDisposable
     {
         string Path { get; }
         string Type { get; }

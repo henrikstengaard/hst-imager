@@ -1,8 +1,11 @@
+using System;
+using System.Threading.Tasks;
+
 namespace Hst.Imager.Core.PhysicalDrives
 {
     using System.IO;
 
-    public class GenericPhysicalDrive : IPhysicalDrive
+    public class GenericPhysicalDrive : IPhysicalDrive, IAsyncDisposable
     {
         public string Path { get; }
         public string Type { get; }
@@ -12,6 +15,9 @@ namespace Hst.Imager.Core.PhysicalDrives
         public bool Writable { get; private set; }
         public bool ByteSwap { get; private set; }
         public bool SystemDrive { get; private set; }
+        
+        private Stream stream;
+        public bool IsDisposed { get; private set; }
 
         public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false, bool writable = false, bool systemDrive = false)
         {
@@ -22,6 +28,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             Removable = removable;
             Writable = writable;
             SystemDrive = systemDrive;
+            stream = null;
         }
 
         public void SetSystemDrive(bool systemDrive)
@@ -35,9 +42,11 @@ namespace Hst.Imager.Core.PhysicalDrives
             {
                 throw new IOException($"Access to system drive path '{Path}' is not supported!");
             }
+
+            IsDisposed = false;
+            stream ??= File.Open(Path, FileMode.Open, FileAccess.ReadWrite);
             
-            return new MediaStream(File.Open(Path, FileMode.Open, Writable ? FileAccess.ReadWrite : FileAccess.Read),
-                Size);
+            return new MediaStream(stream, Size);
         }
 
         public void SetWritable(bool writable)
@@ -48,6 +57,29 @@ namespace Hst.Imager.Core.PhysicalDrives
         public void SetByteSwap(bool byteSwap)
         {
             ByteSwap = byteSwap;
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+
+            if (disposing)
+            {
+                stream?.Close();
+                stream?.Dispose();
+            }
+
+            IsDisposed = true;
+        }
+
+        public void Dispose() => Dispose(true);
+
+        public async ValueTask DisposeAsync()
+        {
+            if (stream != null) await stream.DisposeAsync();
         }
     }
 }

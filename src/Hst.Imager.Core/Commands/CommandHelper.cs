@@ -27,6 +27,8 @@ namespace Hst.Imager.Core.Commands
         private readonly ILogger<ICommandHelper> logger;
         private readonly bool isAdministrator;
 
+        private readonly IList<IPhysicalDrive> activePhysicalDrives;
+        
         /// <summary>
         /// Active medias contains opened medias and is used to get reuse medias without opening same media twice
         /// </summary>
@@ -36,6 +38,7 @@ namespace Hst.Imager.Core.Commands
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
+            this.activePhysicalDrives = new List<IPhysicalDrive>();
             this.activeMedias = new List<Media>();
             DiscUtils.Containers.SetupHelper.SetupContainers();
             DiscUtils.FileSystems.SetupHelper.SetupFileSystems();
@@ -56,7 +59,8 @@ namespace Hst.Imager.Core.Commands
 
         private Media GetActiveMedia(string path)
         {
-            var media = this.activeMedias.FirstOrDefault(x => x.Path == path);
+            var media = this.activeMedias.FirstOrDefault(x => 
+                x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (media == null)
             {
                 return null;
@@ -164,9 +168,7 @@ namespace Hst.Imager.Core.Commands
                     : new Result<Media>(activeMedia));
             }
 
-            var physicalDrive =
-                physicalDrives.FirstOrDefault(x =>
-                    x.Path.Equals(physicalDrivePath, StringComparison.OrdinalIgnoreCase));
+            var physicalDrive = GetPhysicalDrive(physicalDrives, path);
 
             if (physicalDrive == null)
             {
@@ -183,8 +185,28 @@ namespace Hst.Imager.Core.Commands
             var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
                 Media.MediaType.Raw, true, physicalDrive, byteSwap);
 
+            // add physical drive to active drives if not already present
+            if (activePhysicalDrives.All(x => x.Path != physicalDrivePath))
+            {
+                this.activePhysicalDrives.Add(physicalDrive);
+            }
+            
             this.activeMedias.Add(physicalDriveMedia);
             return Task.FromResult(new Result<Media>(physicalDriveMedia));
+        }
+
+        private IPhysicalDrive GetPhysicalDrive(IEnumerable<IPhysicalDrive> physicalDrives, string path)
+        {
+            var activePhysicalDrive = activePhysicalDrives.FirstOrDefault(x =>
+                    x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            
+            if (activePhysicalDrive != null)
+            {
+                return activePhysicalDrive;
+            }
+            
+            return physicalDrives.FirstOrDefault(x => 
+                x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetPhysicalDrivePath(string path)
@@ -322,7 +344,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             // raw stream
-            // sector stream is only used byteswapping disk media
+            // sector stream is only used for byte swapping disk media
             stream.Position = 0;
             return new Media(path, name, stream.Length, Media.MediaType.Raw, false,
                 byteSwap ? new SectorStream(stream, byteSwap: true, leaveOpen: false) : stream, byteSwap);
@@ -1130,6 +1152,17 @@ namespace Hst.Imager.Core.Commands
         public void Dispose()
         {
             ClearActiveMedias();
+            ClearActivePhysicalDrives();
+        }
+        
+        public void ClearActivePhysicalDrives()
+        {
+            foreach (var activePhysicalDrive in activePhysicalDrives)
+            {
+                activePhysicalDrive.Dispose();
+            }
+
+            activePhysicalDrives.Clear();
         }
     }
 }
