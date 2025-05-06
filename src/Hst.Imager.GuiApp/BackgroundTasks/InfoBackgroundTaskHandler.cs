@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Linq;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
@@ -15,6 +18,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
         AppState appState)
         : IBackgroundTaskHandler
     {
+        private readonly ILogger<ListBackgroundTaskHandler> logger = loggerFactory.CreateLogger<ListBackgroundTaskHandler>();
+
         public event EventHandler<MediaInfoEventArgs> MediaInfoRead;
         public event EventHandler<ErrorEventArgs> ErrorOccurred;
 
@@ -25,31 +30,41 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 return;
             }
 
-            var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
-                appState.Settings.AllPhysicalDrives);
-
-            using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
-            var logger = loggerFactory.CreateLogger<InfoCommand>();
-            var infoCommand = new InfoCommand(logger, commandHelper, physicalDrives,
-                string.Concat(infoBackgroundTask.Byteswap ? "+bs:" : string.Empty, infoBackgroundTask.Path));
-
-            infoCommand.DiskInfoRead += (_, args) =>
+            try
             {
-                OnMediaInfoRead(args.MediaInfo);
-            };
+                // read settings enabling background worker to get changed settings from gui
+                var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
+                    Core.Models.Constants.AppName) ?? new Settings();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
+                    .ToList();
 
-            var result = await infoCommand.Execute(context.Token);
-            if (result.IsFaulted)
-            {
-                // send null info result for views to reset/clear
-                OnMediaInfoRead(null);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                var infoCommand = new InfoCommand(loggerFactory.CreateLogger<InfoCommand>(), commandHelper, physicalDrives,
+                    string.Concat(infoBackgroundTask.Byteswap ? "+bs:" : string.Empty, infoBackgroundTask.Path));
 
-                var message = result.Error?.Message ?? "Info command returned error without message error";
-                logger.LogError(message);
+                infoCommand.DiskInfoRead += (_, args) =>
+                {
+                    OnMediaInfoRead(args.MediaInfo);
+                };
+
+                var result = await infoCommand.Execute(context.Token);
+                if (result.IsFaulted)
+                {
+                    // send null info result for views to reset/clear
+                    OnMediaInfoRead(null);
+
+                    var message = result.Error?.Message ?? "Info command returned error without message error";
+                    logger.LogError(message);
                 
-                OnErrorOccurred(message);
+                    OnErrorOccurred(message);
+                }
             }
-        }
+            catch (Exception e)
+            {
+                logger.LogError(e, "An unexpected error occured while executing list command");
+
+                OnErrorOccurred(e.Message);
+            }        }
         
         private void OnMediaInfoRead(MediaInfo mediaInfo)
         {

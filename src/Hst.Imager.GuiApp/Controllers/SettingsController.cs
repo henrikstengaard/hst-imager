@@ -26,7 +26,7 @@
             }
 
             appState.Settings = request;
-            await ApplicationDataHelper.WriteSettings(Constants.AppName, request);
+            await ApplicationDataHelper.WriteSettings(appState.AppDataPath, Constants.AppName, request);
 
             return Ok();
         }

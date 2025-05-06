@@ -76,13 +76,12 @@ namespace Hst.Imager.GuiApp
                 }
             }
 
-            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName))?.DebugMode ?? false;
-            var hasDebugEnabled = ApplicationDataHelper.HasDebugEnabled(Constants.AppName) || debugMode;
+            var hasDebugEnabled = await ApplicationDataHelper.HasDebugEnabled(appDataPath, Constants.AppName);
 
 #if RELEASE
-            SetupReleaseLogging(hasDebugEnabled);
+            SetupReleaseLogging(appDataPath, hasDebugEnabled);
 #else
-            SetupDebugLogging();
+            SetupDebugLogging(appDataPath);
 #endif
 
             Log.Information("Imager starting");
@@ -154,10 +153,9 @@ namespace Hst.Imager.GuiApp
                     }
                 });
 
-        private static void SetupReleaseLogging(bool hasDebugEnabled)
+        private static void SetupReleaseLogging(string appDataPath, bool hasDebugEnabled)
         {
-            var logFilePath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Constants.AppName), "logs",
-                "log-imager.txt");
+            var logFilePath = Path.Combine(appDataPath, "logs", "log-imager.txt");
             if (hasDebugEnabled)
             {
                 Log.Logger = new LoggerConfiguration()
@@ -183,10 +181,9 @@ namespace Hst.Imager.GuiApp
             }
         }
 
-        private static void SetupDebugLogging()
+        private static void SetupDebugLogging(string appDataPath)
         {
-            var logFilePath = Path.Combine(Path.GetDirectoryName(WorkerHelper.GetExecutingFile()), "logs",
-                "log-imager.txt");
+            var logFilePath = Path.Combine(appDataPath, "logs", "log-imager.txt");
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .MinimumLevel.Debug()

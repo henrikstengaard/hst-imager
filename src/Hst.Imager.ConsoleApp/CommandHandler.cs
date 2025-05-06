@@ -193,7 +193,8 @@ namespace Hst.Imager.ConsoleApp
                 return;
             }
 
-            await ApplicationDataHelper.WriteSettings(Core.Models.Constants.AppName, AppState.Instance.Settings);
+            var appDataPath = ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName);
+            await ApplicationDataHelper.WriteSettings(appDataPath, Core.Models.Constants.AppName, AppState.Instance.Settings);
         }
 
         public static async Task Script(string path)

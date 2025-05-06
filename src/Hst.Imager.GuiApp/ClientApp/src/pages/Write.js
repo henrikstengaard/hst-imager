@@ -240,7 +240,7 @@ export default function Write() {
                         value={sourcePath || ''}
                         endAdornment={
                             <BrowseOpenDialog
-                                id="browse-source-path"
+                                id="write-source-image-path"
                                 title="Select source image file"
                                 onChange={async (path) => {
                                     setSourcePath(path)
@@ -310,7 +310,7 @@ export default function Write() {
                             value={destinationPath || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-destination-image-path"
+                                    id="write-destination-image-path"
                                     title="Select destination image file"
                                     onChange={async (path) => {
                                         setDestinationPath(path)

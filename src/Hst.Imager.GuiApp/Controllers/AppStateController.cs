@@ -23,7 +23,7 @@
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            appState.Settings = await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName)
+            appState.Settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, Constants.AppName)
                 ?? new Settings();
 
             return Ok(appState);

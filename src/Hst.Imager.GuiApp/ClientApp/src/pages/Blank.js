@@ -95,7 +95,7 @@ export default function Blank() {
                         value={path || ''}
                         endAdornment={
                             <BrowseSaveDialog
-                                id="browse-image-path"
+                                id="blank-image-path"
                                 title="Select image file to create"
                                 onChange={(path) => setPath(path)}
                             />

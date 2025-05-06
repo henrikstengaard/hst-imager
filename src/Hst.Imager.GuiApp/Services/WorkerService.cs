@@ -79,7 +79,8 @@
 
         public async Task<Result<bool>> Start()
         {
-            var settings = await ApplicationDataHelper.ReadSettings<Settings>(Constants.AppName) ?? new Settings();
+            var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, Constants.AppName) 
+                           ?? new Settings();
             
             var workerCommand = WorkerHelper.GetWorkerFileName(appState.ExecutingFile);
             var workerPath = Path.Combine(
@@ -97,9 +98,10 @@
             var arguments = $"--worker --app-data-path \"{appState.AppDataPath}\" --baseurl {appState.BaseUrl} --process-id {currentProcessId}";
             logger.LogDebug($"Starting worker '{workerPath}' with arguments '{arguments}'");
 
+            var hasDebugEnabled = await ApplicationDataHelper.HasDebugEnabled(appState.AppDataPath, Constants.AppName);
             var processStartInfo = ElevateHelper.GetElevatedProcessStartInfo(
-                $"{Constants.AppName} needs administrator privileges for raw disk access", workerCommand, arguments,
-                appState.AppPath, Debugger.IsAttached || ApplicationDataHelper.HasDebugEnabled(Constants.AppName), 
+                $"{Constants.AppName} needs administrator privileges for raw disk access", workerPath, arguments,
+                appState.AppPath, Debugger.IsAttached || hasDebugEnabled, 
                 settings.MacOsElevateMethod == Settings.MacOsElevateMethodEnum.OsascriptSudo);
 
             logger.LogDebug($"Worker process file name '{processStartInfo.FileName}' with arguments '{processStartInfo.Arguments}'");

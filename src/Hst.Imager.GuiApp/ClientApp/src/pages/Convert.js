@@ -113,7 +113,7 @@ export default function Convert() {
                         value={sourcePath || ''}
                         endAdornment={
                             <BrowseOpenDialog
-                                id="browse-source-path"
+                                id="convert-source-path"
                                 title="Select source image file"
                                 onChange={async (path) => {
                                     setSourcePath(path)
@@ -155,7 +155,7 @@ export default function Convert() {
                         value={destinationPath || ''}
                         endAdornment={
                             <BrowseSaveDialog
-                                id="browse-destination-path"
+                                id="convert-destination-path"
                                 title="Select destination image file"
                                 onChange={(path) => setDestinationPath(path)}
                                 fileFilters = {[{

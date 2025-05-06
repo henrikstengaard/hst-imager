@@ -76,7 +76,7 @@ export default function Settings() {
                 <Grid item xs={12} lg={6}>
                     <CheckboxField
                         id="allPhysicalDrives"
-                        label="Show all physical drives (Warning)"
+                        label="Show all physical drives (Warning any physical drive can be overwritten except system drives)"
                         value={allPhysicalDrives}
                         onChange={async (checked) => {
                             setAllPhysicalDrives(checked);

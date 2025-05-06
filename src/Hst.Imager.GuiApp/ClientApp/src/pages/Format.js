@@ -325,7 +325,7 @@ export default function Format() {
                             value={path || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-image-path"
+                                    id="format-image-path"
                                     title="Select image file"
                                     onChange={async (path) => {
                                         setPath(path)
@@ -473,7 +473,7 @@ export default function Format() {
                                     value={fileSystemPath || ''}
                                     endAdornment={
                                         <BrowseOpenDialog
-                                            id="browse-file-system-file-path"
+                                            id="file-system-file-path"
                                             title="Select file system file"
                                             onChange={async (path) => {
                                                 setFileSystemPath(path)

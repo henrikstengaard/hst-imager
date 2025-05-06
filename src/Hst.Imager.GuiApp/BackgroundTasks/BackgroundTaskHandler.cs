@@ -1,4 +1,5 @@
-﻿using Hst.Imager.GuiApp.Extensions;
+﻿using System.Linq;
+using Hst.Imager.GuiApp.Extensions;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
@@ -105,8 +106,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
         {
             return backgroundTask switch
             {
-                ListBackgroundTask => new ListBackgroundTaskHandler(loggerFactory, resultHubConnection,
-                    errorHubConnection, physicalDriveManager, appState),
+                ListBackgroundTask => CreateListBackgroundTaskHandler(),
                 InfoBackgroundTask => CreateInfoBackgroundTaskHandler(),
                 ReadBackgroundTask => CreateReadBackgroundTaskHandler(),
                 WriteBackgroundTask => CreateWriteBackgroundTaskHandler(),
@@ -116,6 +116,20 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             };
         }
 
+        private IBackgroundTaskHandler CreateListBackgroundTaskHandler()
+        {
+            var handler = new ListBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);
+            handler.ListRead += async (_, args) =>
+            {
+                await resultHubConnection.SendListResult(args.MediaInfos?.Select(x => x.ToViewModel()));
+            };
+            handler.ErrorOccurred += async (_, args) =>
+            {
+                await errorHubConnection.UpdateError(args.Message);
+            };
+            return handler;
+        }
+        
         private IBackgroundTaskHandler CreateInfoBackgroundTaskHandler()
         {
             var handler = new InfoBackgroundTaskHandler(loggerFactory, physicalDriveManager, appState);

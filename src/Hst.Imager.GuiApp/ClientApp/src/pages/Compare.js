@@ -315,7 +315,7 @@ export default function Verify() {
                             value={sourcePath || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-source-image-path"
+                                    id="compare-source-image-path"
                                     title="Select source file"
                                     onChange={async (path) => {
                                         if (sourceMedia) {
@@ -420,7 +420,7 @@ export default function Verify() {
                             value={destinationPath || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-destination-path"
+                                    id="compare-destination-path"
                                     title="Select destination image file"
                                     onChange={async (path) => {
                                         setDestinationPath(path)

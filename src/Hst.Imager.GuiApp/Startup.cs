@@ -38,6 +38,9 @@ namespace Hst.Imager.GuiApp
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var appDataPath = ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName);
+            var hasDebugMode = ApplicationDataHelper.HasDebugEnabled(appDataPath, Core.Models.Constants.AppName)
+                .GetAwaiter().GetResult();
 #if BACKEND
             services.AddCors(options =>
             {
@@ -52,7 +55,7 @@ namespace Hst.Imager.GuiApp
 #endif
             services.AddSignalR(o =>
             {
-                o.EnableDetailedErrors = ApplicationDataHelper.HasDebugEnabled(Core.Models.Constants.AppName);
+                o.EnableDetailedErrors = hasDebugMode;
                 o.MaximumReceiveMessageSize = 1024 * 1024;
             }).AddJsonProtocol(options =>
             {
@@ -77,7 +80,7 @@ namespace Hst.Imager.GuiApp
             services.AddHostedService<BackgroundTaskService>();
             services.AddSingleton<IActiveBackgroundTaskList>(new ActiveBackgroundTaskList());
             services.AddSingleton(AppState.Create(
-                ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName),
+                appDataPath,
                 string.Empty,
                 OperatingSystem.IsAdministrator()));
             services.AddSingleton<PhysicalDriveManagerFactory>();
@@ -182,8 +185,8 @@ namespace Hst.Imager.GuiApp
             browserWindow.OnMaximize += () => Electron.IpcMain.Send(browserWindow, "window-maximized");
             browserWindow.OnUnmaximize += () => Electron.IpcMain.Send(browserWindow, "window-unmaximized");
 
-            var debugMode = (await ApplicationDataHelper.ReadSettings<Settings>(Core.Models.Constants.AppName))?.DebugMode ?? false;
-            if (ApplicationDataHelper.HasDebugEnabled(Core.Models.Constants.AppName) || debugMode)
+            var appDataPath = ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName);
+            if (await ApplicationDataHelper.HasDebugEnabled(appDataPath, Core.Models.Constants.AppName))
             {
                 browserWindow.WebContents.OpenDevTools();
             }

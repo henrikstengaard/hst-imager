@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.GuiApp.BackgroundTasks
+﻿using System.Linq;
+using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System;
     using System.Threading.Tasks;
@@ -28,8 +31,11 @@
 
             try
             {
-                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
-                    appState.Settings.AllPhysicalDrives);
+                // read settings enabling background worker to get changed settings from gui
+                var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
+                    Core.Models.Constants.AppName) ?? new Settings();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
+                    .ToList();
 
                 using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var readCommand =

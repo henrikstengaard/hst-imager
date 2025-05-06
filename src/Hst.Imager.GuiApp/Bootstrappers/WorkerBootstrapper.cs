@@ -24,9 +24,9 @@
         public static async Task Start(string appDataPath, string baseUrl, int processId, bool hasDebugEnabled)
         {
 #if RELEASE
-            SetupReleaseLogging(hasDebugEnabled);
+            SetupReleaseLogging(appDataPath, hasDebugEnabled);
 #else
-            SetupDebugLogging();
+            SetupDebugLogging(appDataPath);
 #endif
 
             var serviceCollection = new ServiceCollection();
@@ -227,10 +227,9 @@
             }
         }
 
-        private static void SetupReleaseLogging(bool hasDebugEnabled)
+        private static void SetupReleaseLogging(string appDataPath, bool hasDebugEnabled)
         {
-            var logFilePath = Path.Combine(ApplicationDataHelper.GetApplicationDataDir(Core.Models.Constants.AppName), "logs",
-                "log-worker.txt");
+            var logFilePath = Path.Combine(appDataPath, "logs", "log-worker.txt");
             if (hasDebugEnabled)
             {
                 Log.Logger = new LoggerConfiguration()
@@ -256,10 +255,9 @@
                 .CreateLogger();
         }
 
-        private static void SetupDebugLogging()
+        private static void SetupDebugLogging(string appDataPath)
         {
-            var logFilePath = Path.Combine(Path.GetDirectoryName(WorkerHelper.GetExecutingFile()), "logs",
-                "log-imager.txt");
+            var logFilePath = Path.Combine(appDataPath, "logs", "log-worker.txt");
             Log.Logger = new LoggerConfiguration()
                 .Enrich.FromLogContext()
                 .MinimumLevel.Debug()

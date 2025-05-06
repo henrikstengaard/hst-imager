@@ -255,7 +255,7 @@ export default function Read() {
                             value={sourcePath || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-source-image-path"
+                                    id="read-source-image-path"
                                     title="Select source image file"
                                     onChange={async (path) => {
                                         setSourcePath(path)
@@ -327,7 +327,7 @@ export default function Read() {
                         value={destinationPath || ''}
                         endAdornment={
                             <BrowseSaveDialog
-                                id="read-destination-path"
+                                id="read-destination-image-path"
                                 title="Select destination image"
                                 onChange={(path) => setDestinationPath(path)}
                                 fileFilters = {[{

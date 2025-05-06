@@ -1,62 +1,80 @@
-﻿namespace Hst.Imager.GuiApp.BackgroundTasks
+﻿using System;
+using System.Collections.Generic;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System.Linq;
     using System.Threading.Tasks;
-    using Extensions;
     using Core;
     using Core.Commands;
     using Hst.Imager.Core.Models.BackgroundTasks;
-    using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class ListBackgroundTaskHandler : IBackgroundTaskHandler
+    public class ListBackgroundTaskHandler(
+        ILoggerFactory loggerFactory,
+        IPhysicalDriveManager physicalDriveManager,
+        AppState appState)
+        : IBackgroundTaskHandler
     {
-        private readonly ILoggerFactory loggerFactory;
-        private readonly HubConnection resultHubConnection;
-        private readonly HubConnection errorHubConnection;
-        private readonly IPhysicalDriveManager physicalDriveManager;
-        private readonly AppState appState;
+        private readonly ILogger<ListBackgroundTaskHandler> logger = loggerFactory.CreateLogger<ListBackgroundTaskHandler>();
 
-        public ListBackgroundTaskHandler(
-            ILoggerFactory loggerFactory,
-            HubConnection resultHubConnection,
-            HubConnection errorHubConnection,
-            IPhysicalDriveManager physicalDriveManager, AppState appState)
-        {
-            this.loggerFactory = loggerFactory;
-            this.resultHubConnection = resultHubConnection;
-            this.errorHubConnection = errorHubConnection;
-            this.physicalDriveManager = physicalDriveManager;
-            this.appState = appState;
-        }
+        public event EventHandler<ListReadEventArgs> ListRead;
+        public event EventHandler<ErrorEventArgs> ErrorOccurred;
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(
-                appState.Settings.AllPhysicalDrives)).ToList();
-
-            using var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
-            var logger = loggerFactory.CreateLogger<InfoCommand>();
-            var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
-
-            listCommand.ListRead += async (_, args) =>
+            if (context.BackgroundTask is not ListBackgroundTask)
             {
-                await resultHubConnection.SendListResult(args.MediaInfos.Select(x => x.ToViewModel()).ToList());
-            };
-
-            var result = await listCommand.Execute(context.Token);
-            if (result == null)
-            {
-                logger.LogError("List command returned null");
                 return;
             }
-            if (result.IsFaulted)
+
+            try
             {
-                var message = result.Error?.Message ?? "List command returned error without message error";
-                logger.LogError(message);
-                await errorHubConnection.UpdateError(message, context.Token);
+                // read settings enabling background worker to get changed settings from gui
+                var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
+                                   Core.Models.Constants.AppName) ?? new Settings();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
+                    .ToList();
+
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                var listCommand = new ListCommand(loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
+
+                listCommand.ListRead += (_, args) =>
+                {
+                    OnListRead(args.MediaInfos);
+                };
+
+                var result = await listCommand.Execute(context.Token);
+                if (result.IsFaulted)
+                {
+                    // send empty list result for views to reset/clear
+                    OnListRead([]);
+
+                    var message = result.Error?.Message ?? "List command returned error without message error";
+                    logger.LogError(message);
+                    
+                    OnErrorOccurred(message);
+                }
             }
+            catch (Exception e)
+            {
+                logger.LogError(e, "An unexpected error occured while executing list command");
+
+                OnErrorOccurred(e.Message);
+            }
+        }
+        
+        private void OnListRead(IEnumerable<MediaInfo> mediaInfos)
+        {
+            ListRead?.Invoke(this, new ListReadEventArgs(mediaInfos));
+        }
+        
+        private void OnErrorOccurred(string errorMessage)
+        {
+            ErrorOccurred?.Invoke(this, new ErrorEventArgs(errorMessage));
         }
     }
 }

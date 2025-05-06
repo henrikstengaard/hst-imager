@@ -190,7 +190,7 @@ export default function Optimize() {
                         value={path || ''}
                         endAdornment={
                             <BrowseOpenDialog
-                                id="browse-image-path"
+                                id="optimize-browse-image-path"
                                 title="Select image file"
                                 onChange={async (path) => {
                                     setPath(path)

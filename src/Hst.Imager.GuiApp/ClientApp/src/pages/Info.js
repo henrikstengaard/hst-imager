@@ -76,7 +76,6 @@ export default function Info() {
             .build();
 
         newConnection.on("Info", (newMedia) => {
-            console.log('info', newMedia)
             setMedia(newMedia)
         });
 
@@ -163,7 +162,7 @@ export default function Info() {
                             value={path || ''}
                             endAdornment={
                                 <BrowseOpenDialog
-                                    id="browse-image-path"
+                                    id="info-image-path"
                                     title="Select image file"
                                     onChange={async (path) => {
                                         setPath(path)

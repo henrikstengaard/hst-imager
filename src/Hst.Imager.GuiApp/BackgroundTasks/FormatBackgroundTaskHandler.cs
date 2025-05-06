@@ -6,6 +6,8 @@ using Hst.Imager.GuiApp.Models;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using System;
+using System.Linq;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
@@ -37,8 +39,11 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     PercentComplete = 0
                 });
 
-                var physicalDrives = await physicalDriveManager.GetPhysicalDrives(
-                    appState.Settings.AllPhysicalDrives);
+                // read settings enabling background worker to get changed settings from gui
+                var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
+                    Core.Models.Constants.AppName) ?? new Settings();
+                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
+                    .ToList();
 
                 using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var formatCommand = new FormatCommand(loggerFactory.CreateLogger<FormatCommand>(), loggerFactory,

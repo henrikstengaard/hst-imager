@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Helpers
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Helpers
 {
     using System;
     using System.IO;
@@ -53,19 +55,21 @@
             await File.WriteAllTextAsync(licenseAgreedPath, licenseText);
         }
 
-        public static bool HasDebugEnabled(string appName)
+        public static async Task<bool> HasDebugEnabled(string appDataPath, string appName)
         {
-            return File.Exists(Path.Combine(GetApplicationDataDir(appName), "debug.txt"));
+            var debugMode = (await ReadSettings<Settings>(appDataPath, appName))?.DebugMode ?? false;
+            var debugFileExists = File.Exists(Path.Combine(appDataPath, "debug.txt"));
+            return debugFileExists || debugMode;
         }
 
-        private static string GetSettingsPath(string appName)
+        private static string GetSettingsPath(string appDataPath, string appName)
         {
-            return Path.Combine(GetApplicationDataDir(appName), "settings.json");
+            return Path.Combine(appDataPath, "settings.json");
         }
 
-        public static async Task<T> ReadSettings<T>(string appName)
+        public static async Task<T> ReadSettings<T>(string appDataPath, string appName)
         {
-            var settingsPath = GetSettingsPath(appName);
+            var settingsPath = GetSettingsPath(appDataPath, appName);
 
             if (!File.Exists(settingsPath))
             {
@@ -82,9 +86,9 @@
             }
         }
 
-        public static async Task WriteSettings<T>(string appName, T settings)
+        public static async Task WriteSettings<T>(string appDataPath, string appName, T settings)
         {
-            var settingsPath = GetSettingsPath(appName);
+            var settingsPath = GetSettingsPath(appDataPath, appName);
             await File.WriteAllTextAsync(settingsPath, JsonSerializer.Serialize(settings, JsonSerializerOptions));
         }
 
