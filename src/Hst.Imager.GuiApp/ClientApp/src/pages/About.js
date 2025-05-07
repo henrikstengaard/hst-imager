@@ -42,7 +42,7 @@ export default function About() {
             </Alert>
 
             <Alert severity="warning" sx={{ mt: 1 }}>
-                Hst Imager filters out fixed disks, so only removeable and USB attached physical drives are accessible. Be very sure to select the correct physical drive. Otherwise Hst Imager might destroy your disk and it's file system.
+                Hst Imager filters out fixed disks by default, so only removable and USB attached physical drives are accessible. All physical drives can be listed and accessed by Hst Imager when enabling "Show all physical drives" in settings. Be very sure to select the correct physical drive otherwise Hst Imager might destroy your disk and it's file system.
                 Raw disk access requires administrator privileges, so you need to run as administrator or with sudo.
             </Alert>
             

@@ -44,7 +44,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 
                 listCommand.ListRead += (_, args) =>
                 {
-                    OnListRead(args.MediaInfos);
+                    OnListRead(args.MediaInfos.Where(x => !x.SystemDrive));
                 };
 
                 var result = await listCommand.Execute(context.Token);
