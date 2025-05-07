@@ -11,6 +11,7 @@ import {BackendApiStateContext} from "../components/BackendApiContext";
 import TextField from "../components/TextField";
 import useDebounce from "../hooks/UseDebounce";
 import Box from "@mui/material/Box";
+import {Alert} from "@mui/material";
 
 export default function Settings() {
     const appState = React.useContext(AppStateContext)
@@ -76,16 +77,19 @@ export default function Settings() {
                 <Grid item xs={12} lg={6}>
                     <CheckboxField
                         id="allPhysicalDrives"
-                        label="Show all physical drives (Warning any physical drive can be overwritten except system drives)"
+                        label="Show all physical drives (except system/boot drives)"
                         value={allPhysicalDrives}
                         onChange={async (checked) => {
                             setAllPhysicalDrives(checked);
                             await handleChange({ name: 'allPhysicalDrives', value: checked });
                         }}
                     />
+                    <Alert severity="warning" sx={{ mt: 1 }}>
+                        All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!
+                    </Alert>
                 </Grid>
             </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0}}>
+            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
                     <SelectField
                         label="macOS elevate method"

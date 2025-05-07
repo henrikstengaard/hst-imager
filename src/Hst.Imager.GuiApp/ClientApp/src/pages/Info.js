@@ -287,7 +287,7 @@ export default function Info() {
                 )}
             </Grid>
             {piStormDiskOptions.length > 1 && (
-                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                     <Grid item xs={12} lg={6}>
                         <SelectField
                             label={

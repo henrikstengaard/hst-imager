@@ -261,7 +261,7 @@ namespace Hst.Imager.Core.Tests
         }
 
         public static async Task AddMbrDiskPartition(TestCommandHelper testCommandHelper, string path,
-            long partitionSize = 0, byte[] data = null)
+            long partitionSize = 0, byte biosType = BiosPartitionTypes.Fat32Lba, byte[] data = null)
         {
             if (partitionSize == 0 && data == null)
             {
@@ -286,9 +286,14 @@ namespace Hst.Imager.Core.Tests
                 ? 1
                 : biosPartitionTable.Partitions.Max(x => x.LastSector) + 1;
             var endSector = startSector + sectors - 1;
+
+            if (endSector > disk.Geometry.Value.TotalSectorsLong)
+            {
+                endSector = disk.Geometry.Value.TotalSectorsLong;
+            }
                 
             var partitionIndex = biosPartitionTable.CreatePrimaryBySector(startSector, endSector,
-                BiosPartitionTypes.Fat32Lba, biosPartitionTable.Partitions.Count == 0);
+                biosType, biosPartitionTable.Partitions.Count == 0);
 
             if (data == null || data.Length == 0)
             {

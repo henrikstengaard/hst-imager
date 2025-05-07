@@ -1,4 +1,8 @@
-﻿namespace Hst.Imager.Core.Tests
+﻿using Hst.Amiga.Extensions;
+using Hst.Amiga.RigidDiskBlocks;
+using Hst.Core.Extensions;
+
+namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;
@@ -74,10 +78,11 @@
         {
             // arrange
             var imgPath = $"{Guid.NewGuid()}.img.xz";
-            var testCommandHelper = new TestCommandHelper();
 
             try
             {
+                var testCommandHelper = new TestCommandHelper();
+
                 // arrange - xz compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.xz"), imgPath);
 
@@ -116,10 +121,11 @@
         {
             // arrange
             var imgPath = $"{Guid.NewGuid()}.img.gz";
-            var testCommandHelper = new TestCommandHelper();
 
             try
             {
+                using var testCommandHelper = new TestCommandHelper();
+
                 // arrange - gz compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.gz"), imgPath);
 
@@ -158,10 +164,11 @@
         {
             // arrange
             var imgPath = $"{Guid.NewGuid()}.img.zip";
-            var testCommandHelper = new TestCommandHelper();
 
             try
             {
+                var testCommandHelper = new TestCommandHelper();
+
                 // arrange - zip compressed img media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.zip"), imgPath);
 
@@ -200,10 +207,11 @@
         {
             // arrange
             var imgPath = $"{Guid.NewGuid()}.vhd.gz";
-            var testCommandHelper = new TestCommandHelper();
 
             try
             {
+                using var testCommandHelper = new TestCommandHelper();
+
                 // arrange - gz compressed vhd media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.vhd.gz"), imgPath);
 
@@ -242,10 +250,11 @@
         {
             // arrange
             var imgPath = $"{Guid.NewGuid()}.vhd.zip";
-            var testCommandHelper = new TestCommandHelper();
 
             try
             {
+                var testCommandHelper = new TestCommandHelper();
+
                 // arrange - zip compressed vhd media
                 File.Copy(Path.Combine("TestData", "compressed-images", "1gb.vhd.zip"), imgPath);
 
@@ -277,6 +286,62 @@
                     File.Delete(imgPath);
                 }
             }
+        }
+
+        [Fact]
+        public async Task When_ReadInfoFromMbrPiStormRdbPartition_Then_DiskInfoIsRead()
+        {
+            // arrange - img and info paths
+            var imgPath = $"{Guid.NewGuid()}.img";
+            var infoPath = Path.Combine($"{imgPath}", "mbr", "1");
+
+            // arrange - create test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create rigid disk block
+            byte[] rdbBytes;
+            using (var rdbStream = new MemoryStream())
+            {
+                var rdb = RigidDiskBlock
+                    .Create(80.MB())
+                    .AddFileSystem("PDS3", TestHelper.Pfs3AioBytes)
+                    .AddPartition("DH0", 80.MB());
+
+                await RigidDiskBlockWriter.WriteBlock(rdb, rdbStream);
+                rdbBytes = rdbStream.ToArray();
+            }
+
+            // arrange - create img media
+            testCommandHelper.AddTestMedia(imgPath, 100.MB());
+            
+            // arrange - create mbr disk
+            await TestHelper.CreateMbrDisk(testCommandHelper, imgPath, 100.MB());
+            
+            // arrange - add mbr disk partition for pistorm
+            await TestHelper.AddMbrDiskPartition(testCommandHelper,  imgPath, 100.MB(), biosType: 0x76);
+
+            // arrange - write rigid disk block to mbr partition
+            var mbrPartitionPart = await TestHelper.GetMbrPartitionPart(testCommandHelper, imgPath, 1);
+            await TestHelper.WriteData(testCommandHelper, imgPath, mbrPartitionPart.StartOffset, rdbBytes);
+            
+            // arrange - info command
+            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
+                [], infoPath);
+            MediaInfo mediaInfo = null;
+            infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
+
+            // act - read info
+            var result = await infoCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+            
+            // assert
+            Assert.NotNull(mediaInfo);
+            Assert.Null(mediaInfo.DiskInfo.MbrPartitionTablePart);
+            Assert.Null(mediaInfo.DiskInfo.GptPartitionTablePart);
+            Assert.NotNull(mediaInfo.DiskInfo.RdbPartitionTablePart);
+            var rdbPartitionPart = mediaInfo.DiskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(
+                x=> x.FileSystem == "PDS\\3" && x.PartitionNumber == 1);
+            Assert.NotNull(rdbPartitionPart);
         }
     }
 }

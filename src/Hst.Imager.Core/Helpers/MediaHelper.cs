@@ -37,11 +37,6 @@ namespace Hst.Imager.Core.Helpers
         public static PiStormRdbMediaResult GetPiStormRdbMedia(Media media, string fileSystemPath,
             string directorySeparatorChar)
         {
-            if (media.Type != Media.MediaType.Raw && media.Type != Media.MediaType.Vhd)
-            {
-                throw new ArgumentException("Only raw and vhd media is supported for pistormrdb", nameof(media));
-            }
-
             if (media is PiStormRdbMedia)
             {
                 return new PiStormRdbMediaResult

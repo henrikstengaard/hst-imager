@@ -11,6 +11,11 @@ namespace Hst.Imager.Core.PartitionTables;
 
 public static class GuidPartitionTableReader
 {
+    /// <summary>
+    /// GuidPartitionTypeRegister
+    /// LazyThreadSafetyMode.PublicationOnly added to fix
+    /// "Error: ValueFactory attempted to access the Value property of this instance".
+    /// </summary>
     private static readonly Lazy<GuidPartitionTypeRegister> GuidPartitionTypeRegister =
         new Lazy<GuidPartitionTypeRegister>(
             () =>
@@ -18,7 +23,7 @@ public static class GuidPartitionTableReader
                 var register = new GuidPartitionTypeRegister();
                 register.AddDefault();
                 return register;
-            }, LazyThreadSafetyMode.None);
+            }, LazyThreadSafetyMode.PublicationOnly);
 
     public static DiscUtils.Partitions.GuidPartitionTable Read(VirtualDisk disk)
     {
