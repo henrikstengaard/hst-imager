@@ -110,7 +110,7 @@ namespace Hst.Imager.Core.Helpers
 
             var partitionStream = new VirtualStream(disk.Content, partitionOffset, partitionSize, partitionSize);
 
-            var piStormRdbMedia = CreatePiStormRdbMedia(media, partitionSize, partitionStream);
+            var piStormRdbMedia = CreatePiStormRdbMedia(media, partitionNumber, partitionSize, partitionStream);
 
             return new PiStormRdbMediaResult
             {
@@ -120,14 +120,21 @@ namespace Hst.Imager.Core.Helpers
             };
         }
 
-        private static Media CreatePiStormRdbMedia(Media media, long size, Stream stream)
+        private static Media CreatePiStormRdbMedia(Media media, int mbrPartitionNumber, long size, Stream stream)
         {
             var type = media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd
                 ? Media.MediaType.CompressedRaw
                 : Media.MediaType.Raw;
 
-            return new PiStormRdbMedia(media.Path, Constants.FileSystemNames.PiStormRdb, size, type,
-                false, stream, false, media);
+            return new PiStormRdbMedia(
+                media.Path, 
+                string.Concat("Partition #", mbrPartitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
+                size,
+                type,
+                false,
+                stream, 
+                false,
+                media);
         }
 
         public static async Task<RigidDiskBlock> ReadRigidDiskBlockFromMedia(Media media)

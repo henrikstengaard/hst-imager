@@ -18,6 +18,7 @@ import {BackendApiStateContext} from "../components/BackendApiContext";
 import IconButton from "@mui/material/IconButton";
 import SelectField from "../components/SelectField";
 import Accordion from "../components/Accordion";
+import {formatBytes} from "../utils/Format";
 
 const typeOptions = [{
     title: 'Image file',
@@ -27,12 +28,17 @@ const typeOptions = [{
     value: 'PhysicalDisk'
 }]
 
+let piStormDiskSelected = false;
+
 export default function Info() {
     const [loading, setLoading] = React.useState(false)
     const [media, setMedia] = React.useState(null)
     const [medias, setMedias] = React.useState(null)
     const [path, setPath] = React.useState(null)
     const [sourceType, setSourceType] = React.useState('ImageFile')
+    const [piStormDiskPath, setPiStormDiskPath] = React.useState(null)
+    const [piStormDiskOptions, setPiStormDiskOptions] = React.useState([])
+    const [piStormMedia, setPiStormMedia] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false)
     const [connection, setConnection] = React.useState(null);
     const {
@@ -76,7 +82,42 @@ export default function Info() {
             .build();
 
         newConnection.on("Info", (newMedia) => {
+            if (piStormDiskSelected) {
+                setPiStormMedia(newMedia);
+                return;
+            }
+
             setMedia(newMedia)
+
+            const mbrPartitionTablePart = get(newMedia, 'diskInfo.mbrPartitionTablePart');
+            
+            if (!mbrPartitionTablePart)
+            {
+                setPiStormDiskPath(null);
+                setPiStormDiskOptions([]);
+                return;
+            }
+
+            const directoryPathSeparator = newMedia.path.startsWith('/') ? '/' : '\\'
+
+            const newPiStormDiskOptions = [{
+                title: `Disk (${formatBytes(newMedia.diskSize)})`,
+                value: newMedia.path
+            }]
+
+            mbrPartitionTablePart.parts.filter(part => part.partType === 'Partition' && !isNil(part.biosType) && part.biosType === '118').forEach(part => {
+                const type = part.partitionType === part.fileSystem
+                    ? part.partitionType
+                    : `${part.partitionType}, ${part.fileSystem}`;
+
+                newPiStormDiskOptions.push({
+                    title: `Partition #${part.partitionNumber}: ${type} (${formatBytes(part.size)})`,
+                    value: newMedia.path + directoryPathSeparator + 'mbr' + directoryPathSeparator + part.partitionNumber
+                })
+            })
+
+            setPiStormDiskPath(newPiStormDiskOptions.length > 0 ? newPiStormDiskOptions[0].value : null)
+            setPiStormDiskOptions(newPiStormDiskOptions);
         });
 
         newConnection.on('List', async (medias) => {
@@ -113,12 +154,17 @@ export default function Info() {
         setMedias(null)
         setPath(null)
         setSourceType(null)
+        setPiStormDiskPath(null)
+        setPiStormDiskOptions([])
+        setPiStormMedia(null)
         setByteswap(false)
     }
     
     const handleUpdate = async () => {
         await backendApi.updateList()
     }
+    
+    const currentMedia = piStormMedia || media;
     
     return (
         <React.Fragment>
@@ -142,6 +188,10 @@ export default function Info() {
                             setSourceType(value);
                             setPath(null);
                             setMedia(null);
+                            setPiStormDiskPath(null)
+                            setPiStormDiskOptions([])
+                            setPiStormMedia(null)
+                            piStormDiskSelected = false;
                             if (value === 'PhysicalDisk') {
                                 getMedias();
                             }
@@ -166,6 +216,11 @@ export default function Info() {
                                     title="Select image file"
                                     onChange={async (path) => {
                                         setPath(path)
+                                        setMedia(null)
+                                        setPiStormDiskPath(null)
+                                        setPiStormDiskOptions([])
+                                        setPiStormMedia(null)
+                                        piStormDiskSelected = false;
                                         await getInfo(path, byteswap)
                                     }}
                                     fileFilters = {[{
@@ -181,6 +236,10 @@ export default function Info() {
                                 setPath(get(event, 'target.value'))
                                 if (media) {
                                     setMedia(null)
+                                    setPiStormDiskPath(null)
+                                    setPiStormDiskOptions([])
+                                    setPiStormMedia(null)
+                                    piStormDiskSelected = false;
                                 }
                             }}
                             onKeyDown={async (event) => {
@@ -207,6 +266,11 @@ export default function Info() {
                                 path={sourceType === 'PhysicalDisk' ? path || '' : null}
                                 onChange={async (media) => {
                                     setPath(media.path)
+                                    setMedia(null)
+                                    setPiStormDiskPath(null)
+                                    setPiStormDiskOptions([])
+                                    setPiStormMedia(null)
+                                    piStormDiskSelected = false;
                                     await getInfo(media.path, byteswap)
                                 }}
                             />
@@ -222,6 +286,28 @@ export default function Info() {
                     </Grid>
                 )}
             </Grid>
+            {piStormDiskOptions.length > 1 && (
+                <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
+                    <Grid item xs={12} lg={6}>
+                        <SelectField
+                            label={
+                                <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
+                                    <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> PiStorm disk to read
+                                </div>
+                            }
+                            id="pistorm-disk-path"
+                            emptyLabel="None available"
+                            value={piStormDiskPath || '' }
+                            options={piStormDiskOptions}
+                            onChange={async (value) => {
+                                piStormDiskSelected = true;
+                                setPiStormDiskPath(value);
+                                await getInfo(value, byteswap)
+                            }}
+                        />
+                    </Grid>
+                </Grid>
+            )}
             <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
                     <Accordion title="Advanced" icon="gear" expanded={false} border={false}>
@@ -265,7 +351,7 @@ export default function Info() {
                     </Box>
                 </Grid>
             </Grid>
-            {media && media.diskInfo && (
+            {currentMedia && currentMedia.diskInfo && (
                 <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                     <Grid item xs={12}>
                         <Typography variant="h3">
@@ -274,7 +360,7 @@ export default function Info() {
                         <Typography>
                             Disk information read from source {(sourceType === 'ImageFile' ? 'image file' : 'physical disk')}.
                         </Typography>
-                        <Media media={media}/>
+                        <Media media={currentMedia}/>
                     </Grid>
                 </Grid>
             )}

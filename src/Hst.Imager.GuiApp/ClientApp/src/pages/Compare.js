@@ -503,7 +503,6 @@ export default function Verify() {
                                     onChange={(value) => {
                                         setSrcPartPath(value)
                                         setSrcStartOffset(0);
-                                        console.log(sourceMedia);
                                         setSize(value === 'custom' ? get(sourceMedia, 'diskSize') || 0 : 0)
                                         setUnit('bytes')
                                     }}

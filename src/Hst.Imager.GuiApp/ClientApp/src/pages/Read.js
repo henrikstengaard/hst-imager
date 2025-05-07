@@ -280,7 +280,6 @@ export default function Read() {
                                 if (event.key !== 'Enter') {
                                     return
                                 }
-                                console.log("get info")
                                 await getInfo(sourcePath, byteswap)
                             }}
                         />

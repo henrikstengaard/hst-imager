@@ -19,7 +19,7 @@ This tool can be used to create new blank images or create images of physical dr
 
 Hst Imager console comes with following features:
 - List physical drives.
-- Read information from physical drive or image file.
+- Read information from physical drive or image file listing partitions, types, file systems and offsets.
 - Read disk to image file.
 - Write image file to physical drive.
 - Compare physical drive and image file.
@@ -211,11 +211,18 @@ hst.imager list
 
 ### Display information about a physical drive or image file
 
-Displays information about a physical drive or image file by reading Master Boot Record and Rigid Disk Block and displays a table with partition tables present. Physical drives requires administrator privileges.
+Displays information about a physical drive or image file by reading Master Boot Record, Guid Partition Table and Rigid Disk Block and displays a table with partition tables present.
+
+**Physical drives requires administrator privileges to read.**
 
 Example of display information about a Windows physical drive disk 2:
 ```
 hst.imager info \disk2
+```
+
+Example of display information about a Windows physical drive disk 2 Master Boot Record partition 2 containing PiStorm RDB:
+```
+hst.imager info \disk2\mbr\2
 ```
 
 Example of display information about a Linux physical drive /dev/sdb:
@@ -311,13 +318,15 @@ For Master Boot Record and Guid Partition Table, one partition is added with siz
 
 For Rigid Disk Block, Professional File System `pfs3aio` (PDS\3 and PFS\3) and Fast File System (DOS\3 and DOS\7) are supported.
 If file system PDS\3 or PFS\3 is used, then Professional File System `pfs3aio` is automatically downloaded from aminet.net by default unless another file system path is defined.
+
 When partitioning, first `Workbench` partition will always have the size of 1GB to support Amiga's that can't access disks larger than 4GB at boot time.
-Additional `Work` partitions are added for the remaining disk space with size up to 64GB.
-If Fast File System is used and it's version doesn't support large partitions, the `Workbench` partition is changed to 500MB and `Work` partition size is changed to a max of 2GB.
-If Fast File System is used and it's version doesn't support DOS\7 long filenames then it's changed to DOS\3.
+Additional `Work` partitions are added for the remaining disk space with size up to 128GB.
+- If Fast File System is used and it's version doesn't support large partitions, the `Workbench` partition is changed to 500MB and `Work` partition size is changed to a max of 2GB.
+- If Fast File System is used and it's version doesn't support DOS\7 long filenames then it's changed to DOS\3.
+
 File system path for formatting Rigid Disk Block supports .lha, .iso, .adf and file system files like `pfs3aio` and `FastFileSystem`.
-If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
-If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
+- If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
+- If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
 
 For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
 

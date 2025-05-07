@@ -42,7 +42,7 @@ See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for 
 
 Hst Imager Gui comes with following features:
 - List physical drives.
-- Read information from physical drive or image file (supports writing .rar, .zip, .gz, .xz compressed image files).
+- Read information from physical drive or image file listing partitions, types, file systems and offsets (supports writing .rar, .zip, .gz, .xz compressed image files).
 - Read disk to image file (supports writing to .zip, .gz, compressed image files).
 - Write image file to physical drive (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Compare physical drive and image file.

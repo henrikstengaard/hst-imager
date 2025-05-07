@@ -472,7 +472,7 @@ namespace Hst.Imager.Core.Commands
             
             // init rdb
             var rdbInitCommand = new RdbInitCommand(loggerFactory.CreateLogger<RdbInitCommand>(), commandHelper, physicalDrives,
-                rdbPath, "HstImager", size, string.Empty, 0);
+                rdbPath, "HstImager", new Size(diskSize, Unit.Bytes), string.Empty, 0);
             AddMessageEvents(rdbInitCommand);
 
             var rdbInitResult = await rdbInitCommand.Execute(cancellationToken);

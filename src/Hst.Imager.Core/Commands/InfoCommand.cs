@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -37,7 +39,7 @@
                 return new Result(sourceMediaResult.Error);
             }
 
-            using var media = sourceMediaResult.Value;
+            using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, sourceMediaResult.Value, path);
 
             OnDebugMessage($"Media size '{media.Size}'");
 
