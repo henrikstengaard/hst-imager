@@ -97,11 +97,10 @@ namespace Hst.Imager.Core.Commands.MbrCommands
             OnInformationMessage($"- Path '{destPath}'");
 
             var destinationMediaResult =
-                await commandHelper.GetWritableMedia(physicalDrives, destPath, create: true);
+                await commandHelper.GetWritableMedia(physicalDrives, destPath);
             if (destinationMediaResult.IsFaulted)
             {
                 return new Result(destinationMediaResult.Error);
-
             }
 
             using var destMedia = destinationMediaResult.Value;

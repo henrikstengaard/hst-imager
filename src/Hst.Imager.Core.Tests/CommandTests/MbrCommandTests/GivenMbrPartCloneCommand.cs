@@ -179,5 +179,71 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
             Assert.True(result.IsFaulted);
             Assert.False(result.IsSuccess);
         }
+
+        [Fact]
+        public async Task When_CloningPartFromOneVhdToAnother_Then_PartitionIsCloned()
+        {
+            // arrange - path, size and test command helper
+            var srcPath = $"src-{Guid.NewGuid()}.vhd";
+            var destPath = $"dest-{Guid.NewGuid()}.vhd";
+            const int srcPartNumberCloneFrom = 1;
+            const int destPartNumberCloneTo = 1;
+
+            // arrange - sector size and mbr partition sectors and offsets
+            var diskSize = 10.MB();
+            const int sectorSize = 512;
+            var mbrPartition1StartSector = 63;
+            var mbrPartition1EndSector = (diskSize / sectorSize) - 10;
+
+            try
+            {
+                using var testCommandHelper = new TestCommandHelper();
+
+                // arrange - create src test media
+                await CreateMbrDisk(testCommandHelper, srcPath, diskSize);
+                await AddMbrPartition(testCommandHelper, srcPath, mbrPartition1StartSector, mbrPartition1EndSector);
+
+                // arrange - create part 1 data
+                var part1Size = (mbrPartition1EndSector - mbrPartition1StartSector + 1) * sectorSize;
+                var part1Bytes = TestDataHelper.CreateTestData(part1Size);
+
+                // arrange - write part 1 data
+                var mbrPartition1StartOffset = mbrPartition1StartSector * sectorSize;
+                await TestHelper.WriteData(testCommandHelper, srcPath, mbrPartition1StartOffset, part1Bytes);
+
+                // arrange - create dest test media
+                await CreateMbrDisk(testCommandHelper, destPath, diskSize);
+                await AddMbrPartition(testCommandHelper, destPath, mbrPartition1StartSector, mbrPartition1EndSector);
+
+                // arrange - get dest data
+                var destData = await TestHelper.ReadData(testCommandHelper, destPath, 0, (int)diskSize);
+
+                // arrange - clear src and dest medias used for creating mbr disks
+                testCommandHelper.ClearActiveMedias();
+                
+                // arrange - mbr partition clone command
+                var mbrPartCloneCommand = new MbrPartCloneCommand(new NullLogger<MbrPartCloneCommand>(), testCommandHelper,
+                    new List<IPhysicalDrive>(), srcPath, srcPartNumberCloneFrom, destPath, destPartNumberCloneTo);
+
+                // act - execute mbr partition clone
+                var result = await mbrPartCloneCommand.Execute(CancellationToken.None);
+
+                // assert - execute mbr partition clone returned success
+                Assert.True(result.IsSuccess);
+
+                // arrange - create expected dest data with part 1 data written to dest part 1 offset
+                var expectedDestData = new byte[diskSize];
+                Array.Copy(destData, 0, expectedDestData, 0, diskSize);
+                Array.Copy(part1Bytes, 0, expectedDestData, mbrPartition1StartOffset, part1Size);
+
+                // assert - actual dest data is equal to expected dest data
+                var actualDestData = await TestHelper.ReadData(testCommandHelper, destPath, 0, (int)diskSize);
+                Assert.Equal(expectedDestData, actualDestData);
+            }
+            finally
+            {
+                TestHelper.DeletePaths(srcPath, destPath);
+            }
+        }
     }
 }
