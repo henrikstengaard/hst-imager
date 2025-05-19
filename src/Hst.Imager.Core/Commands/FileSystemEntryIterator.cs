@@ -166,6 +166,11 @@ public class FileSystemEntryIterator : IEntryIterator
 
         dirPathsIteratedIndex.Add(path);
 
+        if (!fileSystem.Exists(path))
+        {
+            return 0;
+        }
+        
         var uniqueEntries = new Dictionary<string, Entry>();
 
         foreach (var dirPath in fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
