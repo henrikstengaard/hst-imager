@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.FileSystems;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -36,11 +38,12 @@
         private readonly bool bootable;
         private readonly int? bootPriority;
         private readonly int? fileSystemBlockSize;
+        private readonly bool useExperimental;
 
         public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
             uint? reserved, uint? preAlloc, uint? buffers, uint? maxTransfer, uint? mask, bool noMount, bool bootable,
-            int? bootPriority, int? fileSystemBlockSize)
+            int? bootPriority, int? fileSystemBlockSize, bool useExperimental)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -58,6 +61,7 @@
             this.bootable = bootable;
             this.bootPriority = bootPriority;
             this.fileSystemBlockSize = fileSystemBlockSize;
+            this.useExperimental = useExperimental;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -225,6 +229,14 @@
 
             OnInformationMessage(
                 $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            
+            if (FileSystemHelper.IsPfs3DosType(dosTypeBytes) &&
+                FileSystemHelper.IsPfs3PartitionSizeExperimental(partitionSize) &&
+                !useExperimental)
+            {
+                return new Result(new Error($"Partition size is larger than size '{FileSystemHelper.Pfs3MaxPartitionSize.FormatBytes()}' ({FileSystemHelper.Pfs3MaxPartitionSize} bytes) and requires use experimental option to confirm use of experimental PFS3 partition size"));
+            }
+
             OnInformationMessage($"- Low Cyl '{partitionBlock.LowCyl}'");
             OnInformationMessage($"- High Cyl '{partitionBlock.HighCyl}'");
             OnInformationMessage($"- Reserved '{partitionBlock.Reserved}'");

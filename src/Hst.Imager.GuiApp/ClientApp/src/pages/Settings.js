@@ -84,7 +84,7 @@ export default function Settings() {
                             await handleChange({ name: 'allPhysicalDrives', value: checked });
                         }}
                     />
-                    <Alert severity="warning" sx={{ mt: 1 }}>
+                    <Alert severity="warning">
                         All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!
                     </Alert>
                 </Grid>

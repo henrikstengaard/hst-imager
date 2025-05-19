@@ -11,11 +11,17 @@
     public abstract class CommandBase
     {
         public event EventHandler<string> DebugMessage;
+        public event EventHandler<string> WarningMessage;
         public event EventHandler<string> InformationMessage;
 
         protected virtual void OnDebugMessage(string message)
         {
             DebugMessage?.Invoke(this, message);
+        }        
+
+        protected virtual void OnWarningMessage(string message)
+        {
+            WarningMessage?.Invoke(this, message);
         }        
 
         protected virtual void OnInformationMessage(string message)

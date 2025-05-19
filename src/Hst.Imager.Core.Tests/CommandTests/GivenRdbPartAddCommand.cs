@@ -33,7 +33,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize);
+            false, true, 0, fileSystemBlockSize, false);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -76,7 +76,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(50, Unit.Percent), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize);
+            false, true, 0, fileSystemBlockSize, false);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -119,7 +119,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(2.MB(), Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize);
+            false, true, 0, fileSystemBlockSize, false);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -129,7 +129,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH1", "PFS3", new Size(2.MB(), Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize);
+            false, true, 0, fileSystemBlockSize, false);
 
         // act - execute rdb partition add
         result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -174,7 +174,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize);
+            false, true, 0, fileSystemBlockSize, false);
 
         // act - execute rdb partition add
         var rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);

@@ -331,6 +331,10 @@
                 description: "Block size for the partition.",
                 getDefaultValue: () => 512);
 
+            var useExperimentalOption = new Option<bool>(
+                ["--use-experimental"],
+                description: "Use experimental partition sizes.");
+
             var rdbPartAddCommand = new Command("add", "Add partition.");
             rdbPartAddCommand.SetHandler(async (context) =>
             {
@@ -347,9 +351,10 @@
                 var bootable = context.ParseResult.GetValueForOption(bootableOption);
                 var bootPriority = context.ParseResult.GetValueForOption(bootPriorityOption);
                 var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
+                var useExperimental = context.ParseResult.GetValueForOption(useExperimentalOption);
 
                 await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer, mask,
-                    noMount, bootable, bootPriority, blockSize);
+                    noMount, bootable, bootPriority, blockSize, useExperimental);
             });
 
             rdbPartAddCommand.AddArgument(pathArgument);
@@ -365,6 +370,7 @@
             rdbPartAddCommand.AddOption(bootableOption);
             rdbPartAddCommand.AddOption(bootPriorityOption);
             rdbPartAddCommand.AddOption(blockSizeOption);
+            rdbPartAddCommand.AddOption(useExperimentalOption);
 
             return rdbPartAddCommand;
         }

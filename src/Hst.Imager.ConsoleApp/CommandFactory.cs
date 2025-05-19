@@ -240,9 +240,13 @@ namespace Hst.Imager.ConsoleApp
                 ["--size", "-s"],
                 description: "Size of disk to format.");
 
-            var maxPartitionSizeOption = new Option<long?>(
+            var maxPartitionSizeOption = new Option<string>(
                 ["--max-partition-size"],
                 description: "Max partition size for RDB disks.");
+
+            var useExperimentalOption = new Option<bool>(
+                ["--use-experimental"],
+                description: "Use experimental partition sizes.");
             
             var command = new Command("format", "Format physical drive or image file.");
             command.AddArgument(pathArgument);
@@ -251,8 +255,9 @@ namespace Hst.Imager.ConsoleApp
             command.AddOption(fileSystemPathOption);
             command.AddOption(sizeOption);
             command.AddOption(maxPartitionSizeOption);
+            command.AddOption(useExperimentalOption);
             command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument,
-                fileSystemPathOption, sizeOption, maxPartitionSizeOption);
+                fileSystemPathOption, sizeOption, maxPartitionSizeOption, useExperimentalOption);
 
             return command;
         }

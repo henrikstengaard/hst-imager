@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.FileSystems;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -154,6 +156,13 @@
 
             OnInformationMessage(
                 $"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+
+            if (FileSystemHelper.IsPfs3DosType(partitionBlock.DosType) &&
+                FileSystemHelper.IsPfs3PartitionSizeExperimental(partitionBlock.PartitionSize))
+            {
+                OnWarningMessage($"- Partition size is larger than size '{FileSystemHelper.Pfs3MaxPartitionSize.FormatBytes()}' ({FileSystemHelper.Pfs3MaxPartitionSize} bytes) and will be formatted with an experimental PFS3 partition size!");
+            }
+            
             if (nonRdb)
             {
                 OnInformationMessage($"- Cylinders '{(partitionBlock.HighCyl - partitionBlock.LowCyl + 1)}'");

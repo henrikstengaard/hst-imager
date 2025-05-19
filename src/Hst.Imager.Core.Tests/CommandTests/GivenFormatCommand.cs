@@ -32,7 +32,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(), 0);
+                string.Empty, string.Empty, new Size(), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -78,7 +78,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(), 
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(50, Unit.Percent), 0);
+                string.Empty, string.Empty, new Size(50, Unit.Percent), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -123,7 +123,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(), 0);
+                string.Empty, string.Empty, new Size(), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -169,7 +169,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper,
                 new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(), 0);
+                string.Empty, string.Empty, new Size(), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -221,7 +221,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(50, Unit.Percent), 0);
+                string.Empty, string.Empty, new Size(50, Unit.Percent), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -273,7 +273,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             // arrange - create format command
             var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                 testCommandHelper, new List<IPhysicalDrive>(), diskPath, partitionTable, fileSystem, 
-                string.Empty, string.Empty, new Size(), 0);
+                string.Empty, string.Empty, new Size(), new Size(), false);
 
             // act - execute format command
             var result = await formatCommand.Execute(CancellationToken.None);
@@ -332,7 +332,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    fileSystemPath, outputDir, new Size(), 0);
+                    fileSystemPath, outputDir, new Size(), new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -394,7 +394,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    fileSystemPath, outputDir, new Size(), 0);
+                    fileSystemPath, outputDir, new Size(), new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -460,7 +460,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, new Size(50, Unit.Percent), 0);
+                    fileSystemPath, outputDir, new Size(50, Unit.Percent), new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -523,7 +523,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, new Size(), 0);
+                    fileSystemPath, outputDir, new Size(), new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -597,7 +597,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem, 
-                    fileSystemPath, outputDir, size, 0);
+                    fileSystemPath, outputDir, size, new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -671,7 +671,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, size, 0);
+                    fileSystemPath, outputDir, size, new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -713,7 +713,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, size, 0);
+                    fileSystemPath, outputDir, size, new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -775,7 +775,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, size, 0);
+                    fileSystemPath, outputDir, size, new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);
@@ -837,7 +837,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputDir, size, 0);
+                    fileSystemPath, outputDir, size, new Size(), false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);

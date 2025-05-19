@@ -19,6 +19,7 @@ import SelectField from "../components/SelectField";
 import { BackendApiStateContext } from "../components/BackendApiContext";
 import IconButton from "@mui/material/IconButton";
 import Accordion from "../components/Accordion";
+import {Alert} from "@mui/material";
 
 const unitOptions = [{
     title: 'GB',
@@ -85,7 +86,7 @@ const rdbFileSystemOptions = [{
     value: "dos7"
 }];
 
-const maxPartitionSizeOptions = [{
+const defaultMaxPartitionSizeOptions = [{
     title: "128 GB",
     value: "137438953472" // math.pow(2, 37)
 }, {
@@ -111,6 +112,49 @@ const maxPartitionSizeOptions = [{
     value: "1073741824" // math.pow(2, 30)
 }];
 
+const pfs3MaxPartitionSizeOptions = [{
+    title: "101.6 GB",
+    value: "109067239424" // max pfs3 partition size
+}, {
+    title: "64 GB",
+    value: "68719476736" // math.pow(2, 36)
+}, {
+    title: "32 GB",
+    value: "34359738368" // math.pow(2, 35)
+}, {
+    title: "16 GB",
+    value: "17179869184" // math.pow(2, 34)
+}, {
+    title: "8 GB",
+    value: "8589934592" // math.pow(2, 33)
+}, {
+    title: "4 GB",
+    value: "4294967296" // math.pow(2, 32)
+}, {
+    title: "2 GB",
+    value: "2147483648" // math.pow(2, 31)
+}, {
+    title: "1 GB",
+    value: "1073741824" // math.pow(2, 30)
+}];
+
+const pfs3ExperimentalMaxPartitionSizeOptions = [{
+    title: "2 TB",
+    value: "2199023255552" // math.pow(2, 41)
+}, {
+    title: "1 TB",
+    value: "1099511627776" // math.pow(2, 40)
+}, {
+    title: "512 GB",
+    value: "549755813888" // math.pow(2, 39)
+}, {
+    title: "256 GB",
+    value: "274877906944" // math.pow(2, 38)
+}, {
+    title: "128 GB",
+    value: "137438953472" // math.pow(2, 37)
+}];
+
 const pfs3AioUrl = 'https://aminet.net/disk/misc/pfs3aio.lha';
 
 export default function Format() {
@@ -125,7 +169,9 @@ export default function Format() {
     const [formatType, setFormatType] = React.useState('mbr')
     const [fileSystem, setFileSystem] = React.useState('fat32')
     const [fileSystemOptions, setFileSystemOptions] = React.useState(basicFileSystemOptions)
-    const [maxPartitionSize, setMaxPartitionSize] = React.useState(maxPartitionSizeOptions[0].value)
+    const [useExperimental, setUseExperimental] = React.useState(false);
+    const [maxPartitionSize, setMaxPartitionSize] = React.useState(pfs3MaxPartitionSizeOptions[0].value)
+    const [maxPartitionSizeOptions, setMaxPartitionSizeOptions] = React.useState(pfs3MaxPartitionSizeOptions)
     const [downloadPfs3Aio, setDownloadPfs3Aio] = React.useState(true);
     const [fileSystemPath, setFileSystemPath] = React.useState(pfs3AioUrl);
     const [connection, setConnection] = React.useState(null);
@@ -242,6 +288,7 @@ export default function Format() {
             fileSystemPath,
             size: (size * unitOption.size),
             maxPartitionSize,
+            useExperimental,
             byteswap
         });
     }
@@ -270,11 +317,25 @@ export default function Format() {
         setFileSystem('fat32')
         setConnection(null)
         setDownloadPfs3Aio(true)
+        setMaxPartitionSize(pfs3MaxPartitionSizeOptions[0].value)
+        setMaxPartitionSizeOptions(pfs3MaxPartitionSizeOptions)
         setFileSystemPath(pfs3AioUrl)
     }
 
     const handleUpdate = async () => {
         await backendApi.updateList()
+    }
+    
+    const handleChangeMaxPartitionOptions = (fileSystem, useExperimental) => {
+        let newMaxPartitionSizeOptions = defaultMaxPartitionSizeOptions;
+        if (fileSystem === 'pds3' || fileSystem === 'pfs3') {
+            newMaxPartitionSizeOptions = useExperimental
+                ? pfs3ExperimentalMaxPartitionSizeOptions
+                : pfs3MaxPartitionSizeOptions;
+        }
+
+        setMaxPartitionSize(newMaxPartitionSizeOptions[0].value);
+        setMaxPartitionSizeOptions(newMaxPartitionSizeOptions);
     }
 
     const pathValid = !isNil(path) && path.trim().length > 0
@@ -282,7 +343,7 @@ export default function Format() {
         (!isNil(fileSystemPath) && fileSystemPath.trim().length > 0)
     
     const formatDisabled = !pathValid || !fileSystemPathValid
-
+    
     return (
         <Box>
             <ConfirmDialog
@@ -414,6 +475,7 @@ export default function Format() {
                                     setFileSystem(rdbFileSystemOptions[0].value)
                                     setDownloadPfs3Aio(true)
                                     setFileSystemPath(pfs3AioUrl)
+                                    handleChangeMaxPartitionOptions(rdbFileSystemOptions[0].value, useExperimental);
                                     break;
                                 default:
                                     setFileSystemOptions([])
@@ -439,6 +501,7 @@ export default function Format() {
                             const isPfs3FileSystem = value === 'pds3' || value === 'pfs3'
                             setDownloadPfs3Aio(isPfs3FileSystem)
                             setFileSystemPath(isPfs3FileSystem ? pfs3AioUrl : null)
+                            handleChangeMaxPartitionOptions(value, useExperimental);
                         }}
                     />
                 </Grid>
@@ -542,20 +605,40 @@ export default function Format() {
                             </Grid>
                         </Grid>
                         {(formatType === 'rdb' || formatType === 'pistorm') && (
-                            <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0.3 }}>
-                                <Grid item xs={12} lg={12}>
-                                    <SelectField
-                                        label="Max partition size"
-                                        id="max-partition-size"
-                                        emptyLabel="None available"
-                                        value={maxPartitionSize || ''}
-                                        options={maxPartitionSizeOptions || []}
-                                        onChange={(value) => {
-                                            setMaxPartitionSize(value);
-                                        }}
-                                    />
+                            <React.Fragment>
+                                {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
+                                    <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>
+                                        <Grid item xs={12} lg={6}>
+                                            <CheckboxField
+                                                id="use-experimental"
+                                                label="Use experimental partition sizes"
+                                                value={useExperimental}
+                                                onChange={async (checked) => {
+                                                    setUseExperimental(checked);
+                                                    handleChangeMaxPartitionOptions(fileSystem, checked);
+                                                }}
+                                            />
+                                            <Alert severity="warning">
+                                                Using experimental partition sizes might cause data loss and/or corruption.
+                                            </Alert>
+                                        </Grid>
+                                    </Grid>
+                                )}
+                                <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0 }}>
+                                    <Grid item xs={12} lg={12}>
+                                        <SelectField
+                                            label="Max partition size"
+                                            id="max-partition-size"
+                                            emptyLabel="None available"
+                                            value={maxPartitionSize || ''}
+                                            options={maxPartitionSizeOptions || []}
+                                            onChange={(value) => {
+                                                setMaxPartitionSize(value);
+                                            }}
+                                        />
+                                    </Grid>
                                 </Grid>
-                            </Grid>
+                            </React.Fragment>
                         )}
                         <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                             <Grid item xs={12}>

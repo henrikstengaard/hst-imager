@@ -21,7 +21,7 @@ namespace Hst.Imager.GuiApp.Models.Requests
         public long Size { get; set; }
 
         public long MaxPartitionSize { get; set; }
-
+        public bool UseExperimental { get; set; }
         public bool Byteswap { get; set; }
     }
 }

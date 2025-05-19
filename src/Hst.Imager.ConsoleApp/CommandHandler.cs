@@ -121,8 +121,9 @@ namespace Hst.Imager.ConsoleApp
 
         private static async Task Execute(CommandBase command)
         {
-            command.DebugMessage += (_, progressMessage) => { Log.Logger.Debug(progressMessage); };
-            command.InformationMessage += (_, progressMessage) => { Log.Logger.Information(progressMessage); };
+            command.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
+            command.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
+            command.InformationMessage += (_, message) => { Log.Logger.Information(message); };
 
             var cancellationTokenSource = new CancellationTokenSource();
             Result result = null;
@@ -335,14 +336,14 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task Format(string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string size, long? maxPartitionSize)
+            string fileSystemPath, string size, string maxPartitionSize, bool useExperimental)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), 
                 ServiceProvider.GetService<ILoggerFactory>(),
                 commandHelper, await GetPhysicalDrives(), path,
                 formatType, fileSystem, fileSystemPath,
-                AppState.Instance.AppPath, ParseSize(size), maxPartitionSize ?? 0));
+                AppState.Instance.AppPath, ParseSize(size), ParseSize(maxPartitionSize), useExperimental));
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)
@@ -540,13 +541,13 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,
             uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int? priority,
-            int? fileSystemBlockSize)
+            int? fileSystemBlockSize, bool useExperimental)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
                 ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, priority,
-                fileSystemBlockSize));
+                fileSystemBlockSize, useExperimental));
         }
 
         public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,
@@ -597,7 +598,8 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task RdbPartFormat(string path, int partitionNumber, string name, bool nonRdb, string chs, string dosType)
+        public static async Task RdbPartFormat(string path, int partitionNumber, string name, bool nonRdb, string chs,
+            string dosType)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new RdbPartFormatCommand(GetLogger<RdbPartFormatCommand>(), commandHelper,

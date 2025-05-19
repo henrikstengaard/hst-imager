@@ -29,12 +29,15 @@ namespace Hst.Imager.Core.Commands
         private string fileSystemPath;
         private readonly string outputPath;
         private readonly Size size;
-        private readonly long maxPartitionSize;
+        private readonly Size maxPartitionSize;
+        private readonly bool useExperimental;
 
         private int commandsExecuted;
         private int maxCommandsToExecute;
 
-        private const long MaxRdbPartitionSize = 137438953472; // [Math]::Pow(2, 37)
+        private const int MaxRdbPartitions = 32;
+        private const long MaxRdbExperimentalSize = 2199023255552; // [Math]::Pow(2, 41)
+        private const long MaxRdbSize = 137438953472; // [Math]::Pow(2, 37)
         private const long WorkbenchPartitionSize = 1073741824; // [Math]::Pow(2, 30)
         private const long PiStormBootPartitionSize = 1073741824; // [Math]::Pow(2, 30)
 
@@ -56,9 +59,10 @@ namespace Hst.Imager.Core.Commands
         /// <param name="outputPath">Output path to write file system from media.</param>
         /// <param name="size"></param>
         /// <param name="maxPartitionSize">Max partition size for RDB and PiStorm.</param>
+        /// <param name="useExperimental">Confirm using PFS3 experimental partition size.</param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string outputPath, Size size, long maxPartitionSize)
+            string fileSystemPath, string outputPath, Size size, Size maxPartitionSize, bool useExperimental)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -71,6 +75,7 @@ namespace Hst.Imager.Core.Commands
             this.outputPath = outputPath;
             this.size = size;
             this.maxPartitionSize = maxPartitionSize;
+            this.useExperimental = useExperimental;
             this.commandsExecuted = 0;
             this.maxCommandsToExecute = 0;
         }
@@ -110,10 +115,16 @@ namespace Hst.Imager.Core.Commands
                 }
             }
 
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
-                maxPartitionSize > MaxRdbPartitionSize)
+            if (maxPartitionSize.Unit == Unit.Percent)
             {
-                return new Result(new Error($"Max partition size must be less than {MaxRdbPartitionSize} bytes"));
+                return new Result(new Error($"Max partition size doesn't support values in percentage"));
+            }
+            
+            var maxRdbPartitionSize = useExperimental ? MaxRdbExperimentalSize : MaxRdbSize;
+            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+                maxPartitionSize.Value > maxRdbPartitionSize)
+            {
+                return new Result(new Error($"Max {(useExperimental ? "experimental " : "")}partition size must be equal or less than {maxRdbPartitionSize} bytes"));
             }
 
             // set file system path to pfs3aio url, if pfs3 or pds3 file system and file system path is not set
@@ -188,10 +199,10 @@ namespace Hst.Imager.Core.Commands
                     formatResult = await FormatGptDisk(diskSize, gptFileSystem, token);
                     break;
                 case FormatType.Rdb:
-                    formatResult = await FormatRdbDisk(diskSize, rdbFileSystem, path, 0, token);
+                    formatResult = await FormatRdbDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, path, 0, token);
                     break;
                 case FormatType.PiStorm:
-                    formatResult = await FormatPiStormDisk(diskSize, rdbFileSystem, token);
+                    formatResult = await FormatPiStormDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, token);
                     break;
                 default:
                     formatResult = new Result(new Error($"Unsupported format type '{formatType}'"));
@@ -422,7 +433,7 @@ namespace Hst.Imager.Core.Commands
             return revision >= 13;
         }
 
-        private async Task<Result<int>> FormatRdbDisk(long diskSize,
+        private async Task<Result<int>> FormatRdbDisk(long diskSize, long maxRdbDiskSize,
             FormatRdbFileSystem formatRdbFileSystem, string rdbPath, int partitionNumber, CancellationToken cancellationToken)
         {
             var fileSystemPathResult = await PrepareRdbFileSystem(formatRdbFileSystem);
@@ -446,7 +457,7 @@ namespace Hst.Imager.Core.Commands
                 : VersionStringReader.Parse(versionString);
 
             var maxWorkbenchPartitionSize = WorkbenchPartitionSize;
-            var maxWorkPartitionSize = maxPartitionSize == 0 ? MaxRdbPartitionSize : maxPartitionSize;
+            var maxWorkPartitionSize = Convert.ToInt64(maxPartitionSize.Value == 0 ? maxRdbDiskSize : maxPartitionSize.Value);
             
             // change dos type to dos3, if fast file system doesn't support dos7 (version 46.13 or higher)
             if (amigaVersion != null &&
@@ -468,6 +479,21 @@ namespace Hst.Imager.Core.Commands
 
                 maxWorkbenchPartitionSize = 500.MB();
                 maxWorkPartitionSize = 2.GB();
+            }
+
+            // change max work partition size to pfs3 max partition size limit,
+            // if dos type is pfs3 or pds3 and max work partition size is larger
+            // than pfs3 max partition size
+            var cylinderSize = 16 * 63 * 512;
+            var cylinderGapSize = cylinderSize * 10;
+            if ((dosType.Equals("PDS3", StringComparison.OrdinalIgnoreCase) ||
+                 dosType.Equals("PFS3", StringComparison.OrdinalIgnoreCase)) &&
+                maxWorkPartitionSize > FileSystemHelper.Pfs3MaxPartitionSize - cylinderGapSize &&
+                !useExperimental)
+            {
+                // cylinder size of 16 heads * 63 sectors * 512 bytes is subtracted from max partition size
+                // to ensure that max work partition size is less than pfs3 max partition size
+                maxWorkPartitionSize = FileSystemHelper.Pfs3MaxPartitionSize - cylinderGapSize;
             }
             
             // init rdb
@@ -514,7 +540,7 @@ namespace Hst.Imager.Core.Commands
                 // add workbench partition
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
-                physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null, 0x1fe00, null, false, true, null, 512);
+                physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null, 0x1fe00, null, false, true, null, 512, useExperimental);
                 AddMessageEvents(rdbPartAddCommand);
 
                 rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationToken);
@@ -548,22 +574,22 @@ namespace Hst.Imager.Core.Commands
                 return new Result<int>(partitionNumber);
             }
 
-            // calculate work partition count and size
-            var workPartitionCount = diskSize > maxWorkPartitionSize
-                ? Convert.ToInt32(Math.Ceiling((double)diskSize / maxWorkPartitionSize))
-                : 1;
-            var workPartitionSize = diskSize / workPartitionCount;
+            // calculate work partition sizes based on max work partition size
+            var workPartitionSizes = FileSystemHelper.CalculateRdbPartitionSizes(diskSize,
+                maxWorkPartitionSize).ToList();
 
-            // add work partitions
+            // add work partitions to rdb
+            var workPartitionCount =
+                Math.Min(MaxRdbPartitions - (hasWorkbenchPartition ? 1 : 0), workPartitionSizes.Count);
             for (var i = 0; i < workPartitionCount; i++)
             {
-                var partitionSize = new Size(i < workPartitionCount - 1 ? workPartitionSize : 0, Unit.Bytes);
+                var partitionSize = new Size(i < workPartitionSizes.Count - 1 ? workPartitionSizes[i] : 0, Unit.Bytes);
 
                 // add work partition
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
                     physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null,
-                    0x1fe00, null, false, false, null, 512);
+                    0x1fe00, null, false, false, null, 512, useExperimental);
                 AddMessageEvents(rdbPartAddCommand);
 
                 rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationToken);
@@ -598,7 +624,7 @@ namespace Hst.Imager.Core.Commands
             return new Result<int>(partitionNumber);
         }
 
-        private async Task<Result> FormatPiStormDisk(long diskSize,
+        private async Task<Result> FormatPiStormDisk(long diskSize, long maxRdbPartitionSize,
             FormatRdbFileSystem formatRdbFileSystem, CancellationToken cancellationToken)
         {
             var mbrInitCommand = new MbrInitCommand(loggerFactory.CreateLogger<MbrInitCommand>(), commandHelper, physicalDrives, path);
@@ -612,13 +638,18 @@ namespace Hst.Imager.Core.Commands
 
             var formatSize = diskSize.ResolveSize(size).ToSectorSize();
 
+
+            // should be a argument?
+            //var piStormDiskCount = 1;
+            
+            
             // limit to 1 pistorm disk by default, if size is not defined and disk size is larger than 128gb
-            if ((size == null || size.Value == 0)
-                && formatSize > 128.GB()
-                && diskSize > 128.GB())
-            {
-                formatSize = 128.GB();
-            }
+            // if ((size == null || size.Value == 0)
+            //     && formatSize > 128.GB()
+            //     && diskSize > 128.GB())
+            // {
+            //     formatSize = 128.GB();
+            // }
 
             long lastSector = formatSize / 512;
 
@@ -652,15 +683,16 @@ namespace Hst.Imager.Core.Commands
             UpdateCommandsExecuted(1);
 
             // calculate number of pistorm disks
-            var piStormDiskSize = formatSize > 128.GB() ? 128.GB() : formatSize;
-            var piStormDiskCount = formatSize > 128.GB() ? Math.Ceiling((double)formatSize / piStormDiskSize) : 1;
-
-            // max 4 mbr primary partitions
-            if (piStormDiskCount > 3)
-            {
-                piStormDiskCount = 3;
-            }
-
+            //var piStormDiskSize = formatSize > 128.GB() ? 128.GB() : formatSize;
+            
+            // use experimental should allow big pistorm disk sizes and custom ones.
+            var piStormDiskSize = useExperimental ? MaxRdbExperimentalSize : MaxRdbSize;
+            //var piStormDiskCount = useExperimental ? formatSize > 128.GB() ? Math.Ceiling((double)formatSize / piStormDiskSize) : 1;
+            
+            // for simplicity pistorm disk count is set to 1
+            // when supportming more than one then must be limited to 3 due to max 4 mbr primary partitions: boot partition and max 3 pistorm partitions
+            var piStormDiskCount = 1;
+            
             startSector = endSector + 1;
             var rdbPartitionNumber = 0;
 
@@ -673,7 +705,7 @@ namespace Hst.Imager.Core.Commands
                     endSector = lastSector;
                 }
 
-                var partitionSize = (endSector - startSector + 1) * 512;
+                var mbrPartitionSize = (endSector - startSector + 1) * 512;
 
                 // add pistorm rdb partition
                 mbrPartAddCommand = new MbrPartAddCommand(loggerFactory.CreateLogger<MbrPartAddCommand>(), commandHelper,
@@ -690,7 +722,7 @@ namespace Hst.Imager.Core.Commands
 
                 // format pistorm mbr partition
                 var piStormRdbPath = Path.Combine(path, "mbr", (i + 2).ToString());
-                var formatRdbDiskResult = await FormatRdbDisk(partitionSize, formatRdbFileSystem,
+                var formatRdbDiskResult = await FormatRdbDisk(mbrPartitionSize, maxRdbPartitionSize, formatRdbFileSystem,
                     piStormRdbPath, rdbPartitionNumber, cancellationToken);
                 if (formatRdbDiskResult.IsFaulted)
                 {
@@ -734,7 +766,8 @@ namespace Hst.Imager.Core.Commands
         private void AddMessageEvents(CommandBase command)
         {
             command.InformationMessage += (object _, string message) => OnInformationMessage(message);
-            command.DebugMessage += (object _, string message) => OnInformationMessage(message);
+            command.WarningMessage += (object _, string message) => OnWarningMessage(message);
+            command.DebugMessage += (object _, string message) => OnDebugMessage(message);
         }
     }
 }

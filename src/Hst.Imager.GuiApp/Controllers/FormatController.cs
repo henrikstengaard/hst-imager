@@ -42,6 +42,7 @@ namespace Hst.Imager.GuiApp.Controllers
                 FileSystemPath = request.FileSystemPath,
                 Size = request.Size,
                 MaxPartitionSize = request.MaxPartitionSize,
+                UseExperimental = request.UseExperimental,
                 Byteswap = request.Byteswap
             };
             
