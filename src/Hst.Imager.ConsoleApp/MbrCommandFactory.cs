@@ -126,7 +126,7 @@ namespace Hst.Imager.ConsoleApp
 
             var partitionNumberArgument = new Argument<int>(
                 name: "PartitionNumber",
-                description: "Partition number to delete.");
+                description: "Partition number to format.");
 
             var nameArgument = new Argument<string>(
                 name: "Name",
