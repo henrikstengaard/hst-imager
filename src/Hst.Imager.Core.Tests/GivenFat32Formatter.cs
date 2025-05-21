@@ -1,11 +1,8 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading.Tasks;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
-using Hst.Core.Extensions;
 using Hst.Core.IO;
 using Hst.Imager.Core.FileSystems.Fat32;
 using Xunit;
@@ -18,41 +15,6 @@ public class GivenFat32Formatter
     private const long DiskSize16Gb = DiskSize1Gb * 16;
     private const long DiskSize64Gb = DiskSize1Gb * 64;
 
-    [Fact]
-    public async Task When2()
-    {
-        var prgBytes = await File.ReadAllBytesAsync(@"c:\Projects\c64\carts nick\Aztec Challenge_oneload_crunched.prg");
-        var binBytes = prgBytes.Skip(2).Concat(new byte[16384 - prgBytes.Length + 2]).ToArray();
-        await File.WriteAllBytesAsync(@"c:\Projects\c64\carts nick\Aztec Challenge_oneload_crunched_27c512.bin",
-            binBytes.Concat(binBytes).Concat(binBytes).Concat(binBytes).ToArray());
-    }
-
-    [Fact]
-    public async Task When()
-    {
-        await using var stream = File.OpenRead(@"C:\Projects\hst\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net8.0\1gb_fat32.img");
-
-        var output = new List<string>(100);
-        
-        var sectorBytes = new byte[512];
-        int bytesRead;
-        do
-        {
-            var offset = stream.Position;
-            bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
-
-            if (DataSectorReader.IsZeroFilled(sectorBytes, 0, bytesRead))
-            {
-                continue;
-            }
-            
-            output.Add($"offset: {offset}: {sectorBytes.Take(4).ToArray().FormatHex()}");
-        }
-        while (bytesRead < sectorBytes.Length || stream.Position < stream.Length);
-
-        await File.WriteAllLinesAsync(@"C:\Projects\hst\hst-imager\src\Hst.Imager.ConsoleApp\bin\Debug\net8.0\1gb_fat32_sectors.txt", output);
-    }
-    
     [Theory]
     [InlineData(DiskSize1Gb)]
     [InlineData(DiskSize16Gb)]

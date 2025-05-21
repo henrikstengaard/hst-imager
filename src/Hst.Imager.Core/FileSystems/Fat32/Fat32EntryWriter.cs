@@ -1,35 +1,19 @@
 ﻿using System;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace Hst.Imager.Core.FileSystems.Fat32;
 
 public static class Fat32EntryWriter
 {
-    /// <summary>
-    /// Regular expression used to examine if names contain characters other than:
-    /// 0～9 A～Z ! # $ % & ' ( ) - @ ^ _ ` { } ~
-    /// </summary>
-    private static readonly Regex NonValidSfnCharsRegex = new(@"[^a-z0-9!#\\$%&'\\(\\)\\-\\@\\^_`{}~]",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static byte[] Build(Fat32Entry fat32Entry)
     {
         var fat32EntryBytes = new byte[32];
-
-        var name = NonValidSfnCharsRegex
-            .Replace(fat32Entry.Name, string.Empty)
-            .ToUpperInvariant();
         
-        if (name.Length > 11)
-        {
-            name = name[..11];
-        }
-        
-        var nameBytes = Encoding.ASCII.GetBytes(name);
+        var nameBytes = Encoding.ASCII.GetBytes(fat32Entry.Name);
         Array.Copy(nameBytes, 0, fat32EntryBytes, 0, nameBytes.Length);
 
-        if (name.Length < 11)
+        if (nameBytes.Length < 11)
         {
             var fillBytes = new byte[11 - nameBytes.Length];
             Array.Fill<byte>(fillBytes, 0x20);

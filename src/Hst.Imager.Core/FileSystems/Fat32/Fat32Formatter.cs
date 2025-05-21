@@ -91,9 +91,7 @@ public static class Fat32Formatter
             Reserved1 = 0,
             bBootSig = 0x29,
             dBS_VolID = volumeId,
-            sVolLab = Encoding.ASCII.GetBytes(volumeLabel.Length > 11 
-                ? volumeLabel.Substring(0, 11) 
-                : volumeLabel),
+            sVolLab = Encoding.ASCII.GetBytes(Fat32FileNameHelper.MakeValidVolumeLabel(volumeLabel)),
             sBS_FilSysType = Encoding.ASCII.GetBytes("FAT32   "),
             ExecutableCode = new byte[420],
             BootRecordSignature = new byte[] { 0x55, 0xaa }
@@ -175,7 +173,7 @@ public static class Fat32Formatter
         // create volume id entry
         var volumeIdEntry = new Fat32Entry
         {
-            Name = volumeLabel,
+            Name = Fat32FileNameHelper.MakeValidVolumeLabel(volumeLabel),
             Attribute = 8,
             CreationDate = DateTime.Now
         };
