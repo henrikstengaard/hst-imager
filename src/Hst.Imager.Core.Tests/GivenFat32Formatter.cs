@@ -134,7 +134,7 @@ public class GivenFat32Formatter
         Assert.Equal(0xff, firstFatBytes[4]);
         Assert.Equal(0xff, firstFatBytes[5]);
         Assert.Equal(0xff, firstFatBytes[6]);
-        Assert.Equal(0x0f, firstFatBytes[7]);
+        Assert.Equal(0xff, firstFatBytes[7]);
         Assert.Equal(0xff, firstFatBytes[8]);
         Assert.Equal(0xff, firstFatBytes[9]);
         Assert.Equal(0xff, firstFatBytes[10]);
@@ -154,7 +154,7 @@ public class GivenFat32Formatter
         Assert.Equal(0xff, firstFatBytes[4]);
         Assert.Equal(0xff, firstFatBytes[5]);
         Assert.Equal(0xff, firstFatBytes[6]);
-        Assert.Equal(0x0f, firstFatBytes[7]);
+        Assert.Equal(0xff, firstFatBytes[7]);
         Assert.Equal(0xff, firstFatBytes[8]);
         Assert.Equal(0xff, firstFatBytes[9]);
         Assert.Equal(0xff, firstFatBytes[10]);
