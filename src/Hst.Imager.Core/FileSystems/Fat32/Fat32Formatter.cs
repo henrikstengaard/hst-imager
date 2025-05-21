@@ -113,7 +113,7 @@ public static class Fat32Formatter
         // first fat sector bytes
         var firstFatSectorBytes = new byte[bytesPerSector];
         firstFatSectorBytes.ConvertUInt32ToBytes(0x0, 0x0ffffff8); // reserved cluster 1 media id in low byte
-        firstFatSectorBytes.ConvertUInt32ToBytes(0x4, 0x0fffffff); // reserved cluster 2 EOC
+        firstFatSectorBytes.ConvertUInt32ToBytes(0x4, 0xffffffff); // reserved cluster 2 root dir
         firstFatSectorBytes.ConvertUInt32ToBytes(0x8, 0x0fffffff); // end of cluster chain for root dir
 
         var systemAreaSize = (reservedSectorCount + (numberOfFats * fatSizeInSectors) + fat32BootSector.bSecPerClus);
@@ -171,6 +171,24 @@ public static class Fat32Formatter
             stream.Seek(partitionOffset + (sectorStart * bytesPerSector), SeekOrigin.Begin);
             await stream.WriteBytes(firstFatSectorBytes);
         }
+
+        // create volume id entry
+        var volumeIdEntry = new Fat32Entry
+        {
+            Name = volumeLabel,
+            Attribute = 8,
+            CreationDate = DateTime.Now
+        };
+
+        // build volume id entry bytes
+        var volumeIdEntryBytes = Fat32EntryWriter.Build(volumeIdEntry);
+
+        // calculate root directory location
+        var rootDirSector = reservedSectorCount + (numberOfFats * fatSizeInSectors);
+
+        // write volume id entry
+        stream.Seek(partitionOffset + (rootDirSector * bytesPerSector), SeekOrigin.Begin);
+        await stream.WriteBytes(volumeIdEntryBytes);
     }
     
     private static async Task WriteZeroSectors(Stream stream, long partitionOffset, uint startSector, int bytesPerSector, 
