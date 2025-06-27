@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using DiscUtils.Iso9660;
 using DiscUtils.Udf;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.PathComponents;
 using Hst.Imager.Core.UaeMetadatas;
@@ -60,9 +60,14 @@ public class UdfEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public Media Media => null;
     public string RootPath => rootPath;
     
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public Task<bool> Next()
     {

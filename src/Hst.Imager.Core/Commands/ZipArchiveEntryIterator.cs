@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -52,9 +54,14 @@ public class ZipArchiveEntryIterator : IEntryIterator
     {
     }
 
+    public Media Media => null;
     public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public async Task<bool> Next()
     {

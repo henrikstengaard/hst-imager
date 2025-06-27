@@ -41,6 +41,9 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
         // arrange - fat entry writer
         var fatEntryWriter = new FileSystemEntryWriter(media, fatFileSystem, Array.Empty<string>());
 
+        var initializeResult = await fatEntryWriter.Initialize();
+        Assert.True(initializeResult.IsSuccess);
+        
         // act - create directories and files
         await WriteEntry(fatEntryWriter, "file1.txt", new MemoryStream());
         await WriteEntry(fatEntryWriter, "file2.txt", new MemoryStream());
@@ -84,14 +87,14 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.Dir
-        }, entryPathComponents, false);
+        }, entryPathComponents, false, false);
     }
 
     private async Task WriteEntry(IEntryWriter entryWriter, string entryPath, Stream stream)
     {
         var name = Path.GetFileName(entryPath);
         var entryPathComponents = entryPath.Split(new []{"\\", "/"}, StringSplitOptions.RemoveEmptyEntries);
-        await entryWriter.WriteEntry(new Entry
+        await entryWriter.CreateFile(new Entry
         {
             Name = name,
             FormattedName = name,
@@ -102,6 +105,6 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.File
-        }, entryPathComponents, stream, false);
+        }, entryPathComponents, stream, false, false);
     }
 }

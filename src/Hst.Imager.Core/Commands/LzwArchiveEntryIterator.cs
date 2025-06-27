@@ -1,11 +1,14 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using System.Linq;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using ICSharpCode.SharpZipLib.Lzw;
 using Models.FileSystems;
 
@@ -28,9 +31,14 @@ public class LzwArchiveEntryIterator : IEntryIterator
     {
     }
 
+    public Media Media => null;
     public string RootPath { get; }
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public Task<bool> Next()
     {

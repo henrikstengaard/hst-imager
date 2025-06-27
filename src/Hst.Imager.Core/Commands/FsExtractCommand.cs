@@ -71,6 +71,8 @@ public class FsExtractCommand : FsCommandBase
 
         stopwatch.Start();
 
+        bool? isSingleFileOperation = null;
+        
         using (var destEntryWriter = destEntryWriterResult.Value)
         {
             using (var srcEntryIterator = srcEntryIteratorResult.Value)
@@ -78,6 +80,12 @@ public class FsExtractCommand : FsCommandBase
                 while (await srcEntryIterator.Next())
                 {
                     var entry = srcEntryIterator.Current;
+
+                    // is single file entry operation is determined from first entry either
+                    // if first entry is a file and there are no more entries or
+                    // if there is only a single file entry next
+                    isSingleFileOperation ??= entry.Type == EntryType.File && !srcEntryIterator.HasMoreEntries ||
+                                          srcEntryIterator.IsSingleFileEntryNext;
 
                     switch (entry.Type)
                     {
@@ -88,7 +96,8 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes);
+                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
+                                isSingleFileOperation.Value);
                             break;
                         case EntryType.File:
                         {
@@ -101,7 +110,8 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream, skipAttributes);
+                            await destEntryWriter.CreateFile(entry, entry.RelativePathComponents, stream, skipAttributes,
+                                isSingleFileOperation.Value);
                             break;
                         }
                     }

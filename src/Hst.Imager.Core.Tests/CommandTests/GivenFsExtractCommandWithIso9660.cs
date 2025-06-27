@@ -20,8 +20,12 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 
         try
         {
+            // arrange - create iso9660 image with directories and files
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -65,8 +69,12 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 
         try
         {
+            // arrange - create iso9660 image with directories and files
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -108,8 +116,12 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 
         try
         {
+            // arrange - create iso9660 image with directories and files
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -152,8 +164,12 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 
         try
         {
+            // arrange - create iso9660 image with directories and files
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -193,8 +209,12 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 
         try
         {
+            // arrange - create iso9660 image with directories and files
             CreateIso9660WithDirectoriesAndFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 

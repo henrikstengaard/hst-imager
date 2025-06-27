@@ -35,6 +35,9 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
             await CreateMbrNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
             await CreateMbrNtfsDirectoriesAndFiles(testCommandHelper, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),

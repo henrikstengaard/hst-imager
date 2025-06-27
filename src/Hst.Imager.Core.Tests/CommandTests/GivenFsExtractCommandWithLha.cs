@@ -22,8 +22,12 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
+            // arrange - copy lha file to source path
             File.Copy(lhaPath, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -76,8 +80,12 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
+            // arrange - copy lha file to source path
             File.Copy(lhaPath, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -118,8 +126,12 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
+            // arrange - copy lha file to source path
             File.Copy(lhaPath, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -164,8 +176,12 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
+            // arrange - copy lha file to source path
             File.Copy(lhaPath, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -201,8 +217,12 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 
         try
         {
+            // arrange - copy lha file to src path
             File.Copy(lhaPath, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 

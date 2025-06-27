@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 using Hst.Core;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
@@ -70,6 +70,8 @@ public class FsCopyCommand : FsCommandBase
 
         stopwatch.Start();
 
+        bool? isSingleFileOperation = null;
+
         using (var destEntryWriter = destEntryWriterResult.Value)
         {
             using (var srcEntryIterator = srcEntryIteratorResult.Value)
@@ -78,11 +80,22 @@ public class FsCopyCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
+                    // is single file entry operation is determined from first entry either
+                    // if first entry is a file and there are no more entries or
+                    // if there is only a single file entry next
+                    isSingleFileOperation ??= entry.Type == EntryType.File && !srcEntryIterator.HasMoreEntries ||
+                                              srcEntryIterator.IsSingleFileEntryNext;
+                            
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes);
+                            var createDirectoryResult = await destEntryWriter.CreateDirectory(entry,
+                                entry.RelativePathComponents, skipAttributes, isSingleFileOperation.Value);
+                            if (createDirectoryResult.IsFaulted)
+                            {
+                                return new Result(createDirectoryResult.Error);
+                            }
                             break;
                         case EntryType.File:
                         {
@@ -95,8 +108,13 @@ public class FsCopyCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream,
-                                skipAttributes);
+                            var createFileResult = await destEntryWriter.CreateFile(entry,
+                                entry.RelativePathComponents, stream,
+                                skipAttributes, isSingleFileOperation.Value);
+                            if (createFileResult.IsFaulted)
+                            {
+                                return new Result(createFileResult.Error);
+                            }
                             break;
                         }
                     }

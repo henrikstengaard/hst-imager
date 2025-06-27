@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Core;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -11,30 +13,24 @@ using Hst.Imager.Core.UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
-public class FileSystemEntryWriter : IEntryWriter
+public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] rootPathComponents)
+    : IEntryWriter
 {
-    private readonly byte[] buffer;
-    private readonly Media media;
-    private readonly IMediaPath mediaPath;
-    private readonly string[] pathComponents;
-    private readonly IFileSystem fileSystem;
-    private string currentDirPath;
+    private readonly byte[] buffer = new byte[4096];
+    private readonly IMediaPath mediaPath = PathComponents.MediaPath.GenericMediaPath;
+    //private string currentDirPath = string.Empty;
     private bool disposed;
-    private readonly HashSet<string> dirPathsCreated;
+    private readonly HashSet<string> dirPathsCreated = new();
 
-    public FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] pathComponents)
-    {
-        this.buffer = new byte[4096];
-        this.media = media;
-        this.mediaPath = PathComponents.MediaPath.GenericMediaPath;
-        this.pathComponents = pathComponents;
-        this.fileSystem = fileSystem;
-        this.currentDirPath = string.Empty;
+    /// <summary>
+    /// root path components after initialized
+    /// </summary>
+    private string[] dirPathComponents = [];
 
-        dirPathsCreated = new HashSet<string>();
-    }
+    private bool lastPathComponentExist = true;
+    private bool isInitialized = false;
 
-    public string MediaPath => this.media.Path;
+    public string MediaPath => media.Path;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
     
@@ -59,17 +55,74 @@ public class FileSystemEntryWriter : IEntryWriter
     }
 
     public void Dispose() => Dispose(true);
-    
-    public Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
+
+    public Task<Result> Initialize()
     {
-        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        var exisingPathComponents = new List<string>(10);
+            
+        lastPathComponentExist = true;
+
+        for (var i = 0; i < rootPathComponents.Length; i++)
+        {
+            var dirPath = mediaPath.Join(exisingPathComponents.Concat([rootPathComponents[i]]).ToArray());
+
+            var dirs = fileSystem.GetDirectories("").ToList();
+            
+            var fileSystemInfo = fileSystem.GetFileSystemInfo(dirPath);
+            
+            var nextDirPath = string.Join("/", rootPathComponents.Take(i + 1));
+
+            if (!fileSystemInfo.Exists && fileSystemInfo is DiscFileInfo && i < rootPathComponents.Length - 1)
+            {
+                return Task.FromResult(new Result(new PathNotFoundError(
+                    $"Path '{nextDirPath}' is a file and not a directory", nextDirPath)));
+            }
+            
+            if (!fileSystemInfo.Exists)
+            {
+                if (i != rootPathComponents.Length - 1)
+                {
+                    return Task.FromResult(new Result(new PathNotFoundError(
+                        $"Path not found '{nextDirPath}'", nextDirPath)));
+                }
+                
+                lastPathComponentExist = false;
+
+                break;
+            }
+            
+            exisingPathComponents.Add(rootPathComponents[i]);
+        }
+
+        dirPathComponents = exisingPathComponents.ToArray();
+
+        isInitialized = true;
+        
+        return Task.FromResult(new Result());
+    }
+
+    public Task<Result> CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes,
+        bool isSingleFileEntry)
+    {
+        if (!isInitialized)
+        {
+            return Task.FromResult(new Result(new Error("FileSystemEntryWriter is not initialized.")));
+        }
+        
+        var fullPathComponents = rootPathComponents.Concat(entryPathComponents).ToArray();
+
+        if (!lastPathComponentExist)
+        {
+            var path = mediaPath.Join(fullPathComponents);
+            return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{path}'", path)));
+        }
 
         CreateFileSystemDirectory(fullPathComponents);
 
-        var dirPath = mediaPath.Join(fullPathComponents);
-        currentDirPath = dirPath;
+        // var dirPath = mediaPath.Join(fullPathComponents);
+        // currentDirPath = dirPath;
 
-        return Task.CompletedTask;
+        return Task.FromResult(new Result());
     }
 
     private void CreateFileSystemDirectory(string[] pathComponents)
@@ -90,20 +143,24 @@ public class FileSystemEntryWriter : IEntryWriter
         }
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
+    public async Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes, bool singleFile)
     {
-        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
-
-        var dirPathComponents = fullPathComponents.Length <= 1 
-            ? Array.Empty<string>()
-            : fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
-        var dirPath = mediaPath.Join(dirPathComponents);
-
-        if (dirPathComponents.Length > 0 && !currentDirPath.Equals(dirPath))
+        if (!isInitialized)
         {
-            CreateFileSystemDirectory(dirPathComponents);
+            return new Result(new Error("FileSystemEntryWriter is not initialized."));
+        }
+        
+        var fullPathComponents = dirPathComponents.Concat(entryPathComponents).ToArray();
+        var isNewFileName = !lastPathComponentExist &&
+                            singleFile &&
+                            entryPathComponents[^1] != rootPathComponents[^1];
 
-            currentDirPath = dirPath;
+        if (isNewFileName)
+        {
+            fullPathComponents = fullPathComponents
+                .Take(fullPathComponents.Length - 1)
+                .Concat([rootPathComponents[^1]])
+                .ToArray();
         }
 
         var fullPath = mediaPath.Join(fullPathComponents);
@@ -115,6 +172,8 @@ public class FileSystemEntryWriter : IEntryWriter
             bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
             await entryStream.WriteAsync(buffer, 0, bytesRead);
         } while (bytesRead != 0);
+        
+        return new Result();
     }
 
     public Task Flush()

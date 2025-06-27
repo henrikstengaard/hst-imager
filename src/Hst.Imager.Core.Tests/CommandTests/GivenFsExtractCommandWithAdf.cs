@@ -22,9 +22,13 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
         try
         {
+            // arrange - create dos3 formatted adf with files
             await CreateDos3FormattedAdf(srcPath);
             await CreateDos3AdfFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -70,9 +74,13 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
         try
         {
+            // arrange - create dos3 formatted adf with files
             await CreateDos3FormattedAdf(srcPath);
             await CreateDos3AdfFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -116,9 +124,13 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
         try
         {
+            // arrange - create dos3 formatted adf with files
             await CreateDos3FormattedAdf(srcPath);
             await CreateDos3AdfFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -162,9 +174,13 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
         try
         {
+            // arrange - create dos3 formatted adf with files
             await CreateDos3FormattedAdf(srcPath);
             await CreateDos3AdfFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
@@ -198,9 +214,13 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 
         try
         {
+            // arrange - create dos3 formatted adf with files
             await CreateDos3FormattedAdf(srcPath);
             await CreateDos3AdfFiles(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 

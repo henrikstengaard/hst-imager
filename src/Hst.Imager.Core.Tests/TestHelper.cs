@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO.Compression;
+using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Imager.Core.Commands;
@@ -462,5 +463,124 @@ namespace Hst.Imager.Core.Tests
             
             return zipStream.ToArray();
         }
+        
+        public static async Task CreateMbrFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
+            long diskSize = 10 * 1024 * 1024)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+
+            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var biosPartitionTable = BiosPartitionTable.Initialize(disk);
+            var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
+                BiosPartitionTypes.Fat32Lba, true);
+            FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
+        }
+
+        public static async Task CreateRdbPfs3Directory(TestCommandHelper testCommandHelper,
+            string diskPath, string[] dirPathComponents)
+        {
+            var mediaResult = await testCommandHelper.GetWritableMedia([], diskPath);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+
+            var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            await using var pfs3Volume = await MountPfs3Volume(stream);
+
+            for (var i = 0; i < dirPathComponents.Length; i++)
+            {
+                await pfs3Volume.CreateDirectory(dirPathComponents[i]);
+            
+                if (i >= dirPathComponents.Length - 1)
+                {
+                    break;
+                }
+
+                await pfs3Volume.ChangeDirectory(dirPathComponents[i]);
+            }
+        }
+        
+        public static async Task CreateMbrFatDirectory(TestCommandHelper testCommandHelper,
+            string diskPath, string[] dirPathComponents)
+        {
+            var mediaResult = await testCommandHelper.GetWritableMedia([], diskPath);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+
+            using var media = mediaResult.Value;
+            var disk = media is DiskMedia diskMedia
+                ? diskMedia.Disk
+                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+
+            var biosPartitionTable = new BiosPartitionTable(disk);
+            using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
+
+            var path = string.Join(Path.DirectorySeparatorChar, dirPathComponents);
+        
+            fatFileSystem.CreateDirectory(path);
+        }
+
+        public static void CreateLocalDirectory(string dirPath, string[] dirPathComponents)
+        {
+            var path = Path.Combine(dirPath, Path.Combine(dirPathComponents));
+        
+            if (!System.IO.Directory.Exists(path))
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+        }
+
+        // public static async Task<IEnumerable<Amiga.FileSystems.Entry>> GetEntriesFromAmigaVolume(TestCommandHelper testCommandHelper, string mediaPath,
+        //     int partitionNumber, string[] dirPathComponents)
+        // {
+        //     var mediaResult = await testCommandHelper.GetReadableFileMedia(mediaPath);
+        //     if (mediaResult.IsFaulted)
+        //     {
+        //         throw new IOException(mediaResult.Error.ToString());
+        //     }
+        //     
+        //     using var media = mediaResult.Value;
+        //     
+        //     var rigidDiskBlock = await RigidDiskBlockReader.Read(media.Stream);
+        //
+        //     if (rigidDiskBlock == null)
+        //     {
+        //         throw new IOException($"Media '{mediaPath}' is not a valid Amiga Rigid Disk Block (RDB) disk.");
+        //     }
+        //     
+        //     var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+        //     
+        //     if (partitionNumber < 0 || partitionNumber >= partitionBlocks.Count)
+        //     {
+        //         throw new ArgumentOutOfRangeException(nameof(partitionNumber), 
+        //             $"Partition number {partitionNumber} is out of range. Available partitions: {partitionBlocks.Count}");
+        //     }
+        //     
+        //     var partitionBlock = partitionBlocks[partitionNumber];
+        //     
+        //     var fileSystemVolume = await MountAmigaFileSystemVolume(mediaResult.Value.Stream, partitionBlock);
+        //
+        //     foreach (var dirPathComponent in dirPathComponents)
+        //     {
+        //         await fileSystemVolume.ChangeDirectory(dirPathComponent);
+        //     }
+        //
+        //     return await fileSystemVolume.ListEntries();
+        // }
+        //
+        // private static async Task<IFileSystemVolume> MountAmigaFileSystemVolume(Stream stream, PartitionBlock partitionBlock) =>
+        //     partitionBlock.DosTypeFormatted.ToLowerInvariant() switch
+        //     {
+        //         "pds\\3" or "pfs\\3" => await Pfs3Volume.Mount(stream, partitionBlock),
+        //         "dos\\3" or "dos\\7" => await FastFileSystemVolume.MountPartition(stream, partitionBlock),
+        //         _ => throw new IOException($"Unsupported dos type '{partitionBlock.DosTypeFormatted}'")
+        //     };
     }
 }

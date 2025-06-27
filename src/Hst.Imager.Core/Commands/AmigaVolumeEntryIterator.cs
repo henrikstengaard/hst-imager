@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -11,39 +13,34 @@ using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
-public class AmigaVolumeEntryIterator : IEntryIterator
+public class AmigaVolumeEntryIterator(
+    Media media,
+    Stream stream,
+    string rootPath,
+    IFileSystemVolume fileSystemVolume,
+    bool recursive)
+    : IEntryIterator
 {
-    private readonly Stream stream;
-    private readonly IMediaPath mediaPath;
-    private readonly string rootPath;
-    private string[] rootPathComponents;
+    private readonly Stream stream = stream;
+    private readonly IMediaPath mediaPath = MediaPath.AmigaOsPath;
+    private string[] rootPathComponents = [];
     private PathComponentMatcher pathComponentMatcher;
-    private readonly IFileSystemVolume fileSystemVolume;
-    private readonly bool recursive;
-    private readonly Stack<Entry> nextEntries;
-    private bool isFirst;
-    private Entry currentEntry;
-
-    public AmigaVolumeEntryIterator(Stream stream, string rootPath, IFileSystemVolume fileSystemVolume, bool recursive)
-    {
-        this.stream = stream;
-        this.mediaPath = MediaPath.AmigaOsPath;
-        this.rootPath = rootPath;
-        this.rootPathComponents = Array.Empty<string>();
-        this.fileSystemVolume = fileSystemVolume;
-        this.recursive = recursive;
-        this.nextEntries = new Stack<Entry>();
-        this.currentEntry = null;
-        this.isFirst = true;
-    }
+    private readonly Stack<Entry> nextEntries = new();
+    private bool isFirst = true;
+    private Entry currentEntry = null;
 
     public void Dispose()
     {
     }
 
+    public Media Media => media;
     public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public async Task<bool> Next()
     {
@@ -143,7 +140,7 @@ public class AmigaVolumeEntryIterator : IEntryIterator
 
     public async Task Flush()
     {
-        await this.fileSystemVolume.Flush();
+        await fileSystemVolume.Flush();
     }
 
     /// <summary>
@@ -186,11 +183,11 @@ public class AmigaVolumeEntryIterator : IEntryIterator
                 attributes, properties, dirAttributes);
 
             // skip if no entry was created or entry is a file and is not valid
-            var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) &&
-                pathComponentMatcher.IsMatch(iteratorEntry.FullPathComponents);
+            var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) && 
+                          pathComponentMatcher.IsMatch(iteratorEntry.FullPathComponents);
             if (iteratorEntry == null ||
                 (iteratorEntry.Type == Models.FileSystems.EntryType.File &&
-                !isValid))
+                 !isValid))
             {
                 continue;
             }

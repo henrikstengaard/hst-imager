@@ -31,11 +31,18 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
+            // arrange - create destination directory
+            Directory.CreateDirectory(path);
+            
             // arrange - create directory entry writer
             var writer = new DirectoryEntryWriter(path);
+
+            // arrange - initialize the writer
+            var initializeResult = await writer.Initialize();
+            Assert.True(initializeResult.IsSuccess);
             
             // act - write directory entry
-            await writer.WriteEntry(entry, entry.RelativePathComponents, new MemoryStream(), false);
+            var t =await writer.CreateFile(entry, entry.RelativePathComponents, new MemoryStream(), false, false);
             
             // assert - get written files
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);

@@ -334,8 +334,8 @@ public abstract partial class FsCommandBase : CommandBase
         var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
         var rootPath = MediaPath.AmigaOsPath.Join(rootPathComponents);
 
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(mediaResult.Value.Stream, rootPath,
-            fileSystemVolumeResult.Value, recursive));
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(mediaResult.Value, mediaResult.Value.Stream,
+            rootPath, fileSystemVolumeResult.Value, recursive));
     }
 
     protected async Task<Result<IEntryIterator>> GetIso9660EntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -438,7 +438,7 @@ public abstract partial class FsCommandBase : CommandBase
         }
 
         var rootPath = string.Join("/", parts.Skip(2));
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media.Stream, rootPath,
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media, media.Stream, rootPath,
             fileSystemVolumeResult.Value, recursive));
     }
 
@@ -506,15 +506,23 @@ public abstract partial class FsCommandBase : CommandBase
     
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool useCache)
     {
+        if (Directory.Exists(destPath))
+        {
+            var directoryEntryWriter = new DirectoryEntryWriter(destPath);
+
+            var initializeResult = await directoryEntryWriter.Initialize();
+            return initializeResult.IsFaulted
+                ? new Result<IEntryWriter>(initializeResult.Error)
+                : new Result<IEntryWriter>(directoryEntryWriter);
+        }
+        
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(destPath);
 
         // return directory writer, if media path doesn't exist. otherwise return error
         if (mediaResult.IsFaulted)
         {
-            return mediaResult.Error is PathNotFoundError
-                ? new Result<IEntryWriter>(new DirectoryEntryWriter(destPath))
-                : new Result<IEntryWriter>(mediaResult.Error);
+            return new Result<IEntryWriter>(mediaResult.Error);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
@@ -547,9 +555,14 @@ public abstract partial class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
             }
 
-            return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media, string.Empty,
-                fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries), 
-                fileSystemVolumeResult.Value));
+            var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, string.Empty,
+                fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries),
+                fileSystemVolumeResult.Value);
+
+            var adfInitializeResult = await adfAmigaVolumeEntryWriter.Initialize();
+            return adfInitializeResult.IsFaulted
+                ? new Result<IEntryWriter>(adfInitializeResult.Error)
+                : new Result<IEntryWriter>(adfAmigaVolumeEntryWriter);
         }
 
         // disk
@@ -573,7 +586,14 @@ public abstract partial class FsCommandBase : CommandBase
                 }
                 
                 // skip 2 first parts, partition table and partition number
-                return new Result<IEntryWriter>(new FileSystemEntryWriter(media, mbrFileSystemResult.Value, parts.Skip(2).ToArray()));
+                var fileSystemEntryWriter = new FileSystemEntryWriter(media, mbrFileSystemResult.Value,
+                    parts.Skip(2).ToArray());
+
+                // initialize file system entry writer
+                var mbrInitializeResult = await fileSystemEntryWriter.Initialize();
+                return mbrInitializeResult.IsFaulted
+                    ? new Result<IEntryWriter>(mbrInitializeResult.Error)
+                    : new Result<IEntryWriter>(fileSystemEntryWriter);
             case "gpt":
                 var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
                 if (gptFileSystemResult.IsFaulted)
@@ -582,7 +602,14 @@ public abstract partial class FsCommandBase : CommandBase
                 }
                 
                 // skip 2 first parts, partition table and partition number
-                return new Result<IEntryWriter>(new FileSystemEntryWriter(media, gptFileSystemResult.Value, parts.Skip(2).ToArray()));
+                var gptFileSystemEntryWriter = new FileSystemEntryWriter(media, gptFileSystemResult.Value,
+                    parts.Skip(2).ToArray());
+                
+                // initialize file system entry writer
+                var gptInitializeResult = await gptFileSystemEntryWriter.Initialize();
+                return gptInitializeResult.IsFaulted
+                    ? new Result<IEntryWriter>(gptInitializeResult.Error)
+                    : new Result<IEntryWriter>(gptFileSystemEntryWriter);
             case "rdb":
                 if (parts.Length == 1)
                 {
@@ -596,8 +623,14 @@ public abstract partial class FsCommandBase : CommandBase
                 }
 
                 // skip 2 first parts, partition table and device/drive name
-                return new Result<IEntryWriter>(new AmigaVolumeEntryWriter(media, fileSystemPath, parts.Skip(2).ToArray(),
-                    fileSystemVolumeResult.Value));
+                var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, fileSystemPath, parts.Skip(2).ToArray(),
+                    fileSystemVolumeResult.Value);
+                
+                // initialize amiga volume entry writer
+                var rdbInitializeResult = await amigaVolumeEntryWriter.Initialize();
+                return rdbInitializeResult.IsFaulted
+                    ? new Result<IEntryWriter>(rdbInitializeResult.Error)
+                    : new Result<IEntryWriter>(amigaVolumeEntryWriter);
             default:
                 return new Result<IEntryWriter>(new Error($"Unsupported partition table '{parts[0]}'"));
         }

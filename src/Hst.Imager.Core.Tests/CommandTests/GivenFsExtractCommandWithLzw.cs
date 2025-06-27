@@ -22,8 +22,12 @@ public class GivenFsExtractCommandWithLzw : FsCommandTestBase
 
         try
         {
+            // arrange - copy test lzw file to src path
             File.Copy(Path.Combine("TestData", "Lzw", "test.txt.Z"), srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             var fakeCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 

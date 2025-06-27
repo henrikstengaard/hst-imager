@@ -50,10 +50,9 @@ public static class UaeMetadataHelper
             return Regexs.InvalidFilenameCharsRegex.Replace(fileName, "_");
         }
 
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        if (isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileNameWithoutExtension))
+        if (isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
         {
-            return $"_{fileNameWithoutExtension}{Path.GetExtension(fileName)}";
+            return $"_{fileName}";
         }
 
         return Regexs.InvalidFilenameCharsRegex.Replace(fileName, "_");

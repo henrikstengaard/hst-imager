@@ -1,6 +1,6 @@
 ﻿using System.Runtime.Caching;
 using Hst.Amiga.DataTypes.UaeFsDbs;
-using Hst.Core.Extensions;
+using Hst.Core;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -9,27 +9,25 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using Models.FileSystems;
 
-public class DirectoryEntryWriter : IEntryWriter
+public class DirectoryEntryWriter(string path) : IEntryWriter
 {
-    private readonly string path;
-    private readonly byte[] buffer;
-    private readonly IList<string> logs;
-    private readonly MemoryCache cache;
-    private readonly DateTimeOffset cacheExpiration;
+    private readonly byte[] buffer = new byte[4096];
+    private readonly IList<string> logs = new List<string>();
+    private readonly MemoryCache cache = new($"{nameof(DirectoryEntryWriter)}_CACHE");
+    private readonly DateTimeOffset cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
 
-    public DirectoryEntryWriter(string path)
-    {
-        this.path = path;
-        this.buffer = new byte[4096];
-        this.logs = new List<string>();
-        this.cache = new MemoryCache($"{nameof(DirectoryEntryWriter)}_CACHE");
-        this.cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
-    }
+    /// <summary>
+    /// dir path components after initialized
+    /// is only used when creating single file
+    /// </summary>
+    private string[] dirPathComponents = [];
+    private bool lastPathComponentExist = true;
+    private bool isInitialized = false;
 
-    public string MediaPath => this.path;
+    public string MediaPath => path;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
     
@@ -149,19 +147,69 @@ public class DirectoryEntryWriter : IEntryWriter
         return nodes.FirstOrDefault(node => node.AmigaName.Equals(amigaName))?.NormalName;
     }
 
-    public async Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
+    public Task<Result> Initialize()
     {
+        var rootPathComponents = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        
+        var exisingPathComponents = new List<string>(10);
+
+        lastPathComponentExist = true;
+
+        for (var i = 0; i < rootPathComponents.Length; i++)
+        {
+            var dirPath = Path.Combine(rootPathComponents.Take(i + 1).ToArray());
+            
+            var dirExists = Directory.Exists(dirPath);
+            var fileExists = File.Exists(dirPath);
+            var exists = dirExists || fileExists;
+            
+            if (fileExists && i < rootPathComponents.Length - 1)
+            {
+                return Task.FromResult(new Result(new PathNotFoundError($"Path '{dirPath}' is a file and not a directory", dirPath)));
+            }
+
+            if (!exists)
+            {
+                if (i != rootPathComponents.Length - 1)
+                {
+                    return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{dirPath}'", dirPath)));
+                }
+                
+                lastPathComponentExist = false;
+                
+                break;
+            }
+
+            exisingPathComponents.Add(rootPathComponents[i]);
+        }
+
+        dirPathComponents = exisingPathComponents.ToArray();
+
+        isInitialized = true;
+
+        return Task.FromResult(new Result());
+    }
+
+    public async Task<Result> CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes,
+        bool isSingleFileEntry)
+    {
+        if (!isInitialized)
+        {
+            return new Result(new Error("DirectoryEntryWriter is not initialized."));
+        }
+        
         if (entryPathComponents.Length == 0)
         {
-            return;
+            return new Result();
         }
 
         var entryPath = await GetEntryPath(entry, entryPathComponents.Take(entryPathComponents.Length - 1).ToArray());
 
         var fullPath = Path.Combine(path, entryPath);
-        if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))
+
+        if (!lastPathComponentExist)
         {
-            Directory.CreateDirectory(fullPath);
+            return new Result(new PathNotFoundError($"Path not found '{fullPath}'", fullPath));
         }
 
         if (!int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
@@ -218,7 +266,7 @@ public class DirectoryEntryWriter : IEntryWriter
 
         if (UaeMetadata == UaeMetadata.None)
         {
-            return;
+            return new Result();
         }
 
         var uaeCacheEntry = new UaeCacheEntry
@@ -230,10 +278,18 @@ public class DirectoryEntryWriter : IEntryWriter
         var cacheKey = string.Join("|", entryPathComponents);
 
         cache.Add(cacheKey, uaeCacheEntry, cacheExpiration);
+
+        return new Result();
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
+    public async Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes,
+        bool singleFile)
     {
+        if (!isInitialized)
+        {
+            return new Result(new Error("DirectoryEntryWriter is not initialized."));
+        }
+        
         var dirPath = await GetEntryPath(entry, entryPathComponents.Take(entryPathComponents.Length - 1).ToArray());
 
         var fullPath = Path.Combine(path, dirPath);
@@ -287,7 +343,7 @@ public class DirectoryEntryWriter : IEntryWriter
         
         if (!writeUaeMetadata)
         {
-            return;
+            return new Result();
         }
 
         switch (UaeMetadata)
@@ -299,6 +355,8 @@ public class DirectoryEntryWriter : IEntryWriter
                 await UaeMetadataHelper.WriteUaeMetafile(fullPath, fileName, protectionBits, entry.Date ?? DateTime.Now, comment);
                 break;
         }
+
+        return new Result();
     }
 
     private static string GetProperty(IDictionary<string, string> properties, string name) => 

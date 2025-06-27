@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Core;
+using Hst.Imager.Core.PathComponents;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -6,36 +9,36 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
-public class AmigaVolumeEntryWriter : IEntryWriter
+public class AmigaVolumeEntryWriter(
+    Media media,
+    string fileSystemPath,
+    string[] rootPathComponents,
+    IFileSystemVolume fileSystemVolume)
+    : IEntryWriter
 {
-    private readonly bool isWindowsOperatingSystem;
-    private readonly IList<string> logs;
-    private readonly byte[] buffer;
-    private readonly Media media;
-    private readonly string[] pathComponents;
-    private readonly IFileSystemVolume fileSystemVolume;
-    private string[] currentPathComponents;
+    private readonly byte[] buffer = new byte[4096];
+
+    /// <summary>
+    /// dir path components after initialized
+    /// is only used when creating single file
+    /// </summary>
+    private string[] dirPathComponents = [];
+    private bool lastPathComponentExist = true;
+    private bool isInitialized = false;
+    
+    private readonly IMediaPath mediaPath = PathComponents.MediaPath.AmigaOsPath;
+
+    private List<string> currentPathComponents = new(10);
+    private uint currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
     private bool disposed;
 
-    public AmigaVolumeEntryWriter(Media media, string fileSystemPath, string[] pathComponents, IFileSystemVolume fileSystemVolume)
-    {
-        this.isWindowsOperatingSystem = OperatingSystem.IsWindows();
-        this.logs = new List<string>();
-        this.buffer = new byte[4096];
-        this.media = media;
-        this.FileSystemPath = fileSystemPath;
-        this.pathComponents = pathComponents;
-        this.fileSystemVolume = fileSystemVolume;
-        this.currentPathComponents = Array.Empty<string>();
-    }
-
-    public string MediaPath => this.media.Path;
-    public string FileSystemPath { get; }
+    public string MediaPath => media.Path;
+    public string FileSystemPath { get; } = fileSystemPath;
 
     private void Dispose(bool disposing)
     {
@@ -58,105 +61,218 @@ public class AmigaVolumeEntryWriter : IEntryWriter
 
     public void Dispose() => Dispose(true);
 
-    public async Task CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes)
+    public async Task<Result> Initialize()
     {
         await fileSystemVolume.ChangeDirectory("/");
 
-        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        var exisingPathComponents = new List<string>(10);
 
-        for (var i = 0; i < fullPathComponents.Length; i++)
+        lastPathComponentExist = true;
+
+        for (var i = 0; i < rootPathComponents.Length; i++)
         {
-            var part = fullPathComponents[i];
+            var entries = (await fileSystemVolume.ListEntries()).ToList();
 
-            IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
+            var pathComponentEntry = entries.FirstOrDefault(x =>
+                x.Name.Equals(rootPathComponents[i], StringComparison.OrdinalIgnoreCase));
 
+            var nextDirPath = string.Join("/", rootPathComponents.Take(i + 1));
+            
+            if (pathComponentEntry != null && pathComponentEntry.Type == EntryType.File && i < rootPathComponents.Length - 1)
+            {
+                return new Result(new PathNotFoundError($"Path '{nextDirPath}' is a file and not a directory", nextDirPath));
+            }
+
+            if (pathComponentEntry == null)
+            {
+                if (i != rootPathComponents.Length - 1)
+                {
+                    return new Result(new PathNotFoundError($"Path not found '{nextDirPath}'", nextDirPath));
+                }
+                
+                lastPathComponentExist = false;
+                
+                break;
+            }
+
+            await fileSystemVolume.ChangeDirectory(rootPathComponents[i]);
+
+            exisingPathComponents.Add(rootPathComponents[i]);
+        }
+        
+        dirPathComponents = exisingPathComponents.ToArray();
+
+        currentPathComponents = dirPathComponents.ToList();
+        currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
+
+        isInitialized = true;
+        
+        return new Result();
+    }
+
+    private async Task<bool> IsDirectoryChanged(string[] fullPathComponents)
+    {
+        if (currentDirectoryBlockNumber != fileSystemVolume.CurrentDirectoryBlockNumber)
+        {
+            currentPathComponents = mediaPath.Split(await fileSystemVolume.GetCurrentPath()).ToList();
+            currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
+        }
+        
+        if (currentPathComponents.Count != fullPathComponents.Length)
+        {
+            return true;
+        }
+        
+        for (var i = fullPathComponents.Length - 1; i >= 0; i--)
+        {
+            if (currentPathComponents[i] == fullPathComponents[i])
+            {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Changes the current directory to the specified absolute path components.
+    /// </summary>
+    /// <param name="existingAbsolutePathComponents">Absolute path components that must exist.</param>
+    /// <param name="absolutePathComponents">Absolute path components to change to.</param>
+    /// <returns></returns>
+    private async Task<Result> ChangeDirectoryIfNeeded(string[] existingAbsolutePathComponents, string[] absolutePathComponents)
+    {
+        if (!await IsDirectoryChanged(absolutePathComponents))
+        {
+            return new Result();
+        }
+
+        var isRelativeDirChange = currentPathComponents.Count <= absolutePathComponents.Length &&
+                       currentPathComponents.SequenceEqual(absolutePathComponents.Take(currentPathComponents.Count));
+
+        if (!isRelativeDirChange)
+        {
+            await fileSystemVolume.ChangeDirectory("/");
+
+            currentPathComponents = [];
+        }
+
+        var pathComponents = isRelativeDirChange
+            ? absolutePathComponents.Skip(currentPathComponents.Count).ToArray()
+            : absolutePathComponents;
+        
+        for (var i = 0; i < pathComponents.Length; i++)
+        {
+            var part = pathComponents[i];
+            var entries = (await fileSystemVolume.ListEntries()).ToList();
+
+            var mustPathComponentExist = i < existingAbsolutePathComponents.Length;
+            
             var dirEntry = entries.FirstOrDefault(x =>
                 x.Name.Equals(part, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
 
             if (dirEntry == null)
             {
+                if (mustPathComponentExist)
+                {
+                    return new Result(new PathNotFoundError($"Path not found '{part}'", 
+                        string.Join("/", currentPathComponents.Concat([part]))));
+                }
+
                 await fileSystemVolume.CreateDirectory(part);
             }
 
-            if (i == fullPathComponents.Length - 1)
-            {
-                if (!skipAttributes && entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.ProtectionBits))
-                {
-                    if (!int.TryParse(entry.Properties[Core.Constants.EntryPropertyNames.ProtectionBits], out var protectionBitsValue))
-                    {
-                        protectionBitsValue = 0;
-                    }
-
-                    var protectionBits = ProtectionBitsConverter.ToProtectionBits(protectionBitsValue);
-                    await fileSystemVolume.SetProtectionBits(part, protectionBits);
-                }
-
-                if (entry.Date.HasValue)
-                {
-                    await fileSystemVolume.SetDate(part, entry.Date.Value);
-                }
-
-                if (entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.Comment) &&
-                    !string.IsNullOrWhiteSpace(entry.Properties[Core.Constants.EntryPropertyNames.Comment]))
-                {
-                    await fileSystemVolume.SetComment(part, entry.Properties[Core.Constants.EntryPropertyNames.Comment]);
-                }
-            }
-
             await fileSystemVolume.ChangeDirectory(part);
+            currentPathComponents.Add(part);
         }
 
-        currentPathComponents = fullPathComponents;
+        return new Result();
+    }
+    
+    public async Task<Result> CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes,
+        bool isSingleFileEntry)
+    {
+        if (!isInitialized)
+        {
+            return new Result(new Error("AmigaVolumeEntryWriter is not initialized."));
+        }
+        
+        var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
+            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+
+        if (fullPathComponents.Length == 0)
+        {
+            return new Result();
+        }
+        
+        var name = fullPathComponents[^1];
+
+        var requiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
+
+        var changeDirectoryResult = await ChangeDirectoryIfNeeded(requiredPathComponentsToExist, fullPathComponents.Take(fullPathComponents.Length - 1).ToArray());
+        if (changeDirectoryResult.IsFaulted)
+        {
+            return changeDirectoryResult;
+        }
+        
+        IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
+
+        var dirEntry = entries.FirstOrDefault(x =>
+            x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
+        
+        if (dirEntry == null)
+        {
+            await fileSystemVolume.CreateDirectory(name);
+        }
+        
+        if (!skipAttributes && entry.Properties.TryGetValue(Core.Constants.EntryPropertyNames.ProtectionBits, 
+                out var protectionBitsProperty))
+        {
+            if (!int.TryParse(protectionBitsProperty, out var protectionBitsValue))
+            {
+                protectionBitsValue = 0;
+            }
+
+            var protectionBits = ProtectionBitsConverter.ToProtectionBits(protectionBitsValue);
+            await fileSystemVolume.SetProtectionBits(name, protectionBits);
+        }
+
+        if (entry.Date.HasValue)
+        {
+            await fileSystemVolume.SetDate(name, entry.Date.Value);
+        }
+
+        if (entry.Properties.TryGetValue(Core.Constants.EntryPropertyNames.Comment, out var commentProperty) &&
+            !string.IsNullOrWhiteSpace(commentProperty))
+        {
+            await fileSystemVolume.SetComment(name, commentProperty);
+        }
+
+        return new Result();
     }
 
-    public async Task WriteEntry(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes)
+    public async Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes,
+        bool isSingleFileEntry)
     {
-        var fullPathComponents = pathComponents.Concat(entryPathComponents).ToArray();
+        if (!isInitialized)
+        {
+            return new Result(new Error("AmigaVolumeEntryWriter is not initialized."));
+        }
+
+        var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
+            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+
+        var requiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
+
+        var changeDirectoryResult = await ChangeDirectoryIfNeeded(requiredPathComponentsToExist, fullPathComponents.Take(fullPathComponents.Length - 1).ToArray());
+        if (changeDirectoryResult.IsFaulted)
+        {
+            return changeDirectoryResult;
+        }
+
         var fileName = fullPathComponents[^1];
-
-        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
-        var windowsReservedName = string.IsNullOrEmpty(fileNameWithoutExtension) ? fileName : fileNameWithoutExtension;
-
-        if (isWindowsOperatingSystem && windowsReservedName.StartsWith(".") &&
-            Regexs.WindowsReservedNamesRegex.IsMatch(windowsReservedName.Substring(1)))
-        {
-            fileName = fileName.Substring(1);
-            logs.Add($"{(string.Join("/", entryPathComponents))} -> {fileName}");
-        }
-
-        var directoryChanged = currentPathComponents.Length != fullPathComponents.Length - 1;
-        if (!directoryChanged)
-        {
-            for (var i = fullPathComponents.Length - 2; i >= 0; i--)
-            {
-                if (currentPathComponents[i] == fullPathComponents[i])
-                {
-                    continue;
-                }
-
-                directoryChanged = true;
-                break;
-            }
-        }
-
-        if (directoryChanged)
-        {
-            await fileSystemVolume.ChangeDirectory("/");
-
-            for (var i = 0; i < fullPathComponents.Length - 1; i++)
-            {
-                var entries = (await fileSystemVolume.ListEntries()).ToList();
-
-                if (!entries.Any(x => x.Name.Equals(fullPathComponents[i], StringComparison.OrdinalIgnoreCase)))
-                {
-                    await fileSystemVolume.CreateDirectory(fullPathComponents[i]);
-                }
-
-                await fileSystemVolume.ChangeDirectory(fullPathComponents[i]);
-            }
-
-            currentPathComponents = fullPathComponents.Take(fullPathComponents.Length - 1).ToArray();
-        }
 
         await fileSystemVolume.CreateFile(fileName, true, true);
 
@@ -172,9 +288,10 @@ public class AmigaVolumeEntryWriter : IEntryWriter
                  0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
         }
 
-        if (!skipAttributes && entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.ProtectionBits))
+        if (!skipAttributes && entry.Properties.TryGetValue(Core.Constants.EntryPropertyNames.ProtectionBits,
+                out var protectionBitsProperty))
         {
-            if (!int.TryParse(entry.Properties[Core.Constants.EntryPropertyNames.ProtectionBits], out var protectionBitsValue))
+            if (!int.TryParse(protectionBitsProperty, out var protectionBitsValue))
             {
                 protectionBitsValue = 0;
             }
@@ -183,16 +300,18 @@ public class AmigaVolumeEntryWriter : IEntryWriter
             await fileSystemVolume.SetProtectionBits(fileName, protectionBits);
         }
 
-        if (entry.Properties.ContainsKey(Core.Constants.EntryPropertyNames.Comment) &&
-            !string.IsNullOrWhiteSpace(entry.Properties[Core.Constants.EntryPropertyNames.Comment]))
+        if (entry.Properties.TryGetValue(Core.Constants.EntryPropertyNames.Comment, out var commentProperty) &&
+            !string.IsNullOrWhiteSpace(commentProperty))
         {
-            await fileSystemVolume.SetComment(fileName, entry.Properties[Core.Constants.EntryPropertyNames.Comment]);
+            await fileSystemVolume.SetComment(fileName, commentProperty);
         }
 
         if (entry.Date.HasValue)
         {
             await fileSystemVolume.SetDate(fileName, entry.Date.Value);
         }
+
+        return new Result();
     }
 
     public IEnumerable<string> GetDebugLogs()
@@ -200,26 +319,17 @@ public class AmigaVolumeEntryWriter : IEntryWriter
         return fileSystemVolume.GetStatus().ToList();
     }
 
-    public IEnumerable<string> GetLogs()
-    {
-        return this.logs.Count == 0
-            ? new List<string>()
-            : new[]
-            {
-                string.Empty,
-                "Following files were renamed to restore filenames previously conflicted with Windows OS reserved filenames:"
-            }.Concat(logs);
-    }
+    public IEnumerable<string> GetLogs() => [];
 
     public IEntryIterator CreateEntryIterator(string rootPath, bool recursive)
     {
-        return new AmigaVolumeEntryIterator(media.Stream, rootPath, fileSystemVolume, recursive);
+        return new AmigaVolumeEntryIterator(media, media.Stream, rootPath, fileSystemVolume, recursive);
     }
 
     public UaeMetadata UaeMetadata { get; set; }
 
     public async Task Flush()
     {
-        await this.fileSystemVolume.Flush();
+        await fileSystemVolume.Flush();
     }
 }

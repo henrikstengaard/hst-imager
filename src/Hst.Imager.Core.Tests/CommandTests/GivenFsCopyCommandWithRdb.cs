@@ -36,6 +36,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
             await CreatePfs3DirectoriesAndFiles(testCommandHelper, srcPath);
             
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -88,6 +91,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
             await CreatePfs3DirectoriesAndFiles(testCommandHelper, srcPath);
             
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -214,6 +220,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
             await CreatePfs3DirectoriesAndFiles(testCommandHelper, srcPath);
             
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -267,7 +276,6 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             {
                 Path.Combine(dir1Path, "dir2*.uaem"),
                 Path.Combine(dir2DecodedPath, "AUX"),
-                //Path.Combine(dir2DecodedPath, "AUX.uaem"),
                 Path.Combine(dir2DecodedPath, "file1\\"),
                 Path.Combine(dir2DecodedPath, "file1\\.uaem"),
                 Path.Combine(dir2DecodedPath, "file2*"),
@@ -349,6 +357,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
             await CreatePfs3DirectoriesAndFiles(testCommandHelper, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -999,6 +1010,9 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
 
             // arrange - create destination disk image file
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
 
             // create directory and files
             var mediaResult = await testCommandHelper.GetWritableFileMedia(srcPath);

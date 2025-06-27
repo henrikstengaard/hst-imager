@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using System.Linq;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -22,9 +25,14 @@ public class FileEntryIterator : IEntryIterator
         this.isFirst = true;
     }
 
+    public Media Media => null;
     public string RootPath { get; }
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public Task<bool> Next()
     {

@@ -67,9 +67,14 @@ public class FileSystemEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public Media Media => media;
     public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public Task<bool> Next()
     {
