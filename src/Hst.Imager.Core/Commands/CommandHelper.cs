@@ -1008,13 +1008,13 @@ namespace Hst.Imager.Core.Commands
                     path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
                 : path;
 
-            var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
+            var directorySeparatorChar = Path.DirectorySeparatorChar;
 
             for (var i = 0; i < path.Length; i++)
             {
                 if (path[i] == '\\' || path[i] == '/')
                 {
-                    directorySeparatorChar = path[i].ToString();
+                    directorySeparatorChar = path[i];
                     break;
                 }
             }
@@ -1024,7 +1024,7 @@ namespace Hst.Imager.Core.Commands
             if (physicalDrivePathMatch.Success)
             {
                 var physicalDriveMediaPath = physicalDrivePathMatch.Value;
-                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar,
+                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar.ToString(),
                     physicalDriveMediaPath.Length, StringComparison.Ordinal);
 
                 var fileSystemPath = firstSeparatorIndex >= 0
@@ -1040,7 +1040,7 @@ namespace Hst.Imager.Core.Commands
                     FullPath = path,
                     MediaPath = physicalDriveMediaPath,
                     FileSystemPath = fileSystemPath,
-                    DirectorySeparatorChar = directorySeparatorChar,
+                    DirectorySeparatorChar = directorySeparatorChar.ToString(),
                     Modifiers = modifiersResult.Modifiers,
                     ByteSwap = byteSwap
                 });
@@ -1053,7 +1053,7 @@ namespace Hst.Imager.Core.Commands
             var next = string.IsNullOrWhiteSpace(networkPath) ? 0 : networkPath.Length;
             do
             {
-                next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
+                next = path.IndexOf(directorySeparatorChar.ToString(), next + 1, StringComparison.OrdinalIgnoreCase);
                 var mediaPath = path.Substring(0, next == -1 ? path.Length : next);
 
                 if (File.Exists(mediaPath))
@@ -1070,7 +1070,7 @@ namespace Hst.Imager.Core.Commands
                         FullPath = path,
                         MediaPath = mediaPath,
                         FileSystemPath = fileSystemPath,
-                        DirectorySeparatorChar = directorySeparatorChar,
+                        DirectorySeparatorChar = directorySeparatorChar.ToString(),
                         Modifiers = modifiersResult.Modifiers,
                         ByteSwap = byteSwap
                     });

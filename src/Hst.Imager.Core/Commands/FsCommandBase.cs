@@ -503,26 +503,40 @@ public abstract partial class FsCommandBase : CommandBase
         var rootPath = string.Join("\\", parts.Skip(2));
         return new Result<IEntryIterator>(new FileSystemEntryIterator(media, gptFileSystemResult.Value, rootPath, recursive));
     }
+
+    private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path)
+    {
+        var dirPath = Path.GetDirectoryName(path);
+        
+        // return path not found error, if neither path nor directory path exists
+        // last path component is allow to support local directory writer can write a non existing file
+        if (!Directory.Exists(path) && !Directory.Exists(dirPath))
+        {
+            return new Result<IEntryWriter>(new PathNotFoundError($"Path not found '{path}'", path));
+        }
+        
+        var directoryEntryWriter = new DirectoryEntryWriter(path);
+
+        var initializeResult = await directoryEntryWriter.Initialize();
+        return initializeResult.IsFaulted
+            ? new Result<IEntryWriter>(initializeResult.Error)
+            : new Result<IEntryWriter>(directoryEntryWriter);
+    }
     
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool useCache)
     {
-        if (Directory.Exists(destPath))
-        {
-            var directoryEntryWriter = new DirectoryEntryWriter(destPath);
-
-            var initializeResult = await directoryEntryWriter.Initialize();
-            return initializeResult.IsFaulted
-                ? new Result<IEntryWriter>(initializeResult.Error)
-                : new Result<IEntryWriter>(directoryEntryWriter);
-        }
-        
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(destPath);
 
         // return directory writer, if media path doesn't exist. otherwise return error
         if (mediaResult.IsFaulted)
         {
-            return new Result<IEntryWriter>(mediaResult.Error);
+            if (mediaResult.Error is not PathNotFoundError)
+            {
+                return new Result<IEntryWriter>(mediaResult.Error);
+            }
+
+            return await GetDirectoryEntryWriter(destPath);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");

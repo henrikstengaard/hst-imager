@@ -7,7 +7,6 @@ using Hst.Amiga.FileSystems;
 using Hst.Amiga.FileSystems.FastFileSystem;
 using Hst.Amiga.FileSystems.Pfs3;
 using Hst.Amiga.RigidDiskBlocks;
-using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Tests;
 

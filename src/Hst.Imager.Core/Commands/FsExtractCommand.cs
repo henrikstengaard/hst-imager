@@ -90,14 +90,13 @@ public class FsExtractCommand : FsCommandBase
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive || srcEntryIterator.UsesPattern)
-                            {
-                                continue;
-                            }
-
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
+                            var createDirectoryResult = await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
                                 isSingleFileOperation.Value);
+                            if (createDirectoryResult.IsFaulted)
+                            {
+                                return new Result(createDirectoryResult.Error);
+                            }
                             break;
                         case EntryType.File:
                         {
@@ -110,8 +109,12 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.CreateFile(entry, entry.RelativePathComponents, stream, skipAttributes,
+                            var createFileResult = await destEntryWriter.CreateFile(entry, entry.RelativePathComponents, stream, skipAttributes,
                                 isSingleFileOperation.Value);
+                            if (createFileResult.IsFaulted)
+                            {
+                                return new Result(createFileResult.Error);
+                            }
                             break;
                         }
                     }

@@ -19,11 +19,13 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
     private readonly MemoryCache cache = new($"{nameof(DirectoryEntryWriter)}_CACHE");
     private readonly DateTimeOffset cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
 
+    private string[] rootPathComponents = [];
     /// <summary>
     /// dir path components after initialized
     /// is only used when creating single file
     /// </summary>
     private string[] dirPathComponents = [];
+    private string initializedDirPath = string.Empty;
     private bool lastPathComponentExist = true;
     private bool isInitialized = false;
 
@@ -40,7 +42,7 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
             ? CreateNormalEntryPath(entry, entryPathComponents)
             : await CreateUaeEntryPath(entry, entryPathComponents);
 
-    private string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
+    private static string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
     {
         return Path.Combine(entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename).ToArray());
     }
@@ -67,18 +69,16 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         
         foreach (var entryPathComponent in entryPathComponents)
         {
-            cacheKey = string.Join("|", uaeEntryPathComponents.Concat(new []{entryPathComponent}));
+            cacheKey = string.Join("|", uaeEntryPathComponents.Concat([entryPathComponent]));
         
             uaeCacheEntry = cache.Get(cacheKey) as UaeCacheEntry;
             
             // reuse, if already created
             if (uaeCacheEntry != null)
             {
-                uaeEntryPathComponents.Add(uaeCacheEntry.EntryPathComponent);
+                uaeEntryPathComponents.Add(entryPathComponent);
 
-                uaeEntryPath = string.IsNullOrWhiteSpace(uaeEntryPath)
-                    ? entryPathComponent
-                    : Path.Combine(uaeEntryPath, entryPathComponent);
+                uaeEntryPath = uaeCacheEntry.UaeEntryPath;
                 
                 continue;
             }
@@ -106,10 +106,9 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
             }
             
             // create new entry
-            var fileName = UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, uaeEntryPath, entryPathComponent);
-
-            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, Path.Combine(path, uaeEntryPath), entryPathComponent, 
-                fileName, 0, DateTime.Now, string.Empty);
+            var writeUaeMetadata = UaeMetadata != UaeMetadata.None;
+            var fileName = await GetFileName(uaeEntryPath, entryPathComponent, 
+                writeUaeMetadata);
 
             uaeEntryPathComponents.Add(entryPathComponent);
                 
@@ -131,25 +130,9 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         return uaeEntryPath;
     }
 
-    private async Task<string> ReadNormalNameFromUaeFsDb(string path, string amigaName)
-    {
-        var uaeFsDbPath = Path.Combine(path, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
-
-        if (!File.Exists(uaeFsDbPath))
-        {
-            return null;
-        }
-
-        await using var stream = new FileStream(uaeFsDbPath, FileMode.OpenOrCreate, FileAccess.Read, FileShare.Read);
-
-        var nodes = await UaeFsDbReader.ReadFromStream(stream);
-
-        return nodes.FirstOrDefault(node => node.AmigaName.Equals(amigaName))?.NormalName;
-    }
-
     public Task<Result> Initialize()
     {
-        var rootPathComponents = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        rootPathComponents = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
         
         var exisingPathComponents = new List<string>(10);
 
@@ -184,10 +167,35 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         }
 
         dirPathComponents = exisingPathComponents.ToArray();
+        initializedDirPath = Path.Combine(dirPathComponents);
 
         isInitialized = true;
 
         return Task.FromResult(new Result());
+    }
+
+    private async Task<string> GetFileName(string dirPath, string amigaName, bool useUaeMetadata)
+    {
+        if (!useUaeMetadata)
+        {
+            return UaeMetadataHelper.CreateNormalFilename(amigaName);
+        }
+        
+        var uaeMetadataNode = (await UaeMetadataHelper.ReadUaeMetadataNodes(UaeMetadata, dirPath, amigaName))
+            .FirstOrDefault(x => x.AmigaName.Equals(amigaName, StringComparison.OrdinalIgnoreCase));
+
+        var normalName = uaeMetadataNode == null
+            ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, dirPath, amigaName)
+            : uaeMetadataNode.NormalName;
+
+        var requiresUaeMetadata = !amigaName.Equals(normalName);
+
+        if (requiresUaeMetadata && uaeMetadataNode == null)
+        {
+            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, dirPath, amigaName, normalName);
+        }
+
+        return normalName;
     }
 
     public async Task<Result> CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes,
@@ -203,62 +211,44 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
             return new Result();
         }
 
-        var entryPath = await GetEntryPath(entry, entryPathComponents.Take(entryPathComponents.Length - 1).ToArray());
+        var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
+            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
-        var fullPath = Path.Combine(path, entryPath);
+        var fullPath = await GetEntryPath(entry, fullPathComponents);
 
         if (!lastPathComponentExist)
         {
-            return new Result(new PathNotFoundError($"Path not found '{fullPath}'", fullPath));
+            return new Result(new PathNotFoundError($"Path not found '{path}'", path));
         }
 
-        if (!int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
+        int? protectionBits = null;
+        if (int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits),
+                out var parsedProtectionBits))
         {
-            protectionBits = 0;
+            protectionBits = parsedProtectionBits;
         }
             
         var comment = GetProperty(entry.Properties, Constants.EntryPropertyNames.Comment);
 
         var entryName = entryPathComponents[^1];
-        var useUaeMetadataProperties = UaeMetadata != UaeMetadata.None
-            ? UaeMetadataHelper.RequiresUaeMetadataProperties(protectionBits, comment)
-            : false;
-        var useUaeMetadataName = UaeMetadata != UaeMetadata.None
-            ? UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryName)
-            : false;
+        var useUaeMetadataProperties = UaeMetadata != UaeMetadata.None &&
+                                       UaeMetadataHelper.RequiresUaeMetadataProperties(protectionBits, comment);
+        var useUaeMetadataName = UaeMetadata != UaeMetadata.None &&
+                                 UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryName);
         var writeUaeMetadata = useUaeMetadataProperties || useUaeMetadataName;
 
-        var name = UaeMetadata != UaeMetadata.None
-            ? await ReadNormalNameFromUaeFsDb(fullPath, entryName)
-            : null;
+        var dirPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
 
-        if (string.IsNullOrEmpty(name))
-        {
-            name = useUaeMetadataName
-                ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, fullPath, entryName)
-                : UaeMetadataHelper.CreateNormalFilename(entryName);
-        }
-        else
-        {
-            writeUaeMetadata = false;
-        }
+        var name = await GetFileName(dirPath, entryName, writeUaeMetadata);
 
-        var uaeEntryPath = Path.Combine(entryPath, name);
-        
         if (writeUaeMetadata)
         {
-            switch (UaeMetadata)
-            {
-                case UaeMetadata.UaeFsDb:
-                    await UaeMetadataHelper.WriteUaeFsDb(fullPath, entryName, name, protectionBits, comment);
-                    break;
-                case UaeMetadata.UaeMetafile:
-                    await UaeMetadataHelper.WriteUaeMetafile(fullPath, name, protectionBits, entry.Date ?? DateTime.Now, comment);
-                    break;
-            }
+            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, dirPath, entryName, name, protectionBits,
+                entry.Date ?? DateTime.Now, comment);
         }
-        
-        fullPath = Path.Combine(path, uaeEntryPath);
+
+        fullPath = Path.Combine(dirPath, name);
+
         if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))
         {
             Directory.CreateDirectory(fullPath);
@@ -272,10 +262,10 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         var uaeCacheEntry = new UaeCacheEntry
         {
             EntryPathComponent = entryName,
-            UaeEntryPath = uaeEntryPath
+            UaeEntryPath = fullPath
         };
 
-        var cacheKey = string.Join("|", entryPathComponents);
+        var cacheKey = string.Join("|", fullPathComponents);
 
         cache.Add(cacheKey, uaeCacheEntry, cacheExpiration);
 
@@ -283,42 +273,39 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
     }
 
     public async Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes,
-        bool singleFile)
+        bool isSingleFileEntry)
     {
         if (!isInitialized)
         {
             return new Result(new Error("DirectoryEntryWriter is not initialized."));
         }
         
-        var dirPath = await GetEntryPath(entry, entryPathComponents.Take(entryPathComponents.Length - 1).ToArray());
+        var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
+            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+        
+        var fullPath = await GetEntryPath(entry, fullPathComponents);
 
-        var fullPath = Path.Combine(path, dirPath);
-        if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))
-        {
-            Directory.CreateDirectory(fullPath);
-        }
-
-        if (!int.TryParse(GetProperty(entry.Properties, Core.Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
+        if (!int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
         {
             protectionBits = 0;
         }
             
-        var comment = GetProperty(entry.Properties, Core.Constants.EntryPropertyNames.Comment);
+        var comment = GetProperty(entry.Properties, Constants.EntryPropertyNames.Comment);
 
-        var entryName = entryPathComponents[^1];
-        var requiresUaeMetadataProperties = UaeMetadata != UaeMetadata.None
-            ? UaeMetadataHelper.RequiresUaeMetadataProperties(protectionBits, comment)
-            : false;
-        var requiresUaeMetadataFileName = UaeMetadata != UaeMetadata.None
-            ? UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryName)
-            : false;
+        var entryName = fullPathComponents[^1];
+        var requiresUaeMetadataProperties = UaeMetadata != UaeMetadata.None &&
+                                            UaeMetadataHelper.RequiresUaeMetadataProperties(protectionBits, comment);
+        var requiresUaeMetadataFileName = UaeMetadata != UaeMetadata.None && 
+                                          UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryName);
         var writeUaeMetadata = requiresUaeMetadataProperties || requiresUaeMetadataFileName;
-        
-        var fileName = requiresUaeMetadataFileName
-            ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, fullPath, entryName)
-            : UaeMetadataHelper.CreateNormalFilename(entryName);
 
-        var filePath = Path.Combine(fullPath, fileName);
+        var dirPath = Path.GetDirectoryName(fullPath);
+
+        var fileName = await GetFileName(dirPath, entryName, writeUaeMetadata);
+
+        var filePath = string.IsNullOrEmpty(dirPath)
+            ? fileName
+            : Path.Combine(dirPath, fileName);
 
         await using var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
 
@@ -349,10 +336,10 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         switch (UaeMetadata)
         {
             case UaeMetadata.UaeFsDb:
-                await UaeMetadataHelper.WriteUaeFsDb(fullPath, entryName, fileName, protectionBits, comment);
+                await UaeMetadataHelper.WriteUaeFsDb(dirPath, entryName, fileName, protectionBits, comment);
                 break;
             case UaeMetadata.UaeMetafile:
-                await UaeMetadataHelper.WriteUaeMetafile(fullPath, fileName, protectionBits, entry.Date ?? DateTime.Now, comment);
+                await UaeMetadataHelper.WriteUaeMetafile(dirPath, fileName, protectionBits, entry.Date ?? DateTime.Now, comment);
                 break;
         }
 

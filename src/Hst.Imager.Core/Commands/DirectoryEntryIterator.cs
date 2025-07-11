@@ -156,9 +156,9 @@ public class DirectoryEntryIterator : IEntryIterator
             {
                 UaePathComponents = uaePathComponents.ToArray(),
                 PathComponents = pathComponents.ToArray(),
-                Date = uaeMetadataNode != null ? uaeMetadataNode.Date : DateTime.Now,
-                ProtectionBits = uaeMetadataNode != null ? uaeMetadataNode.ProtectionBits : 0,
-                Comment = uaeMetadataNode != null ? uaeMetadataNode.Comment : string.Empty
+                Date = uaeMetadataNode?.Date,
+                ProtectionBits = uaeMetadataNode?.ProtectionBits,
+                Comment = uaeMetadataNode?.Comment
             };
 
             cache.Add(cacheKey, cacheEntry, cacheExpiration);
@@ -188,9 +188,16 @@ public class DirectoryEntryIterator : IEntryIterator
                 if (uaeMetadataEntry != null)
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
-                    date = uaeMetadataEntry.Date;
-                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
-                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    if (uaeMetadataEntry.Comment != null)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    }
+
+                    if (uaeMetadataEntry.ProtectionBits.HasValue)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    }
                 }
             }
 
@@ -238,9 +245,17 @@ public class DirectoryEntryIterator : IEntryIterator
                 if (uaeMetadataEntry != null)
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
-                    date = uaeMetadataEntry.Date;
-                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
-                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    if (uaeMetadataEntry.Comment != null)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    }
+
+                    if (uaeMetadataEntry.ProtectionBits.HasValue)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    }
+
                 }
             }
 

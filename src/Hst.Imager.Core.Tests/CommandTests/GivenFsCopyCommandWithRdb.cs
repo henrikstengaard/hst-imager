@@ -349,7 +349,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Mode = (uint)ProtectionBits.HeldResident,
                 AmigaName = "dir2*",
                 NormalName = "__uae___dir2_",
-                Comment = string.Empty
+                Comment = "dir2 comment"
             };
             await File.WriteAllBytesAsync(uaeFsDbPath, UaeFsDbWriter.Build(node));
             
@@ -408,10 +408,10 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Assert.Equal(new [] { "dir2*" }, amigaNames);
             Assert.Equal(new [] { "__uae___dir2_" }, normalNames);
             
-            // assert - dir2* uae metafile matches protection bits and comment
+            // assert - dir2* uae metafile is overwritten by protection bits and comment from src path
             var dir2UaeFsDbNode = uaeFsDbNodes.FirstOrDefault(x => x.AmigaName == "dir2*");
             Assert.NotNull(dir2UaeFsDbNode);
-            Assert.Equal((uint)ProtectionBits.HeldResident, dir2UaeFsDbNode.Mode);
+            Assert.Equal(0U, dir2UaeFsDbNode.Mode);
             Assert.Equal(string.Empty, dir2UaeFsDbNode.Comment);
         }
         finally
