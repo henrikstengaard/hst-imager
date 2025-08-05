@@ -1,0 +1,17 @@
+﻿# create blank 100mb image with compatible size (cf/sd/ssd friendly)
+blank 100mb.vhd 100mb --compatible
+
+# initialize rigid disk block
+rdb init 100mb.vhd
+
+# import fast file system from amiga os 3.1 install adf with dos type DOS3
+rdb fs import 100mb.vhd amiga-os-310-install.adf --dos-type DOS3 --name FastFileSystem
+
+# add rdb partition of all diskspace with device name "DH0" and set bootable
+rdb part add 100mb.vhd DH0 DOS3 * --bootable
+
+# format rdb partition number 1 with volume name "Workbench"
+rdb part format 100mb.vhd 1 Workbench
+
+# show info
+info 100mb.vhd
