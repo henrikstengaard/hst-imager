@@ -3,13 +3,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 using Hst.Core;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 

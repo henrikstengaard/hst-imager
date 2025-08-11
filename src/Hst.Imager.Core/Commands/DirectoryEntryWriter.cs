@@ -44,7 +44,18 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
 
     private static string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
     {
-        return Path.Combine(entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename).ToArray());
+        // has windows drive letter first, if entry has more than 1 entry path component (a directory is present)
+        // and first entry path component is a valid Windows drive letter (like c:).
+        // this is to allow Windows drive containing semicolon in name
+        var hasWindowsDriveLetterFirst = entryPathComponents.Length > 1 &&
+                                         OperatingSystem.IsWindows() &&
+                                         Regexs.WindowsDriveRegex.IsMatch(entryPathComponents[0]);
+        
+        var entryPathComponentsNormalised = hasWindowsDriveLetterFirst
+            ? new List<string>{entryPathComponents[0]}.Concat(entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename))
+            : entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename);
+        
+        return Path.Combine(entryPathComponentsNormalised.ToArray());
     }
     
     private async Task<string> CreateUaeEntryPath(Entry entry, string[] entryPathComponents)
@@ -174,25 +185,44 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         return Task.FromResult(new Result());
     }
 
+    /// <summary>
+    /// Get name for directory or file. If name already has uae metadata applied,
+    /// then that is read or created, if it doesn't exist.
+    /// </summary>
+    /// <param name="dirPath">Path to directory to get filename in.</param>
+    /// <param name="amigaName"></param>
+    /// <param name="useUaeMetadata"></param>
+    /// <returns></returns>
     private async Task<string> GetFileName(string dirPath, string amigaName, bool useUaeMetadata)
     {
         if (!useUaeMetadata)
         {
             return UaeMetadataHelper.CreateNormalFilename(amigaName);
         }
+
+        // return amiga name, if dir path is empty and amiga name is a valid Windows drive letter (c:)
+        // this is to allow Windows drive containing semicolon in name
+        if (string.IsNullOrEmpty(dirPath) &&
+            OperatingSystem.IsWindows() &&
+            Regexs.WindowsDriveRegex.IsMatch(amigaName))
+        {
+            return amigaName;
+        }
         
-        var uaeMetadataNode = (await UaeMetadataHelper.ReadUaeMetadataNodes(UaeMetadata, dirPath, amigaName))
+        var uaeMetadataDir = string.IsNullOrEmpty(dirPath) ? Directory.GetCurrentDirectory() : dirPath;
+
+        var uaeMetadataNode = (await UaeMetadataHelper.ReadUaeMetadataNodes(UaeMetadata, uaeMetadataDir, amigaName))
             .FirstOrDefault(x => x.AmigaName.Equals(amigaName, StringComparison.OrdinalIgnoreCase));
 
         var normalName = uaeMetadataNode == null
-            ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, dirPath, amigaName)
+            ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, uaeMetadataDir, amigaName)
             : uaeMetadataNode.NormalName;
 
         var requiresUaeMetadata = !amigaName.Equals(normalName);
 
         if (requiresUaeMetadata && uaeMetadataNode == null)
         {
-            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, dirPath, amigaName, normalName);
+            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, uaeMetadataDir, amigaName, normalName);
         }
 
         return normalName;
@@ -243,8 +273,8 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
 
         if (writeUaeMetadata)
         {
-            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, dirPath, entryName, name, protectionBits,
-                entry.Date ?? DateTime.Now, comment);
+            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, string.IsNullOrEmpty(dirPath) ? "." : dirPath,
+                entryName, name, protectionBits, entry.Date ?? DateTime.Now, comment);
         }
 
         fullPath = Path.Combine(dirPath, name);

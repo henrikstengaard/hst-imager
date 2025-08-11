@@ -14,14 +14,14 @@ using System.Threading.Tasks;
 
 public static class UaeMetadataHelper
 {
-    private static readonly bool isWindowsOperatingSystem = OperatingSystem.IsWindows();
+    private static readonly bool IsWindowsOperatingSystem = OperatingSystem.IsWindows();
 
     public static bool RequiresUaeMetadataProperties(int? protectionBits, string comment) =>
         protectionBits.HasValue && protectionBits != 0 || !string.IsNullOrEmpty(comment);
 
     public static bool RequiresUaeMetadataFileName(UaeMetadata uaeMetadata, string fileName)
     {
-        if (isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
+        if (IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
         {
             return true;
         }
@@ -42,7 +42,7 @@ public static class UaeMetadataHelper
         }
 
         return Regexs.InvalidFilenameCharsRegex.IsMatch(fileName) ||
-        isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName);
+        IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName);
     }
 
     public static string CreateNormalFilename(string fileName)
@@ -52,7 +52,7 @@ public static class UaeMetadataHelper
             return Regexs.InvalidFilenameCharsRegex.Replace(fileName, "_");
         }
 
-        if (isWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
+        if (IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
         {
             return $"_{fileName}";
         }

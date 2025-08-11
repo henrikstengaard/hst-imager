@@ -506,6 +506,9 @@ public abstract partial class FsCommandBase : CommandBase
 
     private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path)
     {
+        // ensure path is full path
+        path = PathHelper.GetFullPath(path);
+
         var dirPath = Path.GetDirectoryName(path);
         
         // return path not found error, if neither path nor directory path exists
