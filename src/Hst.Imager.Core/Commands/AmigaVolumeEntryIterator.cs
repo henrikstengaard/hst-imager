@@ -136,7 +136,7 @@ public class AmigaVolumeEntryIterator(
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesPattern => this.pathComponentMatcher != null;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
 
     public async Task Flush()
     {

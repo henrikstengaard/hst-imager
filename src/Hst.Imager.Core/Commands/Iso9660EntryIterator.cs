@@ -181,7 +181,7 @@ public class Iso9660EntryIterator : IEntryIterator
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
-    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
 
     public Task Flush()
     {

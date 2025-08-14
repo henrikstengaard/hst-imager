@@ -90,6 +90,9 @@ public class LzwArchiveEntryIterator : IEntryIterator
         return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
     }
 
+    /// <summary>
+    /// Lzw archive is a single file archive does not use patterns, it will always returns false.
+    /// </summary>
     public bool UsesPattern => false;
     
     public Task Flush()

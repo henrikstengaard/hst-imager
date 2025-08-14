@@ -235,8 +235,10 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
         {
             return new Result(new Error("DirectoryEntryWriter is not initialized."));
         }
-        
-        if (entryPathComponents.Length == 0)
+
+        // return, if it is a single file entry or if there are no entry path components.
+        // for single file entries, the create file method will create the directory.
+        if (isSingleFileEntry || entryPathComponents.Length == 0)
         {
             return new Result();
         }
@@ -331,6 +333,14 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
 
         var dirPath = Path.GetDirectoryName(fullPath);
 
+        // if the entry is a single file entry, then create the directory if it does not exist.
+        if (isSingleFileEntry &&
+            !string.IsNullOrEmpty(dirPath) &&
+            !Directory.Exists(dirPath))
+        {
+            Directory.CreateDirectory(dirPath);
+        }
+        
         var fileName = await GetFileName(dirPath, entryName, writeUaeMetadata);
 
         var filePath = string.IsNullOrEmpty(dirPath)

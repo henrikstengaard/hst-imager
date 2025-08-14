@@ -40,7 +40,7 @@ public class DirectoryEntryIterator : IEntryIterator
         var usePattern = !string.IsNullOrWhiteSpace(pattern);
         rootPathComponents = GetPathComponents(this.rootPath);
         pathComponentMatcher = new PathComponentMatcher(usePattern
-            ? rootPathComponents.Concat(new[] { pattern }).ToArray()
+            ? rootPathComponents.Concat([pattern]).ToArray()
             : rootPathComponents, recursive);
     }
 
@@ -99,7 +99,7 @@ public class DirectoryEntryIterator : IEntryIterator
             .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
     }
 
-    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
 
     public Task Flush()
     {

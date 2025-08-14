@@ -169,7 +169,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
     public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
-    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
 
     public Task Flush()
     {

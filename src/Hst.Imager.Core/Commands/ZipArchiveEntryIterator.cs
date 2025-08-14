@@ -215,7 +215,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
         return name.EndsWith("/") ? name[..^1] : name;
     }
     
-    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
     
     public Task Flush()
     {

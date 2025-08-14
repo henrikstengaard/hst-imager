@@ -249,4 +249,46 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
+    
+    [Fact]
+    public async Task When_ExtractingNonExistingFileFromAdfToLocalDirectory_Then_NoDirectoriesOrFilesAreExtracted()
+    {
+        var srcPath = $"{Guid.NewGuid()}.adf";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "non-existing-file*");
+
+        try
+        {
+            // arrange - create dos3 formatted adf with files
+            await CreateDos3FormattedAdf(srcPath);
+            await CreateDos3AdfFiles(srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - no files extracted
+            var dirs = Directory.GetDirectories(destPath, "*.*", SearchOption.AllDirectories);
+            Assert.Empty(dirs);
+            
+            // assert - no files extracted
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Assert.Empty(files);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 }
