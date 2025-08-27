@@ -23,6 +23,7 @@
         private readonly string path;
         private readonly SafeFileHandle safeFileHandle;
         private bool disposed;
+        private bool isLocked;
 
         public Win32RawDisk(string path, bool writeable = false, bool ignoreInvalid = false)
         {
@@ -59,10 +60,17 @@
         public bool LockDevice()
         {
             uint intOut = 0;
-            return DeviceApi.DeviceIoControl(safeFileHandle, DeviceApi.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero,
+            var success = DeviceApi.DeviceIoControl(safeFileHandle, DeviceApi.FSCTL_LOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero,
                 0,
                 ref intOut,
                 IntPtr.Zero);
+
+            if (success)
+            {
+                isLocked = true;
+            }
+            
+            return success;
         }
 
         public bool DismountDevice()
@@ -77,10 +85,60 @@
         public bool UnlockDevice()
         {
             uint intOut = 0;
-            return DeviceApi.DeviceIoControl(safeFileHandle, DeviceApi.FSCTL_UNLOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero,
+            var success = DeviceApi.DeviceIoControl(safeFileHandle, DeviceApi.FSCTL_UNLOCK_VOLUME, IntPtr.Zero, 0, IntPtr.Zero,
                 0,
                 ref intOut,
                 IntPtr.Zero);
+
+            if (success)
+            {
+                isLocked = false;
+            }
+            
+            return success;
+        }
+
+        /// <summary>
+        /// Get device number for the raw disk.
+        /// </summary>
+        /// <returns>Device number.</returns>
+        /// <exception cref="Win32Exception">When the DeviceIoControl call fails.</exception>
+        public int GetDeviceNumber()
+        {
+            var buffer = IntPtr.Zero;
+
+            try
+            {
+                // Allocate memory for the output buffer
+                var bufferSize = Marshal.SizeOf(typeof(Kernel32.STORAGE_DEVICE_NUMBER));
+                buffer = Marshal.AllocHGlobal(bufferSize);
+
+                uint bytesReturned = 0;
+                if (!DeviceApi.DeviceIoControl(
+                    safeFileHandle,
+                    DeviceApi.IOCTL_STORAGE_GET_DEVICE_NUMBER,
+                    IntPtr.Zero,
+                    0,
+                    buffer,
+                    (uint)bufferSize,
+                    ref bytesReturned,
+                    IntPtr.Zero))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to get device number for path '{path}'");
+                }
+                
+                // Marshal the output buffer to the STORAGE_DEVICE_NUMBER struct
+                var deviceNumber = Marshal.PtrToStructure<Kernel32.STORAGE_DEVICE_NUMBER>(buffer);
+
+                return deviceNumber.DeviceNumber;
+            }
+            finally
+            {
+                if (buffer != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+            }
         }
 
         public DiskExtendsResult DiskExtends()
@@ -297,8 +355,8 @@
                 return bytesRead;
             }
 
-            var offset = Position();
             var error = Marshal.GetLastWin32Error();
+            var offset = Position();
             throw new IOException(
                 $"Failed to read data '{buffer.Length}', count '{count}' and offset '{offset}', ReadFile returned Win32 error {error}");
         }
@@ -311,8 +369,8 @@
                 return bytesWritten;
             }
 
-            var offset = Position();
             var error = Marshal.GetLastWin32Error();
+            var offset = Position();
             throw new IOException(
                 $"Failed to write data '{buffer.Length}', count '{count}' and offset '{offset}', WriteFile returned Win32 error {error}");
         }
@@ -360,6 +418,10 @@
 
             if (disposing)
             {
+                if (isLocked)
+                {
+                    UnlockDevice();
+                }
                 CloseDevice();
                 if (!safeFileHandle.IsInvalid)
                 {
