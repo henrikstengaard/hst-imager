@@ -1,4 +1,5 @@
 ﻿using System.IO.Compression;
+using Hst.Imager.Core.Apis;
 using Hst.Imager.Core.Extensions;
 using Hst.Imager.Core.PartitionTables;
 using SharpCompress.Archives.Rar;
@@ -57,6 +58,19 @@ namespace Hst.Imager.Core.Commands
             this.activeMedias.Clear();
         }
 
+        public void ClearActiveMedia(string path)
+        {
+            var activeMedia = this.activeMedias.FirstOrDefault(x => 
+                x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            if (activeMedia == null)
+            {
+                return;
+            }
+
+            activeMedia.Dispose();
+            activeMedias.Remove(activeMedia);
+        }
+        
         private Media GetActiveMedia(string path)
         {
             var media = this.activeMedias.FirstOrDefault(x => 
@@ -1163,6 +1177,16 @@ namespace Hst.Imager.Core.Commands
             }
 
             activePhysicalDrives.Clear();
+        }
+        
+        public virtual Task RescanPhysicalDrives()
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                WindowsDiskManager.RescanDrives();
+            }
+        
+            return Task.CompletedTask;
         }
     }
 }
