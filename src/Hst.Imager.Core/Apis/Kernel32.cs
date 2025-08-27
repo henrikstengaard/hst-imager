@@ -255,6 +255,28 @@
             public uint RawPropertiesLength;
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 0x16)]
             public byte[] RawDeviceProperties;
-        }        
+        }
+        
+        [StructLayout(LayoutKind.Sequential)]
+        public struct STORAGE_DEVICE_NUMBER
+        {
+            public int DeviceType;
+            public int DeviceNumber;
+            public int PartitionNumber;
+        }
+        
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern IntPtr FindFirstVolume(
+            [Out] StringBuilder lpszVolumeName,
+            int cchBufferLength);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public static extern bool FindNextVolume(
+            IntPtr hFindVolume,
+            [Out] StringBuilder lpszVolumeName,
+            int cchBufferLength);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool FindVolumeClose(IntPtr hFindVolume);
     }
 }
