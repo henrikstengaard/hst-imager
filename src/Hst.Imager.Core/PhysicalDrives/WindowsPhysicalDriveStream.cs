@@ -5,22 +5,15 @@
     using System.IO;
     using Apis;
 
-    public class WindowsPhysicalDriveStream : Stream
+    public class WindowsPhysicalDriveStream(
+        string path,
+        long size,
+        bool writable,
+        IEnumerable<Win32RawDisk> dismountedDrives)
+        : Stream
     {
-        private readonly long size;
-        private readonly IEnumerable<Win32RawDisk> dismountedDrives;
-
-        private readonly Win32RawDisk win32RawDisk;
-        private long position;
-
-        public WindowsPhysicalDriveStream(string path, long size, bool writable, IEnumerable<Win32RawDisk> dismountedDrives)
-        {
-            this.size = size;
-            this.dismountedDrives = dismountedDrives;
-            this.CanWrite = writable;
-            this.win32RawDisk = new Win32RawDisk(path, writable);
-            this.position = 0;
-        }
+        private readonly Win32RawDisk win32RawDisk = new(path, writable);
+        private long position = 0;
 
         protected override void Dispose(bool disposing)
         {
@@ -30,7 +23,6 @@
 
                 foreach (var dismountedDrive in dismountedDrives)
                 {
-                    dismountedDrive.UnlockDevice();
                     dismountedDrive.Dispose();
                 }
             }
@@ -76,7 +68,7 @@
 
         public override bool CanRead => true;
         public override bool CanSeek => true;
-        public override bool CanWrite { get; }
+        public override bool CanWrite { get; } = writable;
 
         public override long Length => size;
 

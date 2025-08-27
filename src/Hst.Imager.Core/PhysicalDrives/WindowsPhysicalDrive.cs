@@ -3,24 +3,24 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
     using Apis;
     using Commands;
 
-    public class WindowsPhysicalDrive : GenericPhysicalDrive
-    {
-        public readonly string BusType;
-        public readonly List<string> DriveLetters;
-        private bool scanDriveLetters;
-
-        public WindowsPhysicalDrive(string path, string type, string busType, string name, long size, bool removable,
-            bool systemDrive, IEnumerable<string> driveLetters) : base(path, type, name, size, removable: removable,
+    public class WindowsPhysicalDrive(
+        int physicalDriveNumber,
+        string path,
+        string type,
+        string busType,
+        string name,
+        long size,
+        bool removable,
+        bool systemDrive,
+        string[] driveLetters)
+        : GenericPhysicalDrive(path, type, name, size, removable: removable,
             systemDrive: systemDrive)
-        {
-            this.BusType = busType;
-            this.DriveLetters = driveLetters.ToList();
-            this.scanDriveLetters = false;
-        }
+    {
+        public readonly int PhysicalDriveNumber = physicalDriveNumber;
+        public readonly string BusType = busType;
 
         public override Stream Open()
         {
@@ -29,91 +29,129 @@
                 throw new IOException($"Access to system drive path '{Path}' is not supported!");
             }
 
-            if (scanDriveLetters)
-            {
-                ScanDriveLetters();
-            }
-
-            var driveLetters = DriveLetters.Select(driveLetter => @"\\.\" + driveLetter + @"").ToList();
-
             var dismountedDrives = new List<Win32RawDisk>();
-            
-            foreach (var driveLetter in driveLetters)
-            {
-                // open win32 disk for each drive letter
-                var win32RawDisk = new Win32RawDisk(driveLetter, true);
-                
-                // lock device (ignored, if fails)
-                win32RawDisk.LockDevice();
 
-                // dismount device
-                if (!win32RawDisk.DismountDevice())
-                {
-                    win32RawDisk.UnlockDevice();
-                    win32RawDisk.Dispose();
-                    throw new IOException($"Failed to dismount device '{driveLetter}'");
-                }
-                
-                // add win32 raw disk to dismounted drives for unlocking then disposing windows physical drive stream
-                dismountedDrives.Add(win32RawDisk);
-            }
+            var physicalDeviceNumber = GetPhysicalDriveNumber(Path);
 
-            driveLetters.Clear();
+            dismountedDrives.AddRange(LockAndDismountVolumes(physicalDeviceNumber));
+            dismountedDrives.AddRange(LockAndDismountDriveLetters(physicalDeviceNumber, driveLetters));
 
-            // physical drive is closed and has possible changes to drive letters, if it has been partitioned and formatted
-            scanDriveLetters = true;
-
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives), byteSwap: ByteSwap, leaveOpen: true);
+            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
+                byteSwap: ByteSwap, leaveOpen: false);
         }
 
-        private void ScanDriveLetters()
+        private static int GetPhysicalDriveNumber(string path)
         {
-            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(Path);
+            var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);
 
-            if (!physicalDrivePathMatch.Success)
+            if (!physicalDrivePathMatch.Success ||
+                !int.TryParse(physicalDrivePathMatch.Groups[2].Value, out var physicalDriveNumber))
             {
-                return;
+                throw new IOException($"Invalid physical drive path '{path}'");
             }
 
-            var physicalDriveNumber = uint.TryParse(physicalDrivePathMatch.Groups[2].Value, out var parsedDriveNumber)
-                ? parsedDriveNumber
-                : uint.MaxValue;
+            return physicalDriveNumber;
+        }
 
-            DriveLetters.Clear();
+        /// <summary>
+        /// Lock and dismount all volumes for given physical drive number.
+        /// </summary>
+        /// <param name="physicalDriveNumber">Physical drive number.</param>
+        /// <returns>List of dismounted Win32RawDisk volumes.</returns>
+        private static IList<Win32RawDisk> LockAndDismountVolumes(int physicalDriveNumber)
+        {
+            var dismountedDrives = new List<Win32RawDisk>(10);
+            
+            var volumes = WindowsDiskManager.GetVolumes();
 
-            var drives = DriveInfo.GetDrives().ToList();
-            foreach (var drive in drives)
+            foreach (var volume in volumes)
             {
-                if (drive.DriveType == DriveType.CDRom)
-                {
-                    continue;
-                }
+                Win32RawDisk win32RawDisk = null;
 
                 try
                 {
-                    var driveName = drive.Name[..2];
-                    var drivePath = $"\\\\.\\{driveName}";
-
-                    using var win32RawDisk = new Win32RawDisk(drivePath, false, true);
+                    win32RawDisk = new Win32RawDisk(volume.TrimEnd('\\'), true);
                     if (win32RawDisk.IsInvalid())
                     {
                         continue;
                     }
 
-                    var diskExtendsResult = win32RawDisk.DiskExtends();
+                    var deviceNumber = win32RawDisk.GetDeviceNumber();
+                    
+                    if (deviceNumber != physicalDriveNumber)
+                    {
+                        // dispose and continue, if device number doesn't match physical drive number
+                        win32RawDisk.Dispose();
+                        continue;
+                    }
 
-                    if (physicalDriveNumber != diskExtendsResult.DiskNumber)
+                    win32RawDisk.LockDevice();
+
+                    if (!win32RawDisk.DismountDevice())
+                    {
+                        win32RawDisk.UnlockDevice();
+                    }
+                
+                    dismountedDrives.Add(win32RawDisk);
+                }
+                catch (Exception)
+                {
+                    // dispose, if lock and dismount drive fails
+                    win32RawDisk?.Dispose();
+                }
+            }
+
+            return dismountedDrives;
+        }
+
+        /// <summary>
+        /// Lock and dismount all given drive letters for given physical drive number.
+        /// </summary>
+        /// <param name="physicalDriveNumber">Physical drive number.</param>
+        /// <param name="driveLetters">Drive letters to lock and dismount, e.g. C:, D:.</param>
+        /// <returns>List of dismounted Win32RawDisk drive letters.</returns>
+        private static IList<Win32RawDisk> LockAndDismountDriveLetters(int physicalDriveNumber, string[] driveLetters)
+        {
+            var dismountedDrives = new List<Win32RawDisk>(10);
+            
+            foreach (var driveLetter in driveLetters)
+            {
+                var drivePath = $"\\\\.\\{driveLetter}";
+                Win32RawDisk win32RawDisk = null;
+
+                try
+                {
+                    win32RawDisk = new Win32RawDisk(drivePath, false, true);
+                    if (win32RawDisk.IsInvalid())
                     {
                         continue;
                     }
 
-                    DriveLetters.Add(driveName);
+                    var deviceNumber = win32RawDisk.GetDeviceNumber();
+
+                    if (deviceNumber != physicalDriveNumber)
+                    {
+                        win32RawDisk.Dispose();
+                        continue;
+                    }
+
+                    win32RawDisk.LockDevice();
+
+                    if (!win32RawDisk.DismountDevice())
+                    {
+                        win32RawDisk.UnlockDevice();
+                    }
+                    
+                    dismountedDrives.Add(win32RawDisk);
                 }
                 catch (Exception)
                 {
-                    // ignore
+                    // dispose, if lock and dismount drive fails
+                    win32RawDisk?.Dispose();
                 }
             }
+
+            return dismountedDrives;
         }
     }
 }

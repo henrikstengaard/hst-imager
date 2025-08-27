@@ -15,9 +15,9 @@ public class GivenWindowsPhysicalDriveManagerWithUsbIdeAdapter
         new NullLogger<TestWindowsPhysicalDriveManager>(),
         new List<IPhysicalDrive>
         {
-            new WindowsPhysicalDrive("\\disk0", "FixedMedia", "17", "Micron_2450_MTFDKBA1T0TFK", 
+            new WindowsPhysicalDrive(0, "\\disk0", "FixedMedia", "17", "Micron_2450_MTFDKBA1T0TFK", 
                 1024209543168, false, true, new []{ "C" }),
-            new WindowsPhysicalDrive("\\disk1", "FixedMedia", "BusTypeUsb", "SAMSUNG  SSD_PM830_mSATA", 
+            new WindowsPhysicalDrive(1, "\\disk1", "FixedMedia", "BusTypeUsb", "SAMSUNG  SSD_PM830_mSATA", 
                 128035676160, true, false, new []{ "D" }),
         }
     );
