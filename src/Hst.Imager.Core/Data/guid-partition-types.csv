@@ -188,7 +188,6 @@ f95d940e-caba-4578-9b93-bb6c90f29d3e	Fuchsia factory ro system data
 49fd7cb8-df15-4e73-b9d9-992070127f0f	Fuchsia Volume Manager
 421a8bfc-85d9-4d85-acda-b64eec0133e9	Fuchsia verified boot metadata (slot A/B/R)
 9b37fff6-2e58-466a-983a-f7926d0b04e0	Fuchsia Zircon boot image (slot A/B/R)
-c12a7328-f81f-11d2-ba4b-00a0c93ec93b	Fuchsia ESP
 606b000b-b7c7-4653-a7d5-b737332c899d	Fuchsia System
 08185f0c-892d-428a-a789-dbeec8f55e6a	Fuchsia Data
 48435546-4953-2041-494e-5354414c4c52	Fuchsia Install
