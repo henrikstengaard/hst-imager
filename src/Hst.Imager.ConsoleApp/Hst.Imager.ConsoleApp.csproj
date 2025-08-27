@@ -102,6 +102,9 @@
       <None Update="examples\install-amigaos-3.2.sh">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="scripts\create_gpt_chromeos_test_image.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

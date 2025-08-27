@@ -130,6 +130,11 @@ namespace Hst.Imager.Core.Commands
             // flush disk content
             await disk.Content.FlushAsync(token);
 
+            if (media.IsPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
+            }
+            
             return new Result();
         }
 

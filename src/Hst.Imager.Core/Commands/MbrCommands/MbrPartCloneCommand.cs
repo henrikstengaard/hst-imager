@@ -159,6 +159,11 @@ namespace Hst.Imager.Core.Commands.MbrCommands
 
             OnInformationMessage($"Cloned '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
+            if (destMedia.IsPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
+            }
+
             return new Result();
         }
 

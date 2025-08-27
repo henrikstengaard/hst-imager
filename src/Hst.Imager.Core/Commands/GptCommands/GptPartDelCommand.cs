@@ -79,7 +79,12 @@ public class GptPartDelCommand : CommandBase
             
         // flush disk content
         await disk.Content.FlushAsync(token);
-            
+
+        if (media.IsPhysicalDrive)
+        {
+            await commandHelper.RescanPhysicalDrives();
+        }
+
         return new Result();
     }
 }

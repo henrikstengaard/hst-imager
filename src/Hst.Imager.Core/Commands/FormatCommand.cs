@@ -155,9 +155,12 @@ namespace Hst.Imager.Core.Commands
             }
 
             long diskSize;
+            bool isPhysicalDrive;
 
             using (var media = mediaResult.Value)
             {
+                isPhysicalDrive = media.IsPhysicalDrive;
+                
                 var disk = media is DiskMedia diskMedia
                     ? diskMedia.Disk
                     : new Disk(media.Stream, Ownership.None);
@@ -207,6 +210,11 @@ namespace Hst.Imager.Core.Commands
                 default:
                     formatResult = new Result(new Error($"Unsupported format type '{formatType}'"));
                     break;
+            }
+
+            if (isPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
             }
 
             UpdatePercentComplete(100);
