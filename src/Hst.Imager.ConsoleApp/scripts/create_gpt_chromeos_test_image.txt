@@ -1,0 +1,29 @@
+﻿# create gpt chromeos test image
+# ------------------------------
+# this script to creates a gpt chromeos test image with partitions similar to a real chromeos device and
+# formats the first partition as fat32 with name "chromeos".
+# it's used to test switching between writing gpt chromeos image writing to physical drive and formatting
+# physical drive with gpt fat32.
+
+# create gpt chromeos test image
+blank gpt_chromeos_test.vhd 4gb
+
+# initialize gpt
+gpt init gpt_chromeos_test.vhd
+
+# add gpt partitions
+gpt part add gpt_chromeos_test.vhd cab6e88e-abf3-4102-a07a-d4bb9be3c1d3 chromeos 512
+gpt part add gpt_chromeos_test.vhd fe3a2a5d-4f32-41a7-b725-accc3285a309 chromeos 200mb
+gpt part add gpt_chromeos_test.vhd 3cb8e202-3b7e-47dd-8a3c-7ff2a13cfcec chromeos 512
+gpt part add gpt_chromeos_test.vhd 2e0a753d-9e48-43b0-8337-b15192cb1b5e chromeos 512
+gpt part add gpt_chromeos_test.vhd 2e0a753d-9e48-43b0-8337-b15192cb1b5e chromeos 512
+gpt part add gpt_chromeos_test.vhd fe3a2a5d-4f32-41a7-b725-accc3285a309 chromeos 200mb
+gpt part add gpt_chromeos_test.vhd fe3a2a5d-4f32-41a7-b725-accc3285a309 chromeos 32mb
+gpt part add gpt_chromeos_test.vhd 0fc63daf-8483-4772-8e79-3d69d8477de4 chromeos 16mb
+gpt part add gpt_chromeos_test.vhd c12a7328-f81f-11d2-ba4b-00a0c93ec93b chromeos 64mb
+gpt part add gpt_chromeos_test.vhd 3cb8e202-3b7e-47dd-8a3c-7ff2a13cfcec chromeos 2mb
+gpt part add gpt_chromeos_test.vhd 3cb8e202-3b7e-47dd-8a3c-7ff2a13cfcec chromeos 3gb
+gpt part add gpt_chromeos_test.vhd 0fc63daf-8483-4772-8e79-3d69d8477de4 chromeos 10mb
+
+# format gpt partitions
+gpt part format gpt_chromeos_test.vhd 9 fat32 chromeos

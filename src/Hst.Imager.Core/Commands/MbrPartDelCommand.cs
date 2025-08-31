@@ -71,6 +71,11 @@ namespace Hst.Imager.Core.Commands
             // delete mbr partition
             biosPartitionTable.Delete(partitionNumber - 1);
             
+            if (media.IsPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
+            }
+
             return new Result();
         }
     }

@@ -12,44 +12,27 @@ namespace Hst.Imager.Core.Commands
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class WriteCommand : CommandBase
+    public class WriteCommand(
+        ILogger<WriteCommand> logger,
+        ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives,
+        string sourcePath,
+        string destinationPath,
+        Size size,
+        int retries,
+        bool verify,
+        bool force,
+        bool skipZeroFilled,
+        long? start)
+        : CommandBase
     {
-        private readonly ILogger<WriteCommand> logger;
-        private readonly ICommandHelper commandHelper;
-        private readonly IEnumerable<IPhysicalDrive> physicalDrives;
-        private readonly string sourcePath;
-        private readonly string destinationPath;
-        private readonly Size size;
-        private readonly int retries;
-        private readonly bool verify;
-        private readonly bool force;
-        private readonly bool skipZeroFilled;
-        private readonly long? start;
-        private long statusBytesProcessed;
-        private TimeSpan statusTimeElapsed;
+        private readonly ILogger<WriteCommand> logger = logger;
+        private long statusBytesProcessed = 0;
+        private TimeSpan statusTimeElapsed = TimeSpan.Zero;
 
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
-
-        public WriteCommand(ILogger<WriteCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath,
-            string destinationPath, Size size, int retries, bool verify, bool force, bool skipZeroFilled, long? start)
-        {
-            this.logger = logger;
-            this.commandHelper = commandHelper;
-            this.physicalDrives = physicalDrives;
-            this.sourcePath = sourcePath;
-            this.destinationPath = destinationPath;
-            this.size = size;
-            this.retries = retries;
-            this.verify = verify;
-            this.force = force;
-            this.skipZeroFilled = skipZeroFilled;
-            this.start = start;
-            this.statusBytesProcessed = 0;
-            this.statusTimeElapsed = TimeSpan.Zero;
-        }
 
         public override async Task<Result> Execute(CancellationToken token)
         {
@@ -155,6 +138,11 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage(
                 $"Written '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
+            if (destMedia.IsPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
+            }
+            
             return new Result();
         }
 

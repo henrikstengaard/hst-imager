@@ -266,5 +266,10 @@ namespace Hst.Imager.Core.Tests
                 ByteSwap = false
             });
         }
+
+        public override Task RescanPhysicalDrives()
+        {
+            return Task.CompletedTask;
+        }
     }
 }

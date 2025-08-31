@@ -53,7 +53,7 @@
             var physicalDrives = new List<WindowsPhysicalDrive>();
             
             // iterate drive letters and get their relation to physical drives
-            var physicalDriveLettersIndex = new Dictionary<uint, List<string>>();
+            var physicalDriveLettersIndex = new Dictionary<int, List<string>>();
             var drives = DriveInfo.GetDrives().ToList();
             foreach (var drive in drives)
             {
@@ -82,7 +82,7 @@
                         var diskGeometry = win32RawDisk.DiskGeometry();
                         var size = diskGeometry.Cylinders * diskGeometry.TracksPerCylinder * diskGeometry.SectorsPerTrack * diskGeometry.BytesPerSector;                        
                         
-                        var physicalDrive = new WindowsPhysicalDrive(drive.Name, "Floppy",
+                        var physicalDrive = new WindowsPhysicalDrive(0, drive.Name, "Floppy",
                             storagePropertyQueryResult.BusType, drive.Name, size, true, false, [driveName]);
 
                         physicalDrives.Add(physicalDrive);
@@ -94,13 +94,14 @@
                     var diskExtendsResult = win32RawDisk.DiskExtends();
                     logger.LogDebug(
                         $"Disk extends returned disk number {diskExtendsResult.DiskNumber} for drive letter '{driveName}'");
+                    var diskNumber = (int)diskExtendsResult.DiskNumber;
 
-                    if (!physicalDriveLettersIndex.ContainsKey(diskExtendsResult.DiskNumber))
+                    if (!physicalDriveLettersIndex.ContainsKey(diskNumber))
                     {
-                        physicalDriveLettersIndex.Add(diskExtendsResult.DiskNumber, new List<string>());
+                        physicalDriveLettersIndex.Add(diskNumber, new List<string>());
                     }
 
-                    physicalDriveLettersIndex[diskExtendsResult.DiskNumber].Add(driveName);
+                    physicalDriveLettersIndex[diskNumber].Add(driveName);
                 }
                 catch (Exception)
                 {
@@ -109,7 +110,7 @@
             }
 
             // iterate physical drives, get media type from geometry, get name from storage property query and size 
-            for (uint i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
+            for (var i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
             {
                 var physicalDrivePath = $"\\\\.\\PhysicalDrive{i}";
 
@@ -135,9 +136,9 @@
                     var size = win32RawDisk.Size();
 
                     var driveLetters =
-                        physicalDriveLettersIndex.TryGetValue(i, out var value) ? value : new List<string>();
+                        physicalDriveLettersIndex.TryGetValue(i, out var value) ? value.ToArray() : [];
                     var systemDrive = driveLetters.Contains(systemDriveLetter);
-                    var physicalDrive = new WindowsPhysicalDrive(physicalDrivePath, diskGeometryExResult.MediaType,
+                    var physicalDrive = new WindowsPhysicalDrive(i, physicalDrivePath, diskGeometryExResult.MediaType,
                         storagePropertyQueryResult.BusType, name, size,
                         IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), 
                         systemDrive, driveLetters);
@@ -226,14 +227,16 @@
                     (_, logical) => logical.Dependent).ToList();
 
             long size;
+            int physicalDriveNumber;
             using (var win32RawDisk = new Win32RawDisk(wmicDiskDrive.Name))
             {
+                physicalDriveNumber = win32RawDisk.GetDeviceNumber();
                 size = win32RawDisk.Size();
             }
 
-            return new WindowsPhysicalDrive(wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.InterfaceType,
+            return new WindowsPhysicalDrive(physicalDriveNumber, wmicDiskDrive.Name, wmicDiskDrive.MediaType, wmicDiskDrive.InterfaceType,
                 wmicDiskDrive.Model,
-                size, false, false, driveLetters);
+                size, false, false, driveLetters.ToArray());
         }
 
         protected virtual async Task<string> GetWmicDiskDriveListCsv()

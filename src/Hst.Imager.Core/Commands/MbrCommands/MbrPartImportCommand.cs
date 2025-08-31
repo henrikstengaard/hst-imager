@@ -124,6 +124,11 @@
 
             OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
+            if (destinationMedia.IsPhysicalDrive)
+            {
+                await commandHelper.RescanPhysicalDrives();
+            }
+
             return new Result();
         }
 
