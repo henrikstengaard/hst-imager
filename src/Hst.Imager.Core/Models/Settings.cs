@@ -41,7 +41,7 @@
             Verify = false;
             Force = false;
             Retries = 5;
-            SkipUnusedSectors = true;
+            SkipUnusedSectors = false;
         }
     }
 }

@@ -29,7 +29,7 @@ export default function Settings() {
     const [retries, setRetries] = React.useState(get(settings, 'retries') || 5);
     const [force, setForce] = React.useState(get(settings, 'force') || false);
     const [verify, setVerify] = React.useState(get(settings, 'verify') || false);
-    const [skipUnusedSectors, setSkipUnusedSectors] = React.useState(get(settings, 'verify') || true);
+    const [skipUnusedSectors, setSkipUnusedSectors] = React.useState(get(settings, 'skipUnusedSectors') || false);
     const [debugMode, setDebugMode] = React.useState(get(settings, 'debugMode') || false);
 
     const isMacOs = get(appState, 'isMacOs') || false
@@ -84,9 +84,11 @@ export default function Settings() {
                             await handleChange({ name: 'allPhysicalDrives', value: checked });
                         }}
                     />
-                    <Alert severity="warning">
-                        All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!
-                    </Alert>
+                    {allPhysicalDrives && (
+                        <Alert severity="warning">
+                            All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!
+                        </Alert>
+                    )}
                 </Grid>
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
@@ -160,6 +162,11 @@ export default function Settings() {
                         }}
                     />
                 </Grid>
+                {skipUnusedSectors && (
+                    <Alert severity="warning">
+                        Skip unused sectors will make writing and comparing images much faster as sectors with only zeroes are skipped. It also means skipped sectors may contain old data that would otherwise be erased with zeroes and not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!
+                    </Alert>
+                )}
             </Grid>
             <Box sx={{mt: 4}}>
                 <Title
