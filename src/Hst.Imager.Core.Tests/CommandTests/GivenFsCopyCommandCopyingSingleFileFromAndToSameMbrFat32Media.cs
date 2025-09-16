@@ -4,22 +4,22 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Models.FileSystems;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 
-public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsCommandTestBase
+public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsCommandTestBase
 {
     [Fact]
-    public async Task When_CopyingToDirFromAndToSameRdbMedia_Then_FileIsCopied()
+    public async Task When_CopyingToDirFromAndToSameMbrFat32Media_Then_FileIsCopied()
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt");
-        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "dir3");
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "dir3");
         
         try
         {
@@ -29,11 +29,11 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             // arrange - add test media
             testCommandHelper.AddTestMedia(mediaPath, 100.MB());
             
-            // arrange - create pfs3 formatted disk
-            await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
 
             // arrange - create directories and files
-            await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -48,7 +48,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             testCommandHelper.ClearActiveMedias();
 
             // assert - dir3 directory contains 1 entry
-            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
                 0, ["dir1", "dir3"])).ToList();
             Assert.Equal(["file1.txt"], entries.Select(x => x.Name).Order());
         }
@@ -59,11 +59,11 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
     }
 
     [Fact]
-    public async Task When_CopyingToNewNameFromAndToSameRdbMedia_Then_FileIsCopied()
+    public async Task When_CopyingToNewNameFromAndToSameMbrFat32Media_Then_FileIsCopied()
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt");
-        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1_copy.txt");
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1_copy.txt");
         
         try
         {
@@ -73,11 +73,11 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             // arrange - add test media
             testCommandHelper.AddTestMedia(mediaPath, 100.MB());
             
-            // arrange - create pfs3 formatted disk
-            await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
 
             // arrange - create directories and files
-            await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -90,9 +90,9 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
 
             // arrange - clear active medias to avoid source and destination being reused between commands
             testCommandHelper.ClearActiveMedias();
-
+            
             // assert - dir1 directory contains 3 entries
-            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
                 0, ["dir1"])).ToList();
             Assert.Equal(["dir3", "file1_copy.txt", "file1.txt"], entries.Select(x => x.Name).Order());
         }
@@ -103,12 +103,12 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
     }
 
     [Fact]
-    public async Task When_CopyingToNonExistingRootDirectoryFromAndToSameRdbMedia_Then_FileIsCopiedAndRenamed()
+    public async Task When_CopyingToNonExistingRootDirectoryFromAndToSameMbrFat32Media_Then_FileIsCopiedAndRenamed()
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt");
-        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir4");
-        
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4");
+
         try
         {
             // arrange - test command helper
@@ -117,11 +117,11 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             // arrange - add test media
             testCommandHelper.AddTestMedia(mediaPath, 100.MB());
             
-            // arrange - create pfs3 formatted disk
-            await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
 
             // arrange - create directories and files
-            await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -136,12 +136,12 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             testCommandHelper.ClearActiveMedias();
 
             // assert - root directory contains 2 dir entries
-            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
                 0, [])).ToList();
             Assert.Equal(["dir1", "dir2"], entries.Where(x => x.Type == EntryType.Dir).Select(x => x.Name).Order());
             
             // assert - root directory contains 1 file entry
-            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+            entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
                 0, [])).ToList();
             Assert.Equal(["dir4"], entries.Where(x => x.Type == EntryType.File).Select(x => x.Name).Order());
         }
@@ -152,11 +152,11 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
     }
 
     [Fact]
-    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameRdbMedia_Then_ErrorIsReturned()
+    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameMbrFat32Media_Then_ErrorIsReturned()
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt");
-        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir4", "dir5");
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4", "dir5");
         
         try
         {
@@ -166,17 +166,17 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             // arrange - add test media
             testCommandHelper.AddTestMedia(mediaPath, 100.MB());
             
-            // arrange - create pfs3 formatted disk
-            await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
 
             // arrange - create directories and files
-            await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 srcPath, destPath, true, false, true);
-            
+
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.False(result.IsSuccess);
