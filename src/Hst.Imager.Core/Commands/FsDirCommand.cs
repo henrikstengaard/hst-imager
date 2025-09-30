@@ -173,7 +173,7 @@ public class FsDirCommand : FsCommandBase
 
                     break;
                 default:
-                    return new Result(new Error($"Unsupported partition table '{parts[0]}'"));
+                    return new Result(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"));
             }
         }
 

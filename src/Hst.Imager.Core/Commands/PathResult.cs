@@ -5,6 +5,8 @@
 /// </summary>
 public class MediaResult
 {
+    public bool Exists { get; set; }
+    
     /// <summary>
     /// Full path
     /// </summary>
@@ -16,7 +18,7 @@ public class MediaResult
     public string MediaPath { get; set; }
     
     /// <summary>
-    /// File system path in media
+    /// Virtual path in media (rename from file system path to virtual path)
     /// </summary>
     public string FileSystemPath { get; set; }
     

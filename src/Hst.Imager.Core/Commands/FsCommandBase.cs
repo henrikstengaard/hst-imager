@@ -26,7 +26,7 @@ using Helpers;
 using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
-using Hst.Imager.Core.PathComponents;
+using PathComponents;
 using ExFat.DiscUtils;
 using System.Text.RegularExpressions;
 
@@ -41,7 +41,7 @@ public abstract partial class FsCommandBase : CommandBase
         this.physicalDrives = physicalDrives;
     }
     
-    private async Task<bool> IsAdfMedia(MediaResult mediaResult)
+    protected async Task<bool> IsAdfMedia(MediaResult mediaResult)
     {
         // return false, if media file doesnt exist
         if (!File.Exists(mediaResult.MediaPath))
@@ -165,7 +165,7 @@ public abstract partial class FsCommandBase : CommandBase
         return MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1);
     }
 
-    private async Task<bool> IsDiskMedia(MediaResult mediaResult)
+    protected async Task<bool> IsDiskMedia(MediaResult mediaResult)
     {
         // physical drive
         if (Regexs.PhysicalDrivePathRegex.IsMatch(mediaResult.MediaPath) ||

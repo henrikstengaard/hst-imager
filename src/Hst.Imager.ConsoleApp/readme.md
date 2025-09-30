@@ -30,9 +30,10 @@ Hst Imager console comes with following features:
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
-  - List files and subdirectories in a file system.
-  - Copy files from source to destination file system.
-  - Extract files from source to destination file system.
+  - List directories and files in a file system.
+  - Copy directories and files from source to destination file system.
+  - Extract directories and files from source to destination file system.
+  - Create a directory in a file system.
 - Amiga Disk File:
   - Create ADF disk image file.
 - Master Boot Record:
@@ -513,7 +514,7 @@ Destination path can only point to a directory, e.g.:
 
 If destination path directory specified doesn't exist, it will be created.
 
-### List files and subdirectories in a file system
+### List directories and files in a file system
 
 Example of displaying usage for listing of files and subdirectories in a file system:
 ```
@@ -535,7 +536,7 @@ Example of listing of files and directories in 16GB img image file Rigid Disk Bl
 hst.imager fs dir 16gb.img\rdb\dh0\s
 ```
 
-### Copy files and subdirectories from source to destination file system
+### Copy directories and files from source to destination file system
 
 Example of displaying usage for copying files and subdirectories from source to destination file system:
 ```
@@ -567,7 +568,7 @@ Example of copying files and subdirectories recursively from 16GB img image file
 hst.imager fs copy 16gb.img\rdb\dh0 dh0 --recursive --uaemetadata=UaeMetafile
 ```
 
-### Extract files and subdirectories from source to destination file system
+### Extract directories and files from source to destination file system
 
 Example of displaying usage for extracting files and subdirectories from source to destination file system:
 ```
@@ -592,6 +593,23 @@ hst.imager fs extract amigaos3.2.iso 16gb.img\rdb\dh0
 Example of extracting files and subdirectories recursively from lha archive whdload.lha file to local directory whdload and write UAE metafile used by FS-UAE Amiga emulator:
 ```
 hst.imager fs extract whdload.lha whdload --uaemetadata=UaeMetafile
+```
+
+### Create a directory in a file system.
+
+Example of displaying usage for creating a directory in a file system:
+```
+hst.imager fs mkdir
+```
+
+Example of creating a "games" directory in 16GB img image file Master Boot Record partition 1:
+```
+hst.imager fs mkdir 16gb.img\mbr\1\games
+```
+
+Example of creating a "games" directory in 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs mkdir 16gb.img\rdb\dh0\games
 ```
 
 ## ADF commands

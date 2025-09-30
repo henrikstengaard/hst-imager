@@ -241,14 +241,14 @@ namespace Hst.Imager.Core.Tests
             return diskInfo;
         }
 
-        public override Result<MediaResult> ResolveMedia(string path)
+        public override Result<MediaResult> ResolveMedia(string path, bool allowNonExisting = false)
         {
             ArgumentNullException.ThrowIfNull(path);
 
             var testMedia = TestMedias.FirstOrDefault(x => path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase));
             if (testMedia == null)
             {
-                return base.ResolveMedia(path);
+                return base.ResolveMedia(path, allowNonExisting);
             }
             
             var directorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/";
@@ -258,6 +258,7 @@ namespace Hst.Imager.Core.Tests
             
             return new Result<MediaResult>(new MediaResult
             {
+                Exists = true,
                 FullPath = path,
                 MediaPath = testMedia.Path,
                 DirectorySeparatorChar = directorySeparatorChar,

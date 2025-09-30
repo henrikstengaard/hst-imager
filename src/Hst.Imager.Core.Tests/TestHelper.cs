@@ -231,6 +231,10 @@ namespace Hst.Imager.Core.Tests
                 ? guidPartitionTable.FirstUsableSector
                 : guidPartitionTable.Partitions.Max(x => x.LastSector) + 1;
             var endSector = startSector + sectors - 1;
+            if (endSector > guidPartitionTable.LastUsableSector)
+            {
+                endSector = guidPartitionTable.LastUsableSector;
+            }
                 
             var partitionIndex = guidPartitionTable.Create(startSector, endSector,
                 GuidPartitionTypes.WindowsBasicData, 0, "Empty");
@@ -308,7 +312,7 @@ namespace Hst.Imager.Core.Tests
             partitionStream.Position = 0;
             await partitionStream.WriteAsync(data.AsMemory(0, (int)size));
         }
-
+        
         public static async Task<PartInfo> GetMbrPartitionPart(TestCommandHelper testCommandHelper, string path,
             int partitionNumber)
         {
@@ -463,7 +467,21 @@ namespace Hst.Imager.Core.Tests
             
             return zipStream.ToArray();
         }
-        
+
+        public static async Task CreateGptFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
+            long diskSize = 10 * 1024 * 1024)
+        {
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
+            using var media = mediaResult.Value;
+            var stream = media.Stream;
+
+            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var guidPartitionTable = GuidPartitionTable.Initialize(disk);
+            var partitionIndex = guidPartitionTable.Create(guidPartitionTable.FirstUsableSector,
+                guidPartitionTable.LastUsableSector, GuidPartitionTypes.WindowsBasicData, 0, "Empty");
+            FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
+        }
+
         public static async Task CreateMbrFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
             long diskSize = 10 * 1024 * 1024)
         {

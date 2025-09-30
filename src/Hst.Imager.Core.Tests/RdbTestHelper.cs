@@ -7,6 +7,7 @@ using Hst.Amiga.FileSystems;
 using Hst.Amiga.FileSystems.FastFileSystem;
 using Hst.Amiga.FileSystems.Pfs3;
 using Hst.Amiga.RigidDiskBlocks;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Tests;
 
@@ -25,15 +26,19 @@ public static class RdbTestHelper
     /// <exception cref="IOException"></exception>
     public static async Task CreateDirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
     {
-        await using var pfs3Volume = await MountFileSystemVolume(testCommandHelper, path, 0, true);
-        await pfs3Volume.CreateDirectory("dir1");
-        await pfs3Volume.CreateDirectory("dir2");
-        await pfs3Volume.ChangeDirectory("dir1");
-        await pfs3Volume.CreateDirectory("dir3");
-        await pfs3Volume.CreateFile("file1.txt", true, true);
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, path, 0, true);
+        
+        await fileSystemVolume.CreateDirectory("dir1");
+        await fileSystemVolume.CreateDirectory("dir2");
+        await fileSystemVolume.ChangeDirectory("dir1");
+        await fileSystemVolume.CreateDirectory("dir3");
+        await fileSystemVolume.CreateFile("file1.txt", true, true);
+        
+        fileSystemVolume.Dispose();
+        media.Dispose();
     }
 
-    private static async Task<IFileSystemVolume> MountFileSystemVolume(Stream stream, PartitionBlock partitionBlock) =>
+    public static async Task<IFileSystemVolume> MountFileSystemVolume(Stream stream, PartitionBlock partitionBlock) =>
         partitionBlock.DosTypeFormatted.ToLowerInvariant() switch
         {
             "pds\\3" or "pfs\\3" => await Pfs3Volume.Mount(stream, partitionBlock),
@@ -41,7 +46,7 @@ public static class RdbTestHelper
             _ => throw new IOException($"Unsupported dos type '{partitionBlock.DosTypeFormatted}'")
         };
 
-    public static async Task<IFileSystemVolume> MountFileSystemVolume(TestCommandHelper testCommandHelper, string mediaPath,
+    public static async Task<(Media, IFileSystemVolume)> MountFileSystemVolume(TestCommandHelper testCommandHelper, string mediaPath,
         int partitionNumber, bool writable = false)
     {
         var mediaResult = writable
@@ -71,19 +76,37 @@ public static class RdbTestHelper
             
         var partitionBlock = partitionBlocks[partitionNumber];
             
-        return await MountFileSystemVolume(mediaResult.Value.Stream, partitionBlock);
+        return (media, await MountFileSystemVolume(mediaResult.Value.Stream, partitionBlock));
     }
+
+    public static async Task CreateDirectory(
+        TestCommandHelper testCommandHelper, string mediaPath, int partitionNumber, string[] dirPathComponents)
+    {
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, partitionNumber);
+
+        foreach (var dirPathComponent in dirPathComponents)
+        {
+            await fileSystemVolume.CreateDirectory(dirPathComponent);
+            await fileSystemVolume.ChangeDirectory(dirPathComponent);
+        }
         
+        media.Dispose();
+    }
+    
     public static async Task<IEnumerable<Amiga.FileSystems.Entry>> GetEntriesFromFileSystemVolume(TestCommandHelper testCommandHelper, string mediaPath,
         int partitionNumber, string[] dirPathComponents, bool writable = false)
     {
-        var fileSystemVolume = await MountFileSystemVolume(testCommandHelper, mediaPath, partitionNumber, writable);
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, partitionNumber, writable);
 
         foreach (var dirPathComponent in dirPathComponents)
         {
             await fileSystemVolume.ChangeDirectory(dirPathComponent);
         }
 
-        return await fileSystemVolume.ListEntries();
+        var entries = await fileSystemVolume.ListEntries();
+        
+        media.Dispose();
+
+        return entries;
     }
 }
