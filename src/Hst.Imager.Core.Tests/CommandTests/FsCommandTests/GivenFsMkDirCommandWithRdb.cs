@@ -166,5 +166,35 @@ public class GivenFsMkDirCommandWithRdb
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var mkDirPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt", "dir5");
+        
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - add test media
+            await testCommandHelper.AddTestMedia(mediaPath);
+
+            // arrange - create pfs3 formatted disk
+            await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath, 100.MB());
+            
+            // arrange - create existing file in path
+            await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            
+            // arrange - create fs mkdir command
+            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
+                mkDirPath);
+
+            // act - execute fs mkdir command
+            var result = await fsMkDirCommand.Execute(CancellationToken.None);
+            
+            // assert - error is returned
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsFaulted);
+        }
+        finally
+        {
+            TestHelper.DeletePaths(mediaPath);
+        }
     }
 }
