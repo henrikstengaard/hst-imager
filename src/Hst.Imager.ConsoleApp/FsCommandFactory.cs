@@ -12,6 +12,7 @@ public static class FsCommandFactory
         command.AddCommand(CreateFsDir());
         command.AddCommand(CreateFsCopy());
         command.AddCommand(CreateFsExtract());
+        command.AddCommand(CreateFsMkDir());
 
         return command;
     }
@@ -119,6 +120,19 @@ public static class FsCommandFactory
         command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
+
+        return command;
+    }
+    
+    private static Command CreateFsMkDir()
+    {
+        var pathArgument = new Argument<string>(
+            name: "Path",
+            description: "Path to directory to create locally, in physical drive or image file.");
+
+        var command = new Command("mkdir", "Create a directory.");
+        command.SetHandler(CommandHandler.FsMkDir, pathArgument);
+        command.AddArgument(pathArgument);
 
         return command;
     }

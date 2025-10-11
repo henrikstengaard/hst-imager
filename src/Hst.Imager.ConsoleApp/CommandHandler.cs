@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Commands.GptCommands;
+﻿using Hst.Imager.Core.Commands.FsCommands;
+using Hst.Imager.Core.Commands.GptCommands;
 using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.ConsoleApp
@@ -648,6 +649,14 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
+        public static async Task FsMkDir(string path)
+        {
+            using var commandHelper = GetCommandHelper();
+            var command = new FsMkDirCommand(GetLogger<FsMkDirCommand>(), commandHelper,
+                await GetPhysicalDrives(), path);
+            await Execute(command);
+        }
+        
         public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet, UaeMetadata uaeMetadata)
         {
             using var commandHelper = GetCommandHelper();
