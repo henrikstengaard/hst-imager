@@ -3,7 +3,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2024-11-10
+# Date:   2025-10-11
 #
 # A python script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
@@ -54,13 +54,17 @@ amigaos_32_files = [
     {
         'Filename': 'DiskDoctor.adf',
         'Name': 'AmigaOS 3.2 Disk Doctor'
+    },
+    {
+        'Filename': 'MMULibs.adf',
+        'Name': 'AmigaOS 3.2 MMULibs'
     }
 ]
 
 # get amigaos 3.2 files copied to current path
 shared.get_adf_files(amigaos_32_files, current_path)
 
-# amigaos 3.1 adf paths
+# amigaos 3.2 adf paths
 install_adf_path = os.path.join(current_path, "Install3.2.adf")
 workbench_adf_path = os.path.join(current_path, "Workbench3.2.adf")
 extras_adf_path = os.path.join(current_path, "Extras3.2.adf")
@@ -68,6 +72,7 @@ classes_adf_path = os.path.join(current_path, "Classes3.2.adf")
 fonts_adf_path = os.path.join(current_path, "Fonts.adf")
 storage_adf_path = os.path.join(current_path, "Storage3.2.adf")
 diskdoctor_adf_path = os.path.join(current_path, "DiskDoctor.adf")
+mmulibs_adf_path = os.path.join(current_path, "MMULibs.adf")
 
 # confirm create image confirm 
 create_image = shared.confirm("Do you want to create a new hard disk image file?", "enter = yes")
@@ -88,50 +93,45 @@ else:
         print('Error: Image path \'{0}\' doesn\'t exist'.format(image_path))
         exit(1)
 
-install_path = os.path.join(current_path, 'temp', 'install')
-if os.path.exists(install_path):
-    shutil.rmtree(install_path)
-    
-os.makedirs(os.path.join(install_path, 'Prefs'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Env-Archive'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Env-Archive', 'Sys'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Env-Archive', 'Versions'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Presets'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Presets', 'Backdrops'))
-os.makedirs(os.path.join(install_path, 'Prefs', 'Presets', 'Pointers'))
-os.makedirs(os.path.join(install_path, 'Fonts'))
-os.makedirs(os.path.join(install_path, 'Expansion'))
-os.makedirs(os.path.join(install_path, 'WBStartup'))
-os.makedirs(os.path.join(install_path, 'Locale'))
-os.makedirs(os.path.join(install_path, 'Locale', 'Catalogs'))
-os.makedirs(os.path.join(install_path, 'Locale', 'Languages'))
-os.makedirs(os.path.join(install_path, 'Locale', 'Countries'))
-os.makedirs(os.path.join(install_path, 'Locale', 'Help'))
-os.makedirs(os.path.join(install_path, 'Classes'))
-os.makedirs(os.path.join(install_path, 'Classes', 'Gadgets'))
-os.makedirs(os.path.join(install_path, 'Classes', 'DataTypes'))
-os.makedirs(os.path.join(install_path, 'Classes', 'Images'))
-os.makedirs(os.path.join(install_path, 'Devs'))
-os.makedirs(os.path.join(install_path, 'Devs', 'Monitors'))
-os.makedirs(os.path.join(install_path, 'Devs', 'DataTypes'))
-os.makedirs(os.path.join(install_path, 'Devs', 'DOSDrivers'))
-os.makedirs(os.path.join(install_path, 'Devs', 'Printers'))
-os.makedirs(os.path.join(install_path, 'Devs', 'Keymaps'))
-os.makedirs(os.path.join(install_path, 'Storage'))
-os.makedirs(os.path.join(install_path, 'Storage', 'DOSDrivers'))
-os.makedirs(os.path.join(install_path, 'Storage', 'Printers'))
-os.makedirs(os.path.join(install_path, 'Storage', 'Monitors'))
-os.makedirs(os.path.join(install_path, 'Storage', 'Keymaps'))
-os.makedirs(os.path.join(install_path, 'Storage', 'DataTypes'))
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive', 'Sys')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive', 'Versions')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Presets')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Presets', 'Backdrops')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Presets', 'Pointers')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Fonts')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Expansion')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'WBStartup')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale', 'Catalogs')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale', 'Languages')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale', 'Countries')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale', 'Help')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Classes')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Classes', 'Gadgets')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Classes', 'DataTypes')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Classes', 'Images')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Monitors')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'DataTypes')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'DOSDrivers')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Printers')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Keymaps')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'DOSDrivers')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'Printers')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'Monitors')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'Keymaps')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'DataTypes')])
 
-os.makedirs(os.path.join(install_path, 'Libs'))
-os.makedirs(os.path.join(install_path, 'Tools'))
-os.makedirs(os.path.join(install_path, 'System'))
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'System')])
 
-os.makedirs(os.path.join(install_path, 'L'))
-os.makedirs(os.path.join(install_path, 'S'))
-
-shared.run_command([hst_imager_path, 'fs', 'copy', install_path, os.path.join(image_path, 'rdb', 'dh0'), '--recursive'])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'C')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'L')])
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'S')])
 
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'C'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
 
@@ -148,6 +148,7 @@ update_path = os.path.join(current_path, 'temp', 'update')
 if os.path.exists(update_path):
     shutil.rmtree(update_path)
 
+os.mkdir(update_path)
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Update'), update_path])
 
 # copy fastfilesystem
@@ -174,6 +175,7 @@ s_path = os.path.join(current_path, 'temp', 's')
 if os.path.exists(s_path):
     shutil.rmtree(s_path)
 
+os.mkdir(s_path)
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_path, 'S'), s_path])
 os.remove(os.path.join(s_path, 'User-startup'))
 
@@ -197,17 +199,29 @@ shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_p
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Keymaps.info'), os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Monitors.info'), os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Printers.info'), os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Classes', 'DataTypes'), os.path.join(image_path, 'rdb', 'dh0', 'Classes', 'DataTypes')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'C'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'DefIcons', '*.info'), os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive', 'Sys')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Presets', 'Pointers'), os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Presets', 'Pointers')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Monitors'), os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'Monitors')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'DOSDrivers'), os.path.join(image_path, 'rdb', 'dh0', 'Storage', 'DOSDrivers')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'WBStartup'), os.path.join(image_path, 'rdb', 'dh0', 'WBStartup')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Env-Archive', 'deficons.prefs'), os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Env-Archive', 'Pointer.prefs'), os.path.join(image_path, 'rdb', 'dh0', 'Prefs', 'Env-Archive', 'Sys')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Printers'), os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Printers')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'Keymaps'), os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Keymaps')])
+
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(storage_adf_path, 'LIBS'), os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
 
 
@@ -237,6 +251,7 @@ icons_path = os.path.join(current_path, 'temp', 'icons')
 if os.path.exists(icons_path):
     shutil.rmtree(icons_path)
 
+os.mkdir(icons_path)
 shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', '*.info'), icons_path, '--recursive'])
 
 # update icons
@@ -270,5 +285,11 @@ shared.run_command([hst_imager_path, 'fs', 'copy', icons_path, os.path.join(imag
 if os.path.exists(diskdoctor_adf_path):
     shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(diskdoctor_adf_path, 'C', 'DAControl'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
     shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(diskdoctor_adf_path, 'Devs', 'trackfile.device'), os.path.join(image_path, 'rdb', 'dh0', 'Devs')])
+
+# copy files from mmulibs
+if os.path.exists(mmulibs_adf_path):
+    shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(mmulibs_adf_path, 'C'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+    shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(mmulibs_adf_path, 'Libs'), os.path.join(image_path, 'rdb', 'dh0', 'Libs'), '--recursive'])
+    shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(mmulibs_adf_path, 'Locale'), os.path.join(image_path, 'rdb', 'dh0', 'Locale'), '--recursive'])
 
 print('Done')

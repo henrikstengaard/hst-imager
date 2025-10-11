@@ -3,7 +3,7 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2025-10-11
 #
 # A python script to convert a WHDLoad .lha file to an amiga harddisk file 
 # using Hst Imager console.
@@ -94,6 +94,7 @@ shared.install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31)
 shared.install_minimal_whdload(hst_imager_path, image_path)
 
 # extract whdload lha to image file
+shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'WHDLoad')])
 shared.run_command([hst_imager_path, 'fs', 'extract', whdload_lha_path, os.path.join(image_path, 'rdb', 'dh0', 'WHDLoad'), '--recursive'])
 
 # create startup sequence

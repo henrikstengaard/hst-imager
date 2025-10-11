@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-16
+# Date:   2025-10-11
 #
 # A python script with shared functions for example scripts.
 
@@ -509,6 +509,7 @@ def install_kickstart_roms(hst_imager_path, image_path):
     rom_key_path = os.path.join(image_dir, "rom.key")
 
     # copy kickstart roms to image file
+    run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
     run_command([hst_imager_path, 'fs', 'copy', kickstart12_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
     run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
     run_command([hst_imager_path, 'fs', 'copy', kickstart31_a600_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
@@ -532,13 +533,17 @@ def install_minimal_whdload(hst_imager_path, image_path):
     iconlib_lha_path = get_iconlib_lha_path(image_dir)
 
     # extract soft-kicker lha to image file
+    run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(skick_lha_path, 'Kickstarts'), os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
 
     # extract whdload lha to image file
+    run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'C')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'C')), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+    run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'S')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'S')), os.path.join(image_path, 'rdb', 'dh0', 'S')])
 
     # extract iconlib lha to image file
+    run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'Libs', '68000', 'icon.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'RemLib', 'RemLib'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
     run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'LoadResident', 'LoadResident'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
