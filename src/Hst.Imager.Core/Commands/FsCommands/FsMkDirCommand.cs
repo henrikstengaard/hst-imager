@@ -20,6 +20,8 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
 {
     public override async Task<Result> Execute(CancellationToken token)
     {
+        OnInformationMessage($"Creating directory path: '{path}'");
+        
         OnDebugMessage($"Opening '{path}' as readable");
         
         var pathResult = commandHelper.ResolveMedia(path, true);

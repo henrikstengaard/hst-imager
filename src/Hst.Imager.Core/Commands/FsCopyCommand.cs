@@ -158,8 +158,18 @@ public class FsCopyCommand : FsCommandBase
 
         stopwatch.Stop();
 
-        OnInformationMessage(
-            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount == 1 ? "file" : "files")}, {totalBytes.FormatBytes()} copied in {stopwatch.Elapsed.FormatElapsed()}");
+        var stats = new List<string>();
+        if (dirsCount > 0 || filesCount == 0)
+        {
+            stats.Add($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}");
+        }
+        if (filesCount > 0 || dirsCount == 0)
+        {
+            stats.Add($"{filesCount} {(filesCount == 1 ? "file" : "files")}");
+        }
+        stats.Add($"{totalBytes.FormatBytes()} copied in {stopwatch.Elapsed.FormatElapsed()}");
+        
+        OnInformationMessage(string.Join(", ", stats));
 
         return new Result();
     }
