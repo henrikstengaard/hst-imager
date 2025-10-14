@@ -108,8 +108,7 @@ namespace Hst.Imager.ConsoleApp
 
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
-                description: "Number of retries to try read or write data.",
-                getDefaultValue: () => 5);
+                description: "Number of retries to try read or write data.");
 
             var verifyOption = new Option<bool?>(
                 ["--verify", "-v"],
@@ -117,13 +116,11 @@ namespace Hst.Imager.ConsoleApp
             
             var forceOption = new Option<bool?>(
                 ["--force", "-f"],
-                description: "Force write to ignore write errors.",
-                getDefaultValue: () => false);
+                description: "Force write to ignore write errors.");
 
             var skipUnusedSectorsOption = new Option<bool?>(
                 ["--skip-unused-sectors"],
-                description: "Skip unused sectors.",
-                getDefaultValue: () => true);
+                description: "Skip unused sectors. Sectors containing zeroes are skipped to improve write speed. However, not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!");
             
             var startOption = new Option<long?>(
                 ["--start", "-st"],
@@ -160,8 +157,7 @@ namespace Hst.Imager.ConsoleApp
 
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
-                description: "Number of retries to try read or write data.",
-                getDefaultValue: () => 5);
+                description: "Number of retries to try read or write data.");
             
             var verifyOption = new Option<bool?>(
                 ["--verify", "-v"],
@@ -169,8 +165,7 @@ namespace Hst.Imager.ConsoleApp
 
             var forceOption = new Option<bool?>(
                 ["--force", "-f"],
-                description: "Force read to ignore read errors.",
-                getDefaultValue: () => false);
+                description: "Force read to ignore read errors.");
             
             var startOption = new Option<long?>(
                 ["--start", "-st"],
@@ -333,18 +328,15 @@ namespace Hst.Imager.ConsoleApp
             
             var skipUnusedSectorsOption = new Option<bool?>(
                 ["--skip-unused-sectors"],
-                description: "Skip unused sectors.",
-                getDefaultValue: () => true);
+                description: "Skip unused sectors. Sectors containing zeroes are skipped to improve compare speed. However, not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!");
 
             var retriesOption = new Option<int?>(
                 ["--retries", "-r"],
-                description: "Number of retries to try read or write data.",
-                getDefaultValue: () => 5);
+                description: "Number of retries to try read or write data.");
             
             var forceOption = new Option<bool?>(
                 ["--force", "-f"],
-                description: "Force compare to ignore read errors.",
-                getDefaultValue: () => false);
+                description: "Force compare to ignore read errors.");
             
             var convertCommand = new Command("compare", "Compare source and destination physical drive or image file.");
             convertCommand.AddArgument(sourceArgument);
