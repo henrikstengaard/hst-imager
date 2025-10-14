@@ -36,7 +36,7 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true, UaeMetadatas.UaeMetadata.None);
+                srcPath, destPath, true, false, true, uaeMetadata: UaeMetadatas.UaeMetadata.None);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

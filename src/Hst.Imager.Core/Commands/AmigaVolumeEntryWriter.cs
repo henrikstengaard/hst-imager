@@ -18,7 +18,8 @@ public class AmigaVolumeEntryWriter(
     Media media,
     string fileSystemPath,
     string[] rootPathComponents,
-    IFileSystemVolume fileSystemVolume)
+    IFileSystemVolume fileSystemVolume,
+    bool createDirectory)
     : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
@@ -85,14 +86,19 @@ public class AmigaVolumeEntryWriter(
 
             if (pathComponentEntry == null)
             {
-                if (i != rootPathComponents.Length - 1)
+                if (!createDirectory)
                 {
-                    return new Result(new PathNotFoundError($"Path not found '{nextDirPath}'", nextDirPath));
+                    if (i != rootPathComponents.Length - 1)
+                    {
+                        return new Result(new PathNotFoundError($"Path not found '{nextDirPath}'", nextDirPath));
+                    }
+                
+                    lastPathComponentExist = false;
+                
+                    break;
                 }
                 
-                lastPathComponentExist = false;
-                
-                break;
+                await fileSystemVolume.CreateDirectory(rootPathComponents[i]);
             }
 
             await fileSystemVolume.ChangeDirectory(rootPathComponents[i]);

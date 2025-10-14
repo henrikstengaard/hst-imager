@@ -20,11 +20,12 @@ public class FsExtractCommand : FsCommandBase
     private readonly bool recursive;
     private readonly bool skipAttributes;
     private readonly bool quiet;
+    private readonly bool makeDirectory;
     private readonly UaeMetadata uaeMetadata;
 
     public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, 
-        bool skipAttributes, bool quiet, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+        bool skipAttributes, bool quiet, bool makeDirectory = false, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
@@ -34,6 +35,7 @@ public class FsExtractCommand : FsCommandBase
         this.skipAttributes = skipAttributes;
         this.quiet = quiet;
         this.uaeMetadata = uaeMetadata;
+        this.makeDirectory = makeDirectory;
     }
 
     /// <summary>
@@ -61,7 +63,7 @@ public class FsExtractCommand : FsCommandBase
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, false);
+        var destEntryWriterResult = await GetEntryWriter(destPath, makeDirectory);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

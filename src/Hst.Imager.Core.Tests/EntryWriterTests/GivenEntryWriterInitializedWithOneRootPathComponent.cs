@@ -31,7 +31,7 @@ public class GivenEntryWriterInitializedWithOneRootPathComponent
             
             // arrange - create entry writer
             var entryWriter = await EntryWriterTestHelper.CreateEntryWriter(entryWriterType, testCommandHelper, path,
-                rootPathComponents);
+                rootPathComponents, false);
 
             // arrange - initialize the writer
             var initializeResult = await entryWriter.Initialize();
@@ -80,7 +80,7 @@ public class GivenEntryWriterInitializedWithOneRootPathComponent
 
             // arrange - create entry writer
             var entryWriter = await EntryWriterTestHelper.CreateEntryWriter(entryWriterType, testCommandHelper, path,
-                rootPathComponents);
+                rootPathComponents, false);
 
             // act and assert - initialize the writer
             var initializeResult = await entryWriter.Initialize();

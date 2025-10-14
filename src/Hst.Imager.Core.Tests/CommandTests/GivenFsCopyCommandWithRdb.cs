@@ -42,7 +42,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -97,7 +97,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -226,7 +226,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -363,7 +363,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -443,7 +443,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(),
             Path.Combine(srcPath, "rdb", "dh0", "file1"), 
-            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata: uaeMetadata);
 
         // act - copy
         var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -478,7 +478,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(),
             Path.Combine(srcPath, "rdb", "dh0", "file2*"),
-            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+            Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata: uaeMetadata);
 
         // act - copy
         var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -527,7 +527,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "file1"),
-                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -576,7 +576,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 Path.Combine(srcPath, "file2*"),
-                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata);
+                Path.Combine(destPath, "rdb", "dh0"), recursive, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -691,7 +691,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -835,7 +835,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -952,7 +952,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata);
+                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
@@ -1035,7 +1035,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata);
+                Path.Combine(srcPath, "rdb", "dh0"), destPath, true, false, true, uaeMetadata: uaeMetadata);
 
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);

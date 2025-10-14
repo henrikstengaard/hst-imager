@@ -76,7 +76,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
 
         await using var fileSystemVolume = fileSystemVolumeResult.Value;
         using var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(mediaResult.Value, string.Empty,
-            [], fileSystemVolume);
+            [], fileSystemVolume, false);
 
         var initializeResult = await amigaVolumeEntryWriter.Initialize();
         if (initializeResult.IsFaulted)

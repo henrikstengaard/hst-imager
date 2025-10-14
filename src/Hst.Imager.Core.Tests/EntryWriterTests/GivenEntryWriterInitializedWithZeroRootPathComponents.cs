@@ -27,7 +27,7 @@ public class GivenEntryWriterInitializedWithZeroRootPathComponents
 
             // arrange - create entry writer
             var entryWriter = await EntryWriterTestHelper.CreateEntryWriter(entryWriterType, testCommandHelper, path,
-                rootPathComponents);
+                rootPathComponents, false);
 
             // arrange - initialize the writer
             var initializeResult = await entryWriter.Initialize();

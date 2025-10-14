@@ -53,23 +53,23 @@ public static class EntryWriterTestHelper
 
     public static async Task<IEntryWriter> CreateEntryWriter(EntryWriterType entryWriterType,
         TestCommandHelper testCommandHelper,
-        string path, string[] initializePathComponents)
+        string path, string[] initializePathComponents, bool createDestDirectory)
     {
         return entryWriterType switch
         {
             EntryWriterType.AmigaVolumeEntryWriter => await CreateAmigaVolumeEntryWriter(
-                testCommandHelper, path, initializePathComponents),
+                testCommandHelper, path, initializePathComponents, createDestDirectory),
             EntryWriterType.FileSystemEntryWriter => await CreateFileSystemEntryWriter(
-                testCommandHelper, path, initializePathComponents),
+                testCommandHelper, path, initializePathComponents, createDestDirectory),
             EntryWriterType.DirectoryEntryWriter => CreateDirectoryEntryWriter(
-                testCommandHelper, path, initializePathComponents),
+                testCommandHelper, path, initializePathComponents, createDestDirectory),
             _ => throw new ArgumentOutOfRangeException(nameof(entryWriterType), entryWriterType,
                 "Entry writer type not supported")
         };
     }
 
     public static async Task<AmigaVolumeEntryWriter> CreateAmigaVolumeEntryWriter(TestCommandHelper testCommandHelper,
-        string diskPath, string[] initializePathComponents)
+        string diskPath, string[] initializePathComponents, bool createDestDirectory)
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(diskPath);
         if (mediaResult.IsFaulted)
@@ -82,11 +82,11 @@ public static class EntryWriterTestHelper
 
         await using var pfs3Volume = await TestHelper.MountPfs3Volume(stream);
 
-        return new AmigaVolumeEntryWriter(media, string.Empty, initializePathComponents, pfs3Volume);
+        return new AmigaVolumeEntryWriter(media, string.Empty, initializePathComponents, pfs3Volume, createDestDirectory);
     }
     
     public static async Task<IEntryWriter> CreateFileSystemEntryWriter(TestCommandHelper testCommandHelper, 
-        string diskPath, string[] initializePathComponents)
+        string diskPath, string[] initializePathComponents, bool createDestDirectory)
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(diskPath);
         if (mediaResult.IsFaulted)
@@ -102,18 +102,18 @@ public static class EntryWriterTestHelper
         var biosPartitionTable = new BiosPartitionTable(disk);
         using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
 
-        return new FileSystemEntryWriter(media, fatFileSystem, initializePathComponents);
+        return new FileSystemEntryWriter(media, fatFileSystem, initializePathComponents, createDestDirectory);
     }
 
     public static IEntryWriter CreateDirectoryEntryWriter(TestCommandHelper testCommandHelper,
-        string path, string[] initializePathComponents)
+        string path, string[] initializePathComponents, bool createDestDirectory)
     {
         if (!Directory.Exists(path))
         {
             Directory.CreateDirectory(path);
         }
         
-        return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)));
+        return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), createDestDirectory);
     }
 
     public static async Task CreateDirectory(EntryWriterType entryWriterType, TestCommandHelper testCommandHelper,

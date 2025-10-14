@@ -1,31 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Hst.Amiga.FileSystems;
 using Hst.Imager.Core.Commands;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 
-public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : FsCommandTestBase
+public class GivenFsCopyCommandCopyingSingleFileFromAndToSameAdfMedia : FsCommandTestBase
 {
     [Fact]
-    public async Task When_CopyingToDirFromAndToSameLocalMedia_Then_FileIsCopied()
+    public async Task When_CopyingToDirFromAndToSameAdfMedia_Then_FileIsCopied()
     {
-        var mediaPath = Guid.NewGuid().ToString();
+        var mediaPath = $"{Guid.NewGuid()}.adf";
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir1", "dir3");
-
+        
         try
         {
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
+            // arrange - create adf formatted disk
+            await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+
             // arrange - create directories and files
-            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
-            
+            await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -34,48 +39,39 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
-            
-            // assert - directories exist
-            var expectedDirs = new[]
-            {
-                Path.Combine(mediaPath, "dir1"),
-                Path.Combine(mediaPath, "dir1", "dir3"),
-                Path.Combine(mediaPath, "dir2")
-            };
-            var actualDirs = Directory.GetDirectories(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualDirs);
-            Assert.Equal(expectedDirs, actualDirs);
-            
-            var expectedFiles = new[]
-            {
-                Path.Combine(mediaPath, "dir1", "dir3", "file1.txt"),
-                Path.Combine(mediaPath, "dir1", "file1.txt")
-            };
-            var actualFiles = Directory.GetFiles(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualFiles);
-            Assert.Equal(expectedFiles, actualFiles);
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // assert - dir3 directory contains 1 entry
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                ["dir1", "dir3"])).ToList();
+            Assert.Equal(["file1.txt"], entries.Select(x => x.Name).Order());
         }
         finally
         {
             DeletePaths(mediaPath);
         }
     }
-
+    
     [Fact]
-    public async Task When_CopyingToNewNameFromAndToSameLocalMedia_Then_FileIsCopied()
+    public async Task When_CopyingToNewNameFromAndToSameAdfMedia_Then_FileIsCopied()
     {
-        var mediaPath = Guid.NewGuid().ToString();
+        var mediaPath = $"{Guid.NewGuid()}.adf";
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir1", "file1_copy.txt");
-
+        
         try
         {
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
+            // arrange - create adf formatted disk
+            await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+
             // arrange - create directories and files
-            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
-            
+            await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -84,48 +80,39 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
-            
-            // assert - directories exist
-            var expectedDirs = new[]
-            {
-                Path.Combine(mediaPath, "dir1"),
-                Path.Combine(mediaPath, "dir1", "dir3"),
-                Path.Combine(mediaPath, "dir2")
-            };
-            var actualDirs = Directory.GetDirectories(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualDirs);
-            Assert.Equal(expectedDirs, actualDirs);
-            
-            var expectedFiles = new[]
-            {
-                Path.Combine(mediaPath, "dir1", "file1_copy.txt"),
-                Path.Combine(mediaPath, "dir1", "file1.txt")
-            };
-            var actualFiles = Directory.GetFiles(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualFiles);
-            Assert.Equal(expectedFiles, actualFiles);
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // assert - dir1 directory contains 3 entries
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                ["dir1"])).ToList();
+            Assert.Equal(["dir3", "file1_copy.txt", "file1.txt"], entries.Select(x => x.Name).Order());
         }
         finally
         {
             DeletePaths(mediaPath);
         }
     }
-
+    
     [Fact]
-    public async Task When_CopyingToNonExistingRootDirectoryFromAndToSameLocalMedia_Then_FileIsCopiedAndRenamed()
+    public async Task When_CopyingToNonExistingRootDirectoryFromAndToSameAdfMedia_Then_FileIsCopiedAndRenamed()
     {
-        var mediaPath = Guid.NewGuid().ToString();
+        var mediaPath = $"{Guid.NewGuid()}.adf";
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir4");
-
+        
         try
         {
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
+            // arrange - create adf formatted disk
+            await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+
             // arrange - create directories and files
-            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
-            
+            await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -133,48 +120,44 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
-            
+            Assert.True(result.IsSuccess);
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
             // assert - root directory contains 2 dir entries
-            var expectedDirs = new[]
-            {
-                Path.Combine(mediaPath, "dir1"),
-                Path.Combine(mediaPath, "dir1", "dir3"),
-                Path.Combine(mediaPath, "dir2")
-            };
-            var actualDirs = Directory.GetDirectories(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualDirs);
-            Assert.Equal(expectedDirs, actualDirs);
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                [])).ToList();
+            Assert.Equal(["dir1", "dir2"], entries.Where(x => x.Type == EntryType.Dir).Select(x => x.Name).Order());
             
             // assert - root directory contains 1 file entry
-            var expectedFiles = new[]
-            {
-                Path.Combine(mediaPath, "dir1", "file1.txt"),
-                Path.Combine(mediaPath, "dir4")
-            };
-            var actualFiles = Directory.GetFiles(mediaPath, "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualFiles);
-            Assert.Equal(expectedFiles, actualFiles);
+            entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                [])).ToList();
+            Assert.Equal(["dir4"], entries.Where(x => x.Type == EntryType.File).Select(x => x.Name).Order());
         }
         finally
         {
             DeletePaths(mediaPath);
         }
     }
-
+    
     [Fact]
-    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameLocalMedia_Then_ErrorIsReturned()
+    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameAdfMedia_Then_ErrorIsReturned()
     {
-        var mediaPath = Guid.NewGuid().ToString();
+        var mediaPath = $"{Guid.NewGuid()}.adf";
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir4", "dir5");
-
+        
         try
         {
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
+            // arrange - create adf formatted disk
+            await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+
             // arrange - create directories and files
-            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
             
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -184,7 +167,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             
-            // assert - error is returned
+            // assert - error is returned and error is path not found
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
             Assert.NotNull(result.Error);
@@ -195,27 +178,31 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             DeletePaths(mediaPath);
         }
     }
-    
+
     [Fact]
-    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameLocalMediaWithCreateDestDir_Then_FileIsCopied()
+    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameAdfMediaWithCreateDestDir_Then_FileIsCopied()
     {
-        var mediaPath = Guid.NewGuid().ToString();
+        // arrange - paths
+        var mediaPath = $"{Guid.NewGuid()}.adf";
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir4", "dir5");
         const bool createDestDir = true;
-
+        
         try
         {
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
+            // arrange - create adf formatted disk
+            await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+
             // arrange - create directories and files
-            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
-            
+            await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), srcPath, destPath, true, false, true,
-                makeDirectory: createDestDir);
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true, makeDirectory: createDestDir);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -224,13 +211,9 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             Assert.True(result.IsSuccess);
             
             // assert - dir4, dir5 directory contains 1 file entry
-            var expectedFiles = new[]
-            {
-                Path.Combine(mediaPath, "dir4", "dir5", "file1.txt"),
-            };
-            var actualFiles = Directory.GetFiles(Path.Combine(mediaPath, "dir4", "dir5"), "*.*", SearchOption.AllDirectories);
-            Array.Sort(actualFiles);
-            Assert.Equal(expectedFiles, actualFiles);
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                ["dir4", "dir5"])).ToList();
+            Assert.Equal(["file1.txt"], entries.Where(x => x.Type == EntryType.File).Select(x => x.Name).Order());
         }
         finally
         {

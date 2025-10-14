@@ -20,11 +20,12 @@ public class FsCopyCommand : FsCommandBase
     private readonly bool recursive;
     private readonly bool skipAttributes;
     private readonly bool quiet;
+    private readonly bool makeDirectory;
     private readonly UaeMetadata uaeMetadata;
 
     public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive,
-        bool skipAttributes, bool quiet, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+        bool skipAttributes, bool quiet, bool makeDirectory = false, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
@@ -33,6 +34,7 @@ public class FsCopyCommand : FsCommandBase
         this.recursive = recursive;
         this.skipAttributes = skipAttributes;
         this.quiet = quiet;
+        this.makeDirectory = makeDirectory;
         this.uaeMetadata = uaeMetadata;
     }
 
@@ -54,7 +56,7 @@ public class FsCopyCommand : FsCommandBase
         var stopwatch = new Stopwatch();
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, false);
+        var destEntryWriterResult = await GetEntryWriter(destPath, makeDirectory);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

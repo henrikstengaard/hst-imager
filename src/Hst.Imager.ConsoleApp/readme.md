@@ -558,6 +558,11 @@ Example of copying files and subdirectories recursively from directory DH0 to 16
 hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive
 ```
 
+Example of copying files and subdirectories recursively from directory DH0 to 16GB img image file Rigid Disk Block partition DH0 temp directory and create temp directory if it doesn't exist:
+```
+hst.imager fs copy dh0 16gb.img\rdb\dh0\temp --recursive --makedir
+```
+
 Example of copying files and subdirectories recursively from directory DH0 to 16GB img image file Rigid Disk Block partition DH0 and read UAE metafile used by FS-UAE Amiga emulator:
 ```
 hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive --uaemetadata=UaeMetafile
@@ -588,6 +593,11 @@ hst.imager fs extract whdload.lha 16gb.img\rdb\dh0
 Example of extracting files and subdirectories recursively from Amiga OS 3.2 iso file to 16GB img image file Rigid Disk Block partition DH0:
 ```
 hst.imager fs extract amigaos3.2.iso 16gb.img\rdb\dh0
+```
+
+Example of extracting files and subdirectories recursively from Amiga OS 3.2 iso file to 16GB img image file Rigid Disk Block partition DH0 temp directory and create temp directory if it doesn't exist:
+```
+hst.imager fs extract amigaos3.2.iso 16gb.img\rdb\dh0\temp --makedir
 ```
 
 Example of extracting files and subdirectories recursively from lha archive whdload.lha file to local directory whdload and write UAE metafile used by FS-UAE Amiga emulator:

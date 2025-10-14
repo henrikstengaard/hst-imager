@@ -154,6 +154,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
     [Fact]
     public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameMbrFat32Media_Then_ErrorIsReturned()
     {
+        // arrange - paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4", "dir5");
@@ -174,8 +175,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                new List<IPhysicalDrive>(), srcPath, destPath, true, false, true);
 
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -183,6 +183,51 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             Assert.True(result.IsFaulted);
             Assert.NotNull(result.Error);
             Assert.IsType<PathNotFoundError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingToNonExistingSubDirectoryFromAndToSameMbrFat32MediaWithCreateDestDir_Then_FileIsCopied()
+    {
+        // arrange - paths
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4", "dir5");
+        const bool createDestDir = true;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - add test media
+            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
+
+            // arrange - create directories and files
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath, true, false, true,
+                makeDirectory: createDestDir);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - copy is successful
+            Assert.True(result.IsSuccess);
+            
+            // assert - dir4, dir5 directory contains 1 file entry
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, ["dir4", "dir5"])).ToList();
+            Assert.Equal(["file1.txt"], entries.Where(x => x.Type == EntryType.File).Select(x => x.Name).Order());
         }
         finally
         {

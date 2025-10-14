@@ -13,8 +13,8 @@ using UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
-public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] rootPathComponents)
-    : IEntryWriter
+public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] rootPathComponents,
+    bool createDirectory) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IMediaPath mediaPath = PathComponents.MediaPath.GenericMediaPath;
@@ -79,15 +79,20 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
             
             if (!fileSystemInfo.Exists)
             {
-                if (i != rootPathComponents.Length - 1)
+                if (!createDirectory)
                 {
-                    return Task.FromResult(new Result(new PathNotFoundError(
-                        $"Path not found '{nextDirPath}'", nextDirPath)));
+                    if (i != rootPathComponents.Length - 1)
+                    {
+                        return Task.FromResult(new Result(new PathNotFoundError(
+                            $"Path not found '{nextDirPath}'", nextDirPath)));
+                    }
+                
+                    lastPathComponentExist = false;
+
+                    break;
                 }
                 
-                lastPathComponentExist = false;
-
-                break;
+                fileSystem.CreateDirectory(dirPath);
             }
             
             exisingPathComponents.Add(rootPathComponents[i]);

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 using UaeMetadatas;
 using Models.FileSystems;
 
-public class DirectoryEntryWriter(string path) : IEntryWriter
+public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
@@ -164,14 +164,19 @@ public class DirectoryEntryWriter(string path) : IEntryWriter
 
             if (!exists)
             {
-                if (i != rootPathComponents.Length - 1)
+                if (!createDirectory)
                 {
-                    return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{dirPath}'", dirPath)));
+                    if (i != rootPathComponents.Length - 1)
+                    {
+                        return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{dirPath}'", dirPath)));
+                    }
+                
+                    lastPathComponentExist = false;
+                
+                    break;
                 }
-                
-                lastPathComponentExist = false;
-                
-                break;
+
+                Directory.CreateDirectory(dirPath);
             }
 
             exisingPathComponents.Add(rootPathComponents[i]);

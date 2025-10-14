@@ -35,7 +35,7 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             Directory.CreateDirectory(path);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path);
+            var writer = new DirectoryEntryWriter(path, false);
 
             // arrange - initialize the writer
             var initializeResult = await writer.Initialize();
