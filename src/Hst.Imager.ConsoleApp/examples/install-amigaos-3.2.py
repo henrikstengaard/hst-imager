@@ -3,7 +3,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-10-21
 #
 # A python script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
@@ -143,13 +143,13 @@ shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_p
 
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Libs', 'icon.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
 
+# create temp directory
+temp_path = os.path.join(current_path, 'temp')
+if os.path.exists(temp_path):
+    shutil.rmtree(temp_path)
 
-update_path = os.path.join(current_path, 'temp', 'update')
-if os.path.exists(update_path):
-    shutil.rmtree(update_path)
-
-os.mkdir(update_path)
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Update'), update_path])
+update_path = os.path.join(temp_path, 'update')
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Update'), update_path, '--makedir'])
 
 # copy fastfilesystem
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'L', 'FastFileSystem'), os.path.join(image_path, 'rdb', 'dh0', 'L')])
@@ -171,12 +171,8 @@ shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_pa
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_path, 'System'), os.path.join(image_path, 'rdb', 'dh0', 'System')])
 shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_path, 'Tools'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
 
-s_path = os.path.join(current_path, 'temp', 's')
-if os.path.exists(s_path):
-    shutil.rmtree(s_path)
-
-os.mkdir(s_path)
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_path, 'S'), s_path])
+s_path = os.path.join(temp_path, 's')
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(extras_adf_path, 'S'), s_path, '--makedir'])
 os.remove(os.path.join(s_path, 'User-startup'))
 
 shared.run_command([hst_imager_path, 'fs', 'copy', s_path, os.path.join(image_path, 'rdb', 'dh0', 'S')])
@@ -247,12 +243,8 @@ shared.run_command([hst_imager_path, 'fs', 'copy', startup_sequence_path, os.pat
 # --------
 
 # copy icons from image file to local directory
-icons_path = os.path.join(current_path, 'temp', 'icons')
-if os.path.exists(icons_path):
-    shutil.rmtree(icons_path)
-
-os.mkdir(icons_path)
-shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', '*.info'), icons_path, '--recursive'])
+icons_path = os.path.join(temp_path, 'icons')
+shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', '*.info'), icons_path, '--recursive', '--makedir'])
 
 # update icons
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Prefs.info')] + '-x 12 -y 20'.split(' '))

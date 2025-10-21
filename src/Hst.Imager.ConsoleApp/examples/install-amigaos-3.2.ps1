@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-10-21
 #
 # A powershell script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
@@ -11,7 +11,7 @@
 # - Hst Amiga
 # - AmigaOS 3.2 adf files
 
-
+$ErrorActionPreference = "Stop"
 trap {
     Write-Error "Exception occured: $($_.Exception)"
     exit 1
@@ -153,14 +153,15 @@ else
 
 & $hstImagerPath fs extract "$installAdfPath\Libs\icon.library" "$imagePath\rdb\dh0\Libs"
 
-$updatePath = Join-Path $currentPath -ChildPath "temp\update"
-if (Test-Path $updatePath)
+# create temp directory
+$tempPath = Join-Path $currentPath -ChildPath "temp"
+if (Test-Path $tempPath)
 {
-    Remove-Item $updatePath -Recurse
+    Remove-Item $tempPath -Recurse
 }
 
-New-Item -Path $updatePath
-& $hstImagerPath fs extract "$installAdfPath\Update" "$updatePath"
+$updatePath = Join-Path $tempPath -ChildPath "update"
+& $hstImagerPath fs extract "$installAdfPath\Update" "$updatePath" --makedir
 
 # copy fastfilesystem
 & $hstImagerPath fs extract "$installAdfPath\L\FastFileSystem" "$imagePath\rdb\dh0\L"
@@ -181,12 +182,8 @@ New-Item -Path $updatePath
 & $hstImagerPath fs extract "$extrasAdfPath\System" "$imagePath\rdb\dh0\System"
 & $hstImagerPath fs extract "$extrasAdfPath\Tools" "$imagePath\rdb\dh0\Tools"
 
-$sPath = Join-Path $currentPath -ChildPath "temp\s"
-if (Test-Path $sPath)
-{
-    Remove-Item $sPath -Recurse
-}
-& $hstImagerPath fs extract "$extrasAdfPath\S" "$sPath"
+$sPath = Join-Path $tempPath -ChildPath "s"
+& $hstImagerPath fs extract "$extrasAdfPath\S" "$sPath" --makedir
 Remove-Item (Join-Path $sPath -ChildPath "User-startup") -Recurse
     
 & $hstImagerPath fs copy "$sPath" "$imagePath\rdb\dh0\S"
@@ -257,13 +254,8 @@ Rename-Item -Path $startupHardDrivePath -NewName "Startup-sequence"
 # --------
 
 # copy icons from image file to local directory
-$iconsPath = Join-Path $currentPath -ChildPath "temp\icons"
-if (Test-Path $iconsPath)
-{
-    Remove-Item $iconsPath -Recurse
-}
-
-& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive
+$iconsPath = Join-Path $tempPath -ChildPath "icons"
+& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir
 
 # update icons
 & $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Prefs.info") -x 12 -y 20

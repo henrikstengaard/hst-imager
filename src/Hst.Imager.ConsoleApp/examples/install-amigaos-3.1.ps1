@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-10-21
 #
 # A powershell script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -12,6 +12,7 @@
 # - AmigaOS 3.1 adf files
 # - AmigaOS 3.1.4+ install adf for DOS7, if creating new image with DOS7 dostype.
 
+$ErrorActionPreference = "Stop"
 trap {
     Write-Error "Exception occured: $($_.Exception)"
     exit 1
@@ -125,35 +126,42 @@ else
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage"
 & $hstImagerPath fs extract $storageAdfPath "$imagePath\rdb\dh0\Storage"
 
+# create temp directory
+$tempPath = Join-Path $currentPath -ChildPath "temp"
+if (Test-Path $tempPath)
+{
+    Remove-Item $tempPath -Recurse
+}
+
 # copy icons from image file to local directory
-& $hstImagerPath fs mkdir (Join-Path $currentPath -ChildPath "icons")
-& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" (Join-Path $currentPath -ChildPath "icons") --recursive
-Copy-Item (Join-Path $currentPath -ChildPath "icons\storage\Printers.info") (Join-Path $currentPath -ChildPath "icons\Storage.info") -Force
+$iconsPath = Join-Path $tempPath -ChildPath "icons"
+& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir
+Copy-Item (Join-Path $iconsPath -ChildPath "storage\Printers.info") (Join-Path $iconsPath -ChildPath "Storage.info") -Force
 
 # update icons
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Prefs.info") -x 12 -y 20
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Prefs\Printer.info") -x 160 -y 48
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Prefs.info") -x 12 -y 20
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Prefs\Printer.info") -x 160 -y 48
 
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Utilities.info") -x 98 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Utilities\Clock.info") -x 91 -y 11
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Utilities\MultiView.info") -x 7 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Utilities.info") -x 98 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Utilities\Clock.info") -x 91 -y 11
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Utilities\MultiView.info") -x 7 -y 4
 
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools.info") -x 98 -y 38
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\IconEdit.info") -x 111 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\Commodities\Blanker.info") -x 8 -y 84
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\Commodities\ClickToFront.info") -x 99 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\Commodities\CrossDOS.info") -x 99 -y 44
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\Commodities\Exchange.info") -x 8 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Tools\Commodities\FKey.info") -x 99 -y 84
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools.info") -x 98 -y 38
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\IconEdit.info") -x 111 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\Commodities\Blanker.info") -x 8 -y 84
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\Commodities\ClickToFront.info") -x 99 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\Commodities\CrossDOS.info") -x 99 -y 44
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\Commodities\Exchange.info") -x 8 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Tools\Commodities\FKey.info") -x 99 -y 84
 
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\System.info") -x 184 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\WBStartup.info") -x 184 -y 38
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Devs.info") -x 270 -y 4
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Storage.info") -x 270 -y 38 -dx 480 -dy 77 -dw 107 -dh 199
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Storage\Monitors.info") -x 10 -y 106 -dx 480 -dy 77 -dw 107 -dh 199
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Storage\Printers.info") -x 10 -y 140 -dx 480 -dy 77 -dw 107 -dh 199
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Expansion.info") -x 356 -y 20
-& $hstAmigaPath icon update (Join-Path $currentPath -ChildPath "icons\Disk.info") -dx 28 -dy 29 -dw 452 -dh 93
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "System.info") -x 184 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "WBStartup.info") -x 184 -y 38
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Devs.info") -x 270 -y 4
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Storage.info") -x 270 -y 38 -dx 480 -dy 77 -dw 107 -dh 199
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Storage\Monitors.info") -x 10 -y 106 -dx 480 -dy 77 -dw 107 -dh 199
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Storage\Printers.info") -x 10 -y 140 -dx 480 -dy 77 -dw 107 -dh 199
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Expansion.info") -x 356 -y 20
+& $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Disk.info") -dx 28 -dy 29 -dw 452 -dh 93
 
 # copy icons from local directory to image file
-& $hstImagerPath fs copy (Join-Path $currentPath -ChildPath "icons") "$imagePath\rdb\dh0" --recursive
+& $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive
