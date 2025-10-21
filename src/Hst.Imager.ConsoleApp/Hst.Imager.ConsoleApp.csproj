@@ -102,6 +102,12 @@
       <None Update="examples\install-amigaos-3.2.sh">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="examples\install-amigaos-1.3.ps1">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="scripts\create_100mb_vhd_rdb_dos3.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="scripts\create_gpt_chromeos_test_image.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>

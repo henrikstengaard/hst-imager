@@ -23,16 +23,20 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
 
         try
         {
+            // arrange - create amiga adf image with windows reserved names
             await CreateDos3FormattedAdf(srcPath);
             await CreateFilesWithWindowsReservedNames(srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
             using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true, UaeMetadatas.UaeMetadata.None);
+                srcPath, destPath, true, false, true, uaeMetadata: UaeMetadatas.UaeMetadata.None);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
@@ -52,7 +56,7 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
                 files.FirstOrDefault(x => x.Equals(auxPath, StringComparison.OrdinalIgnoreCase)));
 
             // assert - aux.info file was extracted
-            var auxInfoPath = Path.Combine(destPath, $"{windowsReservedPrefix}AUX.info");
+            var auxInfoPath = Path.Combine(destPath, "AUX.info");
             Assert.Equal(auxInfoPath,
                 files.FirstOrDefault(x => x.Equals(auxInfoPath, StringComparison.OrdinalIgnoreCase)));
         }

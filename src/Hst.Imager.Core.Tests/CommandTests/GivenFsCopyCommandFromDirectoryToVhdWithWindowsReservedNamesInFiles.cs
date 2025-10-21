@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -13,69 +15,67 @@ using Xunit;
 public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles : FsCommandTestBase
 {
     [Fact]
-    public async Task WhenCopyingRecursivelyToVhdThenDirectoriesAndFilesAreCopied()
+    public async Task When_CopyingFromAmigaRdbToLocalDirectory_Then_DirectoriesAndFilesAreCopied()
     {
-        var srcPath = $"{Guid.NewGuid()}";
-        var destPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = $"{Guid.NewGuid()}";
+        var srcCopyPath = Path.Combine(srcPath, "rdb", "dh0");
 
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
-            var cancellationTokenSource = new CancellationTokenSource();
+            using var testCommandHelper = new TestCommandHelper();
 
-            // arrange - create source directory
-            await CreateDirectoriesAndFiles(srcPath);
-            
-            // arrange - create destination disk image
-            await CreatePfs3FormattedDisk(testCommandHelper, destPath);
+            // arrange - create src amiga rdb image
+            await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+            await CreateAmigaFilesWithReservedWindowsFilename(testCommandHelper, srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, Path.Combine(destPath, "rdb", "dh0"), true, false, true);
+                srcCopyPath, destPath, true, false, true);
 
             // act - copy
-            var result = await fsCopyCommand.Execute(cancellationTokenSource.Token);
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
-            // assert - get dest media
-            var mediaResult = await testCommandHelper.GetReadableFileMedia(destPath);
-            if (mediaResult.IsFaulted)
+            // assert - files are copied to dest path
+            var expectedFiles = new List<string>
             {
-                throw new IOException(mediaResult.Error.ToString());
+                Path.Combine(destPath, string.Concat(OperatingSystem.IsWindows() ? "__uae___" : string.Empty, "AUX")),
+            };
+            if (OperatingSystem.IsWindows())
+            {
+                expectedFiles.Add(Path.Combine(destPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName));
             }
-            
-            // assert - mount pfs3 volume
-            using var media = mediaResult.Value;
-            await using var pfs3Volume = await MountPfs3Volume(media.Stream);
-            
-            // assert - get root entries
-            var entries = (await pfs3Volume.ListEntries()).ToList();
-            
-            // assert - 1 directory in root are copied
-            Assert.Single(entries);
-            
-            Assert.Equal("dir1",
-                entries.FirstOrDefault(x => x.Name.Equals("dir1", StringComparison.OrdinalIgnoreCase))?.Name);
-            
-            await pfs3Volume.ChangeDirectory("dir1");
-            
-            // assert - get dir1 entries
-            entries = (await pfs3Volume.ListEntries()).ToList();
-            
-            // assert - 2 files in dir1 are copied
-            Assert.Equal(2, entries.Count);
-            
-            Assert.Equal("AUX",
-                entries.FirstOrDefault(x => x.Name.Equals("AUX", StringComparison.OrdinalIgnoreCase))?.Name);
-            Assert.Equal("AUX.info",
-                entries.FirstOrDefault(x => x.Name.Equals("AUX.info", StringComparison.OrdinalIgnoreCase))?.Name);
+            expectedFiles.Add(Path.Combine(destPath, "AUX.info"));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(actualFiles);
+            Assert.Equal(expectedFiles, actualFiles);
         }
         finally
         {
             DeletePaths(srcPath, destPath);
         }
+    }
+    
+    private async Task CreateAmigaFilesWithReservedWindowsFilename(TestCommandHelper testCommandHelper, string path)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        if (mediaResult.IsFaulted)
+        {
+            throw new IOException(mediaResult.Error.ToString());
+        }
+
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        await using var pfs3Volume = await MountPfs3Volume(stream);
+        await pfs3Volume.CreateFile("AUX");
+        await pfs3Volume.CreateFile("AUX.info");
     }
 
     private async Task CreateDirectoriesAndFiles(string path)

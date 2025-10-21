@@ -14,6 +14,7 @@
     public class WindowsPhysicalDriveManager : IPhysicalDriveManager
     {
         private readonly ILogger<WindowsPhysicalDriveManager> logger;
+        private const bool SupportFloppyDrives = false;
 
         public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger)
         {
@@ -48,6 +49,8 @@
             var systemDriveLetter = Environment.SystemDirectory.Substring(0, 2);
 
             logger.LogDebug($"System drive '{systemDriveLetter}'");
+
+            var physicalDrives = new List<WindowsPhysicalDrive>();
             
             // iterate drive letters and get their relation to physical drives
             var physicalDriveLettersIndex = new Dictionary<int, List<string>>();
@@ -70,6 +73,23 @@
                     {
                         continue;
                     }
+                    
+                    if (SupportFloppyDrives &&
+                        (driveName.Equals("a:", StringComparison.OrdinalIgnoreCase) ||
+                        driveName.Equals("b:", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        var storagePropertyQueryResult = win32RawDisk.StoragePropertyQuery();
+                        var diskGeometry = win32RawDisk.DiskGeometry();
+                        var size = diskGeometry.Cylinders * diskGeometry.TracksPerCylinder * diskGeometry.SectorsPerTrack * diskGeometry.BytesPerSector;                        
+                        
+                        var physicalDrive = new WindowsPhysicalDrive(0, drive.Name, "Floppy",
+                            storagePropertyQueryResult.BusType, drive.Name, size, true, false, [driveName]);
+
+                        physicalDrives.Add(physicalDrive);
+                        logger.LogDebug(
+                            $"Physical drive: Path '{physicalDrive.Path}', SystemDrive '{physicalDrive.SystemDrive}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");
+                        continue;
+                    }
 
                     var diskExtendsResult = win32RawDisk.DiskExtends();
                     logger.LogDebug(
@@ -90,7 +110,6 @@
             }
 
             // iterate physical drives, get media type from geometry, get name from storage property query and size 
-            var physicalDrives = new List<WindowsPhysicalDrive>();
             for (var i = 0; i < PhysicalDrive.MAX_NUMBER_OF_DRIVES; i++)
             {
                 var physicalDrivePath = $"\\\\.\\PhysicalDrive{i}";

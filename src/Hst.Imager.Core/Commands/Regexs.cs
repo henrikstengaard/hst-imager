@@ -36,4 +36,7 @@ public static class Regexs
     /// </summary>
     public static readonly Regex InvalidFilenameCharsRegex = new Regex("[\\\\/:\\*\\?\"\\<\\>\\|]",
         RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    
+    public static readonly Regex WindowsDriveRegex = 
+        new("^[a-z]:", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 }

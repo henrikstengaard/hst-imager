@@ -33,6 +33,9 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
                 DiskFileSystemHelper.CreateGptNtfsDirectoriesAndFiles(DiskFileSystemHelper.ToDisk(media));
             }
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),

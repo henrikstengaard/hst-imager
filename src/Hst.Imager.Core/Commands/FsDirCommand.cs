@@ -173,7 +173,7 @@ public class FsDirCommand : FsCommandBase
 
                     break;
                 default:
-                    return new Result(new Error($"Unsupported partition table '{parts[0]}'"));
+                    return new Result(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"));
             }
         }
 
@@ -498,7 +498,7 @@ public class FsDirCommand : FsCommandBase
         }
 
         var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new AmigaVolumeEntryIterator(media.Stream, fileSystemPath, volumeResult.Value, recursive);
+        var entryIterator = new AmigaVolumeEntryIterator(media, media.Stream, fileSystemPath, volumeResult.Value, recursive);
 
         await ListEntries(entryIterator, fileSystemPath);
 

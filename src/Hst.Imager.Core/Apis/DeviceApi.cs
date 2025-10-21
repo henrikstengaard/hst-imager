@@ -14,6 +14,7 @@
         public const uint FSCTL_UNLOCK_VOLUME = 0x0009001c;
         public const uint FSCTL_DISMOUNT_VOLUME = 0x00090020;
         public const uint IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS = 0x00560000;
+        public const uint IOCTL_DISK_GET_DRIVE_GEOMETRY = 0x00070000U;
         public const uint IOCTL_DISK_GET_DRIVE_GEOMETRY_EX = 0x000700A0U;
         // public const uint IOCTL_STORAGE_QUERY_PROPERTY = 0x2D1400;
 

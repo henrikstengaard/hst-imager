@@ -12,6 +12,7 @@ public static class FsCommandFactory
         command.AddCommand(CreateFsDir());
         command.AddCommand(CreateFsCopy());
         command.AddCommand(CreateFsExtract());
+        command.AddCommand(CreateFsMkDir());
 
         return command;
     }
@@ -67,15 +68,23 @@ public static class FsCommandFactory
             description: "Type of UAE metadata to read and write.",
             getDefaultValue: () => UaeMetadata.UaeFsDb);
         
+        var makeDirectoryOption = new Option<bool>(
+            new[] { "--makedir", "-md" },
+            description: "Make destination directory, if it does not exist.",
+            getDefaultValue: () => false);
+        
         var command = new Command("copy", "Copy files or subdirectories from source to destination.");
         command.AddAlias("c");
-        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption);
+        command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, 
+            recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption,
+            makeDirectoryOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
         command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
+        command.AddOption(makeDirectoryOption);
 
         return command;
     }
@@ -110,15 +119,35 @@ public static class FsCommandFactory
             description: "Type of UAE metadata to read and write.",
             getDefaultValue: () => UaeMetadata.UaeFsDb);
 
+        var makeDirectoryOption = new Option<bool>(
+            new[] { "--makedir", "-md" },
+            description: "Make destination directory, if it does not exist.",
+            getDefaultValue: () => false);
+        
         var command = new Command("extract", "Extract files or subdirectories from source to destination.");
         command.AddAlias("x");
-        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption);
+        command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption,
+            skipAttributesOption, quietOption, uaeMetadataOption, makeDirectoryOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
         command.AddOption(skipAttributesOption);
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
+        command.AddOption(makeDirectoryOption);
+
+        return command;
+    }
+    
+    private static Command CreateFsMkDir()
+    {
+        var pathArgument = new Argument<string>(
+            name: "Path",
+            description: "Path to directory to create locally, in physical drive or image file.");
+
+        var command = new Command("mkdir", "Create a directory.");
+        command.SetHandler(CommandHandler.FsMkDir, pathArgument);
+        command.AddArgument(pathArgument);
 
         return command;
     }

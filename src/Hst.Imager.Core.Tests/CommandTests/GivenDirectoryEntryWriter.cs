@@ -31,11 +31,18 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
+            // arrange - create destination directory
+            Directory.CreateDirectory(path);
+            
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path);
+            var writer = new DirectoryEntryWriter(path, false);
+
+            // arrange - initialize the writer
+            var initializeResult = await writer.Initialize();
+            Assert.True(initializeResult.IsSuccess);
             
             // act - write directory entry
-            await writer.WriteEntry(entry, entry.RelativePathComponents, new MemoryStream(), false);
+            var t =await writer.CreateFile(entry, entry.RelativePathComponents, new MemoryStream(), false, false);
             
             // assert - get written files
             var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories);
@@ -47,6 +54,58 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             var file1Path = Path.Combine(path, "File 1");
             Assert.Equal(file1Path,
                 files.FirstOrDefault(x => x.Equals(file1Path, StringComparison.OrdinalIgnoreCase)));
+        }
+        finally
+        {
+            DeletePaths(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_InitializedWithOnePathComponentNotExisting_Then_DirectoryEntryWriterIsInitialized(bool fullPath)
+    {
+        // arrange - path for directory entry writer
+        var path = Guid.NewGuid().ToString();
+        
+        try
+        {
+            // arrange - create directory entry writer
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false);
+
+            // act - initialize the writer
+            var initializeResult = await writer.Initialize();
+
+            // assert - directory entry writer is initialized
+            Assert.True(initializeResult.IsSuccess);
+        }
+        finally
+        {
+            DeletePaths(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_InitializedWithTwoPathComponentsNotExisting_Then_ErrorIsReturned(bool fullPath)
+    {
+        // arrange - path for directory entry writer
+        var path = Path.Combine(Guid.NewGuid().ToString(), "dir");
+        
+        try
+        {
+            // arrange - create directory entry writer
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false);
+
+            // act - initialize the writer
+            var initializeResult = await writer.Initialize();
+
+            // assert - directory entry writer returns error
+            Assert.True(initializeResult.IsFaulted);
+            Assert.False(initializeResult.IsSuccess);
+            Assert.IsType<PathNotFoundError>(initializeResult.Error);
         }
         finally
         {

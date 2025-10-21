@@ -33,7 +33,7 @@
                 DeviceApi.FILE_SHARE_READ | DeviceApi.FILE_SHARE_WRITE,
                 IntPtr.Zero,
                 DeviceApi.OPEN_EXISTING,
-                0,
+                0, //FILE_FLAG_RANDOM_ACCESS,
                 IntPtr.Zero);
 
             if (!ignoreInvalid)
@@ -41,6 +41,8 @@
                 ThrowIfInvalid();
             }
         }
+
+        // private uint FILE_FLAG_RANDOM_ACCESS = 0x10000000;
 
         public bool IsInvalid()
         {
@@ -175,6 +177,50 @@
             };
         }
 
+        /// <summary>
+        /// Get disk geometry. Useful for floppy disks.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Win32Exception"></exception>
+        public DiskGeometryResult DiskGeometry()
+        {
+            var outBufferSize = (uint)Marshal.SizeOf(typeof(Kernel32.DiskGeometry));
+            var outBuffer = Marshal.AllocHGlobal((int)outBufferSize);
+            uint bytesReturned = 0;
+            if (!DeviceApi.DeviceIoControl(safeFileHandle,
+                    DeviceApi.IOCTL_DISK_GET_DRIVE_GEOMETRY,
+                    IntPtr.Zero,
+                    0,
+                    outBuffer,
+                    outBufferSize,
+                    ref bytesReturned,
+                    IntPtr.Zero))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY for path '{path}'");
+            }
+            
+            // convert out buffer pointer to structure
+            //Marshal.PtrToStructure(outBuffer, dge);
+            // I/O-control has been invoked successfully, convert to DISK_GEOMETRY_EX structure 
+            var diskGeometry = (Kernel32.DiskGeometry)Marshal.PtrToStructure(outBuffer, typeof(Kernel32.DiskGeometry))!;
+
+            Marshal.FreeHGlobal(outBuffer);
+            
+            return new DiskGeometryResult
+            {
+                MediaType = diskGeometry.MediaType.ToString(),
+                Cylinders = diskGeometry.Cylinders,
+                TracksPerCylinder = diskGeometry.TracksPerCylinder,
+                SectorsPerTrack = diskGeometry.SectorsPerTrack,
+                BytesPerSector = diskGeometry.BytesPerSector
+            };
+        }
+        
+        /// <summary>
+        /// Get disk geometry extended. Useful for hard disks.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="Win32Exception"></exception>
         public DiskGeometryExResult DiskGeometryEx()
         {
             //var dge = new Kernel32.DiskGeometryEx();

@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2025-10-11
 #
 # A powershell module with shared functions for example scripts.
 
@@ -10,15 +10,48 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName Microsoft.VisualBasic
 
-# show question dialog using winforms
-Function QuestionDialog($title, $message, $icon = 'Question')
-{
-    $result = [System.Windows.Forms.MessageBox]::Show($message, $title, [System.Windows.Forms.MessageBoxButtons]::YesNo, $icon)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
 
-    if($result -eq "YES")
+public class User32 {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
+}
+"@
+
+# Common type Values:
+# 0: OK button.
+# 1: OK and Cancel buttons.
+# 2: Abort, Retry, and Ignore buttons.
+# 3: Yes, No, and Cancel buttons.
+# 4: Yes and No buttons.
+# 16: Critical icon.
+# 32: Question icon.
+# 48: Warning icon.
+# 64: Information icon.
+# You can combine these values using bitwise OR (|) to customize the message box further.
+# 
+# Example with showing warning icon and yes, no and cancel buttons:
+# MessageBox(IntPtr.Zero, "Do you want to continue?", "Confirmation", 3 | 48);
+
+# show question dialog using user32 p/invoke
+Function QuestionDialog($title, $message)
+{
+    $result = [User32]::MessageBox([IntPtr]::Zero, $message, $title, (4 -bor 32))
+
+    # return true, if result is 6 equal to pressing yes button  
+    if($result -eq 6)
     {
         return $true
     }
+
+#     $result = [System.Windows.Forms.MessageBox]::Show($message, $title, [System.Windows.Forms.MessageBoxButtons]::YesNo, $icon, [System.Windows.Forms.MessageBoxOptions]::DefaultDesktopOnly)
+#     $result = [Microsoft.VisualBasic.Interaction]::MsgBox($message,"YesNo,SystemModal,$icon", $title)
+#     if($result -eq "YES")
+#     {
+#         return $true
+#     }
 
     return $false
 }
@@ -32,7 +65,7 @@ Function OpenFileDialog($title, $directory, $filter)
     $openFileDialog.FilterIndex = 0
     $openFileDialog.Multiselect = $false
     $openFileDialog.Title = $title
-    $result = $openFileDialog.ShowDialog()
+    $result = $openFileDialog.ShowDialog((New-Object System.Windows.Forms.Form -Property @{TopMost = $true }))
 
     if($result -ne "OK")
     {
@@ -49,7 +82,7 @@ Function FolderBrowserDialog($title, $directory, $showNewFolderButton)
     $folderBrowserDialog.Description = $title
     $folderBrowserDialog.SelectedPath = $directory
     $folderBrowserDialog.ShowNewFolderButton = $showNewFolderButton
-    $result = $folderBrowserDialog.ShowDialog()
+    $result = $folderBrowserDialog.ShowDialog((New-Object System.Windows.Forms.Form -Property @{TopMost = $true }))
 
     if($result -ne "OK")
     {
@@ -506,6 +539,7 @@ function InstallKickstartRoms($hstImagerPath, $imagePath)
     $romKeyPath = Join-Path $imageDir -ChildPath "rom.key"
     
     # copy kickstart roms to image file
+    & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Kickstarts"
     & $hstImagerPath fs copy $kickstart12A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
     & $hstImagerPath fs copy $kickstart13A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
     & $hstImagerPath fs copy $kickstart31A600RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
@@ -574,13 +608,17 @@ function InstallMinimalWhdload($hstImagerPath, $imagePath)
     $iconLibLhaPath = GetIconLibLhaPath $imageDir
 
     # extract soft-kicker lha to image file
+    & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Kickstarts"
     & $hstImagerPath fs extract "$sKickLhaPath\Kickstarts" "$imagePath\rdb\dh0\Devs\Kickstarts"
 
     # extract whdload lha to image file
+    & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\C"
     & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\C" "$imagePath\rdb\dh0\C"
+    & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
     & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\S" "$imagePath\rdb\dh0\S"
 
     # extract iconlib lha to image file
+    & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Libs"
     & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\Libs\68000\icon.library" "$imagePath\rdb\dh0\Libs"
     & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\RemLib\RemLib" "$imagePath\rdb\dh0\C"
     & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\LoadResident\LoadResident" "$imagePath\rdb\dh0\C"

@@ -2,7 +2,7 @@
 # --------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2025-10-11
 #
 # A powershell script to convert a WHDLoad .lha file to an amiga harddisk file using Hst Imager console.
 
@@ -99,6 +99,7 @@ InstallMinimalAmigaOs $hstImagerPath $imagePath $useAmigaOs31
 InstallMinimalWhdload $hstImagerPath $imagePath
 
 # extract whdload lha to image file
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\WHDLoad"
 & $hstImagerPath fs extract "$whdloadLhaPath" "$imagePath\rdb\dh0\WHDLoad" --recursive
 
 # create startup sequence

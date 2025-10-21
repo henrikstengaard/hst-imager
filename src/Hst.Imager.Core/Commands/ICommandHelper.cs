@@ -24,7 +24,7 @@ namespace Hst.Imager.Core.Commands
         bool IsGZip(string path);
         Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None);
-        Result<MediaResult> ResolveMedia(string path);
+        Result<MediaResult> ResolveMedia(string path, bool allowNonExisting = false);
         Task RescanPhysicalDrives();
     }
 }

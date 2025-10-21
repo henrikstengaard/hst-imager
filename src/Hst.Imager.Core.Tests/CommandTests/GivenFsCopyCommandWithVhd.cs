@@ -100,6 +100,9 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             await CreatePfs3FormattedDisk(testCommandHelper, imagePath);
             await CreatePfs3Directories(testCommandHelper, imagePath);
 
+            // arrange - create destination directory
+            await TestHelper.CreateRdbPfs3Directory(testCommandHelper, imagePath, ["copied"]);
+
             // arrange - clear active medias to avoid source and destination being reused between commands
             testCommandHelper.ClearActiveMedias();
 
@@ -163,8 +166,8 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             // assert - get copied entries
             entries = (await pfs3Volume.ListEntries()).ToList();
 
-            // assert - root directory contains 2 entries
-            Assert.Equal(2, entries.Count);
+            // assert - root directory contains 3 entries
+            Assert.Equal(3, entries.Count);
             
             // assert - copied directory contains dir1 directory
             Assert.Equal("dir1",
@@ -174,6 +177,10 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             Assert.Equal("dir2",
                 entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir2", StringComparison.OrdinalIgnoreCase))?.Name);
 
+            // assert - copied directory contains copied directory
+            Assert.Equal("copied",
+                entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("copied", StringComparison.OrdinalIgnoreCase))?.Name);
+            
             // assert - change to copied directory
             await pfs3Volume.ChangeDirectory("dir1");
             

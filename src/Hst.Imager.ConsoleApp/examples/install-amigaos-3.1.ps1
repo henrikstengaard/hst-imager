@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2023-07-10
+# Date:   2025-10-11
 #
 # A powershell script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -94,31 +94,39 @@ else
 & $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0"
 
 # extract locale adf to image file
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale"
 & $hstImagerPath fs extract $localeAdfPath "$imagePath\rdb\dh0\Locale"
 
 # extract extras adf to image file
 & $hstImagerPath fs extract $extrasAdfPath "$imagePath\rdb\dh0"
 
 # extract fonts adf to image file
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Fonts"
 & $hstImagerPath fs extract $fontsAdfPath "$imagePath\rdb\dh0\Fonts"
 
 # extract install adf to image file
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\BRU") "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup") "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.help") "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox") "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.info") "$imagePath\rdb\dh0\Tools"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox.info") "$imagePath\rdb\dh0\Tools"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\BRUtab") "$imagePath\rdb\dh0\S"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\HDBackup.config") "$imagePath\rdb\dh0\S"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\L"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "L\FastFileSystem") "$imagePath\rdb\dh0\L"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Libs"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Libs\*.library") "$imagePath\rdb\dh0\Libs"
 & $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Update\Disk.info") "$imagePath\rdb\dh0"
 
 # extract storage adf to image file
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage"
 & $hstImagerPath fs extract $storageAdfPath "$imagePath\rdb\dh0\Storage"
 
 # copy icons from image file to local directory
+& $hstImagerPath fs mkdir (Join-Path $currentPath -ChildPath "icons")
 & $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" (Join-Path $currentPath -ChildPath "icons") --recursive
 Copy-Item (Join-Path $currentPath -ChildPath "icons\storage\Printers.info") (Join-Path $currentPath -ChildPath "icons\Storage.info") -Force
 

@@ -3,13 +3,12 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
 using Hst.Core;
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
@@ -21,11 +20,12 @@ public class FsExtractCommand : FsCommandBase
     private readonly bool recursive;
     private readonly bool skipAttributes;
     private readonly bool quiet;
+    private readonly bool makeDirectory;
     private readonly UaeMetadata uaeMetadata;
 
     public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, 
-        bool skipAttributes, bool quiet, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+        bool skipAttributes, bool quiet, bool makeDirectory = false, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
         : base(commandHelper, physicalDrives)
     {
         this.logger = logger;
@@ -35,7 +35,19 @@ public class FsExtractCommand : FsCommandBase
         this.skipAttributes = skipAttributes;
         this.quiet = quiet;
         this.uaeMetadata = uaeMetadata;
+        this.makeDirectory = makeDirectory;
     }
+
+    /// <summary>
+    /// Is single file or uses pattern examines if the operation involves 1 file or if the operation uses pattern.
+    /// </summary>
+    /// <param name="entry">Entry to examine.</param>
+    /// <param name="entryIterator">Entry iterator to examine.</param>
+    /// <returns>True, if entry is a file and there are no more entries or if there is only a single file entry next or if the entry iterator uses a pattern. Otherwise, false.</returns>
+    private static bool IsSingleFileOrUsesPattern(Entry entry, IEntryIterator entryIterator) =>
+        (entry.Type == EntryType.File && !entryIterator.HasMoreEntries) ||
+        entryIterator.IsSingleFileEntryNext ||
+        entryIterator.UsesPattern;
 
     public override async Task<Result> Execute(CancellationToken token)
     {
@@ -51,7 +63,7 @@ public class FsExtractCommand : FsCommandBase
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, false);
+        var destEntryWriterResult = await GetEntryWriter(destPath, makeDirectory);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
@@ -71,6 +83,8 @@ public class FsExtractCommand : FsCommandBase
 
         stopwatch.Start();
 
+        bool? isSingleFileOrUsesPattern = null;
+        
         using (var destEntryWriter = destEntryWriterResult.Value)
         {
             using (var srcEntryIterator = srcEntryIteratorResult.Value)
@@ -79,16 +93,18 @@ public class FsExtractCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
+                    isSingleFileOrUsesPattern ??= IsSingleFileOrUsesPattern(entry, srcEntryIterator);
+
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
-                            if (!recursive || srcEntryIterator.UsesPattern)
-                            {
-                                continue;
-                            }
-
                             dirsCount++;
-                            await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes);
+                            var createDirectoryResult = await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
+                                isSingleFileOrUsesPattern.Value);
+                            if (createDirectoryResult.IsFaulted)
+                            {
+                                return new Result(createDirectoryResult.Error);
+                            }
                             break;
                         case EntryType.File:
                         {
@@ -101,7 +117,12 @@ public class FsExtractCommand : FsCommandBase
                             }
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            await destEntryWriter.WriteEntry(entry, entry.RelativePathComponents, stream, skipAttributes);
+                            var createFileResult = await destEntryWriter.CreateFile(entry, entry.RelativePathComponents, stream, skipAttributes,
+                                isSingleFileOrUsesPattern.Value);
+                            if (createFileResult.IsFaulted)
+                            {
+                                return new Result(createFileResult.Error);
+                            }
                             break;
                         }
                     }
@@ -136,12 +157,22 @@ public class FsExtractCommand : FsCommandBase
 
         stopwatch.Stop();
 
-        OnInformationMessage(
-            $"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount == 1 ? "file" : "files")}, {totalBytes.FormatBytes()} extracted in {stopwatch.Elapsed.FormatElapsed()}");
+        var stats = new List<string>();
+        if (dirsCount > 0 || filesCount == 0)
+        {
+            stats.Add($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}");
+        }
+        if (filesCount > 0 || dirsCount == 0)
+        {
+            stats.Add($"{filesCount} {(filesCount == 1 ? "file" : "files")}");
+        }
+        stats.Add($"{totalBytes.FormatBytes()} extracted in {stopwatch.Elapsed.FormatElapsed()}");
+        
+        OnInformationMessage(string.Join(", ", stats));
 
         return new Result();
     }
-
+    
     protected async Task<Result<IEntryIterator>> GetExtractEntryIterator(string path, bool recursive)
     {
         OnDebugMessage($"Resolving path '{path}'");

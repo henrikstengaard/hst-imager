@@ -17,19 +17,22 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
     [Fact]
     public async Task WhenCopyingFromAndToSameAdfThenDirectoriesAreCopied()
     {
-        var imagePath = $"{Guid.NewGuid()}.adf";
-        var srcPath = Path.Combine(imagePath, "*");
-        var destPath = Path.Combine(imagePath, "copied");
+        var mediaPath = $"{Guid.NewGuid()}.adf";
+        var srcPath = Path.Combine(mediaPath, "*");
+        var destPath = Path.Combine(mediaPath, "copied");
 
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
 
             // arrange - source disk image file with directories
-            await TestHelper.CreateFormattedAdfDisk(testCommandHelper, imagePath, "Amiga");
-            await CreateAdfContent(testCommandHelper, imagePath);
+            await TestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath, "Amiga");
+            await CreateAdfContent(testCommandHelper, mediaPath);
+
+            // arrange - create destination directory
+            await CreateDirectory(testCommandHelper, mediaPath, ["copied"]);
 
             // arrange - clear active medias to avoid source and destination being reused between commands
             testCommandHelper.ClearActiveMedias();
@@ -47,7 +50,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             testCommandHelper.ClearActiveMedias();
             
             // assert - get media
-            var mediaResult = await testCommandHelper.GetReadableFileMedia(imagePath);
+            var mediaResult = await testCommandHelper.GetReadableFileMedia(mediaPath);
             if (mediaResult.IsFaulted)
             {
                 throw new IOException(mediaResult.Error.ToString());
@@ -81,16 +84,20 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             entries = (await ffsVolume.ListEntries()).ToList();
             
             // assert - copied directory contains 2 entries
-            Assert.Equal(2, entries.Count);
+            Assert.Equal(3, entries.Count);
 
-            // assert - root directory contains dir1 directory
+            // assert - copied directory contains dir1 directory
             Assert.Equal("dir1",
                 entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir1", StringComparison.OrdinalIgnoreCase))?.Name);
 
-            // assert - root directory contains dir2 directory
+            // assert - copied directory contains dir2 directory
             Assert.Equal("dir2",
                 entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir2", StringComparison.OrdinalIgnoreCase))?.Name);
-            
+
+            // assert - copied directory contains copied directory
+            Assert.Equal("copied",
+                entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("copied", StringComparison.OrdinalIgnoreCase))?.Name);
+
             await ffsVolume.ChangeDirectory("dir1");
             
             // assert - get dir1 entries
@@ -109,7 +116,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
         }
         finally
         {
-            DeletePaths(imagePath);
+            DeletePaths(mediaPath);
         }
     }
     
@@ -130,5 +137,25 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
         await ffsVolume.ChangeDirectory("dir1");
         await ffsVolume.CreateDirectory("dir3");
         await ffsVolume.CreateFile("file1.txt");
+    }
+
+    private async Task CreateDirectory(TestCommandHelper testCommandHelper, string path, string[] pathComponents)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        if (mediaResult.IsFaulted)
+        {
+            throw new IOException(mediaResult.Error.ToString());
+        }
+
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        await using var ffsVolume = await MountFastFileSystemVolume(stream);
+
+        foreach (var pathComponent in pathComponents)
+        {
+            await ffsVolume.CreateDirectory(pathComponent);
+            await ffsVolume.ChangeDirectory(pathComponent);
+        }
     }
 }

@@ -278,12 +278,27 @@ namespace Hst.Imager.Core.Commands
             }
 
             var name = Path.GetFileName(path);
-            var fileMedia = IsVhd(path)
-                ? GetVhdMedia(path, name, false, byteSwap)
-                : await GetFileMedia(path, name, false, (ModifierEnum)modifiers);
 
-            this.activeMedias.Add(fileMedia);
-            return new Result<Media>(fileMedia);
+            if (!IsVhd(path))
+            {
+                var fileMedia =await GetFileMedia(path, name, false, (ModifierEnum)modifiers);
+                this.activeMedias.Add(fileMedia);
+                return new Result<Media>(fileMedia);
+            }
+
+            Media vhdMedia;
+            
+            try
+            {
+                vhdMedia = GetVhdMedia(path, name, false, byteSwap);
+            }
+            catch (Exception e)
+            {
+                return new Result<Media>(new Error($"Failed to open vhd media '{path}': {e}"));
+            }
+
+            activeMedias.Add(vhdMedia);
+            return new Result<Media>(vhdMedia);
         }
 
         private async Task<Media> GetFileMedia(string path, string name, bool writeable, ModifierEnum modifiers)
@@ -561,8 +576,18 @@ namespace Hst.Imager.Core.Commands
                 return Task.FromResult(new Result<Media>(fileMedia));
             }
 
-            var vhdMedia = GetVhdMedia(path, name, true, byteSwap);
-            this.activeMedias.Add(vhdMedia);
+            Media vhdMedia;
+            
+            try
+            {
+                vhdMedia = GetVhdMedia(path, name, true, byteSwap);
+            }
+            catch (Exception e)
+            {
+                return Task.FromResult(new Result<Media>(new Error($"Failed to open vhd media '{path}': {e}")));
+            }
+            
+            activeMedias.Add(vhdMedia);
             return Task.FromResult(new Result<Media>(vhdMedia));
         }
 
@@ -1000,7 +1025,7 @@ namespace Hst.Imager.Core.Commands
             return left == 0 ? value : value - left + size;
         }
 
-        public virtual Result<MediaResult> ResolveMedia(string path)
+        public virtual Result<MediaResult> ResolveMedia(string path, bool allowNonExisting = false)
         {
             logger.LogDebug($"Resolving path '{path}'");
 
@@ -1022,13 +1047,13 @@ namespace Hst.Imager.Core.Commands
                     path.Substring(diskPathMatch.Groups[1].Value.Length + diskPathMatch.Groups[2].Value.Length))
                 : path;
 
-            var directorySeparatorChar = Path.DirectorySeparatorChar.ToString();
+            var directorySeparatorChar = Path.DirectorySeparatorChar;
 
             for (var i = 0; i < path.Length; i++)
             {
                 if (path[i] == '\\' || path[i] == '/')
                 {
-                    directorySeparatorChar = path[i].ToString();
+                    directorySeparatorChar = path[i];
                     break;
                 }
             }
@@ -1038,7 +1063,7 @@ namespace Hst.Imager.Core.Commands
             if (physicalDrivePathMatch.Success)
             {
                 var physicalDriveMediaPath = physicalDrivePathMatch.Value;
-                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar,
+                var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar.ToString(),
                     physicalDriveMediaPath.Length, StringComparison.Ordinal);
 
                 var fileSystemPath = firstSeparatorIndex >= 0
@@ -1051,10 +1076,11 @@ namespace Hst.Imager.Core.Commands
 
                 return new Result<MediaResult>(new MediaResult
                 {
+                    Exists = true,
                     FullPath = path,
                     MediaPath = physicalDriveMediaPath,
                     FileSystemPath = fileSystemPath,
-                    DirectorySeparatorChar = directorySeparatorChar,
+                    DirectorySeparatorChar = directorySeparatorChar.ToString(),
                     Modifiers = modifiersResult.Modifiers,
                     ByteSwap = byteSwap
                 });
@@ -1067,7 +1093,7 @@ namespace Hst.Imager.Core.Commands
             var next = string.IsNullOrWhiteSpace(networkPath) ? 0 : networkPath.Length;
             do
             {
-                next = path.IndexOf(directorySeparatorChar, next + 1, StringComparison.OrdinalIgnoreCase);
+                next = path.IndexOf(directorySeparatorChar.ToString(), next + 1, StringComparison.OrdinalIgnoreCase);
                 var mediaPath = path.Substring(0, next == -1 ? path.Length : next);
 
                 if (File.Exists(mediaPath))
@@ -1081,10 +1107,11 @@ namespace Hst.Imager.Core.Commands
 
                     return new Result<MediaResult>(new MediaResult
                     {
+                        Exists = true,
                         FullPath = path,
                         MediaPath = mediaPath,
                         FileSystemPath = fileSystemPath,
-                        DirectorySeparatorChar = directorySeparatorChar,
+                        DirectorySeparatorChar = directorySeparatorChar.ToString(),
                         Modifiers = modifiersResult.Modifiers,
                         ByteSwap = byteSwap
                     });
@@ -1096,7 +1123,20 @@ namespace Hst.Imager.Core.Commands
                 }
             } while (next != -1);
 
-            return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
+            if (!Directory.Exists(path) && !allowNonExisting)
+            {
+                return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
+            }
+            
+            return new Result<MediaResult>(new MediaResult
+            {
+                FullPath = path,
+                MediaPath = path,
+                FileSystemPath = string.Empty,
+                DirectorySeparatorChar = directorySeparatorChar.ToString(),
+                Modifiers = modifiersResult.Modifiers,
+                ByteSwap = byteSwap
+            });
         }
         
         private static string GetNetworkPath(string path)

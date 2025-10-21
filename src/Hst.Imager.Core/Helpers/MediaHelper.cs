@@ -33,6 +33,7 @@ namespace Hst.Imager.Core.Helpers
         /// </summary>
         /// <param name="media">Media used to get pistorm rdb from.</param>
         /// <param name="fileSystemPath">File system path used to get pistorm rdb from.</param>
+        /// <param name="directorySeparatorChar"></param>
         /// <returns>PiStormRdb media result with PiStormRdb media, if master boot record partition type is 0x76. Otherwise media is returned.</returns>
         public static PiStormRdbMediaResult GetPiStormRdbMedia(Media media, string fileSystemPath,
             string directorySeparatorChar)

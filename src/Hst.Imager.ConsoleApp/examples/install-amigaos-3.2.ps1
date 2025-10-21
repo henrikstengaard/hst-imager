@@ -2,7 +2,8 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2024-11-10
+# Date:   2025-10-11
+#
 # A powershell script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
 #
@@ -56,6 +57,10 @@ $amigaOs32Files = @(
     @{
         'Filename' = 'DiskDoctor.adf';
         'Name' = 'AmigaOS 3.2 Disk Doctor'
+    },
+    @{
+        'Filename' = 'MMULibs.adf';
+        'Name' = 'AmigaOS 3.2 MMULibs'
     }
 )
 
@@ -70,6 +75,7 @@ $classesAdfPath = Join-Path $currentPath -ChildPath "Classes3.2.adf"
 $fontsAdfPath = Join-Path $currentPath -ChildPath "Fonts.adf"
 $storageAdfPath = Join-Path $currentPath -ChildPath "Storage3.2.adf"
 $diskDoctorAdfPath = Join-Path $currentPath -ChildPath "DiskDoctor.adf"
+$mmuLibsAdfPath = Join-Path $currentPath -ChildPath "MMULibs.adf"
 
 # show create image question dialog
 $createImage = QuestionDialog 'Create image' "Do you want to create a new image file?`r`n`r`nIf No then existing image file can be selected."
@@ -97,52 +103,45 @@ else
 # install
 # -------
 
-$installPath = Join-Path $currentPath -ChildPath 'temp\install'
-if (Test-Path $installPath)
-{
-    Remove-Item $installPath -Recurse
-}
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Env-Archive"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Env-Archive\Sys"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Env-Archive\Versions"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Presets"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Presets\Backdrops"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Prefs\Presets\Pointers"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Fonts"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Expansion"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\WBStartup"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale\Catalogs"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale\Languages"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale\Countries"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale\Help"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Classes"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Classes\Gadgets"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Classes\DataTypes"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Classes\Images"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Monitors"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\DataTypes"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\DOSDrivers"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Printers"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Keymaps"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage\DOSDrivers"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage\Printers"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage\Monitors"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage\Keymaps"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage\DataTypes"
 
-mkdir (Join-Path $installPath -ChildPath "Prefs") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Env-Archive") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Env-Archive/Sys") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Env-Archive/Versions") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Presets") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Presets/Backdrops") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Prefs/Presets/Pointers") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Fonts") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Expansion") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "WBStartup") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Locale") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Locale/Catalogs") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Locale/Languages") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Locale/Countries") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Locale/Help") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Classes") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Classes/Gadgets") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Classes/DataTypes") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Classes/Images") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs/Monitors") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs/DataTypes") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs/DOSDrivers") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs/Printers") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Devs/Keymaps") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage/DOSDrivers") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage/Printers") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage/Monitors") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage/Keymaps") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Storage/DataTypes") | Out-Null
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Libs"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Tools"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\System"
 
-mkdir (Join-Path $installPath -ChildPath "Libs") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "Tools") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "System") | Out-Null
-
-mkdir (Join-Path $installPath -ChildPath "L") | Out-Null
-mkdir (Join-Path $installPath -ChildPath "S") | Out-Null
-
-& $hstImagerPath fs copy $installPath "$imagePath\rdb\dh0" --recursive
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\C"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\L"
+& $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
 
 & $hstImagerPath fs extract "$installAdfPath\C" "$imagePath\rdb\dh0\C"
 
@@ -160,6 +159,7 @@ if (Test-Path $updatePath)
     Remove-Item $updatePath -Recurse
 }
 
+New-Item -Path $updatePath
 & $hstImagerPath fs extract "$installAdfPath\Update" "$updatePath"
 
 # copy fastfilesystem
@@ -175,8 +175,6 @@ if (Test-Path $updatePath)
 # extras
 # ------
 
-#Copy >NIL: "$amigaosdisk:~(Disk.info|S)" "SYSTEMDIR:" ALL CLONE
-#Copy >NIL: "$amigaosdisk:S/~(user-startup)" "SYSTEMDIR:S" ALL CLONE
 & $hstImagerPath fs extract "$extrasAdfPath\*.info" "$imagePath\rdb\dh0" --recursive false
 & $hstImagerPath fs extract "$extrasAdfPath\L" "$imagePath\rdb\dh0\L"
 & $hstImagerPath fs extract "$extrasAdfPath\Prefs" "$imagePath\rdb\dh0\Prefs"
@@ -190,7 +188,7 @@ if (Test-Path $sPath)
 }
 & $hstImagerPath fs extract "$extrasAdfPath\S" "$sPath"
 Remove-Item (Join-Path $sPath -ChildPath "User-startup") -Recurse
-
+    
 & $hstImagerPath fs copy "$sPath" "$imagePath\rdb\dh0\S"
 
 # classes
@@ -299,6 +297,14 @@ if (Test-Path $diskDoctorAdfPath)
 {
     & $hstImagerPath fs extract "$diskDoctorAdfPath\C\DAControl" "$imagePath\rdb\dh0\C"
     & $hstImagerPath fs extract "$diskDoctorAdfPath\Devs\trackfile.device" "$imagePath\rdb\dh0\Devs"
+}
+
+# copy files from mmulibs
+if (Test-Path $mmuLibsAdfPath)
+{
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\C" "$imagePath\rdb\dh0\C"
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\Libs" "$imagePath\rdb\dh0\Libs" --recursive
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\Locale" "$imagePath\rdb\dh0\Locale" --recursive
 }
 
 Write-Host "Done"

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -38,13 +40,18 @@ public class DirectoryEntryIterator : IEntryIterator
         var usePattern = !string.IsNullOrWhiteSpace(pattern);
         rootPathComponents = GetPathComponents(this.rootPath);
         pathComponentMatcher = new PathComponentMatcher(usePattern
-            ? rootPathComponents.Concat(new[] { pattern }).ToArray()
+            ? rootPathComponents.Concat([pattern]).ToArray()
             : rootPathComponents, recursive);
     }
 
+    public Media Media => null;
     public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
+                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
     public async Task<bool> Next()
     {
@@ -92,7 +99,7 @@ public class DirectoryEntryIterator : IEntryIterator
             .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
     }
 
-    public bool UsesPattern => this.pathComponentMatcher?.UsesPattern ?? false;
+    public bool UsesPattern => pathComponentMatcher.UsesPattern;
 
     public Task Flush()
     {
@@ -149,9 +156,9 @@ public class DirectoryEntryIterator : IEntryIterator
             {
                 UaePathComponents = uaePathComponents.ToArray(),
                 PathComponents = pathComponents.ToArray(),
-                Date = uaeMetadataNode != null ? uaeMetadataNode.Date : DateTime.Now,
-                ProtectionBits = uaeMetadataNode != null ? uaeMetadataNode.ProtectionBits : 0,
-                Comment = uaeMetadataNode != null ? uaeMetadataNode.Comment : string.Empty
+                Date = uaeMetadataNode?.Date,
+                ProtectionBits = uaeMetadataNode?.ProtectionBits,
+                Comment = uaeMetadataNode?.Comment
             };
 
             cache.Add(cacheKey, cacheEntry, cacheExpiration);
@@ -181,9 +188,16 @@ public class DirectoryEntryIterator : IEntryIterator
                 if (uaeMetadataEntry != null)
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
-                    date = uaeMetadataEntry.Date;
-                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
-                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    if (uaeMetadataEntry.Comment != null)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    }
+
+                    if (uaeMetadataEntry.ProtectionBits.HasValue)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    }
                 }
             }
 
@@ -231,9 +245,17 @@ public class DirectoryEntryIterator : IEntryIterator
                 if (uaeMetadataEntry != null)
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents;
-                    date = uaeMetadataEntry.Date;
-                    properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
-                    properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    if (uaeMetadataEntry.Comment != null)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                    }
+
+                    if (uaeMetadataEntry.ProtectionBits.HasValue)
+                    {
+                        properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                    }
+
                 }
             }
 

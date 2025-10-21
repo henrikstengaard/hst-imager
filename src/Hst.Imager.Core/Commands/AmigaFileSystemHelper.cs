@@ -40,7 +40,8 @@ namespace Hst.Imager.Core.Commands
                 ? diskMedia.Disk.Content
                 : media.Stream;
 
-            var fileSystems = await GetFileSystemsFromMedia(mediaPath, mediaStream, fileSystemName);
+            var fileSystems = await GetFileSystemsFromMedia(media, mediaPath, mediaStream,
+                fileSystemName);
 
             var fileSystemWithHighestVersion = fileSystems.OrderDescending(new FileSystemVersionComparer())
                 .FirstOrDefault();
@@ -53,8 +54,8 @@ namespace Hst.Imager.Core.Commands
             return new Result<Tuple<string, byte[]>>(fileSystemWithHighestVersion);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> GetFileSystemsFromMedia(string mediaPath,
-            Stream mediaStream, string fileSystemName)
+        private static async Task<IEnumerable<Tuple<string, byte[]>>> GetFileSystemsFromMedia(Media media,
+            string mediaPath, Stream mediaStream, string fileSystemName)
         {
             // read first 100kb from media
             var firstBytes = await mediaStream.ReadBytes((int)(mediaStream.Length > 100.KB()
@@ -72,7 +73,7 @@ namespace Hst.Imager.Core.Commands
             // read file systems from adf, if media has adf magic number
             if (MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, firstBytes, 0))
             {
-                return await FindFileSystemsInAdf(mediaStream, fileSystemName);
+                return await FindFileSystemsInAdf(media, mediaStream, fileSystemName);
             }
 
             // read file systems from lha, if media has lha magic number
@@ -86,7 +87,7 @@ namespace Hst.Imager.Core.Commands
                 MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, firstBytes, 0x8801) ||
                 MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, firstBytes, 0x9001))
             {
-                return await FindFileSystemsInIso(mediaStream, fileSystemName);
+                return await FindFileSystemsInIso(media, mediaStream, fileSystemName);
             }
 
             // read file systems from rigid disk block, if media has rdb magic number
@@ -115,7 +116,7 @@ namespace Hst.Imager.Core.Commands
             ]);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInIso(Stream stream,
+        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInIso(Media media, Stream stream,
             string fileSystemName)
         {
             var cdReader = new CDReader(stream, true);
@@ -135,7 +136,7 @@ namespace Hst.Imager.Core.Commands
 
                 var adfStream = await iso9660Iterator.OpenEntry(entry);
 
-                fileSystems.AddRange(await FindFileSystemsInAdf(adfStream, fileSystemName));
+                fileSystems.AddRange(await FindFileSystemsInAdf(media, adfStream, fileSystemName));
             }
 
             return fileSystems;
@@ -150,12 +151,12 @@ namespace Hst.Imager.Core.Commands
             return await FindFileSystemsInEntryIterator(lhaEntryIterator, fileSystemName);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInAdf(Stream stream,
+        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInAdf(Media media, Stream stream,
             string fileSystemName)
         {
             var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
 
-            var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(stream, string.Empty, fastFileSystemVolume, true);
+            var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(media, stream, string.Empty, fastFileSystemVolume, true);
 
             return await FindFileSystemsInEntryIterator(amigaVolumeEntryIterator, fileSystemName);
         }

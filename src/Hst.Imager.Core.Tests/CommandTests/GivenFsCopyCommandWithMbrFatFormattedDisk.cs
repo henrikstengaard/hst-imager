@@ -35,6 +35,9 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
             await CreateMbrFatFormattedDisk(testCommandHelper, srcPath, 10.MB());
             await CreateDirectoriesAndFiles(testCommandHelper, srcPath);
 
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
@@ -145,6 +148,9 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
             testCommandHelper.AddTestMedia(destPath, 10.MB());
             await CreateMbrFatFormattedDisk(testCommandHelper, destPath, 4.GB());
 
+            // arrange - create destination directories
+            await TestHelper.CreateMbrFatDirectory(testCommandHelper, destPath, ["dest"]);
+
             // arrange - create fs copy command
             var cancellationTokenSource = new CancellationTokenSource();
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -234,6 +240,9 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
             // arrange - destination mbr fat formatted disk
             testCommandHelper.AddTestMedia(destPath, 10.MB());
             await CreateMbrFatFormattedDisk(testCommandHelper, destPath, 4.GB());
+            
+            // arrange - create destination directories
+            await TestHelper.CreateMbrFatDirectory(testCommandHelper, destPath, ["dir1", "dir2"]);
 
             // arrange - create fs copy command
             var cancellationTokenSource = new CancellationTokenSource();

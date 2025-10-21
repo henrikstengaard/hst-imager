@@ -55,9 +55,10 @@ Hst Imager Console version comes with following additional features:
 - File system:
   - Supports local files and directories, image files, physical drives, ISO9660 .iso, Zip archive .zip, Lha archive .lha or Amiga Disk File .adf as source.
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
-  - List files and subdirectories in a file system.
-  - Copy files from source to destination file system.
-  - Extract files from source to destination file system.
+  - List directories and files in a file system.
+  - Copy directories and files from source to destination file system.
+  - Extract directories and files from source to destination file system.
+  - Create a directory in a file system.
 - Amiga Disk File:
   - Create ADF disk image file.
 - Master Boot Record:
