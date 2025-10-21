@@ -43,12 +43,15 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             Assert.True(result.IsSuccess);
 
             // assert - files are copied to dest path
-            var expectedFiles = new[]
+            var expectedFiles = new List<string>
             {
                 Path.Combine(destPath, string.Concat(OperatingSystem.IsWindows() ? "__uae___" : string.Empty, "AUX")),
-                Path.Combine(destPath, "AUX.info")
-            }.Concat(OperatingSystem.IsWindows()
-                ? [Path.Combine(destPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName)] : []);
+            };
+            if (OperatingSystem.IsWindows())
+            {
+                expectedFiles.Add(Path.Combine(destPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName));
+            }
+            expectedFiles.Add(Path.Combine(destPath, "AUX.info"));
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
             Array.Sort(actualFiles);
             Assert.Equal(expectedFiles, actualFiles);
