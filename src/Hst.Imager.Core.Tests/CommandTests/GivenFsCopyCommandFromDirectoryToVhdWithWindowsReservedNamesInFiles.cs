@@ -42,21 +42,16 @@ public class GivenFsCopyCommandFromDirectoryToVhdWithWindowsReservedNamesInFiles
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
-            // arrange - get files in destination directory
-            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
-
-            // assert - 3 files are copied
-            Assert.Equal(3, files.Length);
-
-            var auxFile = Path.Combine(destPath, string.Concat("__uae___", "AUX")); 
-            Assert.Equal(auxFile,
-                files.FirstOrDefault(x => x.Equals(auxFile, StringComparison.OrdinalIgnoreCase)));
-            var auxInfoFile = Path.Combine(destPath, "AUX.info");
-            Assert.Equal(auxInfoFile,
-                files.FirstOrDefault(x => x.Equals(auxInfoFile, StringComparison.OrdinalIgnoreCase)));
-            var uaeFsDbFile = Path.Combine(destPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
-            Assert.Equal(uaeFsDbFile,
-                files.FirstOrDefault(x => x.Equals(uaeFsDbFile, StringComparison.OrdinalIgnoreCase)));
+            // assert - files are copied to dest path
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, string.Concat(OperatingSystem.IsWindows() ? "__uae___" : string.Empty, "AUX")),
+                Path.Combine(destPath, "AUX.info")
+            }.Concat(OperatingSystem.IsWindows()
+                ? [Path.Combine(destPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName)] : []);
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(actualFiles);
+            Assert.Equal(expectedFiles, actualFiles);
         }
         finally
         {

@@ -42,7 +42,7 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
             ? CreateNormalEntryPath(entry, entryPathComponents)
             : await CreateUaeEntryPath(entry, entryPathComponents);
 
-    private static string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
+    private string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
     {
         // has windows drive letter first, if entry has more than 1 entry path component (a directory is present)
         // and first entry path component is a valid Windows drive letter (like c:).
@@ -55,7 +55,9 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
             ? new List<string>{entryPathComponents[0]}.Concat(entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename))
             : entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename);
         
-        return Path.Combine(entryPathComponentsNormalised.ToArray());
+        return string.Concat(
+            Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
+            Path.Combine(entryPathComponentsNormalised.ToArray()));
     }
     
     private async Task<string> CreateUaeEntryPath(Entry entry, string[] entryPathComponents)
@@ -74,7 +76,7 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
             return uaeCacheEntry.UaeEntryPath;
         }
 
-        var uaeEntryPath = string.Empty;
+        var uaeEntryPath = Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty;
 
         var uaeEntryPathComponents = new List<string>();
         
@@ -151,7 +153,9 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
 
         for (var i = 0; i < rootPathComponents.Length; i++)
         {
-            var dirPath = Path.Combine(rootPathComponents.Take(i + 1).ToArray());
+            var dirPath = string.Concat(
+                Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
+                Path.Combine(rootPathComponents.Take(i + 1).ToArray()));
             
             var dirExists = Directory.Exists(dirPath);
             var fileExists = File.Exists(dirPath);

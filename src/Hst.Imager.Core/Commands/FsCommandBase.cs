@@ -542,6 +542,11 @@ public abstract partial class FsCommandBase : CommandBase
             return await GetDirectoryEntryWriter(destPath, createDestDirectory);
         }
 
+        if (Directory.Exists(destPath))
+        {
+            return await GetDirectoryEntryWriter(destPath, createDestDirectory);
+        }
+
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
 

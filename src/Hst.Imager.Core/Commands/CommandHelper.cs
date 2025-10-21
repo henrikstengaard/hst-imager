@@ -1123,7 +1123,7 @@ namespace Hst.Imager.Core.Commands
                 }
             } while (next != -1);
 
-            if (!allowNonExisting)
+            if (!Directory.Exists(path) && !allowNonExisting)
             {
                 return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
             }

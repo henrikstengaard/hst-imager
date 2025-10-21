@@ -60,4 +60,56 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             DeletePaths(path);
         }
     }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_InitializedWithOnePathComponentNotExisting_Then_DirectoryEntryWriterIsInitialized(bool fullPath)
+    {
+        // arrange - path for directory entry writer
+        var path = Guid.NewGuid().ToString();
+        
+        try
+        {
+            // arrange - create directory entry writer
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false);
+
+            // act - initialize the writer
+            var initializeResult = await writer.Initialize();
+
+            // assert - directory entry writer is initialized
+            Assert.True(initializeResult.IsSuccess);
+        }
+        finally
+        {
+            DeletePaths(path);
+        }
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task When_InitializedWithTwoPathComponentsNotExisting_Then_ErrorIsReturned(bool fullPath)
+    {
+        // arrange - path for directory entry writer
+        var path = Path.Combine(Guid.NewGuid().ToString(), "dir");
+        
+        try
+        {
+            // arrange - create directory entry writer
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false);
+
+            // act - initialize the writer
+            var initializeResult = await writer.Initialize();
+
+            // assert - directory entry writer returns error
+            Assert.True(initializeResult.IsFaulted);
+            Assert.False(initializeResult.IsSuccess);
+            Assert.IsType<PathNotFoundError>(initializeResult.Error);
+        }
+        finally
+        {
+            DeletePaths(path);
+        }
+    }
 }
