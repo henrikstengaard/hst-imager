@@ -43,6 +43,7 @@ namespace Hst.Imager.GuiApp.Controllers
                 Size = request.Size,
                 MaxPartitionSize = request.MaxPartitionSize,
                 UseExperimental = request.UseExperimental,
+                Kickstart31 = request.Kickstart31,
                 Byteswap = request.Byteswap
             };
             

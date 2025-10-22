@@ -170,6 +170,7 @@ export default function Format() {
     const [fileSystem, setFileSystem] = React.useState('fat32')
     const [fileSystemOptions, setFileSystemOptions] = React.useState(basicFileSystemOptions)
     const [useExperimental, setUseExperimental] = React.useState(false);
+    const [kickstart31, setKickstart31] = React.useState(false);
     const [maxPartitionSize, setMaxPartitionSize] = React.useState(pfs3MaxPartitionSizeOptions[0].value)
     const [maxPartitionSizeOptions, setMaxPartitionSizeOptions] = React.useState(pfs3MaxPartitionSizeOptions)
     const [downloadPfs3Aio, setDownloadPfs3Aio] = React.useState(true);
@@ -289,6 +290,7 @@ export default function Format() {
             size: (size * unitOption.size),
             maxPartitionSize,
             useExperimental,
+            kickstart31,
             byteswap
         });
     }
@@ -319,6 +321,7 @@ export default function Format() {
         setDownloadPfs3Aio(true)
         setMaxPartitionSize(pfs3MaxPartitionSizeOptions[0].value)
         setMaxPartitionSizeOptions(pfs3MaxPartitionSizeOptions)
+        setKickstart31(false)
         setFileSystemPath(pfs3AioUrl)
     }
 
@@ -476,6 +479,7 @@ export default function Format() {
                                     setDownloadPfs3Aio(true)
                                     setFileSystemPath(pfs3AioUrl)
                                     handleChangeMaxPartitionOptions(rdbFileSystemOptions[0].value, useExperimental);
+                                    setKickstart31(false);
                                     break;
                                 default:
                                     setFileSystemOptions([])
@@ -608,10 +612,10 @@ export default function Format() {
                             <React.Fragment>
                                 {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
                                     <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>
-                                        <Grid item xs={12} lg={6}>
+                                        <Grid item xs={12} lg={12}>
                                             <CheckboxField
                                                 id="use-experimental"
-                                                label="Use experimental partition sizes"
+                                                label="Use PFS3 experimental partition sizes"
                                                 value={useExperimental}
                                                 onChange={async (checked) => {
                                                     setUseExperimental(checked);
@@ -619,11 +623,23 @@ export default function Format() {
                                                 }}
                                             />
                                             <Alert severity="warning">
-                                                Using experimental partition sizes might cause data loss and/or corruption.
+                                                Using PFS3 experimental partition sizes might cause data loss and/or corruption.
                                             </Alert>
                                         </Grid>
                                     </Grid>
                                 )}
+                                <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>
+                                    <Grid item xs={12} lg={12}>
+                                        <CheckboxField
+                                            id="kickstart-31"
+                                            label="Create Workbench partition size for Kickstart v3.1 or lower within first 4GB."
+                                            value={kickstart31}
+                                            onChange={async (checked) => {
+                                                setKickstart31(checked);
+                                            }}
+                                        />
+                                    </Grid>
+                                </Grid>
                                 <Grid container spacing={1} direction="row" alignItems="center" sx={{ mt: 0 }}>
                                     <Grid item xs={12} lg={12}>
                                         <SelectField

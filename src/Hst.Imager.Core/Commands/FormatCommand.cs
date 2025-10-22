@@ -31,6 +31,7 @@ namespace Hst.Imager.Core.Commands
         private readonly Size size;
         private readonly Size maxPartitionSize;
         private readonly bool useExperimental;
+        private readonly bool kickstart31;
 
         private int commandsExecuted;
         private int maxCommandsToExecute;
@@ -46,7 +47,7 @@ namespace Hst.Imager.Core.Commands
         public event EventHandler<DataProcessedEventArgs> DataProcessed;
 
         /// <summary>
-        /// 
+        /// Format command.
         /// </summary>
         /// <param name="logger"></param>
         /// <param name="loggerFactory"></param>
@@ -60,9 +61,11 @@ namespace Hst.Imager.Core.Commands
         /// <param name="size"></param>
         /// <param name="maxPartitionSize">Max partition size for RDB and PiStorm.</param>
         /// <param name="useExperimental">Confirm using PFS3 experimental partition size.</param>
+        /// <param name="kickstart31">Create Workbench partition size for Kickstart v3.1 or lower.</param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string outputPath, Size size, Size maxPartitionSize, bool useExperimental)
+            string fileSystemPath, string outputPath, Size size, Size maxPartitionSize, bool useExperimental,
+            bool kickstart31)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -78,6 +81,7 @@ namespace Hst.Imager.Core.Commands
             this.useExperimental = useExperimental;
             this.commandsExecuted = 0;
             this.maxCommandsToExecute = 0;
+            this.kickstart31 = kickstart31;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -464,8 +468,8 @@ namespace Hst.Imager.Core.Commands
                 ? null
                 : VersionStringReader.Parse(versionString);
 
-            var maxWorkbenchPartitionSize = WorkbenchPartitionSize;
             var maxWorkPartitionSize = Convert.ToInt64(maxPartitionSize.Value == 0 ? maxRdbDiskSize : maxPartitionSize.Value);
+            var maxWorkbenchPartitionSize = kickstart31 ? WorkbenchPartitionSize : maxWorkPartitionSize;
             
             // change dos type to dos3, if fast file system doesn't support dos7 (version 46.13 or higher)
             if (amigaVersion != null &&
@@ -485,8 +489,8 @@ namespace Hst.Imager.Core.Commands
             {
                 OnInformationMessage($"File system '{fileSystemPath}' with v{amigaVersion.Version}.{amigaVersion.Revision} doesn't support partitions larger than 2GB. Max partition size is changed to 2GB, use FastFileSystem from AmigaOS 3.1.4 or newer for larger partitions!");
 
-                maxWorkbenchPartitionSize = 500.MB();
                 maxWorkPartitionSize = 2.GB();
+                maxWorkbenchPartitionSize = kickstart31 ? 500.MB() : maxWorkPartitionSize;
             }
 
             // change max work partition size to pfs3 max partition size limit,

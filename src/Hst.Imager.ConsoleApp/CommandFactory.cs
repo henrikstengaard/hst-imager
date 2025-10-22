@@ -241,7 +241,11 @@ namespace Hst.Imager.ConsoleApp
 
             var useExperimentalOption = new Option<bool>(
                 ["--use-experimental"],
-                description: "Use experimental partition sizes.");
+                description: "Use PFS3 experimental partition sizes.");
+
+            var kickstart31Option = new Option<bool>(
+                ["--kickstart31"],
+                description: "Create Workbench partition size for Kickstart v3.1 or lower within first 4GB.");
             
             var command = new Command("format", "Format physical drive or image file.");
             command.AddArgument(pathArgument);
@@ -251,8 +255,10 @@ namespace Hst.Imager.ConsoleApp
             command.AddOption(sizeOption);
             command.AddOption(maxPartitionSizeOption);
             command.AddOption(useExperimentalOption);
+            command.AddOption(kickstart31Option);
             command.SetHandler(CommandHandler.Format, pathArgument, partitionTableArgument, fileSystemArgument,
-                fileSystemPathOption, sizeOption, maxPartitionSizeOption, useExperimentalOption);
+                fileSystemPathOption, sizeOption, maxPartitionSizeOption, useExperimentalOption,
+                kickstart31Option);
 
             return command;
         }

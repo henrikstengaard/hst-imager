@@ -54,7 +54,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     appState.AppDataPath,
                     new Size(formatBackgroundTask.Size, Unit.Bytes),
                     new Size(formatBackgroundTask.MaxPartitionSize, Unit.Bytes),
-                    formatBackgroundTask.UseExperimental);
+                    formatBackgroundTask.UseExperimental,
+                    formatBackgroundTask.Kickstart31);
                 formatCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress

@@ -252,7 +252,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 // arrange - create format command
                 var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
                     testCommandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
-                    fileSystemPath, outputPath, new Models.Size(), new Models.Size(), false);
+                    fileSystemPath, outputPath, new Models.Size(), new Models.Size(), false, false);
 
                 // act - execute format command
                 var formatResult = await formatCommand.Execute(CancellationToken.None);

@@ -337,14 +337,16 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task Format(string path, FormatType formatType, string fileSystem,
-            string fileSystemPath, string size, string maxPartitionSize, bool useExperimental)
+            string fileSystemPath, string size, string maxPartitionSize, bool useExperimental,
+            bool kickstart31)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new FormatCommand(GetLogger<FormatCommand>(), 
                 ServiceProvider.GetService<ILoggerFactory>(),
                 commandHelper, await GetPhysicalDrives(), path,
                 formatType, fileSystem, fileSystemPath,
-                AppState.Instance.AppPath, ParseSize(size), ParseSize(maxPartitionSize), useExperimental));
+                AppState.Instance.AppPath, ParseSize(size), ParseSize(maxPartitionSize), useExperimental,
+                kickstart31));
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)
