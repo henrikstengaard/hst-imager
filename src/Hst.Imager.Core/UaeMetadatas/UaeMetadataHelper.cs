@@ -320,7 +320,7 @@ public static class UaeMetadataHelper
 
         var uaeMetafileBytes = UaeMetafileWriter.Build(uaeMetafile);
 
-        var uaeMetafilePath = Path.Combine(dirPath, string.Concat(Path.GetFileNameWithoutExtension(normalName),
+        var uaeMetafilePath = Path.Combine(dirPath, string.Concat(normalName,
             Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension));
 
         await File.WriteAllBytesAsync(uaeMetafilePath, uaeMetafileBytes);

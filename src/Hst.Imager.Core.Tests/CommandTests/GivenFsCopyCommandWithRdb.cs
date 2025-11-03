@@ -1069,6 +1069,146 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
     }
 
+    [Fact]
+    public async Task When_Copying2FilesWithProtectionBitsUsingUaeFsDb_Then_FilesAreCopiedAndUaeFsDbIsCreated()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.img";
+        var destPath = $"{Guid.NewGuid()}-local";
+        var srcCopyPath = Path.Combine(srcPath, "rdb", "1");
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+        
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create src media
+            await testCommandHelper.AddTestMedia(srcPath);
+            await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+            
+            // arrange - create dest local directory
+            Directory.CreateDirectory(destPath);
+            
+            // create src files
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(srcPath);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            using (var pfs3Volume = await MountPfs3Volume(stream))
+            {
+                await pfs3Volume.CreateFile("locale");
+                await pfs3Volume.CreateFile("locale.info");
+                await pfs3Volume.SetProtectionBits("locale", ProtectionBits.Pure);
+                await pfs3Volume.SetProtectionBits("locale.info", ProtectionBits.Pure);
+            }
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcCopyPath, destPath, true, false, true, uaeMetadata: uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - fs copy command executed successfully
+            Assert.True(result.IsSuccess);
+            
+            // assert - dest dir contains files
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(files);
+            Assert.Equal([
+                Path.Combine(destPath, "_UAEFSDB.___"),
+                Path.Combine(destPath, "locale"),
+                Path.Combine(destPath, "locale.info")
+            ], files);
+
+            // assert - uaefsdb in dir 1 contains files
+            var uaeFsDbPath = Path.Combine(destPath, "_UAEFSDB.___");
+            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            Assert.Equal(2, uaeFsDbNodes.Count);
+            var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
+            var normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
+            Assert.Equal(new[] { "locale", "locale.info" }, amigaNames);
+            Assert.Equal(new[] { "locale", "locale.info" }, normalNames);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_Copying2FilesWithProtectionBitsUsingUaeMetafile_Then_FilesAreCopiedAndUaeMetafilesAreCreated()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.img";
+        var destPath = $"{Guid.NewGuid()}-local";
+        var srcCopyPath = Path.Combine(srcPath, "rdb", "1");
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeMetafile;
+        
+        try
+        {
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create src media
+            await testCommandHelper.AddTestMedia(srcPath);
+            await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+            
+            // arrange - create dest local directory
+            Directory.CreateDirectory(destPath);
+            
+            // create src files
+            var mediaResult = await testCommandHelper.GetWritableFileMedia(srcPath);
+            if (mediaResult.IsFaulted)
+            {
+                throw new IOException(mediaResult.Error.ToString());
+            }
+
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+            using (var pfs3Volume = await MountPfs3Volume(stream))
+            {
+                await pfs3Volume.CreateFile("locale");
+                await pfs3Volume.CreateFile("locale.info");
+                await pfs3Volume.SetProtectionBits("locale", ProtectionBits.Pure);
+                await pfs3Volume.SetProtectionBits("locale.info", ProtectionBits.Pure);
+            }
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcCopyPath, destPath, true, false, true, uaeMetadata: uaeMetadata);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - fs copy command executed successfully
+            Assert.True(result.IsSuccess);
+            
+            // assert - dest dir contains files
+            var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(files);
+            Assert.Equal([
+                Path.Combine(destPath, "locale"),
+                Path.Combine(destPath, "locale.info"),
+                Path.Combine(destPath, "locale.info.uaem"),
+                Path.Combine(destPath, "locale.uaem"),
+            ], files);
+        }
+        finally
+        {
+            DeletePaths(destPath);
+        }
+    }
+
     private static async Task<IEnumerable<UaeFsDbNode>> ReadUaeFsDbNodes(string uaeFsDbPath)
     {
         var uaeFsDbBytes = await File.ReadAllBytesAsync(uaeFsDbPath);
