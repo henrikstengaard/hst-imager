@@ -554,51 +554,20 @@ namespace Hst.Imager.Core.Tests
                 System.IO.Directory.CreateDirectory(path);
             }
         }
+        
+        public static async Task<byte[]> ReadMediaBytes(ICommandHelper commandHelper, string path, long? size = null)
+        {
+            var mediaResult = await commandHelper.GetReadableFileMedia(path);
+            using var media = mediaResult.Value;
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            stream.Position = 0;
+            var readSize = size ?? media.Size;
+            var bytes = new byte[readSize];
+            var bytesRead = await stream.ReadAsync(bytes, 0, bytes.Length);
 
-        // public static async Task<IEnumerable<Amiga.FileSystems.Entry>> GetEntriesFromAmigaVolume(TestCommandHelper testCommandHelper, string mediaPath,
-        //     int partitionNumber, string[] dirPathComponents)
-        // {
-        //     var mediaResult = await testCommandHelper.GetReadableFileMedia(mediaPath);
-        //     if (mediaResult.IsFaulted)
-        //     {
-        //         throw new IOException(mediaResult.Error.ToString());
-        //     }
-        //     
-        //     using var media = mediaResult.Value;
-        //     
-        //     var rigidDiskBlock = await RigidDiskBlockReader.Read(media.Stream);
-        //
-        //     if (rigidDiskBlock == null)
-        //     {
-        //         throw new IOException($"Media '{mediaPath}' is not a valid Amiga Rigid Disk Block (RDB) disk.");
-        //     }
-        //     
-        //     var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
-        //     
-        //     if (partitionNumber < 0 || partitionNumber >= partitionBlocks.Count)
-        //     {
-        //         throw new ArgumentOutOfRangeException(nameof(partitionNumber), 
-        //             $"Partition number {partitionNumber} is out of range. Available partitions: {partitionBlocks.Count}");
-        //     }
-        //     
-        //     var partitionBlock = partitionBlocks[partitionNumber];
-        //     
-        //     var fileSystemVolume = await MountAmigaFileSystemVolume(mediaResult.Value.Stream, partitionBlock);
-        //
-        //     foreach (var dirPathComponent in dirPathComponents)
-        //     {
-        //         await fileSystemVolume.ChangeDirectory(dirPathComponent);
-        //     }
-        //
-        //     return await fileSystemVolume.ListEntries();
-        // }
-        //
-        // private static async Task<IFileSystemVolume> MountAmigaFileSystemVolume(Stream stream, PartitionBlock partitionBlock) =>
-        //     partitionBlock.DosTypeFormatted.ToLowerInvariant() switch
-        //     {
-        //         "pds\\3" or "pfs\\3" => await Pfs3Volume.Mount(stream, partitionBlock),
-        //         "dos\\3" or "dos\\7" => await FastFileSystemVolume.MountPartition(stream, partitionBlock),
-        //         _ => throw new IOException($"Unsupported dos type '{partitionBlock.DosTypeFormatted}'")
-        //     };
+            return readSize != bytesRead
+                ? throw new IOException($"Failed to read {readSize} bytes from {path}, instead read {bytesRead} bytes")
+                : bytes;
+        }
     }
 }

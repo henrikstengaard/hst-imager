@@ -2,7 +2,7 @@
 {
     using System.ComponentModel.DataAnnotations;
 
-    public class ConvertRequest
+    public class TransferRequest
     {
         [Required]
         public string Title { get; set; }
@@ -12,6 +12,10 @@
         
         [Required]
         public string DestinationPath { get; set; }
+        public long SrcStartOffset { get; set; }
+        public long DestStartOffset { get; set; }
+        public long Size { get; set; }
+
         public bool Byteswap { get; set; }
     }
 }

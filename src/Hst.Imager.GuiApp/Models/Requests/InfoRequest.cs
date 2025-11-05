@@ -8,5 +8,7 @@
         public string Path { get; set; }
 
         public bool Byteswap { get; set; }
+        
+        public bool AllowNonExisting { get; set; }
     }
 }

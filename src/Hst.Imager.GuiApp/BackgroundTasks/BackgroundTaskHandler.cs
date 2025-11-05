@@ -88,8 +88,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     return JsonSerializer.Deserialize<WriteBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(CompareBackgroundTask):
                     return JsonSerializer.Deserialize<CompareBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
-                case nameof(ConvertBackgroundTask):
-                    return JsonSerializer.Deserialize<ConvertBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
+                case nameof(TransferBackgroundTask):
+                    return JsonSerializer.Deserialize<TransferBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(BlankBackgroundTask):
                     return JsonSerializer.Deserialize<BlankBackgroundTask>(backgroundTask.Payload, JsonSerializerOptions);
                 case nameof(OptimizeBackgroundTask):

@@ -273,7 +273,7 @@ export default function Verify() {
             />
             <Title
                 text="Compare"
-                description="Compare an image file and a physical disk byte by byte."
+                description="Compare image files and physical disks byte by byte."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>

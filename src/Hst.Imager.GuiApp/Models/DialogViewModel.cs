@@ -13,6 +13,8 @@
         public string Title { get; set; }
         
         public string Path { get; set; }
+        
+        public bool PromptCreate { get; set; }
 
         public IEnumerable<FileFilterViewModel> FileFilters { get; set; }
 

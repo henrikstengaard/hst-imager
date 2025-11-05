@@ -109,23 +109,23 @@ Example of comparing 4GB vhd image file and 4GB img image file:
 hst.imager compare 4gb.vhd 4gb.img
 ```
 
-## Convert an image file
+## Transfer from one image file to another
 
-Converts an image file from one format to another.
+Transfer an image file from one format to another.
 
-Example of displaying usage for converting an image file:
+Example of displaying usage for transfer:
 ```
-hst.imager convert
-```
-
-Example of converting 4GB img image file to vhd image file:
-```
-hst.imager convert 4gb.img 4gb.vhd
+hst.imager transfer
 ```
 
-Example of converting 4GB vhd image file to img image file:
+Example of transfer converting 4GB img image file to vhd image file:
 ```
-hst.imager convert 4gb.vhd 4gb.img
+hst.imager transfer 4gb.img 4gb.vhd
+```
+
+Example of transfer converting 4GB vhd image file to img image file:
+```
+hst.imager transfer 4gb.vhd 4gb.img
 ```
 
 ## Create a blank image file

@@ -36,7 +36,8 @@ namespace Hst.Imager.GuiApp.Controllers
             var infoBackgroundTask = new InfoBackgroundTask
             {
                 Path = request.Path,
-                Byteswap = request.Byteswap
+                Byteswap = request.Byteswap,
+                AllowNonExisting = request.AllowNonExisting
             };
 
             var hasPhysicalDrivePaths = PhysicalDriveHelper.HasPhysicalDrivePaths(request.Path);

@@ -17,7 +17,8 @@ export default function BrowseOpenDialog(props) {
             name: 'All files',
             extensions: ['*']
         }],
-        onChange
+        onChange,
+        promptCreate = false
     } = props
 
     const [connection, setConnection] = React.useState(null);
@@ -62,7 +63,7 @@ export default function BrowseOpenDialog(props) {
     }, [backendBaseUrl, connection, id, onChange, setConnection])
     
     const handleBrowseClick = async () => {
-        appState.hostIpc.showOpenDialog({ id, title, filters: fileFilters })
+        appState.hostIpc.showOpenDialog({ id, title, filters: fileFilters, promptCreate })
     }
 
     return (

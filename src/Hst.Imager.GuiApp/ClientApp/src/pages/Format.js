@@ -358,7 +358,7 @@ export default function Format() {
             />
             <Title
                 text="Format"
-                description="Format an image file or a physical disk."
+                description="Format a physical disk or an image file."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>

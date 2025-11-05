@@ -13,6 +13,7 @@
         public string Title { get; set; }
         public string Path { get; set; }
         public IEnumerable<FileFilter> FileFilters { get; set; }
+        public bool PromptCreate { get; set; }
 
         public ShowDialogBackgroundTask()
         {

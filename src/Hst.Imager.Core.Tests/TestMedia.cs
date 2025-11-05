@@ -9,14 +9,13 @@ public class TestMedia
 {
     public readonly string Path;
     public readonly string Name;
-    public long Size { get; private set; }
+    public long Size => Stream.Length;
     public readonly BlockMemoryStream Stream;
 
     public TestMedia(string path, string name, long size)
     {
         Path = path;
         Name = name;
-        Size = size;
         Stream = new BlockMemoryStream();
         Stream.SetLength(size);
     }

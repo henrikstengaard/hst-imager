@@ -46,7 +46,7 @@ Hst Imager Gui comes with following features:
 - Read disk to image file (supports writing to .zip, .gz, compressed image files).
 - Write image file to physical drive (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Compare physical drive and image file.
-- Convert image file between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
+- Transfer from one image file to another. This includes converting, importing and exporting from one image file to another and between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
 - Format physical drive or image file with Master Boot Record, Guid Partition Table or Rigid Disk Block partition table, add partitions and format them.

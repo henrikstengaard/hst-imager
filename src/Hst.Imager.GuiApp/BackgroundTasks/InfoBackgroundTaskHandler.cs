@@ -40,7 +40,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 
                 using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
                 var infoCommand = new InfoCommand(loggerFactory.CreateLogger<InfoCommand>(), commandHelper, physicalDrives,
-                    string.Concat(infoBackgroundTask.Byteswap ? "+bs:" : string.Empty, infoBackgroundTask.Path));
+                    string.Concat(infoBackgroundTask.Byteswap ? "+bs:" : string.Empty, infoBackgroundTask.Path),
+                        infoBackgroundTask.AllowNonExisting);
 
                 infoCommand.DiskInfoRead += (_, args) =>
                 {

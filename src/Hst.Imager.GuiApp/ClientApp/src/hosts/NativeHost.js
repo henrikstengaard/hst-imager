@@ -5,7 +5,7 @@ export class NativeHost {
         this.backendBaseUrl = backendBaseUrl;
     }
 
-    async showOpenDialog({id, title, filters}) {
+    async showOpenDialog({id, title, filters, promptCreate}) {
         const response = await fetch(`${this.backendBaseUrl}api/show-open-dialog`, {
             method: 'POST',
             headers: {
@@ -15,7 +15,8 @@ export class NativeHost {
             body: JSON.stringify({
                 id,
                 title,
-                fileFilters: filters
+                fileFilters: filters,
+                promptCreate
             })
         });
 

@@ -19,12 +19,12 @@ export default function Start() {
 
     const actions = [{
         title: 'Read',
-        description: 'Read an image file, a physical disk or part of to an image file.',
+        description: 'Read a physical disk or part of to an image file.',
         url: '/read',
         icon: 'upload'
     },{
         title: 'Write',
-        description: 'Write an image file or part of to an image file or a physical disk.',
+        description: 'Write an image file or part of to a physical disk.',
         url: '/write',
         icon: 'download'
     },{
@@ -33,13 +33,13 @@ export default function Start() {
         url: '/info',
         icon: 'info'
     },{
-        title: 'Convert',
-        description: 'Convert an image file from one format to another.',
-        url: '/convert',
+        title: 'Transfer',
+        description: 'Transfer converts, imports or exports from an image file or part of to another.',
+        url: '/transfer',
         icon: 'exchange-alt'
     },{
         title: 'Compare',
-        description: 'Compare an image file and a physical disk byte by byte.',
+        description: 'Compare image files and physical disks byte by byte.',
         url: '/compare',
         icon: 'check'
     },{
@@ -49,12 +49,12 @@ export default function Start() {
         icon: 'plus'
     },{
         title: 'Optimize',
-        description: 'Optimize an image file.',
+        description: 'Optimize an image file size.',
         url: '/optimize',
         icon: 'compress'
     }, {
         title: 'Format',
-        description: 'Format an image file or a physical disk.',
+        description: 'Format a physical disk or an image file.',
         url: '/format',
         icon: 'eraser'
     // },{

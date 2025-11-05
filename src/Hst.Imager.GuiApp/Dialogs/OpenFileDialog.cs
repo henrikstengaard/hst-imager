@@ -20,9 +20,10 @@ public class OpenFileDialog
     public string InitialDirectory { get; set; } = null;
     public string Filter { get; set; } = "All files(*.*)\0\0";
     public bool ShowHidden { get; set; } = false;
+    public bool MustExist { get; set; } = true;
     public bool Success { get; private set; }
     public string[] Files { get; private set; }
-    
+
     /// <summary>
     /// Open a single file
     /// </summary>
@@ -31,15 +32,17 @@ public class OpenFileDialog
     /// <param name="filter">File name filter. Example : "txt files (*.txt)|*.txt|All files (*.*)|*.*"</param>
     /// <param name="initialDirectory">Example : "c:\\"</param>
     /// <param name="showHidden">Forces the showing of system and hidden files</param>
+    /// <param name="mustExist"></param>
     /// <returns>True of a file was selected, false if the dialog was cancelled or closed</returns>
     public static bool OpenFile(out string file, string title = null, string filter = null,
-        string initialDirectory = null, bool showHidden = false)
+        string initialDirectory = null, bool showHidden = false, bool mustExist = true)
     {
         OpenFileDialog dialog = new OpenFileDialog();
         dialog.Title = title;
         dialog.InitialDirectory = initialDirectory;
         dialog.Filter = filter;
         dialog.ShowHidden = showHidden;
+        dialog.MustExist = mustExist;
 
         dialog.ShowDialog();
         if (dialog.Success)
@@ -70,6 +73,7 @@ public class OpenFileDialog
         dialog.Filter = filter;
         dialog.ShowHidden = showHidden;
         dialog.Multiselect = true;
+        dialog.MustExist = true;
 
         dialog.ShowDialog();
         if (dialog.Success)
@@ -107,9 +111,13 @@ public class OpenFileDialog
         ofn.maxFileTitle = ofn.fileTitle.Length;
         ofn.initialDir = InitialDirectory;
         ofn.title = Title;
-        ofn.flags = (int)OpenFileNameFlags.OFN_HIDEREADONLY | (int)OpenFileNameFlags.OFN_EXPLORER |
-                    (int)OpenFileNameFlags.OFN_FILEMUSTEXIST | (int)OpenFileNameFlags.OFN_PATHMUSTEXIST;
-
+        ofn.flags = (int)OpenFileNameFlags.OFN_HIDEREADONLY | (int)OpenFileNameFlags.OFN_EXPLORER;
+                    
+        if (MustExist)
+        {
+            ofn.flags |= (int)OpenFileNameFlags.OFN_FILEMUSTEXIST | (int)OpenFileNameFlags.OFN_PATHMUSTEXIST;
+        }
+        
         // Create buffer for file names
         ofn.file = Marshal.AllocHGlobal(maxFileLength * Marshal.SystemDefaultCharSize);
         ofn.maxFile = maxFileLength;
@@ -129,6 +137,9 @@ public class OpenFileDialog
         {
             ofn.flags |= (int)OpenFileNameFlags.OFN_ALLOWMULTISELECT;
         }
+        
+        ofn.flags |= (int)OpenFileNameFlags.OFN_PATHMUSTEXIST;
+        
 
         Success = GetOpenFileName(ofn);
 

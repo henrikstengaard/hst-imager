@@ -7,11 +7,12 @@ namespace Hst.Imager.GuiApp.Dialogs;
 
 public static class OperatingSystemDialog
 {
-    public static string ShowOpenDialog(string title, IEnumerable<FileFilter> fileFilters, string initialDirectory)
+    public static string ShowOpenDialog(string title, IEnumerable<FileFilter> fileFilters, string initialDirectory,
+        bool mustExist)
     {
         if (OperatingSystem.IsWindows())
         {
-            return ShowOpenDialogWindows(title, fileFilters, initialDirectory);
+            return ShowOpenDialogWindows(title, fileFilters, initialDirectory, mustExist);
         }
 
         return null;
@@ -28,11 +29,11 @@ public static class OperatingSystemDialog
     }
 
     private static string ShowOpenDialogWindows(string title, IEnumerable<FileFilter> fileFilters,
-        string initialDirectory) =>
+        string initialDirectory, bool mustExist) =>
         OpenFileDialog.OpenFile(out var path,
             title,
             FormatFileFilters(fileFilters),
-            initialDirectory)
+            initialDirectory, mustExist: mustExist)
             ? path
             : null;
 
@@ -41,7 +42,7 @@ public static class OperatingSystemDialog
         SaveFileDialog.SaveFile(out var path,
             title,
             FormatFileFilters(fileFilters),
-            initialDirectory)
+            initialDirectory, promptOverwrite: true)
             ? path
             : null;
 
