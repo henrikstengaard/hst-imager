@@ -548,13 +548,17 @@ namespace Hst.Imager.Core.Commands
                 {
                     var fileStream = CreateWriteableStream(path, true);
                     var fileMedia = ResolveWritableFileMedia(path, name, fileStream, byteSwap);
-                    this.activeMedias.Add(fileMedia);
+                    if (fileMedia.Type is Media.MediaType.Raw or Media.MediaType.Floppy)
+                    {
+                        fileStream.SetLength(size ?? 0);
+                    }
+                    activeMedias.Add(fileMedia);
                     return Task.FromResult(new Result<Media>(fileMedia));
                 }
 
                 if (size == null || size.Value == 0)
                 {
-                    throw new ArgumentNullException(nameof(size), "Size is required for creating VHD image file");
+                    throw new ArgumentException("Size is required for creating VHD image file", nameof(size));
                 }
 
                 using var vhdStream = CreateWriteableStream(path, true);

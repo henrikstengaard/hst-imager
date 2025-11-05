@@ -74,7 +74,7 @@ namespace Hst.Imager.ConsoleApp
             
             if (HexRegex.IsMatch(value))
             {
-                return System.Convert.ToUInt32(value, 16);
+                return Convert.ToUInt32(value, 16);
             }
 
             if (IntRegex.IsMatch(value) && uint.TryParse(value, out var uintValue))
@@ -222,7 +222,8 @@ namespace Hst.Imager.ConsoleApp
         public static async Task Info(string path, bool showUnallocated)
         {
             using var commandHelper = GetCommandHelper();
-            var command = new InfoCommand(GetLogger<InfoCommand>(), commandHelper, await GetPhysicalDrives(), path);
+            var command = new InfoCommand(GetLogger<InfoCommand>(), commandHelper, await GetPhysicalDrives(), path, 
+                false);
             command.DiskInfoRead += (_, args) =>
             {
                 Log.Logger.Information(InfoPresenter.PresentInfo(args.MediaInfo.DiskInfo, showUnallocated));
@@ -238,13 +239,14 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
-        public static async Task Convert(string sourcePath, string destinationPath, string size, bool verify)
+        public static async Task Transfer(string sourcePath, string destinationPath, string size, bool verify,
+            long? srcStart, long? destStart)
         {
             SrcIoErrors.Clear();
             DestIoErrors.Clear();
             using var commandHelper = GetCommandHelper();
-            var command = new ConvertCommand(GetLogger<ConvertCommand>(), commandHelper, sourcePath,
-                destinationPath, ParseSize(size), verify);
+            var command = new TransferCommand(commandHelper, sourcePath,
+                destinationPath, ParseSize(size), verify, srcStart, destStart);
             command.DataProcessed += WriteProcessMessage;
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);

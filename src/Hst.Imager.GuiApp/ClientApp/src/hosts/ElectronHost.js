@@ -10,7 +10,7 @@ export class ElectronHost {
         // this.electronIpc.on({event: 'window-unmaximized', callback: () => setMaximized(false)})
     }
 
-    async showOpenDialog({id, title, filters}) {
+    async showOpenDialog({id, title, filters, promptCreate}) {
         const response = await fetch(`${this.backendBaseUrl}api/show-open-dialog`, {
             method: 'POST',
             headers: {
@@ -20,7 +20,8 @@ export class ElectronHost {
             body: JSON.stringify({
                 id,
                 title,
-                fileFilters: filters
+                fileFilters: filters,
+                promptCreate
             })
         });
 

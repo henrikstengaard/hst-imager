@@ -18,7 +18,7 @@
 
         public string Path;
         public string Model;
-        public long Size;
+        public virtual long Size => Stream.Length;
         public bool IsPhysicalDrive;
         public MediaType Type;
         public bool Byteswap;
@@ -30,7 +30,7 @@
         {
             Path = path;
             Model = name;
-            Size = size;
+            //Size = size;
             Type = type;
             IsPhysicalDrive = isPhysicalDrive; 
             Stream = stream;

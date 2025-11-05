@@ -9,7 +9,8 @@ namespace Hst.Imager.GuiApp.Dialogs;
 
 public static class ElectronDialog
 {
-    public static async Task<string> ShowOpenDialog(string title, IEnumerable<FileFilter> fileFilters, string path)
+    public static async Task<string> ShowOpenDialog(string title, IEnumerable<FileFilter> fileFilters, string path,
+        bool promptToCreate = false)
     {
         var browserWindow = Electron.WindowManager.BrowserWindows.FirstOrDefault();
         if (browserWindow == null)
@@ -25,7 +26,8 @@ public static class ElectronDialog
                 Name = x.Name,
                 Extensions = x.Extensions.ToArray()
             }).ToArray(),
-            DefaultPath = path
+            DefaultPath = path,
+            Properties = promptToCreate ? [OpenDialogProperty.promptToCreate] : []
         });
 
         return paths.FirstOrDefault();

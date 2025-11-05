@@ -21,9 +21,9 @@ const StyledAccordionSummary = styled(AccordionSummary)(({theme}) => ({
 
 const initialState = {
     diskExpanded: true,
-    gptExpanded: true,
-    mbrExpanded: true,
-    rdbExpanded: true,
+    gptExpanded: false,
+    mbrExpanded: false,
+    rdbExpanded: false,
     showUnallocated: true
 }
 

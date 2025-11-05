@@ -104,9 +104,9 @@ export default function Navigation(props) {
             path: '/info'
         },
         {
-            text: 'Convert',
+            text: 'Transfer',
             icon: 'exchange-alt',
-            path: '/convert'
+            path: '/transfer'
         },
         {
             text: 'Compare',

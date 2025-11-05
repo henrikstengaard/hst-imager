@@ -23,7 +23,7 @@ Hst Imager console comes with following features:
 - Read disk to image file.
 - Write image file to physical drive.
 - Compare physical drive and image file.
-- Convert image file between .img/.hdf and .vhd.
+- Transfer from one image file to another. This includes converting, importing and exporting from one image file to another and between .img/.hdf and .vhd (supports reading from .rar, .zip, .gz, .xz compressed image files).
 - Create blank .img/.hdf and .vhd image file.
 - Optimize image file size.
 - Format physical drive or image file with Master Boot Record, Guid Partition Table or Rigid Disk Block partition table, add partitions and format them.
@@ -425,28 +425,38 @@ Example of comparing Rigid Disk Block partition 2 on a physical drive and an ima
 hst.imager compare \disk2\rdb\2 part2.img
 ```
 
-### Convert an image file
+### Transfer from one image file to another
 
-Converts an image file from one format to another. Supports converting from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
+Transfer converts, imports and exports from one image file to another. Supports transferring from compressed gzip, zip, xz and rar image files using extensions: .gz, .zip, .xz, .rar.
 
-Example of displaying usage for converting an image file:
+Example of displaying usage for transfer:
 ```
-hst.imager convert
-```
-
-Example of converting 4GB img image file to vhd image file:
-```
-hst.imager convert 4gb.img 4gb.vhd
+hst.imager transfer
 ```
 
-Example of converting 4GB vhd image file to img image file:
+Example of transfer converting 4GB img image file to vhd image file:
 ```
-hst.imager convert 4gb.vhd 4gb.img
+hst.imager transfer 4gb.img 4gb.vhd
 ```
 
-Example of converting 4GB gzip compressed image file to img image file:
+Example of transfer converting 4GB vhd image file to img image file:
 ```
-hst.imager convert 4gb.img.gz 4gb.img
+hst.imager transfer 4gb.vhd 4gb.img
+```
+
+Example of transfer converting 4GB gzip compressed image file to img image file:
+```
+hst.imager transfer 4gb.img.gz 4gb.img
+```
+
+Example of transfer exporting a Rigid Disk Block partition 2 from 4GB vhd image file to an image file:
+```
+hst.imager transfer 4gb.vhd\rdb\2 part2.img
+```
+
+Example of transfer importing an image file to Rigid Disk Block partition 2 in 4GB vhd image file:
+```
+hst.imager transfer 4gb.vhd\rdb\2 part2.img
 ```
 
 ### Create a blank image file

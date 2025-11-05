@@ -81,7 +81,7 @@ export default function Blank() {
             />
             <Title
                 text="Blank"
-                description="Create blank image file."
+                description="Create a blank image file."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>

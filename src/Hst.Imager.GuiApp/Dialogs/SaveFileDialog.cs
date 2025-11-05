@@ -19,26 +19,31 @@ public class SaveFileDialog
     public string InitialDirectory { get; set; } = null;
     public string Filter { get; set; } = "All files(*.*)\0\0";
     public bool ShowHidden { get; set; } = false;
+    public bool PromptOverwrite { get; set; } = true;
     public bool Success { get; private set; }
     public string[] Files { get; private set; }
 
     /// <summary>
     /// Save a single file
     /// </summary>
-    /// <param name="file">Path to the selected file, or null if the return value is false</param>
-    /// <param name="title">Title of the dialog</param>
-    /// <param name="filter">File name filter. Example : "txt files (*.txt)|*.txt|All files (*.*)|*.*"</param>
-    /// <param name="initialDirectory">Example : "c:\\"</param>
-    /// <param name="showHidden">Forces the showing of system and hidden files</param>
+    /// <param name="file">Path to the selected file, or null if the return value is false.</param>
+    /// <param name="title">Title of the dialog.</param>
+    /// <param name="filter">File name filter. Example : "txt files (*.txt)|*.txt|All files (*.*)|*.*".</param>
+    /// <param name="initialDirectory">Example : "c:\\".</param>
+    /// <param name="showHidden">Forces the showing of system and hidden files.</param>
+    /// <param name="promptOverwrite">Prompt overwrite, if file exists.</param>
     /// <returns>True of a file was selected, false if the dialog was cancelled or closed</returns>
     public static bool SaveFile(out string file, string title = null, string filter = null,
-        string initialDirectory = null, bool showHidden = false)
+        string initialDirectory = null, bool showHidden = false, bool promptOverwrite = true)
     {
-        var dialog = new SaveFileDialog();
-        dialog.Title = title;
-        dialog.InitialDirectory = initialDirectory;
-        dialog.Filter = filter;
-        dialog.ShowHidden = showHidden;
+        var dialog = new SaveFileDialog
+        {
+            Title = title,
+            InitialDirectory = initialDirectory,
+            Filter = filter,
+            ShowHidden = showHidden,
+            PromptOverwrite = promptOverwrite
+        };
 
         dialog.ShowDialog();
         if (dialog.Success)
@@ -53,7 +58,7 @@ public class SaveFileDialog
 
     private void ShowDialog()
     {
-        Thread thread = new Thread(ShowSaveFileDialog);
+        var thread = new Thread(ShowSaveFileDialog);
 #pragma warning disable CA1416
         thread.SetApartmentState(ApartmentState.STA);
 #pragma warning restore CA1416
@@ -76,8 +81,7 @@ public class SaveFileDialog
         ofn.maxFileTitle = ofn.fileTitle.Length;
         ofn.initialDir = InitialDirectory;
         ofn.title = Title;
-        ofn.flags = (int)OpenFileNameFlags.OFN_HIDEREADONLY | (int)OpenFileNameFlags.OFN_EXPLORER |
-            (int)OpenFileNameFlags.OFN_OVERWRITEPROMPT;
+        ofn.flags = (int)OpenFileNameFlags.OFN_HIDEREADONLY | (int)OpenFileNameFlags.OFN_EXPLORER;
 
         // Create buffer for file names
         ofn.file = Marshal.AllocHGlobal(maxFileLength * Marshal.SystemDefaultCharSize);
@@ -94,14 +98,19 @@ public class SaveFileDialog
             ofn.flags |= (int)OpenFileNameFlags.OFN_FORCESHOWHIDDEN;
         }
 
+        if (PromptOverwrite)
+        {
+            ofn.flags |= (int)OpenFileNameFlags.OFN_OVERWRITEPROMPT;
+        }
+
         Success = GetSaveFileName(ofn);
 
         if (Success)
         {
-            IntPtr filePointer = ofn.file;
-            long pointer = (long)filePointer;
-            string file = Marshal.PtrToStringAuto(filePointer);
-            List<string> strList = new List<string>();
+            var filePointer = ofn.file;
+            var pointer = (long)filePointer;
+            var file = Marshal.PtrToStringAuto(filePointer);
+            var strList = new List<string>();
 
             // Retrieve file names
             while (file.Length > 0)

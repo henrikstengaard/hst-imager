@@ -26,13 +26,14 @@ namespace Hst.Imager.ConsoleApp
         {
             var rootCommand = new RootCommand
             {
-                Description = "Hst Imager reads, writes and initializes image files and physical drives."
+                Description = "Hst Imager reads, writes and initializes image files and physical disks."
             };
 
             rootCommand.AddGlobalOption(LogFileOption);
             rootCommand.AddGlobalOption(VerboseOption);
             rootCommand.AddCommand(CreateBlankCommand());
             rootCommand.AddCommand(CreateConvertCommand());
+            rootCommand.AddCommand(CreateTransferCommand());
             rootCommand.AddCommand(CreateFormatCommand());
             rootCommand.AddCommand(CreateInfoCommand());
             rootCommand.AddCommand(CreateListCommand());
@@ -58,7 +59,7 @@ namespace Hst.Imager.ConsoleApp
                 name: "Path",
                 description: "Path to script file.");
 
-            var scriptCommand = new Command("script", "Run script.");
+            var scriptCommand = new Command("script", "Run a script.");
             scriptCommand.AddArgument(pathArgument);
             scriptCommand.SetHandler(CommandHandler.Script, pathArgument);
 
@@ -69,14 +70,14 @@ namespace Hst.Imager.ConsoleApp
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to physical drive or image file.");
+                description: "Path to physical disk or image file.");
 
             var showUnallocatedOption = new Option<bool>(
                 ["--unallocated", "-u"],
                 description: "Show unallocated.",
                 getDefaultValue: () => true);
 
-            var command = new Command("info", "Display info about physical drive or image file.");
+            var command = new Command("info", "Display information about an image file or a physical disk.");
             command.AddArgument(pathArgument);
             command.AddOption(showUnallocatedOption);
             command.SetHandler(CommandHandler.Info, pathArgument, showUnallocatedOption);
@@ -86,7 +87,7 @@ namespace Hst.Imager.ConsoleApp
 
         private static Command CreateListCommand()
         {
-            var listCommand = new Command("list", "Display list of physical drives.");
+            var listCommand = new Command("list", "Display list of physical disks.");
             listCommand.SetHandler(CommandHandler.List);
 
             return listCommand;
@@ -100,7 +101,7 @@ namespace Hst.Imager.ConsoleApp
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
-                description: "Path to destination image file or physical drive.");
+                description: "Path to destination image file or physical disk.");
 
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
@@ -126,7 +127,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--start", "-st"],
                 description: "Destination start offset.");
 
-            var writeCommand = new Command("write", "Write image file to disk.");
+            var writeCommand = new Command("write", "Write an image file or part of to a physical disk.");
             writeCommand.AddArgument(sourceArgument);
             writeCommand.AddArgument(destinationArgument);
             writeCommand.AddOption(sizeOption);
@@ -145,7 +146,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
-                description: "Path to source image file or physical drive.");
+                description: "Path to source image file or physical disk.");
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
@@ -171,7 +172,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--start", "-st"],
                 description: "Source start offset.");
             
-            var readCommand = new Command("read", "Read disk to image file.");
+            var readCommand = new Command("read", "Read a physical disk or part of to an image file.");
             readCommand.AddArgument(sourceArgument);
             readCommand.AddArgument(destinationArgument);
             readCommand.AddOption(sizeOption);
@@ -197,27 +198,77 @@ namespace Hst.Imager.ConsoleApp
 
             var sizeOption = new Option<string>(
                 ["--size", "-s"],
-                description: "Size of image file convert.");
+                description: "Size of image file transfer.");
 
             var verifyOption = new Option<bool>(
                 ["--verify", "-v"],
-                description: "Verify data converted.");
+                description: "Verify data transferred.");
             
-            var convertCommand = new Command("convert", "Convert image file.");
+            var srcStartOption = new Option<long?>(
+                ["--src-start", "-ss"],
+                description: "Source start offset.");
+
+            var destStartOption = new Option<long?>(
+                ["--dest-start", "-ds"],
+                description: "Destination start offset.");
+
+            var convertCommand = new Command("convert", "Convert an image file. Obsolete, works same way af transfer and convert will be removed in a future release!");
             convertCommand.AddArgument(sourceArgument);
             convertCommand.AddArgument(destinationArgument);
             convertCommand.AddOption(sizeOption);
             convertCommand.AddOption(verifyOption);
-            convertCommand.SetHandler(CommandHandler.Convert, sourceArgument, destinationArgument, sizeOption, verifyOption);
+            convertCommand.AddOption(srcStartOption);
+            convertCommand.AddOption(destStartOption);
+            convertCommand.SetHandler(CommandHandler.Transfer, sourceArgument, destinationArgument, sizeOption,
+                verifyOption, srcStartOption, destStartOption);
 
             return convertCommand;
+        }
+        
+        private static Command CreateTransferCommand()
+        {
+            var sourceArgument = new Argument<string>(
+                name: "Source",
+                description: "Path to source image file.");
+
+            var destinationArgument = new Argument<string>(
+                name: "Destination",
+                description: "Path to destination image file.");
+
+            var sizeOption = new Option<string>(
+                ["--size", "-s"],
+                description: "Size of image file transfer.");
+
+            var verifyOption = new Option<bool>(
+                ["--verify", "-v"],
+                description: "Verify data transferred.");
+            
+            var srcStartOption = new Option<long?>(
+                ["--src-start", "-ss"],
+                description: "Source start offset.");
+
+            var destStartOption = new Option<long?>(
+                ["--dest-start", "-ds"],
+                description: "Destination start offset.");
+
+            var transferCommand = new Command("transfer", "Transfer converts, imports or exports from an image file or part of to another.");
+            transferCommand.AddArgument(sourceArgument);
+            transferCommand.AddArgument(destinationArgument);
+            transferCommand.AddOption(sizeOption);
+            transferCommand.AddOption(verifyOption);
+            transferCommand.AddOption(srcStartOption);
+            transferCommand.AddOption(destStartOption);
+            transferCommand.SetHandler(CommandHandler.Transfer, sourceArgument, destinationArgument, sizeOption,
+                verifyOption, srcStartOption, destStartOption);
+
+            return transferCommand;
         }
 
         private static Command CreateFormatCommand()
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to physical drive or image file.");
+                description: "Path to physical disk or image file.");
 
             var partitionTableArgument = new Argument<FormatType>(
                 name: "FormatType",
@@ -247,7 +298,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--kickstart31"],
                 description: "Create Workbench partition size for Kickstart v3.1 or lower within first 4GB.");
             
-            var command = new Command("format", "Format physical drive or image file.");
+            var command = new Command("format", "Format a physical disk or an image file.");
             command.AddArgument(pathArgument);
             command.AddArgument(partitionTableArgument);
             command.AddArgument(fileSystemArgument);
@@ -278,7 +329,7 @@ namespace Hst.Imager.ConsoleApp
                 description: "Make size compatible by reducing it with 5%.",
                 getDefaultValue: () => false);
 
-            var blankCommand = new Command("blank", "Blank image file.");
+            var blankCommand = new Command("blank", "Create a blank image file.");
             blankCommand.AddArgument(pathArgument);
             blankCommand.AddArgument(sizeArgument);
             blankCommand.AddOption(compatibleSizeOption);
@@ -301,24 +352,24 @@ namespace Hst.Imager.ConsoleApp
                 ["--partition-table", "-pt"],
                 description: "Optimize to size of partition table.");
             
-            var convertCommand = new Command("optimize", "Optimize image file size.");
-            convertCommand.AddArgument(pathArgument);
-            convertCommand.AddOption(sizeOption);
-            convertCommand.AddOption(partitionTableOption);
-            convertCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption, partitionTableOption);
+            var optimizeCommand = new Command("optimize", "Optimize an image file size.");
+            optimizeCommand.AddArgument(pathArgument);
+            optimizeCommand.AddOption(sizeOption);
+            optimizeCommand.AddOption(partitionTableOption);
+            optimizeCommand.SetHandler(CommandHandler.Optimize, pathArgument, sizeOption, partitionTableOption);
 
-            return convertCommand;
+            return optimizeCommand;
         }
 
         private static Command CreateCompareCommand()
         {
             var sourceArgument = new Argument<string>(
                 name: "Source",
-                description: "Path to source physical drive or image file.");
+                description: "Path to source physical disk or image file.");
 
             var destinationArgument = new Argument<string>(
                 name: "Destination",
-                description: "Path to destination physical drive or image file.");
+                description: "Path to destination physical disk or image file.");
 
             var srcStartOffsetOption = new Option<long?>(
                 ["--source-start"],
@@ -344,20 +395,20 @@ namespace Hst.Imager.ConsoleApp
                 ["--force", "-f"],
                 description: "Force compare to ignore read errors.");
             
-            var convertCommand = new Command("compare", "Compare source and destination physical drive or image file.");
-            convertCommand.AddArgument(sourceArgument);
-            convertCommand.AddArgument(destinationArgument);
-            convertCommand.AddOption(srcStartOffsetOption);
-            convertCommand.AddOption(destStartOffsetOption);
-            convertCommand.AddOption(skipUnusedSectorsOption);
-            convertCommand.AddOption(sizeOption);
-            convertCommand.AddOption(retriesOption);
-            convertCommand.AddOption(forceOption);
-            convertCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, 
+            var compareCommand = new Command("compare", "Compare image files and physical disks byte by byte.");
+            compareCommand.AddArgument(sourceArgument);
+            compareCommand.AddArgument(destinationArgument);
+            compareCommand.AddOption(srcStartOffsetOption);
+            compareCommand.AddOption(destStartOffsetOption);
+            compareCommand.AddOption(skipUnusedSectorsOption);
+            compareCommand.AddOption(sizeOption);
+            compareCommand.AddOption(retriesOption);
+            compareCommand.AddOption(forceOption);
+            compareCommand.SetHandler(CommandHandler.Compare, sourceArgument, destinationArgument, 
                 srcStartOffsetOption, destStartOffsetOption, sizeOption,
                 skipUnusedSectorsOption, retriesOption, forceOption);
 
-            return convertCommand;
+            return compareCommand;
         }
 
         private static Command CreateBlockCommand()
@@ -372,7 +423,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to physical drive or image file.");
+                description: "Path to physical disk or image file.");
 
             var outputPathArgument = new Argument<string>(
                 name: "OutputPath",
@@ -395,7 +446,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--end", "-e"],
                 description: "End offset.");
             
-            var blankCommand = new Command("read", "Read blocks to file per block.");
+            var blankCommand = new Command("read", "Read blocks from a physical disk or an image file to file per block.");
             blankCommand.SetHandler(CommandHandler.BlockRead, pathArgument, outputPathArgument, blockSizeOption,
                 usedOption, startOption, endOption);
             blankCommand.AddArgument(pathArgument);
@@ -412,7 +463,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var pathArgument = new Argument<string>(
                 name: "Path",
-                description: "Path to physical drive or image file.");
+                description: "Path to physical disk or image file.");
 
             var blockSizeOption = new Option<int>(
                 ["--block-size", "-bs"],
@@ -423,7 +474,7 @@ namespace Hst.Imager.ConsoleApp
                 ["--start", "-s"],
                 description: "Start offset.");
 
-            var blankCommand = new Command("view", "View block as hex.");
+            var blankCommand = new Command("view", "View blocks from a physical disk or an image file as hex.");
             blankCommand.SetHandler(CommandHandler.BlockView, pathArgument, blockSizeOption, startOption);
             blankCommand.AddArgument(pathArgument);
             blankCommand.AddOption(blockSizeOption);

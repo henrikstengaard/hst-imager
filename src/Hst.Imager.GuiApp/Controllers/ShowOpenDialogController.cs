@@ -14,18 +14,11 @@ namespace Hst.Imager.GuiApp.Controllers
 
     [ApiController]
     [Route("api/show-open-dialog")]
-    public class ShowOpenDialogController : ControllerBase
+    public class ShowOpenDialogController(
+        IBackgroundTaskQueue backgroundTaskQueue,
+        IHubContext<ShowDialogResultHub> showDialogResultContext)
+        : ControllerBase
     {
-        private readonly IBackgroundTaskQueue backgroundTaskQueue;
-        private readonly IHubContext<ShowDialogResultHub> showDialogResultContext;
-
-        public ShowOpenDialogController(IBackgroundTaskQueue backgroundTaskQueue,
-            IHubContext<ShowDialogResultHub> showDialogResultContext)
-        {
-            this.backgroundTaskQueue = backgroundTaskQueue;
-            this.showDialogResultContext = showDialogResultContext;
-        }
-
         [HttpPost]
         public async Task<IActionResult> Post(DialogViewModel model)
         {
@@ -43,7 +36,8 @@ namespace Hst.Imager.GuiApp.Controllers
                 {
                     Name = x.Name,
                     Extensions = x.Extensions
-                })
+                }),
+                PromptCreate = model.PromptCreate
             });
 
             return Ok();
@@ -57,14 +51,16 @@ namespace Hst.Imager.GuiApp.Controllers
             }
 
             var path = HybridSupport.IsElectronActive
-                ? await ElectronDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path)
-                : OperatingSystemDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path);
+                ? await ElectronDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters,
+                    showDialogBackgroundTask.Path, showDialogBackgroundTask.PromptCreate)
+                : OperatingSystemDialog.ShowOpenDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters,
+                    showDialogBackgroundTask.Path, !showDialogBackgroundTask.PromptCreate);
 
             await showDialogResultContext.Clients.All.SendAsync("ShowDialogResult", new ShowDialogResult
             {
                 Id = showDialogBackgroundTask.Id,
                 IsSuccess = path != null,
-                Paths = new []{ path }
+                Paths = [path]
             }, context.Token);
         }
     }

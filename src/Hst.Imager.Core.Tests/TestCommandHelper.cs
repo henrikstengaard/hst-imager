@@ -80,6 +80,24 @@ namespace Hst.Imager.Core.Tests
             TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size));
         }
         
+        public async Task CreateTestMedia(string path, long size = 0, byte[] data = null, bool createTestData = false)
+        {
+            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size));
+
+            var mediaResult = await GetWritableFileMedia(path, size: size, create: true);
+            using var media = mediaResult.Value;
+
+            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            stream.Position = 0;
+
+            if (data == null && !createTestData)
+            {
+                return;
+            }
+
+            await stream.WriteBytes(data ?? CreateTestData(size));
+        }
+        
         public void AddTestMediaWithData(string path, long size)
         {
             var testMedia = new TestMedia(path, Path.GetFileNameWithoutExtension(path), size);

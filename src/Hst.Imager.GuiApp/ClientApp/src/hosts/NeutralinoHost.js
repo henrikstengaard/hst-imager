@@ -14,7 +14,7 @@ export class NeutralinoHost {
         this.connection.start();
     }
     
-    async showOpenDialog({ id, title, filters }) {
+    async showOpenDialog({ id, title, filters, promptCreate }) {
         let entries = await window.Neutralino.os.showOpenDialog(title, {
             filters: filters
         });

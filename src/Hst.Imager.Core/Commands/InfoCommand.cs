@@ -9,21 +9,15 @@ namespace Hst.Imager.Core.Commands
     using Hst.Core;
     using Microsoft.Extensions.Logging;
 
-    public class InfoCommand : CommandBase
+    public class InfoCommand(
+        ILogger<InfoCommand> logger,
+        ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives,
+        string path,
+        bool allowNonExisting)
+        : CommandBase
     {
-        private readonly ILogger<InfoCommand> logger;
-        private readonly ICommandHelper commandHelper;
-        private readonly IEnumerable<IPhysicalDrive> physicalDrives;
-        private readonly string path;
-
-        public InfoCommand(ILogger<InfoCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path)
-        {
-            this.logger = logger;
-            this.commandHelper = commandHelper;
-            this.physicalDrives = physicalDrives;
-            this.path = path;
-        }
+        private readonly ILogger<InfoCommand> logger = logger;
 
         public event EventHandler<InfoReadEventArgs> DiskInfoRead;
 
@@ -36,6 +30,13 @@ namespace Hst.Imager.Core.Commands
             var sourceMediaResult = await commandHelper.GetReadableMedia(physicalDrives, path);
             if (sourceMediaResult.IsFaulted)
             {
+                if (allowNonExisting && sourceMediaResult.Error is PathNotFoundError)
+                {
+                    OnDiskInfoRead(null);
+
+                    return new Result();
+                }
+                
                 return new Result(sourceMediaResult.Error);
             }
 

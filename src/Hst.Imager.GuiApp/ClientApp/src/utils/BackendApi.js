@@ -95,13 +95,14 @@ export class BackendApi {
         }
     }
 
-    async updateInfo({ path, byteswap }) {
+    async updateInfo({ path, byteswap, allowNonExisting }) {
         return await this.send({
             method: 'POST',
             path: `api/info`,
             data: {
                 path,
-                byteswap
+                byteswap,
+                allowNonExisting
             }
         })
     }
@@ -147,8 +148,8 @@ export class BackendApi {
         }
     }
 
-    async startConvert({ title, sourcePath, destinationPath, byteswap }) {
-        const response = await fetch(`${this.baseUrl}api/convert`, {
+    async startTransfer({ title, sourcePath, destinationPath, srcStartOffset, destStartOffset, size, byteswap }) {
+        const response = await fetch(`${this.baseUrl}api/transfer`, {
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -158,12 +159,15 @@ export class BackendApi {
                 title,
                 sourcePath,
                 destinationPath,
+                srcStartOffset,
+                destStartOffset,
+                size,
                 byteswap
             })
         });
         
         if (!response.ok) {
-            throw new Error('Failed to start convert')
+            throw new Error('Failed to start transfer')
         }
     }
 

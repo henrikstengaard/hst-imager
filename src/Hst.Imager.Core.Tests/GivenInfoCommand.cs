@@ -9,7 +9,6 @@ namespace Hst.Imager.Core.Tests
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using Core;
     using Commands;
     using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
@@ -29,7 +28,7 @@ namespace Hst.Imager.Core.Tests
             // arrange - info command
             var cancellationTokenSource = new CancellationTokenSource();
             var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                [], imgPath, false);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -58,7 +57,7 @@ namespace Hst.Imager.Core.Tests
             // arrange - info command
             var cancellationTokenSource = new CancellationTokenSource();
             var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                [], imgPath, false);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -89,7 +88,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - info command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                    [], imgPath, false);
                 MediaInfo mediaInfo = null;
                 infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -132,7 +131,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - info command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                    [], imgPath, false);
                 MediaInfo mediaInfo = null;
                 infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -175,7 +174,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - info command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                    [], imgPath, false);
                 MediaInfo mediaInfo = null;
                 infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -218,7 +217,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - info command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                    [], imgPath, false);
                 MediaInfo mediaInfo = null;
                 infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -261,7 +260,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - info command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), imgPath);
+                    [], imgPath, false);
                 MediaInfo mediaInfo = null;
                 infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 
@@ -326,7 +325,7 @@ namespace Hst.Imager.Core.Tests
             
             // arrange - info command
             var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
-                [], infoPath);
+                [], infoPath, false);
             MediaInfo mediaInfo = null;
             infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
 

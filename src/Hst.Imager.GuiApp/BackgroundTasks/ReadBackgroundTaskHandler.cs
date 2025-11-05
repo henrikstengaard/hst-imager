@@ -31,6 +31,15 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
 
             try
             {
+                OnProgressUpdated(new Progress
+                {
+                    Title = readBackgroundTask.Title,
+                    IsComplete = false,
+                    HasError = false,
+                    ErrorMessage = null,
+                    PercentComplete = 0
+                });
+
                 // read settings enabling background worker to get changed settings from gui
                 var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
                     Core.Models.Constants.AppName) ?? new Settings();

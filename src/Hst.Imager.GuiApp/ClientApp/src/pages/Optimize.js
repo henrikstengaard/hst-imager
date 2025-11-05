@@ -176,7 +176,7 @@ export default function Optimize() {
             />
             <Title
                 text="Optimize"
-                description="Optimize image file size."
+                description="Optimize an image file size."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>

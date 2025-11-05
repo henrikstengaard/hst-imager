@@ -80,8 +80,6 @@ namespace Hst.Imager.Core.Commands
                 startOffset += start.Value;
             }
             
-            srcStream.Position = startOffset;
-            
             var readSize = sourceSize.ResolveSize(size);
             OnInformationMessage($"Size '{readSize.FormatBytes()}' ({readSize} bytes)");
             

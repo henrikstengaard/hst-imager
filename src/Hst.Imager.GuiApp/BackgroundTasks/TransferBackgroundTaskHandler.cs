@@ -1,30 +1,27 @@
-﻿using System.Linq;
-using Hst.Imager.Core.Helpers;
+﻿using Hst.Imager.Core;
 
 namespace Hst.Imager.GuiApp.BackgroundTasks
 {
     using System;
     using System.Threading.Tasks;
-    using Core;
     using Core.Commands;
     using Hst.Imager.Core.Models;
     using Hst.Imager.Core.Models.BackgroundTasks;
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class WriteBackgroundTaskHandler(
+    public class TransferBackgroundTaskHandler(
         ILoggerFactory loggerFactory,
-        IPhysicalDriveManager physicalDriveManager,
         AppState appState)
         : IBackgroundTaskHandler
     {
-        private readonly ILogger<WriteBackgroundTaskHandler> logger = loggerFactory.CreateLogger<WriteBackgroundTaskHandler>();
+        private readonly ILogger<TransferBackgroundTaskHandler> logger = loggerFactory.CreateLogger<TransferBackgroundTaskHandler>();
 
         public event EventHandler<ProgressEventArgs> ProgressUpdated;
 
         public async ValueTask Handle(IBackgroundTaskContext context)
         {
-            if (context.BackgroundTask is not WriteBackgroundTask writeBackgroundTask)
+            if (context.BackgroundTask is not TransferBackgroundTask transferBackgroundTask)
             {
                 return;
             }
@@ -33,32 +30,25 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             {
                 OnProgressUpdated(new Progress
                 {
-                    Title = writeBackgroundTask.Title,
+                    Title = transferBackgroundTask.Title,
                     IsComplete = false,
                     HasError = false,
                     ErrorMessage = null,
                     PercentComplete = 0
                 });
 
-                // read settings enabling background worker to get changed settings from gui
-                var settings = await ApplicationDataHelper.ReadSettings<Settings>(appState.AppDataPath, 
-                    Core.Models.Constants.AppName) ?? new Settings();
-                var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
-                    .ToList();
-
                 using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
-                var writeCommand =
-                    new WriteCommand(loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives,
-                        string.Concat(writeBackgroundTask.Byteswap ? "+bs:" : string.Empty,
-                            writeBackgroundTask.SourcePath),
-                        writeBackgroundTask.DestinationPath, new Size(writeBackgroundTask.Size, Unit.Bytes), 
-                        appState.Settings.Retries, appState.Settings.Verify, appState.Settings.Force,
-                        appState.Settings.SkipUnusedSectors,  writeBackgroundTask.StartOffset);
-                writeCommand.DataProcessed += (_, args) =>
+                var transferCommand =
+                    new TransferCommand(commandHelper,
+                        string.Concat(transferBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
+                            transferBackgroundTask.SourcePath),
+                        transferBackgroundTask.DestinationPath, new Size(transferBackgroundTask.Size, Unit.Bytes),
+                        false, transferBackgroundTask.SrcStartOffset, transferBackgroundTask.DestStartOffset);
+                transferCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress
                     {
-                        Title = writeBackgroundTask.Title,
+                        Title = transferBackgroundTask.Title,
                         IsComplete = false,
                         PercentComplete = args.PercentComplete,
                         BytesPerSecond = args.BytesPerSecond,
@@ -77,11 +67,11 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     });
                 };
 
-                var result = await writeCommand.Execute(context.Token);
-
+                var result = await transferCommand.Execute(context.Token);
+            
                 OnProgressUpdated(new Progress
                 {
-                    Title = writeBackgroundTask.Title,
+                    Title = transferBackgroundTask.Title,
                     IsComplete = true,
                     HasError = result.IsFaulted,
                     ErrorMessage = result.IsFaulted ? result.Error.Message : null,
@@ -90,11 +80,11 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
             }
             catch (Exception e)
             {
-                logger.LogError(e, "An unexpected error occured while executing write command");
+                logger.LogError(e, "An unexpected error occured while executing transfer command");
 
                 OnProgressUpdated(new Progress
                 {
-                    Title = writeBackgroundTask.Title,
+                    Title = transferBackgroundTask.Title,
                     IsComplete = true,
                     HasError = true,
                     ErrorMessage = e.Message,
@@ -102,7 +92,7 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 });
             }
         }
-        
+                
         private void OnProgressUpdated(Progress progress)
         {
             ProgressUpdated?.Invoke(this, new ProgressEventArgs(progress));

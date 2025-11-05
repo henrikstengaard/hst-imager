@@ -14,6 +14,8 @@
             this.Disk = disk;
         }
 
+        public override long Size => this.Disk?.Capacity ?? Stream?.Length ?? 0;
+
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);

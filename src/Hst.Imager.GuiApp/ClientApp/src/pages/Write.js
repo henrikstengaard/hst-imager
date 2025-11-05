@@ -39,23 +39,13 @@ const unitOptions = [{
     size: 1
 }]
 
-const typeOptions = [{
-    title: 'Image file',
-    value: 'ImageFile'
-}, {
-    title: 'Physical disk',
-    value: 'PhysicalDisk'
-}]
-
 let updateTarget = '';
 
 export default function Write() {
     const [openConfirm, setOpenConfirm] = React.useState(false);
     const [sourcePath, setSourcePath] = React.useState(null)
     const [sourceMedia, setSourceMedia] = React.useState(null)
-    const [destinationPath, setDestinationPath] = React.useState(null)
     const [destinationMedia, setDestinationMedia] = React.useState(null)
-    const [destinationType, setDestinationType] = React.useState('ImageFile')
     const [medias, setMedias] = React.useState(null)
     const [byteswap, setByteswap] = React.useState(false);
     const [size, setSize] = React.useState(0)
@@ -68,8 +58,6 @@ export default function Write() {
         backendBaseUrl,
         backendApi
     } = React.useContext(BackendApiStateContext)
-
-    const destinationTypeFormatted = destinationType === 'PhysicalDisk' ? 'physical disk' : 'image file';
 
     const writePartPathOption = writePartPathOptions.find(x => x.value === writePartPath)
     const formattedWritePartPath = writePartPathOption ? (writePartPath === 'custom'
@@ -110,6 +98,8 @@ export default function Write() {
         if (connection) {
             return
         }
+
+        getMedias();
 
         const newConnection = new HubConnectionBuilder()
             .withUrl(`${backendBaseUrl}hubs/result`)
@@ -155,7 +145,6 @@ export default function Write() {
             }
 
             const newPath = get(newMedia, 'path');
-            setDestinationPath(newPath)
             await getInfo('Destination', newPath, byteswap)
         })
 
@@ -170,11 +159,11 @@ export default function Write() {
 
             connection.stop();
         };
-    }, [backendBaseUrl, byteswap, connection, destinationMedia, destinationPath, getInfo, getMedia, getMedias, setConnection, sourcePath])
+    }, [backendBaseUrl, byteswap, connection, destinationMedia, getInfo, getMedia, getMedias, setConnection, sourcePath])
     
     const handleWrite = async () => {
         await backendApi.startWrite({
-            title: `Writing source image file '${sourcePath}' to destination ${destinationTypeFormatted} '${isNil(destinationMedia) ? destinationPath : destinationMedia.name}${formattedWritePartPath}'${formattedSize}`,
+            title: `Writing source image file '${sourcePath}' to destination physical disk '${destinationMedia.name}${formattedWritePartPath}'${formattedSize}`,
             sourcePath,
             destinationPath: isNil(writePartPath) || writePartPath === 'custom' ? destinationMedia.path : writePartPath,
             startOffset,
@@ -202,7 +191,6 @@ export default function Write() {
         setOpenConfirm(false)
         setSourcePath(null)
         setSourceMedia(null)
-        setDestinationPath(null)
         setDestinationMedia(null)
         setMedias([])
         setByteswap(false)
@@ -221,12 +209,12 @@ export default function Write() {
                 id="confirm-write"
                 open={openConfirm}
                 title="Write"
-                description={`Do you want to write source image file '${sourcePath}' to destination ${destinationTypeFormatted} '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}?`}
+                description={`Do you want to write source image file '${sourcePath}' to destination physical disk '${get(destinationMedia, 'name') || ''}${formattedWritePartPath}'${formattedSize}?`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
                 text="Write"
-                description="Write an image file or part of to an image file or a physical disk."
+                description="Write an image file or part of to a physical disk."
             />
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 1}}>
                 <Grid item xs={12} lg={6}>
@@ -273,98 +261,28 @@ export default function Write() {
             </Grid>
             <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
                 <Grid item xs={12} lg={6}>
-                    <SelectField
-                        label={
-                            <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                <FontAwesomeIcon icon="download" style={{marginRight: '5px'}} /> Destination
-                            </div>
-                        }
-                        id="destination"
-                        emptyLabel="None available"
-                        value={destinationType || 'ImageFile' }
-                        options={typeOptions}
-                        onChange={(value) => {
-                            updateTarget = 'Destination';
-                            setDestinationType(value);
-                            setDestinationPath(null);
-                            setDestinationMedia(null);
-                            setWritePartPath(null);
-                            setWritePartPathOptions([]);
-                            if (value === 'PhysicalDisk') {
-                                getMedias();
-                            }
-                        }}
-                    />
-                </Grid>
-            </Grid>
-            <Grid container spacing={1} direction="row" alignItems="center" sx={{mt: 0.3}}>
-                {destinationType === 'ImageFile' && (
-                    <Grid item xs={12} lg={6}>
-                        <TextField
-                            id="destination-image-path"
+                    <Stack direction="row">
+                        <MediaSelectField
                             label={
                                 <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                    <FontAwesomeIcon icon="file" style={{marginRight: '5px'}} /> Destination image file
+                                    <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination physical disk
                                 </div>
                             }
-                            value={destinationPath || ''}
-                            endAdornment={
-                                <BrowseOpenDialog
-                                    id="write-destination-image-path"
-                                    title="Select destination image file"
-                                    onChange={async (path) => {
-                                        setDestinationPath(path)
-                                        await getInfo('Destination', path, byteswap)
-                                    }}
-                                    fileFilters = {[{
-                                        name: 'Hard disk image files',
-                                        extensions: ['img', 'hdf', 'vhd', 'xz', 'gz', 'zip', 'rar']
-                                    }, {
-                                        name: 'All files',
-                                        extensions: ['*']
-                                    }]}
-                                />
-                            }
-                            onChange={(event) => {
-                                setDestinationPath(get(event, 'target.value'))
-                                if (destinationMedia) {
-                                    setDestinationMedia(null)
-                                }
-                            }}
-                            onKeyDown={async (event) => {
-                                if (event.key !== 'Enter') {
-                                    return
-                                }
-                                await getInfo('Destination', destinationPath, byteswap)
-                            }}
+                            id="destination-disk"
+                            medias={medias || []}
+                            path={get(destinationMedia, 'path') || ''}
+                            onChange={(media) => setDestinationMedia(media)}
                         />
-                    </Grid>
-                )}
-                {destinationType === 'PhysicalDisk' && (
-                    <Grid item xs={12} lg={6}>
-                        <Stack direction="row">
-                            <MediaSelectField
-                                label={
-                                    <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                        <FontAwesomeIcon icon="hdd" style={{marginRight: '5px'}} /> Destination physical disk
-                                    </div>
-                                }
-                                id="destination-disk"
-                                medias={medias || []}
-                                path={get(destinationMedia, 'path') || ''}
-                                onChange={(media) => setDestinationMedia(media)}
-                            />
-                            <IconButton
-                                aria-label="refresh"
-                                color="primary"
-                                disableFocusRipple={true}
-                                onClick={async () => handleUpdate()}
-                            >
-                                <FontAwesomeIcon icon="sync-alt" />
-                            </IconButton>
-                        </Stack>
-                    </Grid>
-                )}
+                        <IconButton
+                            aria-label="refresh"
+                            color="primary"
+                            disableFocusRipple={true}
+                            onClick={async () => handleUpdate()}
+                        >
+                            <FontAwesomeIcon icon="sync-alt" />
+                        </IconButton>
+                    </Stack>
+                </Grid>
             </Grid>
             <Grid container spacing={0} direction="row" alignItems="center" sx={{ mt: 0 }}>
                 <Grid item xs={12} lg={6}>
@@ -374,7 +292,7 @@ export default function Write() {
                                 <SelectField
                                     label={
                                         <div style={{display: 'flex', alignItems: 'center', verticalAlign: 'bottom'}}>
-                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> {`Part of destination ${destinationTypeFormatted} to write`}
+                                            <FontAwesomeIcon icon="file-fragment" style={{marginRight: '5px'}} /> Part of destination physical disk to write to
                                         </div>
                                     }
                                     id="write-part-path"

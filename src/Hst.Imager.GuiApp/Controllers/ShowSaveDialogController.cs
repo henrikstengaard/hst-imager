@@ -56,14 +56,16 @@ namespace Hst.Imager.GuiApp.Controllers
             }
 
             var path = HybridSupport.IsElectronActive
-                ? await ElectronDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path)
-                : OperatingSystemDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters, showDialogBackgroundTask.Path);
+                ? await ElectronDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters,
+                    showDialogBackgroundTask.Path)
+                : OperatingSystemDialog.ShowSaveDialog(showDialogBackgroundTask.Title, showDialogBackgroundTask.FileFilters,
+                    showDialogBackgroundTask.Path);
             
             await showDialogResultContext.Clients.All.SendAsync("ShowDialogResult", new ShowDialogResult
             {
                 Id = showDialogBackgroundTask.Id,
                 IsSuccess = !string.IsNullOrWhiteSpace(path),
-                Paths = new []{ path }
+                Paths = [path]
             }, context.Token);            
         }
     }
