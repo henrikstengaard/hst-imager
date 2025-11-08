@@ -64,7 +64,7 @@ public class AdfCreateCommand : CommandBase
             return new Result(new Error("Name required for formatting"));
         }
 
-        var dosTypeBytes = DosTypeHelper.FormatDosType(dosType);
+        var dosTypeBytes = DosTypeHelper.FormatDosType(dosType.ToUpperInvariant());
 
         OnInformationMessage(
             $"- DOS type '0x{dosTypeBytes.FormatHex()}' ({dosTypeBytes.FormatDosType()})");

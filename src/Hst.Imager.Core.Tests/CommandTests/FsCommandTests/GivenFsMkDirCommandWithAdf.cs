@@ -26,6 +26,9 @@ public class GivenFsMkDirCommandWithAdf
             // arrange - add test media
             await TestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath, "Amiga");
             
+            // arrange - clear active medias
+            testCommandHelper.ClearActiveMedias();
+            
             // arrange - create fs mkdir command
             var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
                 mkDirPath);
@@ -57,6 +60,9 @@ public class GivenFsMkDirCommandWithAdf
 
             // arrange - add test media
             await TestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath, "Amiga");
+            
+            // arrange - clear active medias
+            testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
             var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
@@ -100,6 +106,9 @@ public class GivenFsMkDirCommandWithAdf
             
             // arrange - create existing path
             await AdfTestHelper.CreateDirectory(testCommandHelper, mediaPath, ["dir3"]);
+            
+            // arrange - clear active medias
+            testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
             var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
@@ -166,6 +175,9 @@ public class GivenFsMkDirCommandWithAdf
 
             // arrange - create existing file in path
             await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            
+            // arrange - clear active medias
+            testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
             var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],

@@ -60,7 +60,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
     
     private async Task<Result> CreateAdfMediaDirectory(MediaResult resolvedMedia)
     {
-        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        var mediaResult = await commandHelper.GetWritableFileMedia(resolvedMedia.MediaPath);
         if (mediaResult.IsFaulted)
         {
             return new Result<IEntryIterator>(mediaResult.Error);
