@@ -160,13 +160,25 @@ public static class MbrTestHelper
     /// <exception cref="IOException"></exception>
     public static async Task CreateDirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
     {
-        var (media, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
+        var (_, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
         
         fileSystem.CreateDirectory("dir1");
         fileSystem.CreateDirectory("dir2");
         fileSystem.CreateDirectory("dir1\\dir3");
         
         await using var file = fileSystem.OpenFile("dir1\\file1.txt", FileMode.Create, FileAccess.Write);
+    }
+
+    public static async Task CreateFile(TestCommandHelper testCommandHelper, string path, string[] pathComponents)
+    {
+        var (_, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
+
+        if (pathComponents.Length > 1)
+        {
+            fileSystem.CreateDirectory(string.Join("\\",  pathComponents.Take(pathComponents.Length - 1)));
+        }
+        
+        await using var file = fileSystem.OpenFile(string.Join("\\",  pathComponents), FileMode.Create, FileAccess.Write);
     }
     
     public static async Task<(Media, IFileSystem)> MountFileSystem(TestCommandHelper testCommandHelper, string mediaPath,

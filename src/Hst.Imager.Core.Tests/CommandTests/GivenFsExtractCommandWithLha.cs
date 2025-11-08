@@ -14,8 +14,11 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
 {
     private readonly string lhaPath = Path.Combine("TestData", "Lha", "amiga.lha");
 
-    [Fact]
-    public async Task WhenExtractingAllRecursivelyFromLhaToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenExtractingAllRecursivelyFromLhaToLocalDirectoryThenDirectoriesAndFilesAreExtracted(
+        bool recursive)
     {
         var srcPath = $"{Guid.NewGuid()}.lha";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -34,7 +37,7 @@ public class GivenFsExtractCommandWithLha : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

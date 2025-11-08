@@ -193,6 +193,16 @@ public class FsExtractCommand : FsCommandBase
                     mediaResult.Value.MediaPath));
         }
 
+        // set recursive true, if not recursive and virtual path is empty
+        // when extracting an archive specifying only the archive filename,
+        // it should extract all directories and files in it.
+        // when extracting an archive specifying archive filename and a virtual path to a file,
+        // it should leave recursive as is.
+        if (!recursive && string.IsNullOrEmpty(mediaResult.Value.FileSystemPath))
+        {
+            recursive = true;
+        }
+        
         // zip
         var zipEntryIteratorResult = await GetZipEntryIterator(mediaResult.Value, recursive);
         if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)

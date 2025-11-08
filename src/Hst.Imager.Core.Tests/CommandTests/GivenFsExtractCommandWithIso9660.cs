@@ -12,8 +12,11 @@ using Xunit;
 
 public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
 {
-    [Fact]
-    public async Task WhenExtractingAllRecursivelyFromIsoToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenExtractingAllRecursivelyFromIsoToLocalDirectoryThenDirectoriesAndFilesAreExtracted(
+        bool recursive)
     {
         var srcPath = $"{Guid.NewGuid()}.iso";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -32,7 +35,7 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

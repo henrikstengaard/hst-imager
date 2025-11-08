@@ -1,5 +1,4 @@
 ﻿using System.Runtime.Caching;
-using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Core;
 
 namespace Hst.Imager.Core.Commands;
@@ -27,7 +26,8 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
     private string[] dirPathComponents = [];
     private string initializedDirPath = string.Empty;
     private bool lastPathComponentExist = true;
-    private bool isInitialized = false;
+    private EntryType lastPathComponentEntryType = EntryType.Dir;
+    private bool isInitialized;
 
     public string MediaPath => path;
     public string FileSystemPath => string.Empty;
@@ -182,6 +182,13 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
 
                 Directory.CreateDirectory(dirPath);
             }
+            else
+            {
+                if (i == rootPathComponents.Length - 1)
+                {
+                    lastPathComponentEntryType = dirExists ? EntryType.Dir : EntryType.File;
+                }
+            }
 
             exisingPathComponents.Add(rootPathComponents[i]);
         }
@@ -253,7 +260,7 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
         }
 
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         var fullPath = await GetEntryPath(entry, fullPathComponents);
 
@@ -322,7 +329,7 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
         }
         
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
         
         var fullPath = await GetEntryPath(entry, fullPathComponents);
 
@@ -368,7 +375,6 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
              0); // continue until bytes read is 0. reads from zip streams can return bytes between 0 to buffer length. 
 
         fileStream.Close();
-        await fileStream.DisposeAsync();
 
         if (entry.Date.HasValue)
         {
@@ -410,7 +416,7 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
 
     public IEnumerable<string> GetLogs()
     {
-        return this.logs.Count == 0
+        return logs.Count == 0
             ? new List<string>()
             : new[]
             {

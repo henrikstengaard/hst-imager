@@ -14,8 +14,11 @@ public class GivenFsExtractCommandWithLzx : FsCommandTestBase
 {
     private readonly string lzxPath = Path.Combine("TestData", "Lzx", "amiga.lzx");
     
-    [Fact]
-    public async Task WhenExtractingAllRecursivelyFromLzxToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenExtractingAllRecursivelyFromLzxToLocalDirectoryThenDirectoriesAndFilesAreExtracted(
+        bool recursive)
     {
         var srcPath = $"{Guid.NewGuid()}.lzx";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -34,7 +37,7 @@ public class GivenFsExtractCommandWithLzx : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

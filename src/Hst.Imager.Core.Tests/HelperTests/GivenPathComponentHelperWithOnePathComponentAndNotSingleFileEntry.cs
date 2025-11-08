@@ -14,16 +14,17 @@ public class GivenPathComponentHelperWithOnePathComponentAndNotSingleFileEntry
     [InlineData(EntryType.File, false)]
     [InlineData(EntryType.Dir, true)]
     [InlineData(EntryType.Dir, false)]
-    public void When_GetPathComponents_Then_DirAndEntryPathComponentsAreCombined(EntryType entryType,
+    public void When_GetPathComponents_Then_DirAndEntryPathComponentsAreCombined(EntryType srcEntryType,
         bool lastRootPathComponentExist)
     {
         // arrange - src and dest path components
         var srcPathComponents = new[] { "dir1" };
+        const EntryType destEntryType = EntryType.Dir;
         var destPathComponents = new[] { "dir2" };
 
         // act - get full path components
-        var fullPathComponents = PathComponentHelper.GetFullPathComponents(entryType, srcPathComponents,
-            destPathComponents, lastRootPathComponentExist, IsSingleEntryOperation);
+        var fullPathComponents = PathComponentHelper.GetFullPathComponents(srcEntryType, srcPathComponents,
+            destEntryType, destPathComponents, lastRootPathComponentExist, IsSingleEntryOperation);
 
         // assert
         Assert.Equal(["dir2", "dir1"], fullPathComponents);

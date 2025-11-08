@@ -13,12 +13,14 @@ using Directory = System.IO.Directory;
 
 public class GivenFsExtractCommandWithAdf : FsCommandTestBase
 {
-    [Fact]
-    public async Task WhenExtractingAllRecursivelyFromAdfToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenExtractingAllRecursivelyFromAdfToLocalDirectoryThenDirectoriesAndFilesAreExtracted(
+        bool recursive)
     {
         var srcPath = $"{Guid.NewGuid()}.adf";
         var destPath = $"{Guid.NewGuid()}-extract";
-        const bool recursive = true;
 
         try
         {

@@ -13,8 +13,11 @@ using Xunit;
 
 public class GivenFsExtractCommandWithZip : FsCommandTestBase
 {
-    [Fact]
-    public async Task WhenExtractingAllRecursivelyFromZipToLocalDirectoryThenDirectoriesAndFilesAreExtracted()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task WhenExtractingAllRecursivelyFromZipToLocalDirectoryThenDirectoriesAndFilesAreExtracted(
+        bool recursive)
     {
         var srcPath = $"{Guid.NewGuid()}.zip";
         var destPath = $"{Guid.NewGuid()}-extract";
@@ -33,7 +36,7 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             // arrange - create fs extract command
             var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
 
             // act - extract
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);

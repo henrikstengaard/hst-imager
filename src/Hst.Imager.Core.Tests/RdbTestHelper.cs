@@ -38,6 +38,25 @@ public static class RdbTestHelper
         media.Dispose();
     }
 
+    public static async Task CreateFile(TestCommandHelper testCommandHelper, string mediaPath, string[] pathComponents)
+    {
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, 0, true);
+
+        if (pathComponents.Length > 1)
+        {
+            foreach (var pathComponent in pathComponents.Take(pathComponents.Length - 1))
+            {
+                await fileSystemVolume.CreateDirectory(pathComponent);
+                await fileSystemVolume.ChangeDirectory(pathComponent);
+            }
+        }
+        
+        await fileSystemVolume.CreateFile(pathComponents[^1], true, true);
+        
+        fileSystemVolume.Dispose();
+        media.Dispose();
+    }
+    
     public static async Task<IFileSystemVolume> MountFileSystemVolume(Stream stream, PartitionBlock partitionBlock) =>
         partitionBlock.DosTypeFormatted.ToLowerInvariant() switch
         {

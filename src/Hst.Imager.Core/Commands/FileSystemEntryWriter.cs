@@ -27,6 +27,7 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
     private string[] dirPathComponents = [];
 
     private bool lastPathComponentExist = true;
+    private Models.FileSystems.EntryType lastPathComponentEntryType = Models.FileSystems.EntryType.Dir;
     private bool isInitialized = false;
 
     public string MediaPath => media.Path;
@@ -94,6 +95,14 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
                 
                 fileSystem.CreateDirectory(dirPath);
             }
+            else
+            {
+                if (i == rootPathComponents.Length - 1)
+                {
+                    lastPathComponentEntryType = fileSystem.DirectoryExists(fileSystemInfo.FullName)
+                        ? Models.FileSystems.EntryType.Dir : Models.FileSystems.EntryType.File;
+                }
+            }
             
             exisingPathComponents.Add(rootPathComponents[i]);
         }
@@ -114,7 +123,7 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
         }
         
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         if (fullPathComponents.Length == 0)
         {
@@ -160,7 +169,7 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
         }
 
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         var fullPath = mediaPath.Join(fullPathComponents);
 

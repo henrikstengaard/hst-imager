@@ -15,11 +15,105 @@ namespace Hst.Imager.Core.Tests.CommandTests;
 public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsCommandTestBase
 {
     [Fact]
+    public async Task When_CopyingFromAndToSameRootDirMbrFat32Media_Then_FileIsCopied()
+    {
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "file2.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "file2_copy.txt");
+        const bool recursive = false;
+        
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - add test media
+            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
+
+            // arrange - create directories and files
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateFile(testCommandHelper, mediaPath, ["file2.txt"]);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, recursive, false, true);
+            
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // assert - root directory contains 4 entries
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, [])).ToList();
+            Assert.Equal(["dir1", "dir2", "file2_copy.txt", "file2.txt"], entries.Select(x => x.Name).Order());
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingFromAndToSameRootDirMbrFat32MediaFilesExisting_Then_FileIsCopied()
+    {
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine(mediaPath, "mbr", "1", "file2.txt");
+        var destPath = Path.Combine(mediaPath, "mbr", "1", "file2_copy.txt");
+        const bool recursive = false;
+        
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - add test media
+            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
+
+            // arrange - create directories and files
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+            await MbrTestHelper.CreateFile(testCommandHelper, mediaPath, ["file2.txt"]);
+            await MbrTestHelper.CreateFile(testCommandHelper, mediaPath, ["file2_copy.txt"]);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, recursive, false, true);
+            
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // assert - root directory contains 4 entries
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, [])).ToList();
+            Assert.Equal(["dir1", "dir2", "file2_copy.txt", "file2.txt"], entries.Select(x => x.Name).Order());
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+    
+    [Fact]
     public async Task When_CopyingToDirFromAndToSameMbrFat32Media_Then_FileIsCopied()
     {
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "dir3");
+        const bool recursive = false;
         
         try
         {
@@ -38,7 +132,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -64,6 +158,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1_copy.txt");
+        const bool recursive = false;
         
         try
         {
@@ -82,7 +177,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -108,7 +203,8 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4");
-
+        const bool recursive = false;
+        
         try
         {
             // arrange - test command helper
@@ -126,7 +222,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -158,6 +254,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4", "dir5");
+        const bool recursive = false;
         
         try
         {
@@ -175,7 +272,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), srcPath, destPath, true, false, true);
+                new List<IPhysicalDrive>(), srcPath, destPath, recursive, false, true);
 
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -197,6 +294,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
         var mediaPath = $"{Guid.NewGuid()}.vhd";
         var srcPath = Path.Combine(mediaPath, "mbr", "1", "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "mbr", "1", "dir4", "dir5");
+        const bool recursive = false;
         const bool createDestDir = true;
 
         try
@@ -215,7 +313,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), srcPath, destPath, true, false, true,
+                new List<IPhysicalDrive>(), srcPath, destPath, recursive, false, true,
                 makeDirectory: createDestDir);
 
             // act - copy

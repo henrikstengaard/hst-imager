@@ -11,11 +11,13 @@ public static class PathComponentHelper
     /// <param name="srcEntryType"></param>
     /// <param name="srcPathComponents">Source path components to entry to write.</param>
     /// <param name="destPathComponents">Root path components to where the writer is initialized.</param>
+    /// <param name="destEntryType"></param>
     /// <param name="doesLastPathComponentExist">Does the last part of root path component exist.</param>
     /// <param name="isSingleEntryOperation">Is it a single file operation.</param>
     /// <returns></returns>
-    public static string[] GetFullPathComponents(EntryType srcEntryType, string[] srcPathComponents, string[] destPathComponents,
-        bool doesLastPathComponentExist, bool isSingleEntryOperation)
+    public static string[] GetFullPathComponents(EntryType srcEntryType, string[] srcPathComponents,
+        EntryType destEntryType, string[] destPathComponents, bool doesLastPathComponentExist,
+        bool isSingleEntryOperation)
     {
         var dirPathComponents = doesLastPathComponentExist ? destPathComponents : destPathComponents.Take(destPathComponents.Length - 1).ToArray();
         
@@ -26,8 +28,17 @@ public static class PathComponentHelper
         {
             return dirPathComponents;
         }
+
+        if (isSingleEntryOperation &&
+            doesLastPathComponentExist &&
+            srcEntryType == EntryType.File &&
+            destEntryType == EntryType.File)
+        {
+            return destPathComponents;
+        }
         
-        var isSingleFileCopyAndRename = isSingleEntryOperation && !doesLastPathComponentExist;
+        var isSingleFileCopyAndRename = isSingleEntryOperation &&
+                                        !doesLastPathComponentExist;
 
         var fullPathComponents = isSingleFileCopyAndRename
             ? destPathComponents

@@ -28,6 +28,11 @@ public static class MagicBytes
     public static readonly byte[] MbrMagicNumber = [0x55, 0xaa];
 
     /// <summary>
+    /// GPT signature at offset 0 / 0x0 in LBA 1 / sector 1 (Guid Partition Table)
+    /// </summary>
+    public static readonly byte[] GptMagicNumber = [0x45, 0x46, 0x49, 0x20, 0x50, 0x41, 0x52, 0x54];
+    
+    /// <summary>
     /// "-lh" at offset 2 (Lha archive)
     /// </summary>
     public static readonly byte[] LhaMagicNumber = [0x2D, 0x6C, 0x68];

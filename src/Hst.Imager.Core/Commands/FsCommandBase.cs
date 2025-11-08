@@ -1,4 +1,5 @@
 ﻿using DiscUtils.Ntfs;
+using Hst.Imager.Core.Extensions;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -525,6 +526,74 @@ public abstract partial class FsCommandBase : CommandBase
             ? new Result<IEntryWriter>(initializeResult.Error)
             : new Result<IEntryWriter>(directoryEntryWriter);
     }
+
+    private async Task<Result<bool>> IsFileDiskMedia(string path, ModifierEnum modifiers)
+    {
+        var readableMediaResult = await commandHelper.GetReadableFileMedia(path, modifiers);
+        if (readableMediaResult.IsFaulted)
+        {
+            return new Result<bool>(readableMediaResult.Error);
+        }
+
+        using var media = readableMediaResult.Value;
+        var stream = media.Stream;
+
+        // read sector 0
+        var sectorBytes = new byte[512];
+        var bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
+        if (bytesRead != sectorBytes.Length)
+        {
+            return new Result<bool>(false);
+        }
+
+        // return true, if media has adf size and has dos magic number
+        if (media.Size == Amiga.FloppyDiskConstants.DoubleDensity.Size &&
+            sectorBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber))
+        {
+            return new Result<bool>(true);
+        }
+        
+        // return true, if sector 0 has mbr, rdb or vhd magic number
+        if (sectorBytes.HasMagicNumber(MagicBytes.MbrMagicNumber, 0x1fe) ||
+            sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber) ||
+            sectorBytes.HasMagicNumber(MagicBytes.VhdMagicNumber))
+        {
+            return new Result<bool>(true);
+        }
+
+        // read sector 1
+        bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
+        if (bytesRead != sectorBytes.Length)
+        {
+            return new Result<bool>(false);
+        }
+
+        // return true, if sector 1 has gpr or rdb magic number
+        if (sectorBytes.HasMagicNumber(MagicBytes.GptMagicNumber) ||
+            sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber))
+        {
+            return new Result<bool>(true);
+        }
+
+        // read sector 2-15
+        for (var i = 2; i <= 15; i++)
+        {
+            // read sector
+            bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
+            if (bytesRead != sectorBytes.Length)
+            {
+                return new Result<bool>(false);
+            }
+            
+            // return true, if sector 1 has rdb magic number
+            if (sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber))
+            {
+                return new Result<bool>(true);
+            }
+        }
+        
+        return new Result<bool>(false);
+    }
     
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool createDestDirectory)
     {
@@ -549,6 +618,12 @@ public abstract partial class FsCommandBase : CommandBase
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
         OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
+
+        if (File.Exists(destPath) &&
+            string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
+        {
+            return await GetDirectoryEntryWriter(destPath, createDestDirectory);
+        }
 
         var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
         if (writableMediaResult.IsFaulted)

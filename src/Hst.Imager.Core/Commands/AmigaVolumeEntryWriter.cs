@@ -30,7 +30,8 @@ public class AmigaVolumeEntryWriter(
     /// </summary>
     private string[] dirPathComponents = [];
     private bool lastPathComponentExist = true;
-    private bool isInitialized = false;
+    private Models.FileSystems.EntryType lastPathComponentEntryType = Models.FileSystems.EntryType.Dir;
+    private bool isInitialized;
     
     private readonly IMediaPath mediaPath = PathComponents.MediaPath.AmigaOsPath;
 
@@ -99,10 +100,23 @@ public class AmigaVolumeEntryWriter(
                 }
                 
                 await fileSystemVolume.CreateDirectory(rootPathComponents[i]);
+                
+                await fileSystemVolume.ChangeDirectory(rootPathComponents[i]);
             }
-
-            await fileSystemVolume.ChangeDirectory(rootPathComponents[i]);
-
+            else
+            {
+                if (pathComponentEntry.Type != EntryType.File)
+                {
+                    await fileSystemVolume.ChangeDirectory(rootPathComponents[i]);
+                }
+                
+                if (i == rootPathComponents.Length - 1)
+                {
+                    lastPathComponentEntryType = pathComponentEntry.Type == EntryType.Dir
+                        ? Models.FileSystems.EntryType.Dir : Models.FileSystems.EntryType.File;
+                }
+            }
+            
             exisingPathComponents.Add(rootPathComponents[i]);
         }
         
@@ -206,7 +220,7 @@ public class AmigaVolumeEntryWriter(
         }
         
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         if (fullPathComponents.Length == 0)
         {
@@ -268,7 +282,7 @@ public class AmigaVolumeEntryWriter(
         }
 
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         var requiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
 
