@@ -319,6 +319,7 @@ For Master Boot Record and Guid Partition Table, one partition is added with siz
 
 For Rigid Disk Block, Professional File System `pfs3aio` (PDS\3 and PFS\3) and Fast File System (DOS\3 and DOS\7) are supported.
 If file system PDS\3 or PFS\3 is used, then Professional File System `pfs3aio` is automatically downloaded from aminet.net by default unless another file system path is defined.
+Professional File System partitions are formatted with filename size set to 107 by default, so it's not necessary to run `setfnsize` after formatting.
 
 When partitioning, first `Workbench` partition will always have the size of 1GB to support Amiga's that can't access disks larger than 4GB at boot time.
 Additional `Work` partitions are added for the remaining disk space with size up to 128GB.
