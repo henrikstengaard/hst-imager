@@ -102,7 +102,7 @@ public static class FsCommandFactory
         var recursiveOption = new Option<bool>(
             new[] { "--recursive", "-r" },
             description: "Recursively extract sub-directories.",
-            getDefaultValue: () => true);
+            getDefaultValue: () => false);
         
         var skipAttributesOption = new Option<bool>(
             new[] { "--skip-attributes", "-sa" },

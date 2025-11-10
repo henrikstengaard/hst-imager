@@ -82,7 +82,8 @@ public static class EntryWriterTestHelper
 
         await using var pfs3Volume = await TestHelper.MountPfs3Volume(stream);
 
-        return new AmigaVolumeEntryWriter(media, string.Empty, initializePathComponents, pfs3Volume, createDestDirectory);
+        return new AmigaVolumeEntryWriter(media, string.Empty, initializePathComponents, false,
+            pfs3Volume, createDestDirectory);
     }
     
     public static async Task<IEntryWriter> CreateFileSystemEntryWriter(TestCommandHelper testCommandHelper, 
@@ -102,7 +103,8 @@ public static class EntryWriterTestHelper
         var biosPartitionTable = new BiosPartitionTable(disk);
         using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
 
-        return new FileSystemEntryWriter(media, fatFileSystem, initializePathComponents, createDestDirectory);
+        return new FileSystemEntryWriter(media, fatFileSystem, initializePathComponents, false,
+            createDestDirectory);
     }
 
     public static IEntryWriter CreateDirectoryEntryWriter(TestCommandHelper testCommandHelper,
@@ -113,7 +115,8 @@ public static class EntryWriterTestHelper
             Directory.CreateDirectory(path);
         }
         
-        return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), createDestDirectory);
+        return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), false,
+            createDestDirectory);
     }
 
     public static async Task CreateDirectory(EntryWriterType entryWriterType, TestCommandHelper testCommandHelper,

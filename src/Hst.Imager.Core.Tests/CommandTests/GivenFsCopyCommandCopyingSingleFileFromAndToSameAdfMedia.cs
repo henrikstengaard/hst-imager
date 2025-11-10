@@ -75,7 +75,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameAdfMedia : FsComman
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, false, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -116,7 +116,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameAdfMedia : FsComman
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, false, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);

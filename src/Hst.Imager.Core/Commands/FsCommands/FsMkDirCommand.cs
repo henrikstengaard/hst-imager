@@ -40,7 +40,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         
         if (await IsAdfMedia(pathResult.Value))
         {
-            return await CreateAdfMediaDirectory(pathResult.Value);
+            return await CreateAdfMediaDirectory(pathResult.Value, false);
         }
 
         return await CreateDiskMediaDirectory(pathResult.Value);
@@ -58,7 +58,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         return new Result();
     }
     
-    private async Task<Result> CreateAdfMediaDirectory(MediaResult resolvedMedia)
+    private async Task<Result> CreateAdfMediaDirectory(MediaResult resolvedMedia, bool recursive)
     {
         var mediaResult = await commandHelper.GetWritableFileMedia(resolvedMedia.MediaPath);
         if (mediaResult.IsFaulted)
@@ -78,7 +78,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
 
         await using var fileSystemVolume = fileSystemVolumeResult.Value;
         using var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(mediaResult.Value, string.Empty,
-            [], fileSystemVolume, false);
+            [], recursive, fileSystemVolume, false);
 
         var initializeResult = await amigaVolumeEntryWriter.Initialize();
         if (initializeResult.IsFaulted)

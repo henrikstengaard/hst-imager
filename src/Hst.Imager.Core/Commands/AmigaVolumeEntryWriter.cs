@@ -18,6 +18,7 @@ public class AmigaVolumeEntryWriter(
     Media media,
     string fileSystemPath,
     string[] rootPathComponents,
+    bool recursive,
     IFileSystemVolume fileSystemVolume,
     bool createDirectory)
     : IEntryWriter
@@ -118,6 +119,12 @@ public class AmigaVolumeEntryWriter(
             }
             
             exisingPathComponents.Add(rootPathComponents[i]);
+        }
+        
+        if (recursive && !lastPathComponentExist)
+        {
+            var path = string.Join("/", rootPathComponents);
+            return new Result(new PathNotFoundError($"Path '{path}' not found. Directory must exist when using recursive!", path));
         }
         
         dirPathComponents = exisingPathComponents.ToArray();

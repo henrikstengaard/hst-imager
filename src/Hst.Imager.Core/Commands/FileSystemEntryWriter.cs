@@ -14,7 +14,7 @@ using Models;
 using Entry = Models.FileSystems.Entry;
 
 public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[] rootPathComponents,
-    bool createDirectory) : IEntryWriter
+    bool recursive, bool createDirectory) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IMediaPath mediaPath = PathComponents.MediaPath.GenericMediaPath;
@@ -107,6 +107,12 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
             exisingPathComponents.Add(rootPathComponents[i]);
         }
 
+        if (recursive && !lastPathComponentExist)
+        {
+            var path = string.Join("/", rootPathComponents);
+            return Task.FromResult(new Result(new PathNotFoundError($"Path '{path}' not found. Directory must exist when using recursive!", path)));
+        }
+
         dirPathComponents = exisingPathComponents.ToArray();
 
         isInitialized = true;
@@ -138,12 +144,10 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
             return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{path}'", path)));
         }
 
-        CreateFileSystemDirectory(fullPathComponents);
-
-        return Task.FromResult(new Result());
+        return Task.FromResult(CreateFileSystemDirectory(fullPathComponents));
     }
 
-    private void CreateFileSystemDirectory(string[] pathComponents)
+    private Result CreateFileSystemDirectory(string[] pathComponents)
     {
         for (var i = 1; i <= pathComponents.Length; i++)
         {
@@ -154,10 +158,19 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
                 continue;
             }
 
-            fileSystem.CreateDirectory(mediaPath.Join(pathComponents.Take(i).ToArray()));
+            var path = mediaPath.Join(pathComponents.Take(i).ToArray());
+
+            if (fileSystem.FileExists(path))
+            {
+                return new Result(new Error($"Create directory path '{path}' failed. Path already exists as a file!"));
+            }
+            
+            fileSystem.CreateDirectory(path);
 
             dirPathsCreated.Add(dirPath);
         }
+        
+        return new Result();
     }
 
     public async Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes,

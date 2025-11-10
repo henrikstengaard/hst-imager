@@ -56,7 +56,7 @@ public class FsCopyCommand : FsCommandBase
         var stopwatch = new Stopwatch();
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, makeDirectory);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

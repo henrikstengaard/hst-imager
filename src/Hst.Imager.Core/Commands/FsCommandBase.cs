@@ -505,7 +505,7 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<IEntryIterator>(new FileSystemEntryIterator(media, gptFileSystemResult.Value, rootPath, recursive));
     }
 
-    private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path, bool createDirectory)
+    private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path, bool recursive, bool createDirectory)
     {
         // ensure path is full path
         path = PathHelper.GetFullPath(path);
@@ -519,7 +519,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(new PathNotFoundError($"Path not found '{path}'", path));
         }
         
-        var directoryEntryWriter = new DirectoryEntryWriter(path, createDirectory);
+        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory);
 
         var initializeResult = await directoryEntryWriter.Initialize();
         return initializeResult.IsFaulted
@@ -595,7 +595,7 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<bool>(false);
     }
     
-    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool createDestDirectory)
+    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool recursive, bool createDestDirectory)
     {
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(destPath);
@@ -608,12 +608,12 @@ public abstract partial class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(mediaResult.Error);
             }
 
-            return await GetDirectoryEntryWriter(destPath, createDestDirectory);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
         }
 
         if (Directory.Exists(destPath))
         {
-            return await GetDirectoryEntryWriter(destPath, createDestDirectory);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
@@ -622,7 +622,7 @@ public abstract partial class FsCommandBase : CommandBase
         if (File.Exists(destPath) &&
             string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
-            return await GetDirectoryEntryWriter(destPath, createDestDirectory);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
         }
 
         var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
@@ -652,7 +652,7 @@ public abstract partial class FsCommandBase : CommandBase
             }
 
             var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, string.Empty,
-                fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries),
+                fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), recursive,
                 fileSystemVolumeResult.Value, createDestDirectory);
 
             var adfInitializeResult = await adfAmigaVolumeEntryWriter.Initialize();
@@ -683,7 +683,7 @@ public abstract partial class FsCommandBase : CommandBase
                 
                 // skip 2 first parts, partition table and partition number
                 var fileSystemEntryWriter = new FileSystemEntryWriter(media, mbrFileSystemResult.Value,
-                    parts.Skip(2).ToArray(), createDestDirectory);
+                    parts.Skip(2).ToArray(), recursive, createDestDirectory);
 
                 // initialize file system entry writer
                 var mbrInitializeResult = await fileSystemEntryWriter.Initialize();
@@ -699,7 +699,7 @@ public abstract partial class FsCommandBase : CommandBase
                 
                 // skip 2 first parts, partition table and partition number
                 var gptFileSystemEntryWriter = new FileSystemEntryWriter(media, gptFileSystemResult.Value,
-                    parts.Skip(2).ToArray(), createDestDirectory);
+                    parts.Skip(2).ToArray(), recursive, createDestDirectory);
                 
                 // initialize file system entry writer
                 var gptInitializeResult = await gptFileSystemEntryWriter.Initialize();
@@ -719,8 +719,9 @@ public abstract partial class FsCommandBase : CommandBase
                 }
 
                 // skip 2 first parts, partition table and device/drive name
-                var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, fileSystemPath, parts.Skip(2).ToArray(),
-                    fileSystemVolumeResult.Value, createDestDirectory);
+                var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, fileSystemPath,
+                    parts.Skip(2).ToArray(), recursive, fileSystemVolumeResult.Value,
+                    createDestDirectory);
                 
                 // initialize amiga volume entry writer
                 var rdbInitializeResult = await amigaVolumeEntryWriter.Initialize();

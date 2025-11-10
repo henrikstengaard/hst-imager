@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using UaeMetadatas;
 using Models.FileSystems;
 
-public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWriter
+public class DirectoryEntryWriter(string path, bool recursive, bool createDirectory) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
@@ -193,6 +193,11 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
             exisingPathComponents.Add(rootPathComponents[i]);
         }
 
+        if (recursive && !lastPathComponentExist)
+        {
+            return Task.FromResult(new Result(new PathNotFoundError($"Path '{path}' not found. Directory must exist when using recursive!", path)));
+        }
+
         dirPathComponents = exisingPathComponents.ToArray();
         initializedDirPath = Path.Combine(dirPathComponents);
 
@@ -297,6 +302,11 @@ public class DirectoryEntryWriter(string path, bool createDirectory) : IEntryWri
 
         fullPath = Path.Combine(dirPath, name);
 
+        if (File.Exists(fullPath))
+        {
+            return new Result(new Error($"Create directory path '{path}' failed. Path already exists as a file!"));
+        }
+        
         if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))
         {
             Directory.CreateDirectory(fullPath);

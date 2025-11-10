@@ -293,4 +293,86 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
+
+    [Fact]
+    public async Task When_ExtractingSingleFileFromAdfToLocalDirectoryRenamed_ThenFileIsExtracted()
+    {
+        var srcPath = $"{Guid.NewGuid()}.adf";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractSrcPath = Path.Combine(srcPath, "file1.txt");
+        var extractDestPath = Path.Combine(destPath, "file1_extracted.txt");
+        const bool recursive = false;
+        
+        try
+        {
+            // arrange - create dos3 formatted adf with files
+            await CreateDos3FormattedAdf(srcPath);
+            await CreateDos3AdfFiles(srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractSrcPath, extractDestPath, recursive, false, true);//, uaeMetadata: uaeMetadata);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert - 1 file extracted
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "file1_extracted.txt")
+            };
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+            Array.Sort(actualFiles);
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_ExtractingSingleFileFromAdfToLocalDirectoryRenamedRecursively_ThenErrorIsReturned()
+    {
+        var srcPath = $"{Guid.NewGuid()}.adf";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractSrcPath = Path.Combine(srcPath, "file1.txt");
+        var extractDestPath = Path.Combine(destPath, "file1_extracted.txt");
+        const bool recursive = true;
+        
+        try
+        {
+            // arrange - create dos3 formatted adf with files
+            await CreateDos3FormattedAdf(srcPath);
+            await CreateDos3AdfFiles(srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractSrcPath, extractDestPath, recursive, false, true);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(CancellationToken.None);
+            
+            // assert
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsFaulted);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 }
