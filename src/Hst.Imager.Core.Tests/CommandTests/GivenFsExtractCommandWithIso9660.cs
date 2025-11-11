@@ -321,12 +321,15 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var expectedFiles = new[]
-            {
-                Path.Combine(destPath, "__uae___AUX"),
-                Path.Combine(destPath, "_UAEFSDB.___"),
-                Path.Combine(destPath, "AUX.info")
-            };
+            var expectedFiles = (OperatingSystem.IsWindows()
+                ? new[]
+                {
+                    Path.Combine(destPath, "__uae___AUX"),
+                    Path.Combine(destPath, "_UAEFSDB.___"),
+                } : new []
+                {
+                    Path.Combine(destPath, "AUX")
+                }).Concat([Path.Combine(destPath, "AUX.info")]);
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
             Assert.Equal(expectedFiles, actualFiles);
         }
@@ -364,12 +367,15 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var expectedFiles = new[]
-            {
-                Path.Combine(destPath, "%41%55%58"),
-                Path.Combine(destPath, "%41%55%58.uaem"),
-                Path.Combine(destPath, "AUX.info"),
-            };
+            var expectedFiles = (OperatingSystem.IsWindows()
+                ? new[]
+                {
+                    Path.Combine(destPath, "%41%55%58"),
+                    Path.Combine(destPath, "%41%55%58.uaem"),
+                } : new []
+                {
+                    Path.Combine(destPath, "AUX")
+                }).Concat([Path.Combine(destPath, "AUX.info")]);
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
             Assert.Equal(expectedFiles, actualFiles);
         }
