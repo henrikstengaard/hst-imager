@@ -100,5 +100,7 @@ public class LzwArchiveEntryIterator : IEntryIterator
         return Task.CompletedTask;
     }
 
+    public bool SupportsUaeMetadata => false;
+
     public UaeMetadata UaeMetadata { get; set; }
 }

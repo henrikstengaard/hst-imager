@@ -353,6 +353,8 @@ public class AmigaVolumeEntryWriter(
         return new AmigaVolumeEntryIterator(media, media.Stream, rootPath, fileSystemVolume, recursive);
     }
 
+    public bool SupportsUaeMetadata => true;
+
     public UaeMetadata UaeMetadata { get; set; }
 
     public async Task Flush()

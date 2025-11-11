@@ -387,6 +387,9 @@ public class FileSystemEntryIterator : IEntryIterator
     {
         return Task.CompletedTask;
     }
+
+    public bool SupportsUaeMetadata => false;
+
     private bool SkipEntry(string[] pathComponents)
     {
         if (!UsesPattern)

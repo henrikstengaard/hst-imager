@@ -64,5 +64,7 @@ public interface IEntryWriter : IDisposable
 
     IEntryIterator CreateEntryIterator(string rootPath, bool recursive);
     
+    bool SupportsUaeMetadata { get; }
+
     UaeMetadata UaeMetadata { get; set; }
 }

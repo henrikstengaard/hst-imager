@@ -140,6 +140,9 @@
       <None Update="TestData\lsblk\lsblk-ubuntu.json">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\iso\reserved_windows_filenames.iso">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

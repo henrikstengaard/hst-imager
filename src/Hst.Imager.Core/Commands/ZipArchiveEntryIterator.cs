@@ -222,5 +222,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
         return Task.CompletedTask;
     }
 
+    public bool SupportsUaeMetadata => true;
+
     public UaeMetadata UaeMetadata { get; set; }
 }

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Imager.Core.UaeMetadatas;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -242,6 +244,134 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
                 Path.Combine(destPath, "file3.txt"),
             };
             Assert.Equal(expectedFiles, files);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_ExtractingWithReservedWindowsFilenamesAndNoMetaData_Then_FilesAreExtractedWithoutMetaData()
+    {
+        var srcPath = $"{Guid.NewGuid()}.iso";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        const UaeMetadata uaeMetadata = UaeMetadata.None;
+
+        try
+        {
+            // arrange - create iso9660 image with reserved windows filename
+            File.Copy(Path.Combine("TestData", "iso", "reserved_windows_filenames.iso"), srcPath);
+            
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true, uaeMetadata: uaeMetadata);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, $"{(OperatingSystem.IsWindows() ? "_" : string.Empty)}AUX"),
+                Path.Combine(destPath, "AUX.info"),
+            };
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_ExtractingWithReservedWindowsFilenamesAndUaeFsDb_Then_FilesAreExtractedWithMetaData()
+    {
+        var srcPath = $"{Guid.NewGuid()}.iso";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - create iso9660 image with reserved windows filename
+            File.Copy(Path.Combine("TestData", "iso", "reserved_windows_filenames.iso"), srcPath);
+            
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true, uaeMetadata: uaeMetadata);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "__uae___AUX"),
+                Path.Combine(destPath, "_UAEFSDB.___"),
+                Path.Combine(destPath, "AUX.info")
+            };
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_ExtractingWithReservedWindowsFilenamesAndUaeMetafile_Then_FilesAreExtractedWithMetaData()
+    {
+        var srcPath = $"{Guid.NewGuid()}.iso";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeMetafile;
+
+        try
+        {
+            // arrange - create iso9660 image with reserved windows filename
+            File.Copy(Path.Combine("TestData", "iso", "reserved_windows_filenames.iso"), srcPath);
+            
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true, uaeMetadata: uaeMetadata);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            var expectedFiles = new[]
+            {
+                Path.Combine(destPath, "%41%55%58"),
+                Path.Combine(destPath, "%41%55%58.uaem"),
+                Path.Combine(destPath, "AUX.info"),
+            };
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
+            Assert.Equal(expectedFiles, actualFiles);
         }
         finally
         {

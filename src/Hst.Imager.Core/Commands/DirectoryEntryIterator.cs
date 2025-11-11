@@ -106,6 +106,8 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.CompletedTask;
     }
 
+    public bool SupportsUaeMetadata => true;
+
     private async Task<UaeMetadataEntry> GetUaeMetadataEntry(string path, string[] pathComponents)
     {
         if (pathComponents.Length == 0)

@@ -69,11 +69,10 @@ public class FsCopyCommand : FsCommandBase
             return new Result(srcEntryIteratorResult.Error);
         }
 
-        var supportsUaeMetadata = UaeMetadataHelper.EntryIteratorSupportsUaeMetadata(srcEntryIteratorResult.Value) &&
-            UaeMetadataHelper.EntryWriterSupportsUaeMetadata(destEntryWriterResult.Value);
-
-        srcEntryIteratorResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
-        destEntryWriterResult.Value.UaeMetadata = supportsUaeMetadata ? uaeMetadata : UaeMetadata.None;
+        srcEntryIteratorResult.Value.UaeMetadata = srcEntryIteratorResult.Value.SupportsUaeMetadata &&
+                                                   uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
+        destEntryWriterResult.Value.UaeMetadata = destEntryWriterResult.Value.SupportsUaeMetadata &&
+                                                  uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
 
         // iterate through source entries and write in destination
         var count = 0;

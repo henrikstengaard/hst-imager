@@ -213,4 +213,6 @@ public class FileSystemEntryWriter(Media media, IFileSystem fileSystem, string[]
     }
     
     public IEntryIterator CreateEntryIterator(string rootPath, bool recursive) => null;
+
+    public bool SupportsUaeMetadata => false;
 }

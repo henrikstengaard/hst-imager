@@ -176,5 +176,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
         return Task.CompletedTask;
     }
 
+    public bool SupportsUaeMetadata => false;
+
     public UaeMetadata UaeMetadata { get; set; }
 }

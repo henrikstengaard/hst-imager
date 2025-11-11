@@ -143,6 +143,8 @@ public class AmigaVolumeEntryIterator(
         await fileSystemVolume.Flush();
     }
 
+    public bool SupportsUaeMetadata => true;
+
     /// <summary>
     /// Enqueue directory by iterating entries in path.
     /// </summary>

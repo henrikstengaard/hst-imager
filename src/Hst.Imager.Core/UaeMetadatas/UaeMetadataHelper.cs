@@ -325,32 +325,4 @@ public static class UaeMetadataHelper
 
         await File.WriteAllBytesAsync(uaeMetafilePath, uaeMetafileBytes);
     }
-
-    /// <summary>
-    /// Entry iterator supports uae metadata.
-    /// </summary>
-    /// <param name="entryIterator">Entry iterator.</param>
-    /// <returns>True, if entry iterator supports reading uae metadata.</returns>
-    public static bool EntryIteratorSupportsUaeMetadata(IEntryIterator entryIterator)
-    {
-        return entryIterator switch
-        {
-            AmigaVolumeEntryIterator _ or DirectoryEntryIterator _ or LhaArchiveEntryIterator _ or LzxArchiveEntryIterator _ => true,
-            _ => false,
-        };
-    }
-
-    /// <summary>
-    /// Entry writer supports uae metadata
-    /// </summary>
-    /// <param name="entryWriter">Entry writer.</param>
-    /// <returns>True, if entry writer supports writing uae metadata.</returns>
-    public static bool EntryWriterSupportsUaeMetadata(IEntryWriter entryWriter)
-    {
-        return entryWriter switch
-        {
-            AmigaVolumeEntryWriter _ or DirectoryEntryWriter _ => true,
-            _ => false,
-        };
-    }
 }

@@ -20,5 +20,6 @@ public interface IEntryIterator : IDisposable
     string[] GetPathComponents(string path);
     bool UsesPattern { get; }
     Task Flush();
+    bool SupportsUaeMetadata { get; }
     UaeMetadata UaeMetadata { get; set; }
 }

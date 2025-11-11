@@ -200,5 +200,7 @@ public class UdfEntryIterator : IEntryIterator
         return Task.CompletedTask;
     }
 
+    public bool SupportsUaeMetadata => false;
+
     public UaeMetadata UaeMetadata { get; set; }
 }

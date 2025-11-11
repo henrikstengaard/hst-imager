@@ -435,4 +435,6 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
     }
 
     public IEntryIterator CreateEntryIterator(string rootPath, bool recursive) => null;
+
+    public bool SupportsUaeMetadata => true;
 }
