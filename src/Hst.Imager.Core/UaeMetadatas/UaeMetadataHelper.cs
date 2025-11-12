@@ -19,9 +19,28 @@ public static class UaeMetadataHelper
     public static bool RequiresUaeMetadataProperties(int? protectionBits, string comment) =>
         protectionBits.HasValue && protectionBits != 0 || !string.IsNullOrEmpty(comment);
 
+    private static bool HasInvalidFilenameChars(string fileName)
+    {
+        if (fileName.Equals(".") || fileName.Equals(".."))
+        {
+            return true;
+        }
+
+        return Regexs.InvalidFilenameCharsRegex.IsMatch(fileName) ||
+               IsWindowsOperatingSystem && HasWindowsReservedNames(fileName);
+    }
+
+    private static bool HasWindowsReservedNames(string fileName)
+    {
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName) ?? string.Empty;
+
+        return Regexs.WindowsReservedNamesRegex.IsMatch(fileName) ||
+               Regexs.WindowsReservedNamesRegex.IsMatch(fileNameWithoutExtension);
+    }
+
     public static bool RequiresUaeMetadataFileName(UaeMetadata uaeMetadata, string fileName)
     {
-        if (IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
+        if (IsWindowsOperatingSystem && HasWindowsReservedNames(fileName))
         {
             return true;
         }
@@ -34,17 +53,6 @@ public static class UaeMetadataHelper
         };
     }
 
-    public static bool HasInvalidFilenameChars(string fileName)
-    {
-        if (fileName.Equals(".") || fileName.Equals(".."))
-        {
-            return true;
-        }
-
-        return Regexs.InvalidFilenameCharsRegex.IsMatch(fileName) ||
-        IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName);
-    }
-
     public static string CreateNormalFilename(string fileName)
     {
         if (fileName.Equals(".") || fileName.Equals(".."))
@@ -52,7 +60,7 @@ public static class UaeMetadataHelper
             return Regexs.InvalidFilenameCharsRegex.Replace(fileName, "_");
         }
 
-        if (IsWindowsOperatingSystem && Regexs.WindowsReservedNamesRegex.IsMatch(fileName))
+        if (IsWindowsOperatingSystem && HasWindowsReservedNames(fileName))
         {
             return $"_{fileName}";
         }
@@ -71,7 +79,7 @@ public static class UaeMetadataHelper
         {
             UaeMetadata.UaeFsDb => UaeFsDbNodeHelper.CreateUniqueNormalName(dirPath,
                 UaeFsDbNodeHelper.MakeSafeFilename(fileName)),
-            UaeMetadata.UaeMetafile => Regexs.WindowsReservedNamesRegex.IsMatch(fileName)
+            UaeMetadata.UaeMetafile => HasWindowsReservedNames(fileName)
                 ? UaeMetafileHelper.EncodeFilename(fileName)
                 : UaeMetafileHelper.EncodeFilenameSpecialChars(fileName),
             _ => CreateNormalFilename(fileName)

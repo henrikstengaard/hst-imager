@@ -279,10 +279,11 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
+            var windowsReservedPrefix = OperatingSystem.IsWindows() ? "_" : string.Empty;
             var expectedFiles = new[]
             {
-                Path.Combine(destPath, $"{(OperatingSystem.IsWindows() ? "_" : string.Empty)}AUX"),
-                Path.Combine(destPath, "AUX.info"),
+                Path.Combine(destPath, $"{windowsReservedPrefix}AUX"),
+                Path.Combine(destPath, $"{windowsReservedPrefix}AUX.info"),
             };
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
             Assert.Equal(expectedFiles, actualFiles);
@@ -321,15 +322,17 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var expectedFiles = (OperatingSystem.IsWindows()
+            var expectedFiles = OperatingSystem.IsWindows()
                 ? new[]
                 {
                     Path.Combine(destPath, "__uae___AUX"),
+                    Path.Combine(destPath, "__uae___AUX.info"),
                     Path.Combine(destPath, "_UAEFSDB.___"),
                 } : new []
                 {
-                    Path.Combine(destPath, "AUX")
-                }).Concat([Path.Combine(destPath, "AUX.info")]);
+                    Path.Combine(destPath, "AUX"),
+                    Path.Combine(destPath, "AUX.info")
+                };
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
             Assert.Equal(expectedFiles, actualFiles);
         }
@@ -367,15 +370,18 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             Assert.True(result.IsSuccess);
 
             // assert - get extracted files
-            var expectedFiles = (OperatingSystem.IsWindows()
+            var expectedFiles = OperatingSystem.IsWindows()
                 ? new[]
                 {
                     Path.Combine(destPath, "%41%55%58"),
                     Path.Combine(destPath, "%41%55%58.uaem"),
+                    Path.Combine(destPath, "%41%55%58%2e%69%6e%66%6f"),
+                    Path.Combine(destPath, "%41%55%58%2e%69%6e%66%6f.uaem")
                 } : new []
                 {
-                    Path.Combine(destPath, "AUX")
-                }).Concat([Path.Combine(destPath, "AUX.info")]);
+                    Path.Combine(destPath, "AUX"),
+                    Path.Combine(destPath, "AUX.info")
+                };
             var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories).OrderBy(x => x).ToArray();
             Assert.Equal(expectedFiles, actualFiles);
         }

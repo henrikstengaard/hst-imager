@@ -56,7 +56,7 @@ public class GivenFsExtractCommandWithAdfAndWindowsReservedNamesInFiles : FsComm
                 files.FirstOrDefault(x => x.Equals(auxPath, StringComparison.OrdinalIgnoreCase)));
 
             // assert - aux.info file was extracted
-            var auxInfoPath = Path.Combine(destPath, "AUX.info");
+            var auxInfoPath = Path.Combine(destPath, $"{windowsReservedPrefix}AUX.info");
             Assert.Equal(auxInfoPath,
                 files.FirstOrDefault(x => x.Equals(auxInfoPath, StringComparison.OrdinalIgnoreCase)));
         }
