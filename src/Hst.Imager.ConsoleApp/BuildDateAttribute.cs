@@ -4,13 +4,10 @@
     using System.Globalization;
 
     [AttributeUsage(AttributeTargets.Assembly)]
-    internal class BuildDateAttribute : Attribute
+    internal class BuildDateAttribute(string value) : Attribute
     {
-        public BuildDateAttribute(string value)
-        {
-            DateTime = DateTime.ParseExact(value, "yyyyMMddHHmmss", CultureInfo.InvariantCulture, DateTimeStyles.None);
-        }
-
-        public DateTime DateTime { get; }
+        public DateTime DateTime { get; } = DateTime.ParseExact(value, "yyyyMMddHHmmss",
+            CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal)
+            .ToLocalTime();
     }
 }
