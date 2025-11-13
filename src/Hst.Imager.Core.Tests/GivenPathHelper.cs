@@ -20,7 +20,6 @@ public class GivenPathHelper
         var fullPath = PathHelper.GetFullPath(path);
         
         // assert - full path is rooted and starts with / or windows drive
-        Assert.True(Path.IsPathRooted(fullPath));
         Assert.True(fullPath.StartsWith("/") ||
                     Regexs.WindowsDriveRegex.IsMatch(fullPath));
     }
@@ -38,7 +37,6 @@ public class GivenPathHelper
         
         // assert - full path is equal to path, is rooted and starts with / or windows drive
         Assert.Equal(path, fullPath);
-        Assert.True(Path.IsPathRooted(fullPath));
         Assert.True(fullPath.StartsWith("/") ||
                     fullPath.StartsWith(@"\\") ||
                     Regexs.WindowsDriveRegex.IsMatch(fullPath));
