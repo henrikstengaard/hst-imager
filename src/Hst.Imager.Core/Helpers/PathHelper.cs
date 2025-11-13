@@ -10,6 +10,19 @@ namespace Hst.Imager.Core.Helpers
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.Substring(2))
             : path;
 
-        public static string GetFullPath(string path) => Path.GetFullPath(ResolveUserProfilePath(path));
+        public static string GetFullPath(string path)
+        {
+            path = ResolveUserProfilePath(path);
+            if (Path.IsPathRooted(path))
+            {
+                return path;
+            }
+
+            var dirName = Path.GetDirectoryName(path) ?? string.Empty;
+            var fileName = Path.GetFileName(path) ?? string.Empty;
+
+            return Path.Combine(Path.GetFullPath(string.IsNullOrEmpty(dirName)
+                ? Directory.GetCurrentDirectory() : dirName), fileName);
+        }
     }
 }

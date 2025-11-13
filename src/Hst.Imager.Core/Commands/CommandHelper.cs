@@ -1092,9 +1092,11 @@ namespace Hst.Imager.Core.Commands
 
             path = PathHelper.GetFullPath(path);
 
-            // media file
+            // if path starts with a network path, update next to start after network path start
             var networkPath = GetNetworkPath(path);
             var next = string.IsNullOrWhiteSpace(networkPath) ? 0 : networkPath.Length;
+            
+            // detect if path contains a media file
             do
             {
                 next = path.IndexOf(directorySeparatorChar.ToString(), next + 1, StringComparison.OrdinalIgnoreCase);
