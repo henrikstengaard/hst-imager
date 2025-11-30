@@ -28,6 +28,9 @@ public class LzxArchiveEntryIterator : IEntryIterator
     private bool disposed;
     private readonly IDictionary<string, byte[]> lzxEntryIndex;
 
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+
     public LzxArchiveEntryIterator(Stream stream, string rootPath, LzxArchive lzxArchive, bool recursive)
     {
         this.stream = stream;
@@ -45,7 +48,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
             pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
         this.rootPathComponents =
             hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
     }
 
     private void Dispose(bool disposing)
@@ -65,6 +68,14 @@ public class LzxArchiveEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public Task Initialize()
+    {
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents => rootPathComponents;
+
+    public string[] DirPathComponents => rootPathComponents;
     public Media Media => null;
     public string RootPath => rootPath;
 

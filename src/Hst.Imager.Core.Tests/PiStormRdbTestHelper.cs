@@ -239,7 +239,7 @@ public static class PiStormRdbTestHelper
     }
 
     public static async Task<IEnumerable<Amiga.FileSystems.Entry>> GetEntriesFromFileSystemVolume(
-        TestCommandHelper testCommandHelper, string path, bool writable = false)
+        TestCommandHelper testCommandHelper, string path)
     {
         var resolvedResult = testCommandHelper.ResolveMedia(path);
         if (resolvedResult.IsFaulted)

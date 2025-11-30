@@ -15,7 +15,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = false;
             var rootPathComponents = Array.Empty<string>();
-            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
             var entryPath = "dir1/file2.txt";
             var rawPath = entryPath;
             var isDir = false;
@@ -59,7 +59,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = true;
             var rootPathComponents = Array.Empty<string>();
-            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
             var entryPath = "dir1/file2.txt";
             var rawPath = entryPath;
             var isDir = false;
@@ -111,7 +111,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = false;
             var rootPathComponents = new[] { "dir1" };
-            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
             var entryPath = "dir1/file2.txt";
             var rawPath = entryPath;
             var isDir = false;
@@ -155,7 +155,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             var mediaPath = MediaPath.ForwardSlashMediaPath;
             const bool recursive = false;
             var rootPathComponents = Array.Empty<string>();
-            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
             var entryPath = "dir1";
             var rawPath = entryPath;
             var isDir = true;
@@ -200,7 +200,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             const bool recursive = false;
             var rootPathComponents = Array.Empty<string>();
             var pattern = "*.txt";
-            var pathComponentMatcher = new PathComponentMatcher(new[] { pattern }, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(new[] { pattern }, recursive: recursive);
             var entryPath = "dir1";
             var rawPath = entryPath;
             var isDir = true;
@@ -245,7 +245,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorFunctionsTests
             const bool recursive = true;
             var rootPathComponents = Array.Empty<string>();
             var pattern = "*.txt";
-            var pathComponentMatcher = new PathComponentMatcher(new[] { pattern }, recursive);
+            var pathComponentMatcher = new PathComponentMatcher(new[] { pattern }, recursive: recursive);
             var entryPath = "dir1";
             var rawPath = entryPath;
             var isDir = true;

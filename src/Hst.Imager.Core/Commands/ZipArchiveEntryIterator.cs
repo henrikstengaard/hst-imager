@@ -30,6 +30,9 @@ public class ZipArchiveEntryIterator : IEntryIterator
     private Entry currentEntry;
     private readonly IDictionary<string, ZipArchiveEntry> zipEntryIndex;
 
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+
     public ZipArchiveEntryIterator(Stream stream, string rootPath, ZipArchive zipArchive, bool recursive)
     {
         this.stream = stream;
@@ -47,13 +50,21 @@ public class ZipArchiveEntryIterator : IEntryIterator
             pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
         this.rootPathComponents =
             hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
     }
 
     public void Dispose()
     {
     }
 
+    public Task Initialize()
+    {
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents => rootPathComponents;
+
+    public string[] DirPathComponents => rootPathComponents;
     public Media Media => null;
     public string RootPath => rootPath;
 

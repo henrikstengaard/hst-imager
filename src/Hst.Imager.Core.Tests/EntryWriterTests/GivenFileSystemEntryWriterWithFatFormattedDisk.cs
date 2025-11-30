@@ -39,7 +39,8 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
         var fatFileSystem = new FatFileSystem(partitionInfo.Open());
         
         // arrange - fat entry writer
-        var fatEntryWriter = new FileSystemEntryWriter(media, fatFileSystem, [], false, false);
+        var fatEntryWriter = new FileSystemEntryWriter(media, PartitionTableType.MasterBootRecord, 0,
+            fatFileSystem, [], false, false, false);
 
         var initializeResult = await fatEntryWriter.Initialize();
         Assert.True(initializeResult.IsSuccess);

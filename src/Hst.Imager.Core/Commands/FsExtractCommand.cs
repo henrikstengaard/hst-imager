@@ -14,31 +14,21 @@ using UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
-public class FsExtractCommand : FsCommandBase
+public class FsExtractCommand(
+    ILogger<FsExtractCommand> logger,
+    ICommandHelper commandHelper,
+    IEnumerable<IPhysicalDrive> physicalDrives,
+    string srcPath,
+    string destPath,
+    bool recursive,
+    bool skipAttributes,
+    bool quiet,
+    bool makeDirectory = false,
+    bool forceOverwrite = false,
+    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+    : FsCommandBase(commandHelper, physicalDrives)
 {
-    private readonly ILogger<FsExtractCommand> logger;
-    private readonly string srcPath;
-    private readonly string destPath;
-    private readonly bool recursive;
-    private readonly bool skipAttributes;
-    private readonly bool quiet;
-    private readonly bool makeDirectory;
-    private readonly UaeMetadata uaeMetadata;
-
-    public FsExtractCommand(ILogger<FsExtractCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive, 
-        bool skipAttributes, bool quiet, bool makeDirectory = false, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
-        : base(commandHelper, physicalDrives)
-    {
-        this.logger = logger;
-        this.srcPath = srcPath;
-        this.destPath = destPath;
-        this.recursive = recursive;
-        this.skipAttributes = skipAttributes;
-        this.quiet = quiet;
-        this.uaeMetadata = uaeMetadata;
-        this.makeDirectory = makeDirectory;
-    }
+    private readonly ILogger<FsExtractCommand> logger = logger;
 
     /// <summary>
     /// Is single file or uses pattern examines if the operation involves 1 file or if the operation uses pattern.
@@ -65,12 +55,22 @@ public class FsExtractCommand : FsCommandBase
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
         }
 
+        if (destEntryWriterResult.Value.ArePathComponentsSelfCopy(srcEntryIteratorResult.Value))
+        {
+            return new Result(new CyclicPathError($"Unable to extract from source path '{srcPath}' to destination path '{destPath}' onto itself"));
+        }
+
+        if (destEntryWriterResult.Value.ArePathComponentsCyclic(srcEntryIteratorResult.Value))
+        {
+            return new Result(new CyclicPathError($"Unable to extract cyclic path from source path '{srcPath}' to destination path '{destPath}'"));
+        }
+        
         srcEntryIteratorResult.Value.UaeMetadata = srcEntryIteratorResult.Value.SupportsUaeMetadata &&
                                                    uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
         destEntryWriterResult.Value.UaeMetadata = destEntryWriterResult.Value.SupportsUaeMetadata &&
@@ -84,8 +84,6 @@ public class FsExtractCommand : FsCommandBase
 
         stopwatch.Start();
 
-        bool? isSingleFileOrUsesPattern = null;
-        
         using (var destEntryWriter = destEntryWriterResult.Value)
         {
             using (var srcEntryIterator = srcEntryIteratorResult.Value)
@@ -94,14 +92,21 @@ public class FsExtractCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
-                    isSingleFileOrUsesPattern ??= IsSingleFileOrUsesPattern(entry, srcEntryIterator);
+                    var isSingleFileOrUsesPattern = IsSingleFileOrUsesPattern(entry, srcEntryIterator);
 
+                    // skip directory entries when there are no entry path components or when it is a single file or uses pattern.
+                    if (entry.Type == EntryType.Dir &&
+                        (isSingleFileOrUsesPattern || entry.RelativePathComponents.Length == 0))
+                    {
+                        continue;
+                    }
+                    
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
                             dirsCount++;
                             var createDirectoryResult = await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
-                                isSingleFileOrUsesPattern.Value);
+                                isSingleFileOrUsesPattern);
                             if (createDirectoryResult.IsFaulted)
                             {
                                 return new Result(createDirectoryResult.Error);
@@ -119,7 +124,7 @@ public class FsExtractCommand : FsCommandBase
 
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
                             var createFileResult = await destEntryWriter.CreateFile(entry, entry.RelativePathComponents, stream, skipAttributes,
-                                isSingleFileOrUsesPattern.Value);
+                                isSingleFileOrUsesPattern);
                             if (createFileResult.IsFaulted)
                             {
                                 return new Result(createFileResult.Error);
@@ -208,6 +213,7 @@ public class FsExtractCommand : FsCommandBase
         var zipEntryIteratorResult = await GetZipEntryIterator(mediaResult.Value, recursive);
         if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)
         {
+            await zipEntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(zipEntryIteratorResult.Value);
         }
 
@@ -215,6 +221,7 @@ public class FsExtractCommand : FsCommandBase
         var lhaEntryIteratorResult = await GetLhaEntryIterator(mediaResult.Value, recursive);
         if (lhaEntryIteratorResult != null && lhaEntryIteratorResult.IsSuccess)
         {
+            await lhaEntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(lhaEntryIteratorResult.Value);
         }
 
@@ -222,6 +229,7 @@ public class FsExtractCommand : FsCommandBase
         var lzxEntryIteratorResult = await GetLzxEntryIterator(mediaResult.Value, recursive);
         if (lzxEntryIteratorResult != null && lzxEntryIteratorResult.IsSuccess)
         {
+            await lzxEntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(lzxEntryIteratorResult.Value);
         }
         
@@ -229,6 +237,7 @@ public class FsExtractCommand : FsCommandBase
         var lzwEntryIteratorResult = await GetLzwEntryIterator(mediaResult.Value);
         if (lzwEntryIteratorResult != null && lzwEntryIteratorResult.IsSuccess)
         {
+            await lzwEntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(lzwEntryIteratorResult.Value);
         }
 
@@ -236,6 +245,7 @@ public class FsExtractCommand : FsCommandBase
         var adfEntryIteratorResult = await GetAdfEntryIterator(mediaResult.Value, recursive);
         if (adfEntryIteratorResult != null && adfEntryIteratorResult.IsSuccess)
         {
+            await adfEntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(adfEntryIteratorResult.Value);
         }
 
@@ -243,6 +253,7 @@ public class FsExtractCommand : FsCommandBase
         var iso9660EntryIteratorResult = await GetIso9660EntryIterator(mediaResult.Value, recursive);
         if (iso9660EntryIteratorResult != null && iso9660EntryIteratorResult.IsSuccess)
         {
+            await iso9660EntryIteratorResult.Value.Initialize();
             return new Result<IEntryIterator>(iso9660EntryIteratorResult.Value);
         }
 

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Hst.Amiga;
 using Hst.Amiga.FileSystems;
@@ -78,6 +79,28 @@ public static class AdfTestHelper
         media.Dispose();
     }
 
+    public static async Task CreateFile(
+        TestCommandHelper testCommandHelper, string mediaPath, string[] dirPathComponents)
+    {
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, true);
+
+        foreach (var dirPathComponent in dirPathComponents.Take(dirPathComponents.Length - 1))
+        {
+            var entries = (await fileSystemVolume.ListEntries()).ToList();
+
+            if (entries.FirstOrDefault(x => x.Name == dirPathComponent) == null)
+            {
+                await fileSystemVolume.CreateDirectory(dirPathComponent);
+            }
+            
+            await fileSystemVolume.ChangeDirectory(dirPathComponent);
+        }
+        
+        await fileSystemVolume.CreateFile(dirPathComponents[^1], true, true);
+        
+        media.Dispose();
+    }
+    
     public static async Task<IEnumerable<Amiga.FileSystems.Entry>> GetEntriesFromFileSystemVolume(
         TestCommandHelper testCommandHelper, string mediaPath, string[] dirPathComponents, bool writable = false)
     {

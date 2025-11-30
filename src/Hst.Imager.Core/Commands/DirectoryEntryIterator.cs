@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -16,42 +17,65 @@ using Entry = Models.FileSystems.Entry;
 
 public class DirectoryEntryIterator : IEntryIterator
 {
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
-    private readonly string pattern;
-    private readonly string[] rootPathComponents;
-    private readonly PathComponentMatcher pathComponentMatcher;
+    private readonly string dirPath;
+    private string[] rootPathComponents;
+    private PathComponentMatcher pathComponentMatcher;
     private readonly bool recursive;
     private Entry currentEntry;
     private bool isFirst;
     private readonly MemoryCache cache;
     private readonly DateTimeOffset cacheExpiration;
 
-    public DirectoryEntryIterator(string path, string pattern, bool recursive)
+    public DirectoryEntryIterator(string path, bool recursive)
     {
         this.nextEntries = new Stack<Entry>();
-        this.rootPath = Path.GetFullPath(path);
-        this.pattern = pattern;
+        rootPath = PathHelper.GetFullPath(path);
         this.recursive = recursive;
         this.isFirst = true;
         this.cache = new MemoryCache($"{nameof(DirectoryEntryIterator)}_CACHE");
         this.cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
-
-        var usePattern = !string.IsNullOrWhiteSpace(pattern);
-        rootPathComponents = GetPathComponents(this.rootPath);
-        pathComponentMatcher = new PathComponentMatcher(usePattern
-            ? rootPathComponents.Concat([pattern]).ToArray()
-            : rootPathComponents, recursive);
+        dirPath = Directory.Exists(rootPath) ? rootPath : Path.GetDirectoryName(rootPath);
     }
 
+    public Task Initialize()
+    {
+        IsSingleFileEntryNext = File.Exists(this.rootPath);
+        
+        if (!Directory.Exists(dirPath))
+        {
+            throw new DirectoryNotFoundException(dirPath);
+        }
+        
+        var pathComponents = GetPathComponents(rootPath);
+        var usePattern = !Directory.Exists(rootPath);
+
+        rootPathComponents = pathComponents;
+        DirPathComponents = !Directory.Exists(rootPath) && pathComponents.Length > 0
+            ? pathComponents.Take(pathComponents.Length - 1).ToArray()
+            : pathComponents;
+            
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : [], 
+            isFile: IsSingleFileEntryNext, recursive: recursive);
+        
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents => rootPathComponents;
+
+    public string[] DirPathComponents { get; private set; }
+
     public Media Media => null;
-    public string RootPath => rootPath;
+    public string RootPath => dirPath;
 
     public Entry Current => currentEntry;
 
     public bool HasMoreEntries => nextEntries.Count > 0;
-    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
-                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
+    public bool IsSingleFileEntryNext { get; private set; }
 
     public async Task<bool> Next()
     {
@@ -59,7 +83,7 @@ public class DirectoryEntryIterator : IEntryIterator
         {
             isFirst = false;
             currentEntry = null;
-            await EnqueueDirectory(rootPathComponents);
+            await EnqueueDirectory(DirPathComponents);
         }
 
         if (this.nextEntries.Count <= 0)
@@ -181,11 +205,11 @@ public class DirectoryEntryIterator : IEntryIterator
             var date = dirInfo.LastWriteTime;
             var properties = new Dictionary<string, string>();
 
-            var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
+            var relativePathComponents = fullPathComponents.Skip(DirPathComponents.Length).ToArray();
 
             if (UaeMetadata != UaeMetadata.None)
             {
-                var uaeMetadataEntry = await GetUaeMetadataEntry(rootPath, relativePathComponents);
+                var uaeMetadataEntry = await GetUaeMetadataEntry(dirPath, relativePathComponents);
 
                 if (uaeMetadataEntry != null)
                 {
@@ -233,16 +257,16 @@ public class DirectoryEntryIterator : IEntryIterator
             var date = fileInfo.LastWriteTime;
             var properties = new Dictionary<string, string>();
 
-            if (SkipEntry(fullPathComponents))
+            if (!pathComponentMatcher.IsMatch(fullPathComponents))
             {
                 continue;
             }
 
-            var relativePathComponents = fullPathComponents.Skip(this.rootPathComponents.Length).ToArray();
+            var relativePathComponents = fullPathComponents.Skip(DirPathComponents.Length).ToArray();
 
             if (UaeMetadata != UaeMetadata.None)
             {
-                var uaeMetadataEntry = await GetUaeMetadataEntry(rootPath, relativePathComponents);
+                var uaeMetadataEntry = await GetUaeMetadataEntry(dirPath, relativePathComponents);
 
                 if (uaeMetadataEntry != null)
                 {

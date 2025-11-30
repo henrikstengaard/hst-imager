@@ -12,31 +12,21 @@ using UaeMetadatas;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
 
-public class FsCopyCommand : FsCommandBase
+public class FsCopyCommand(
+    ILogger<FsCopyCommand> logger,
+    ICommandHelper commandHelper,
+    IEnumerable<IPhysicalDrive> physicalDrives,
+    string srcPath,
+    string destPath,
+    bool recursive,
+    bool skipAttributes,
+    bool quiet,
+    bool makeDirectory = false,
+    bool forceOverwrite = false,
+    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+    : FsCommandBase(commandHelper, physicalDrives)
 {
-    private readonly ILogger<FsCopyCommand> logger;
-    private readonly string srcPath;
-    private readonly string destPath;
-    private readonly bool recursive;
-    private readonly bool skipAttributes;
-    private readonly bool quiet;
-    private readonly bool makeDirectory;
-    private readonly UaeMetadata uaeMetadata;
-
-    public FsCopyCommand(ILogger<FsCopyCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, string destPath, bool recursive,
-        bool skipAttributes, bool quiet, bool makeDirectory = false, UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
-        : base(commandHelper, physicalDrives)
-    {
-        this.logger = logger;
-        this.srcPath = srcPath;
-        this.destPath = destPath;
-        this.recursive = recursive;
-        this.skipAttributes = skipAttributes;
-        this.quiet = quiet;
-        this.makeDirectory = makeDirectory;
-        this.uaeMetadata = uaeMetadata;
-    }
+    private readonly ILogger<FsCopyCommand> logger = logger;
 
     /// <summary>
     /// Is single file or uses pattern examines if the operation involves 1 file or if the operation uses pattern.
@@ -56,7 +46,7 @@ public class FsCopyCommand : FsCommandBase
         var stopwatch = new Stopwatch();
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
@@ -69,6 +59,16 @@ public class FsCopyCommand : FsCommandBase
             return new Result(srcEntryIteratorResult.Error);
         }
 
+        if (destEntryWriterResult.Value.ArePathComponentsSelfCopy(srcEntryIteratorResult.Value))
+        {
+            return new Result(new SelfCopyError($"Unable to copy from source path '{srcPath}' to destination path '{destPath}' onto itself"));
+        }
+
+        if (destEntryWriterResult.Value.ArePathComponentsCyclic(srcEntryIteratorResult.Value))
+        {
+            return new Result(new CyclicPathError($"Unable to copy cyclic path from source path '{srcPath}' to destination path '{destPath}'"));
+        }
+        
         srcEntryIteratorResult.Value.UaeMetadata = srcEntryIteratorResult.Value.SupportsUaeMetadata &&
                                                    uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
         destEntryWriterResult.Value.UaeMetadata = destEntryWriterResult.Value.SupportsUaeMetadata &&
@@ -82,8 +82,6 @@ public class FsCopyCommand : FsCommandBase
 
         stopwatch.Start();
 
-        bool? isSingleFileOrUsesPattern = null;
-
         using (var destEntryWriter = destEntryWriterResult.Value)
         {
             using (var srcEntryIterator = srcEntryIteratorResult.Value)
@@ -92,14 +90,21 @@ public class FsCopyCommand : FsCommandBase
                 {
                     var entry = srcEntryIterator.Current;
 
-                    isSingleFileOrUsesPattern ??= IsSingleFileOrUsesPattern(entry, srcEntryIterator);
-                            
+                    var isSingleFileOrUsesPattern = IsSingleFileOrUsesPattern(entry, srcEntryIterator);
+
+                    // skip directory entries when there are no entry path components or when it is a single file or uses pattern.
+                    if (entry.Type == EntryType.Dir &&
+                        (isSingleFileOrUsesPattern || entry.RelativePathComponents.Length == 0))
+                    {
+                        continue;
+                    }
+
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
                             dirsCount++;
                             var createDirectoryResult = await destEntryWriter.CreateDirectory(entry,
-                                entry.RelativePathComponents, skipAttributes, isSingleFileOrUsesPattern.Value);
+                                entry.RelativePathComponents, skipAttributes, isSingleFileOrUsesPattern);
                             if (createDirectoryResult.IsFaulted)
                             {
                                 return new Result(createDirectoryResult.Error);
@@ -118,7 +123,7 @@ public class FsCopyCommand : FsCommandBase
                             await using var stream = await srcEntryIterator.OpenEntry(entry);
                             var createFileResult = await destEntryWriter.CreateFile(entry,
                                 entry.RelativePathComponents, stream,
-                                skipAttributes, isSingleFileOrUsesPattern.Value);
+                                skipAttributes, isSingleFileOrUsesPattern);
                             if (createFileResult.IsFaulted)
                             {
                                 return new Result(createFileResult.Error);
@@ -179,6 +184,7 @@ public class FsCopyCommand : FsCommandBase
         var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
         if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
         {
+            await directoryEntryIterator.Value.Initialize();
             return new Result<IEntryIterator>(directoryEntryIterator.Value);
         }
 
@@ -201,6 +207,7 @@ public class FsCopyCommand : FsCommandBase
             var fileEntryIterator = await GetFileEntryIterator(path, recursive);
             if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
             {
+                await fileEntryIterator.Value.Initialize();
                 return new Result<IEntryIterator>(fileEntryIterator.Value);
             }
         }
@@ -215,24 +222,27 @@ public class FsCopyCommand : FsCommandBase
 
         if (mediaResult.Value.MediaPath.EndsWith(".adf") && mediaResult.Value.MediaPath == entryWriter.MediaPath)
         {
-            var rootPath = mediaResult.Value.FileSystemPath;
-            return new Result<IEntryIterator>(entryWriter.CreateEntryIterator(rootPath,
-                recursive));
+            var rootPathComponents = entryIteratorFileSystemPathComponents;
+            var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
+            await entryIterator.Initialize();
+            return new Result<IEntryIterator>(entryIterator);
         }
         
         if (mediaResult.Value.MediaPath == entryWriter.MediaPath &&
             entryIteratorFileSystemPathComponents.Take(2).SequenceEqual(
                 entryWriterFileSystemPathComponents)) // and only if first two parts of file system path is equal
         {
-            var rootPath = string.Join("/", entryIteratorFileSystemPathComponents.Skip(2));
-            return new Result<IEntryIterator>(entryWriter.CreateEntryIterator(rootPath,
-                recursive));
+            var rootPathComponents = entryIteratorFileSystemPathComponents.Skip(2).ToArray();
+            var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
+            await entryIterator.Initialize();
+            return new Result<IEntryIterator>(entryIterator);
         }
 
         // floppy or disk entry iterator
         var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
         if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
         {
+            await diskEntryIterator.Value.Initialize();
             return new Result<IEntryIterator>(diskEntryIterator.Value);
         }
 

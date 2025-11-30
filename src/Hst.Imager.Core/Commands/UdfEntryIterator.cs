@@ -27,6 +27,9 @@ public class UdfEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool disposed;
 
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+
     public UdfEntryIterator(Stream stream, string rootPath, UdfReader udfReader, bool recursive)
     {
         this.stream = stream;
@@ -39,7 +42,7 @@ public class UdfEntryIterator : IEntryIterator
         this.isFirst = true;
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
     
@@ -60,6 +63,14 @@ public class UdfEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public Task Initialize()
+    {
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents => rootPathComponents;
+
+    public string[] DirPathComponents => rootPathComponents;
     public Media Media => null;
     public string RootPath => rootPath;
     

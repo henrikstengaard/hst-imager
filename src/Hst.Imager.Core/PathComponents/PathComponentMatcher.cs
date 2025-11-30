@@ -8,10 +8,23 @@ using System.Linq;
 public class PathComponentMatcher
 {
     public readonly string[] PathComponents;
+    private readonly bool isFile;
     private readonly bool recursive;
     private readonly PatternMatcher patternMatcher;
 
-    public PathComponentMatcher(string[] pathComponents, bool recursive = false)
+    /*
+     * Path component matcher rules:
+     * - when last path component contains a wildcard *, it uses pattern. it will therefore not be a single file as it can match multiple.
+     * - when last path component is an existing file (isFile = true), it can't be using pattern.
+     */
+    
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="pathComponents">Path components to match against.</param>
+    /// <param name="isFile">Path components last part is an existing file.</param>
+    /// <param name="recursive">Match path components recursively.</param>
+    public PathComponentMatcher(string[] pathComponents, bool isFile = false, bool recursive = false)
     {
         var hasPathComponents = pathComponents.Any();
         var lastPathComponent = hasPathComponents ? pathComponents[^1].Trim() : string.Empty;
@@ -20,12 +33,13 @@ public class PathComponentMatcher
         var hasWildcard = lastPathComponent.Contains("*", StringComparison.OrdinalIgnoreCase);
 
         UsesPattern = lastPathComponent.Length > 1 && hasWildcard;
-        PathComponents = hasWildcard
+        PathComponents = isFile || hasWildcard
             ? pathComponents.Take(pathComponents.Length - 1).ToArray()
             : pathComponents;
+        this.isFile = isFile;
         this.recursive = recursive;
 
-        patternMatcher = UsesPattern ? new PatternMatcher(lastPathComponent) : null;
+        patternMatcher = UsesPattern || isFile ? new PatternMatcher(lastPathComponent) : null;
     }
 
     public readonly bool UsesPattern;
@@ -45,6 +59,13 @@ public class PathComponentMatcher
                 return false;
             }
         }
+
+        // return true, if last path component when it's a file
+        if (isFile)
+        {
+            return patternMatcher.IsMatch(pathComponents[^1]);
+        }
+
 
         // uses pattern, but no more path components to examine
         if (UsesPattern && pathComponentIndex >= pathComponents.Length)

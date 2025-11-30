@@ -19,18 +19,30 @@ public class LzwArchiveEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool isFirst;
 
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+    
     public LzwArchiveEntryIterator(string path)
     {
-        this.nextEntries = new Stack<Entry>();
-        this.filePath = Path.GetFullPath(path);
-        this.RootPath = Path.GetDirectoryName(this.filePath);
-        this.isFirst = true;
+        nextEntries = new Stack<Entry>();
+        filePath = Path.GetFullPath(path);
+        RootPath = Path.GetDirectoryName(this.filePath);
+        PathComponents = DirPathComponents =GetPathComponents(RootPath);
+        isFirst = true;
     }
 
     public void Dispose()
     {
     }
 
+    public Task Initialize()
+    {
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents { get; }
+
+    public string[] DirPathComponents { get; }
     public Media Media => null;
     public string RootPath { get; }
 

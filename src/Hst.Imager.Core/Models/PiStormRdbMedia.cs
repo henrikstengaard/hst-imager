@@ -1,23 +1,25 @@
 ﻿namespace Hst.Imager.Core.Models
 {
-    using DiscUtils;
-    using Hst.Amiga.RigidDiskBlocks;
     using System;
     using System.IO;
 
     /// <summary>
     /// PiStorm RDB media represents a Master Boot Record partition containing a Rigid Disk Block
     /// </summary>
-    public class PiStormRdbMedia : Media
+    public class PiStormRdbMedia(
+        string path,
+        int partitionNumber,
+        string name,
+        long size,
+        Media.MediaType type,
+        bool isPhysicalDrive,
+        Stream stream,
+        bool byteswap,
+        Media baseMedia)
+        : Media(path, name, size, type, isPhysicalDrive, stream, byteswap), IEquatable<PiStormRdbMedia>
     {
-        private readonly Media baseMedia;
-
-        public PiStormRdbMedia(string path, string name, long size, MediaType type,
-            bool isPhysicalDrive, Stream stream, bool byteswap, Media baseMedia)
-            : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
-        {
-            this.baseMedia = baseMedia;
-        }
+        private readonly Media baseMedia = baseMedia;
+        private readonly int partitionNumber = partitionNumber;
 
         protected override void Dispose(bool disposing)
         {
@@ -26,6 +28,26 @@
             {
                 baseMedia.Dispose();
             }
+        }
+
+        public bool Equals(PiStormRdbMedia other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return base.Equals(other) && Equals(baseMedia, other.baseMedia) && partitionNumber == other.partitionNumber;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((PiStormRdbMedia)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(base.GetHashCode(), baseMedia, partitionNumber);
         }
     }
 }

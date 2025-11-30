@@ -56,7 +56,8 @@ public class FsDirCommand : FsCommandBase
         if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)
         {
             using var zipEntryIterator = zipEntryIteratorResult.Value;
-            await ListEntries(zipEntryIterator, pathResult.Value.FileSystemPath);
+            await zipEntryIterator.Initialize();
+            await ListEntries(zipEntryIterator);
             return new Result();
         }
         
@@ -65,7 +66,8 @@ public class FsDirCommand : FsCommandBase
         if (lhaEntryIteratorResult != null && lhaEntryIteratorResult.IsSuccess)
         {
             using var lhaEntryIterator = lhaEntryIteratorResult.Value;
-            await ListEntries(lhaEntryIterator, pathResult.Value.FileSystemPath);
+            await lhaEntryIterator.Initialize();
+            await ListEntries(lhaEntryIterator);
             return new Result();
         }
 
@@ -74,7 +76,8 @@ public class FsDirCommand : FsCommandBase
         if (lzxEntryIteratorResult != null && lzxEntryIteratorResult.IsSuccess)
         {
             using var lzxEntryIterator = lzxEntryIteratorResult.Value;
-            await ListEntries(lzxEntryIterator, pathResult.Value.FileSystemPath);
+            await lzxEntryIterator.Initialize();
+            await ListEntries(lzxEntryIterator);
             return new Result();
         }
 
@@ -83,7 +86,8 @@ public class FsDirCommand : FsCommandBase
         if (adfEntryIteratorResult != null && adfEntryIteratorResult.IsSuccess)
         {
             using var adfEntryIterator = adfEntryIteratorResult.Value;
-            await ListEntries(adfEntryIterator, pathResult.Value.FileSystemPath);
+            await adfEntryIteratorResult.Value.Initialize();
+            await ListEntries(adfEntryIterator);
             return new Result();
         }
         
@@ -92,7 +96,8 @@ public class FsDirCommand : FsCommandBase
         if (iso9660EntryIteratorResult != null && iso9660EntryIteratorResult.IsSuccess)
         {
             using var iso9660EntryIterator = iso9660EntryIteratorResult.Value;
-            await ListEntries(iso9660EntryIterator, pathResult.Value.FileSystemPath);
+            await iso9660EntryIteratorResult.Value.Initialize();
+            await ListEntries(iso9660EntryIterator);
             return new Result();
         }
         
@@ -188,10 +193,9 @@ public class FsDirCommand : FsCommandBase
             return new Result(mbrFileSystemResult.Error);
         }
 
-        var fileSystemPath = string.Join("/", parts);
-        var entryIterator = new FileSystemEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
-
-        await ListEntries(entryIterator, fileSystemPath);
+        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.None, 0, mbrFileSystemResult.Value, parts, recursive);
+        await entryIterator.Initialize();
+        await ListEntries(entryIterator);
 
         return new Result();
     }
@@ -342,10 +346,13 @@ public class FsDirCommand : FsCommandBase
             return new Result(mbrFileSystemResult.Error);
         }
 
-        var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new FileSystemEntryIterator(media, mbrFileSystemResult.Value, fileSystemPath, recursive);
-
-        await ListEntries(entryIterator, fileSystemPath);
+        var (partitionNumber, fileSystem) = mbrFileSystemResult.Value;
+        
+        var rootPathComponents = parts.Skip(1).ToArray();
+        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.MasterBootRecord, partitionNumber,
+            fileSystem, rootPathComponents, recursive);
+        await entryIterator.Initialize();
+        await ListEntries(entryIterator);
 
         return new Result();
     }
@@ -360,10 +367,13 @@ public class FsDirCommand : FsCommandBase
             return new Result(gptFileSystemResult.Error);
         }
 
-        var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new FileSystemEntryIterator(media, gptFileSystemResult.Value, fileSystemPath, recursive);
+        var (partitionNumber, fileSystem) = gptFileSystemResult.Value;
 
-        await ListEntries(entryIterator, fileSystemPath);
+        var rootPathComponents = parts.Skip(1).ToArray();
+        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.GuidPartitionTable, partitionNumber,
+            fileSystem, rootPathComponents, recursive);
+        await entryIterator.Initialize();
+        await ListEntries(entryIterator);
 
         return new Result();
     }
@@ -497,15 +507,18 @@ public class FsDirCommand : FsCommandBase
             return new Result(volumeResult.Error);
         }
 
-        var fileSystemPath = string.Join("/", parts.Skip(1));
-        var entryIterator = new AmigaVolumeEntryIterator(media, media.Stream, fileSystemPath, volumeResult.Value, recursive);
+        var (partitionNumber, fileSystemVolume) = volumeResult.Value;
 
-        await ListEntries(entryIterator, fileSystemPath);
+        var rootPathComponents = parts.Skip(1).ToArray();
+        var entryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.RigidDiskBlock, partitionNumber,
+            fileSystemVolume, rootPathComponents, recursive);
+        await entryIterator.Initialize();
+        await ListEntries(entryIterator);
 
         return new Result();
     }
 
-    private async Task ListEntries(IEntryIterator entryIterator, string fileSystemPath)
+    private async Task ListEntries(IEntryIterator entryIterator)
     {
         var entries = new List<Entry>();
 

@@ -148,6 +148,8 @@ namespace Hst.Imager.Core.Commands
             var lhaArchive = new LhaArchive(stream);
             var lhaEntryIterator = new LhaArchiveEntryIterator(stream, string.Empty, lhaArchive, true);
 
+            await lhaEntryIterator.Initialize();
+            
             return await FindFileSystemsInEntryIterator(lhaEntryIterator, fileSystemName);
         }
 
@@ -156,8 +158,11 @@ namespace Hst.Imager.Core.Commands
         {
             var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
 
-            var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(media, stream, string.Empty, fastFileSystemVolume, true);
+            var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.None, 0,
+                fastFileSystemVolume, [], true);
 
+            await amigaVolumeEntryIterator.Initialize();
+            
             return await FindFileSystemsInEntryIterator(amigaVolumeEntryIterator, fileSystemName);
         }
 

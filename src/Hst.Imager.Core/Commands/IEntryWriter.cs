@@ -62,7 +62,9 @@ public interface IEntryWriter : IDisposable
     /// <returns></returns>
     IEnumerable<string> GetLogs();
 
-    IEntryIterator CreateEntryIterator(string rootPath, bool recursive);
+    IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive);
+    bool ArePathComponentsSelfCopy(IEntryIterator entryIterator);
+    bool ArePathComponentsCyclic(IEntryIterator entryIterator);
     
     bool SupportsUaeMetadata { get; }
 

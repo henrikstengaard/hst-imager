@@ -124,6 +124,7 @@ namespace Hst.Imager.Core.Helpers
 
             return new PiStormRdbMedia(
                 media.Path, 
+                mbrPartitionNumber,
                 string.Concat("Partition #", mbrPartitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
                 size,
                 type,

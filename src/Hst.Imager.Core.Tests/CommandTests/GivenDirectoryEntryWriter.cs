@@ -35,7 +35,7 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             Directory.CreateDirectory(path);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path, false, false);
+            var writer = new DirectoryEntryWriter(path, false, false, false);
 
             // arrange - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -72,7 +72,7 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         try
         {
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, false);
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, false, false);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -97,7 +97,8 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         try
         {
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, false);
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
+                false, false);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();

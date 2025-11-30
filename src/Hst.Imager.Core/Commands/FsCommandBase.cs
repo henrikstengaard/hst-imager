@@ -219,22 +219,18 @@ public abstract partial class FsCommandBase : CommandBase
 
     protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
     {
-        path = PathHelper.GetFullPath(path);
-        var fileName = Path.GetFileName(path);
-        var hasPattern = fileName.IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
-        
-        var rootPath = hasPattern ? Path.GetDirectoryName(path) : path;
-        var pattern = hasPattern ? fileName : null;
-        
-        return Task.FromResult(!Directory.Exists(rootPath)
-            ? null
-            : new Result<IEntryIterator>(new DirectoryEntryIterator(rootPath, pattern, recursive)));
+        var dirPath = Path.GetDirectoryName(path) ?? string.Empty;
+
+        return Task.FromResult(Directory.Exists(path) || Directory.Exists(dirPath)
+            ? new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive))
+            : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{path}'", path)));
     }
 
     protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)
     {
         path = PathHelper.GetFullPath(path);
-        return Task.FromResult(!File.Exists(path) ? null : new Result<IEntryIterator>(new FileEntryIterator(path)));
+        return Task.FromResult(new Result<IEntryIterator>(
+            new DirectoryEntryIterator(path, recursive)));
     }
 
     protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -332,11 +328,13 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
         }
 
-        var rootPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
-        var rootPath = MediaPath.AmigaOsPath.Join(rootPathComponents);
+        var rootPathComponents = string.IsNullOrEmpty(resolvedMedia.FileSystemPath)
+            ? []
+            : resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
 
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(mediaResult.Value, mediaResult.Value.Stream,
-            rootPath, fileSystemVolumeResult.Value, recursive));
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(mediaResult.Value,
+            PartitionTableType.RigidDiskBlock, 0, fileSystemVolumeResult.Value, rootPathComponents,
+            recursive));
     }
 
     protected async Task<Result<IEntryIterator>> GetIso9660EntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -438,9 +436,11 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
         }
 
-        var rootPath = string.Join("/", parts.Skip(2));
-        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media, media.Stream, rootPath,
-            fileSystemVolumeResult.Value, recursive));
+        var (partitionNumber, fileSystemVolume) = fileSystemVolumeResult.Value;
+
+        var rootPathComponents = parts.Skip(2).ToArray();
+        return new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media, PartitionTableType.RigidDiskBlock,
+            partitionNumber, fileSystemVolume, rootPathComponents, recursive));
     }
 
     private async Task<Result<IEntryIterator>> GetFloppyFileSystemEntryIterator(Media media, string[] parts, bool recursive)
@@ -451,8 +451,8 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(fileSystemResult.Error);
         }
 
-        var rootPath = string.Join("\\", parts);
-        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, fileSystemResult.Value, rootPath, recursive));
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, PartitionTableType.None, 0,
+            fileSystemResult.Value, parts, recursive));
     }
 
     private async Task<Result<IEntryIterator>> GetMbrFileSystemEntryIterator(Media media, string[] parts, bool recursive)
@@ -462,11 +462,6 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        if (!int.TryParse(parts[1], out var partitionNumber))
-        {
-            return new Result<IEntryIterator>(new Error($"Invalid partition number '{parts[1]}'"));
-        }
-        
         // open stream as disk
         var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
@@ -475,9 +470,12 @@ public abstract partial class FsCommandBase : CommandBase
         {
             return new Result<IEntryIterator>(mbrFileSystemResult.Error);
         }
+        
+        var (partitionNumber, fileSystem) = mbrFileSystemResult.Value;
 
-        var rootPath = string.Join("\\", parts.Skip(2));
-        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, mbrFileSystemResult.Value, rootPath, recursive));
+        var rootPathComponents = parts.Skip(2).ToArray();
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, PartitionTableType.MasterBootRecord,
+            partitionNumber, fileSystem, rootPathComponents, recursive));
     }
 
     private async Task<Result<IEntryIterator>> GetGptFileSystemEntryIterator(Media media, string[] parts, bool recursive)
@@ -487,11 +485,6 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        if (!int.TryParse(parts[1], out var partitionNumber))
-        {
-            return new Result<IEntryIterator>(new Error($"Invalid partition number '{parts[1]}'"));
-        }
-        
         // open stream as disk
         var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
@@ -501,11 +494,15 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(gptFileSystemResult.Error);
         }
 
-        var rootPath = string.Join("\\", parts.Skip(2));
-        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, gptFileSystemResult.Value, rootPath, recursive));
+        var (partitionNumber, fileSystem) = gptFileSystemResult.Value;
+
+        var rootPathComponents = parts.Skip(2).ToArray();
+        return new Result<IEntryIterator>(new FileSystemEntryIterator(media, PartitionTableType.GuidPartitionTable,
+            partitionNumber, fileSystem, rootPathComponents, recursive));
     }
 
-    private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path, bool recursive, bool createDirectory)
+    private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path, bool recursive, bool createDirectory,
+        bool forceOverwrite)
     {
         // ensure path is full path
         path = PathHelper.GetFullPath(path);
@@ -519,7 +516,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(new PathNotFoundError($"Path not found '{path}'", path));
         }
         
-        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory);
+        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite);
 
         var initializeResult = await directoryEntryWriter.Initialize();
         return initializeResult.IsFaulted
@@ -595,7 +592,8 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<bool>(false);
     }
     
-    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool recursive, bool createDestDirectory)
+    protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool recursive, bool createDestDirectory,
+        bool forceOverwrite)
     {
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(destPath);
@@ -608,12 +606,12 @@ public abstract partial class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(mediaResult.Error);
             }
 
-            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite);
         }
 
         if (Directory.Exists(destPath))
         {
-            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
@@ -622,7 +620,9 @@ public abstract partial class FsCommandBase : CommandBase
         if (File.Exists(destPath) &&
             string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
-            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory);
+            return forceOverwrite
+                ? await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, true)
+                : new Result<IEntryWriter>(new FileExistsError($"File already exists '{destPath}'"));
         }
 
         var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
@@ -651,9 +651,10 @@ public abstract partial class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
             }
 
-            var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, string.Empty,
+            var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, PartitionTableType.RigidDiskBlock,
+                0, string.Empty,
                 fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), recursive,
-                fileSystemVolumeResult.Value, createDestDirectory);
+                fileSystemVolumeResult.Value, createDestDirectory, forceOverwrite);
 
             var adfInitializeResult = await adfAmigaVolumeEntryWriter.Initialize();
             return adfInitializeResult.IsFaulted
@@ -681,9 +682,12 @@ public abstract partial class FsCommandBase : CommandBase
                     return new Result<IEntryWriter>(mbrFileSystemResult.Error);
                 }
                 
+                var (mbrPartitionNumber, mbrFileSystem) = mbrFileSystemResult.Value;
+                
                 // skip 2 first parts, partition table and partition number
-                var fileSystemEntryWriter = new FileSystemEntryWriter(media, mbrFileSystemResult.Value,
-                    parts.Skip(2).ToArray(), recursive, createDestDirectory);
+                var fileSystemEntryWriter = new FileSystemEntryWriter(media, PartitionTableType.MasterBootRecord,
+                    mbrPartitionNumber, mbrFileSystem, parts.Skip(2).ToArray(), recursive,
+                    createDestDirectory, forceOverwrite);
 
                 // initialize file system entry writer
                 var mbrInitializeResult = await fileSystemEntryWriter.Initialize();
@@ -697,9 +701,12 @@ public abstract partial class FsCommandBase : CommandBase
                     return new Result<IEntryWriter>(gptFileSystemResult.Error);
                 }
                 
+                var (gptPartitionNumber, gptFileSystem) = gptFileSystemResult.Value;
+
                 // skip 2 first parts, partition table and partition number
-                var gptFileSystemEntryWriter = new FileSystemEntryWriter(media, gptFileSystemResult.Value,
-                    parts.Skip(2).ToArray(), recursive, createDestDirectory);
+                var gptFileSystemEntryWriter = new FileSystemEntryWriter(media, PartitionTableType.GuidPartitionTable,
+                    gptPartitionNumber, gptFileSystem, parts.Skip(2).ToArray(), recursive,
+                    createDestDirectory, forceOverwrite);
                 
                 // initialize file system entry writer
                 var gptInitializeResult = await gptFileSystemEntryWriter.Initialize();
@@ -712,16 +719,18 @@ public abstract partial class FsCommandBase : CommandBase
                     return new Result<IEntryWriter>(new Error($"No device name in path"));
                 }
 
-                var fileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
-                if (fileSystemVolumeResult.IsFaulted)
+                var rdbRileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
+                if (rdbRileSystemVolumeResult.IsFaulted)
                 {
-                    return new Result<IEntryWriter>(fileSystemVolumeResult.Error);
+                    return new Result<IEntryWriter>(rdbRileSystemVolumeResult.Error);
                 }
 
+                var (rdbPartitionNumber, rdbFileSystemVolume) = rdbRileSystemVolumeResult.Value;
+
                 // skip 2 first parts, partition table and device/drive name
-                var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, fileSystemPath,
-                    parts.Skip(2).ToArray(), recursive, fileSystemVolumeResult.Value,
-                    createDestDirectory);
+                var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, PartitionTableType.RigidDiskBlock,
+                    rdbPartitionNumber, fileSystemPath, parts.Skip(2).ToArray(), recursive,
+                    rdbFileSystemVolume, createDestDirectory, forceOverwrite);
                 
                 // initialize amiga volume entry writer
                 var rdbInitializeResult = await amigaVolumeEntryWriter.Initialize();
@@ -744,11 +753,11 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<IFileSystemVolume>(fileSystemVolume);
     }
 
-    protected async Task<Result<IFileSystem>> MountMbrFileSystem(VirtualDisk disk, string partitionNumber)
+    protected async Task<Result<(int, IFileSystem)>> MountMbrFileSystem(VirtualDisk disk, string partitionNumber)
     {
         if (!int.TryParse(partitionNumber, out var partitionNumberIntValue))
         {
-            return new Result<IFileSystem>(new Error($"Invalid partition number '{partitionNumber}'"));
+            return new Result<(int, IFileSystem)>(new Error($"Invalid partition number '{partitionNumber}'"));
         }
 
         OnDebugMessage("Reading Master Boot Record");
@@ -760,14 +769,14 @@ public abstract partial class FsCommandBase : CommandBase
         }
         catch (Exception)
         {
-            return new Result<IFileSystem>(new Error("Master Boot Record not found"));
+            return new Result<(int, IFileSystem)>(new Error("Master Boot Record not found"));
         }
 
         OnDebugMessage($"Partition number '{partitionNumber}'");
 
         if (partitionNumberIntValue < 0 || partitionNumberIntValue - 1 > biosPartitionTable.Partitions.Count)
         {
-            return new Result<IFileSystem>(new Error(
+            return new Result<(int, IFileSystem)>(new Error(
                 $"Invalid partition number {partitionNumber}, expected to between 1-{biosPartitionTable.Partitions.Count}"));
         }
 
@@ -777,7 +786,10 @@ public abstract partial class FsCommandBase : CommandBase
 
         var stream = partitionInfo.Open();
 
-        return await MountFileSystem(stream);
+        var fileSystemResult = await MountFileSystem(stream);
+        return fileSystemResult.IsFaulted
+            ? new Result<(int, IFileSystem)>(fileSystemResult.Error)
+            : new Result<(int, IFileSystem)>((partitionNumberIntValue, fileSystemResult.Value));
     }
     
     protected static async Task<Result<IFileSystem>> MountFileSystem(Stream stream)
@@ -790,14 +802,6 @@ public abstract partial class FsCommandBase : CommandBase
         {
             return new Result<IFileSystem>(new ExtFileSystem(stream));
         }
-        
-        // for (var blockOffset = 0; blockOffset < blockBytes.Length; blockOffset += 512)
-        // {
-        //     // fat magic Signature
-        //     if (blockBytes[blockOffset + 0x1fe] == 0x55 && blockBytes[blockOffset + 0x1ff] == 0xaa)
-        //     {
-        //     }
-        // }
         
         if (FatFileSystem.Detect(stream))
         {
@@ -817,11 +821,11 @@ public abstract partial class FsCommandBase : CommandBase
         return new Result<IFileSystem>(new Error("Unsupported Master Boot Record file system"));
     }
 
-    protected async Task<Result<IFileSystem>> MountGptFileSystem(VirtualDisk disk, string partitionNumber)
+    protected async Task<Result<(int, IFileSystem)>> MountGptFileSystem(VirtualDisk disk, string partitionNumber)
     {
         if (!int.TryParse(partitionNumber, out var partitionNumberIntValue))
         {
-            return new Result<IFileSystem>(new Error($"Invalid partition number '{partitionNumber}'"));
+            return new Result<(int, IFileSystem)>(new Error($"Invalid partition number '{partitionNumber}'"));
         }
         
         OnDebugMessage("Reading Guid Partition Table");
@@ -833,14 +837,14 @@ public abstract partial class FsCommandBase : CommandBase
         }
         catch (Exception)
         {
-            return new Result<IFileSystem>(new Error("Guid Partition Table not found"));
+            return new Result<(int, IFileSystem)>(new Error("Guid Partition Table not found"));
         }
 
         OnDebugMessage($"Partition number '{partitionNumber}'");
 
         if (partitionNumberIntValue < 0 || partitionNumberIntValue - 1 > guidPartitionTable.Partitions.Count)
         {
-            return new Result<IFileSystem>(new Error($"Invalid partition number {partitionNumber}, expected to between 1-{guidPartitionTable.Partitions.Count}"));
+            return new Result<(int, IFileSystem)>(new Error($"Invalid partition number {partitionNumber}, expected to between 1-{guidPartitionTable.Partitions.Count}"));
         }
 
         var partitionInfo = guidPartitionTable.Partitions[partitionNumberIntValue - 1];
@@ -849,10 +853,13 @@ public abstract partial class FsCommandBase : CommandBase
 
         var stream = partitionInfo.Open();
 
-        return await MountFileSystem(stream);
+        var fileSystemResult = await MountFileSystem(stream);
+        return fileSystemResult.IsFaulted
+            ? new Result<(int, IFileSystem)>(fileSystemResult.Error)
+            : new Result<(int, IFileSystem)>((partitionNumberIntValue, fileSystemResult.Value));
     }
 
-    protected async Task<Result<IFileSystemVolume>> MountRdbFileSystemVolume(Media media, string partition)
+    protected async Task<Result<(int, IFileSystemVolume)>> MountRdbFileSystemVolume(Media media, string partition)
     {
         OnDebugMessage("Reading Rigid Disk Block");
         
@@ -860,7 +867,7 @@ public abstract partial class FsCommandBase : CommandBase
 
         if (rigidDiskBlock == null)
         {
-            return new Result<IFileSystemVolume>(new Error("No rigid disk block"));
+            return new Result<(int, IFileSystemVolume)>(new Error("No rigid disk block"));
         }
 
         var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
@@ -879,7 +886,7 @@ public abstract partial class FsCommandBase : CommandBase
 
         if (partitionBlock == null)
         {
-            return new Result<IFileSystemVolume>(new Error($"Partition '{partition}' not found"));
+            return new Result<(int, IFileSystemVolume)>(new Error($"Partition '{partition}' not found"));
         }
 
         OnDebugMessage($"Mounting file system");
@@ -887,7 +894,7 @@ public abstract partial class FsCommandBase : CommandBase
         var fileSystemVolumeResult = await MountPartitionFileSystemVolume(media, partitionBlock);
         if (fileSystemVolumeResult.IsFaulted)
         {
-            return new Result<IFileSystemVolume>(fileSystemVolumeResult.Error);
+            return new Result<(int, IFileSystemVolume)>(fileSystemVolumeResult.Error);
         }
 
         OnDebugMessage($"Volume '{fileSystemVolumeResult.Value.Name}'");
@@ -895,10 +902,10 @@ public abstract partial class FsCommandBase : CommandBase
         var fileSystemVolume = fileSystemVolumeResult.Value;
         if (fileSystemVolume == null)
         {
-            return new Result<IFileSystemVolume>(new Error("No file system volume mounted"));
+            return new Result<(int, IFileSystemVolume)>(new Error("No file system volume mounted"));
         }
 
-        return new Result<IFileSystemVolume>(fileSystemVolume);
+        return new Result<(int, IFileSystemVolume)>((partitionBlocks.IndexOf(partitionBlock), fileSystemVolume));
     }
 
     protected async Task<Result<IFileSystemVolume>> MountPartitionFileSystemVolume(Media media,

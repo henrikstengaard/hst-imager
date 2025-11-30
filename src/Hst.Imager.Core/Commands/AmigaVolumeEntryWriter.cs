@@ -16,11 +16,14 @@ using FileMode = Amiga.FileSystems.FileMode;
 
 public class AmigaVolumeEntryWriter(
     Media media,
+    PartitionTableType partitionTableType,
+    int partitionNumber,
     string fileSystemPath,
     string[] rootPathComponents,
     bool recursive,
     IFileSystemVolume fileSystemVolume,
-    bool createDirectory)
+    bool createDirectory,
+    bool forceOverwrite)
     : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
@@ -115,6 +118,11 @@ public class AmigaVolumeEntryWriter(
                 {
                     lastPathComponentEntryType = pathComponentEntry.Type == EntryType.Dir
                         ? Models.FileSystems.EntryType.Dir : Models.FileSystems.EntryType.File;
+
+                    if (pathComponentEntry.Type != EntryType.Dir)
+                    {
+                        break;
+                    }
                 }
             }
             
@@ -182,6 +190,7 @@ public class AmigaVolumeEntryWriter(
         if (!isRelativeDirChange)
         {
             await fileSystemVolume.ChangeDirectory("/");
+            currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
 
             currentPathComponents = [];
         }
@@ -195,7 +204,7 @@ public class AmigaVolumeEntryWriter(
             var part = pathComponents[i];
             var entries = (await fileSystemVolume.ListEntries()).ToList();
 
-            var mustPathComponentExist = i < existingAbsolutePathComponents.Length;
+            var mustPathComponentExist = currentPathComponents.Count + i < existingAbsolutePathComponents.Length;
             
             var dirEntry = entries.FirstOrDefault(x =>
                 x.Name.Equals(part, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
@@ -213,6 +222,7 @@ public class AmigaVolumeEntryWriter(
 
             await fileSystemVolume.ChangeDirectory(part);
             currentPathComponents.Add(part);
+            currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
         }
 
         return new Result();
@@ -301,6 +311,16 @@ public class AmigaVolumeEntryWriter(
 
         var fileName = fullPathComponents[^1];
 
+        var entries = (await fileSystemVolume.ListEntries()).ToList();
+        
+        var fileEntry = entries.FirstOrDefault(x =>
+            x.Name.Equals(fileName, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.File);
+        
+        if (!forceOverwrite && fileEntry != null)
+        {
+            return new Result(new FileExistsError($"File already exists '{string.Join("/", fullPathComponents)}'"));
+        }
+        
         await fileSystemVolume.CreateFile(fileName, true, true);
 
         await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true))
@@ -348,9 +368,85 @@ public class AmigaVolumeEntryWriter(
 
     public IEnumerable<string> GetLogs() => [];
 
-    public IEntryIterator CreateEntryIterator(string rootPath, bool recursive)
+    public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
     {
-        return new AmigaVolumeEntryIterator(media, media.Stream, rootPath, fileSystemVolume, recursive);
+        return new AmigaVolumeEntryIterator(media, partitionTableType, partitionNumber, fileSystemVolume,
+            rootPathComponents, recursive);
+    }
+
+    private bool IsSameMediaAndPartition(IEntryIterator entryIterator) =>
+        entryIterator.Media != null && media.Equals(entryIterator.Media) &&
+        entryIterator.PartitionTableType == partitionTableType &&
+        entryIterator.PartitionNumber == partitionNumber;
+
+    /// <summary>
+    /// Examines if path components used by iterator and writer results in a self copy.
+    /// 
+    /// Examples of self copy paths:
+    /// - dir1 -> dir1: Copy all files from dir1 to dir1.
+    /// - dir1\* -> dir1: Copy all files from dir1 to dir1, same as not writing *.
+    /// - dir1\file1.txt -> dir1: Copy single file file1.txt from dir1 to dir1.
+    ///
+    /// Examples of valid paths that are not self copy:
+    /// - dir1\file1.txt -> dir2: Copy file1.txt from dir1 to dir2.
+    /// - dir1\file1.txt -> dir1\file2.txt: Copy file1.txt from dir1 to file2.txt in dir1.
+    /// </summary>
+    /// <param name="entryIterator"></param>
+    /// <returns>True, if iterator and writer path components result in a self copy.</returns>
+    public bool ArePathComponentsSelfCopy(IEntryIterator entryIterator)
+    {
+        // return false, if not an amiga volume entry iterator or not same media.
+        // self copy/extract is only possible, when copying/extracting from and to same media
+        if (entryIterator is not AmigaVolumeEntryIterator ||
+            !IsSameMediaAndPartition(entryIterator))
+        {
+            return false;
+        }
+
+        var sameDirPathComponents = entryIterator.DirPathComponents.Length == dirPathComponents.Length &&
+                                    entryIterator.DirPathComponents.SequenceEqual(dirPathComponents);
+
+        // return false, if it's not same dir path components or if it's not a single file copy
+        if (!sameDirPathComponents || !entryIterator.IsSingleFileEntryNext)
+        {
+            return false;
+        }
+
+        var lastPathComponent = rootPathComponents.Length > 0 ? rootPathComponents[^1] : string.Empty;
+        
+        // return true, if last writer path component is empty or if last writer path component exist and
+        // is same as last iterator path component
+        return string.IsNullOrEmpty(lastPathComponent) ||
+               lastPathComponentExist && entryIterator.PathComponents[^1].Equals(lastPathComponent);
+    }
+
+    public bool ArePathComponentsCyclic(IEntryIterator entryIterator)
+    {
+        // return false, if not an amiga volume entry iterator and not same media.
+        // cyclic copy/extract are only possible, when copying/extracting from and to same media
+        if (entryIterator is not AmigaVolumeEntryIterator ||
+            (entryIterator.Media != null && !media.Equals(entryIterator.Media)))
+        {
+            return false;
+        }
+
+        // return false, if not recursive
+        if (!recursive && entryIterator.IsSingleFileEntryNext)
+        {
+            return false;
+        }
+        
+        // array of path components that in length is the same between iterator and writer
+        var sameDirPathComponents = entryIterator.DirPathComponents.Length > 0 && dirPathComponents.Length > 1
+            ? dirPathComponents.Take(entryIterator.DirPathComponents.Length).ToArray()
+            : [];
+
+        // true, if writer has same and more path components than iterator
+        var hasSameAndMoreDirPathComponents = dirPathComponents.Length > entryIterator.DirPathComponents.Length &&
+            (entryIterator.DirPathComponents.Length == 0 || entryIterator.DirPathComponents.SequenceEqual(sameDirPathComponents));
+        
+        // return true, if writer has same or more path components and it's recursive
+        return hasSameAndMoreDirPathComponents && recursive;
     }
 
     public bool SupportsUaeMetadata => true;

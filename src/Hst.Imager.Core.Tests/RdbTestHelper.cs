@@ -13,6 +13,31 @@ namespace Hst.Imager.Core.Tests;
 
 public static class RdbTestHelper
 {
+    public static async Task Pfs3FormatRdbPartition(TestCommandHelper testCommandHelper, string path, int partitionNumber,
+        string volumeName = "Workbench")
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+
+        if (rigidDiskBlock == null)
+        {
+            throw new IOException($"Media '{path}' is not a valid Amiga Rigid Disk Block (RDB) disk.");
+        }
+        
+        var partitionBlocks = rigidDiskBlock.PartitionBlocks.ToList();
+        
+        if (partitionNumber < 0 || partitionNumber >= partitionBlocks.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(partitionNumber), 
+                $"Partition number {partitionNumber} is out of range. Available partitions: {partitionBlocks.Count}");
+        }
+        
+        await Pfs3Formatter.FormatPartition(stream, partitionBlocks[partitionNumber], volumeName);
+    }    
+
     /// <summary>
     /// Create
     /// - dir1
@@ -109,6 +134,7 @@ public static class RdbTestHelper
             await fileSystemVolume.ChangeDirectory(dirPathComponent);
         }
         
+        fileSystemVolume.Dispose();
         media.Dispose();
     }
     
@@ -124,6 +150,7 @@ public static class RdbTestHelper
 
         var entries = await fileSystemVolume.ListEntries();
         
+        fileSystemVolume.Dispose();
         media.Dispose();
 
         return entries;

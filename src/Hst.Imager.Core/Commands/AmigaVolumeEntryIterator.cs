@@ -13,34 +13,91 @@ using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 using FileMode = Amiga.FileSystems.FileMode;
 
+/// <summary>
+/// Amiga volume entry iterator.
+/// </summary>
+/// <param name="media">Media used by iterator.</param>
+/// <param name="partitionTableType">Partition table type used by iterator.</param>
+/// <param name="partitionNumber">Partition number used by iterator.</param>
+/// <param name="fileSystemVolume">Amiga file system volume to iterate through.</param>
+/// <param name="rootPathComponents">Root path components to root of iterator.</param>
+/// <param name="recursive">Iterate recursively.</param>
 public class AmigaVolumeEntryIterator(
     Media media,
-    Stream stream,
-    string rootPath,
+    PartitionTableType partitionTableType,
+    int partitionNumber,
     IFileSystemVolume fileSystemVolume,
+    string[] rootPathComponents,
     bool recursive)
     : IEntryIterator
 {
-    private readonly Stream stream = stream;
     private readonly IMediaPath mediaPath = MediaPath.AmigaOsPath;
-    private string[] rootPathComponents = [];
     private PathComponentMatcher pathComponentMatcher;
     private readonly Stack<Entry> nextEntries = new();
     private bool isFirst = true;
     private Entry currentEntry = null;
+
+    public PartitionTableType PartitionTableType => partitionTableType;
+    public int PartitionNumber => partitionNumber;
+
+    public string[] PathComponents => rootPathComponents;
+
+    /// <summary>
+    /// Dir path components from root path components that exist and is set during initialization.
+    /// </summary>
+    public string[] DirPathComponents { get; private set; } = [];
 
     public void Dispose()
     {
     }
 
     public Media Media => media;
-    public string RootPath => rootPath;
 
     public Entry Current => currentEntry;
 
     public bool HasMoreEntries => nextEntries.Count > 0;
-    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
-                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
+
+    public bool IsSingleFileEntryNext { get; private set; } = false;
+
+    public async Task Initialize()
+    {
+        await fileSystemVolume.ChangeDirectory("/");
+
+        var dirComponents = 0;
+        var usePattern = false;
+        foreach (var pathComponent in rootPathComponents)
+        {
+            var findEntryResult = await fileSystemVolume.FindEntry(pathComponent);
+            
+            // change directory if directory exists for path component
+            if (!findEntryResult.PartsNotFound.Any() && findEntryResult.Entry.Type == EntryType.Dir)
+            {
+                dirComponents++;
+                await fileSystemVolume.ChangeDirectory(pathComponent);
+                continue;
+            }
+            
+            // last part component
+            if (dirComponents == rootPathComponents.Length - 1 )
+            {
+                usePattern = true;
+                IsSingleFileEntryNext = findEntryResult.Entry is { Type: EntryType.File } &&
+                                        rootPathComponents.Length > 0;
+
+                break;
+            }
+            
+            if (findEntryResult.PartsNotFound.Any())
+            {
+                throw new IOException(
+                    $"Path not found '{string.Join("/", rootPathComponents.Take(dirComponents).Concat(findEntryResult.PartsNotFound))}'");
+            }
+        }
+
+        DirPathComponents = rootPathComponents.Take(dirComponents).ToArray();
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? rootPathComponents : [], 
+            isFile: IsSingleFileEntryNext, recursive: recursive);
+    }
 
     public async Task<bool> Next()
     {
@@ -48,8 +105,7 @@ public class AmigaVolumeEntryIterator(
         {
             isFirst = false;
             currentEntry = null;
-            await ResolveRootPath(rootPath);
-            await EnqueueDirectory(rootPathComponents);
+            await EnqueueDirectory(DirPathComponents);
         }
 
         if (nextEntries.Count <= 0)
@@ -70,8 +126,8 @@ public class AmigaVolumeEntryIterator(
 
             if (recursive)
             {
-                var entriesEnqueued = await EnqueueDirectory(currentEntry.FullPathComponents);
-                skipEntry = pathComponentMatcher.UsesPattern && entriesEnqueued == 0;
+                var (dirEntriesEnqueued, fileEntriesEnqueued) = await EnqueueDirectory(currentEntry.FullPathComponents);
+                skipEntry = pathComponentMatcher.UsesPattern && dirEntriesEnqueued + fileEntriesEnqueued == 0;
             }
             else
             {
@@ -81,42 +137,6 @@ public class AmigaVolumeEntryIterator(
         } while (nextEntries.Count > 0 && skipEntry);
 
         return true;
-    }
-
-    private async Task ResolveRootPath(string path)
-    {
-        var pathComponents = GetPathComponents(path);
-        
-        await fileSystemVolume.ChangeDirectory("/");
-
-        var dirComponents = 0;
-        var usePattern = false;
-        foreach (var pathComponent in pathComponents)
-        {
-            var findEntryResult = await fileSystemVolume.FindEntry(pathComponent);
-
-            if (!findEntryResult.PartsNotFound.Any() && findEntryResult.Entry.Type == EntryType.Dir)
-            {
-                dirComponents++;
-                await fileSystemVolume.ChangeDirectory(pathComponent);
-                continue;
-            }
-            
-            if (dirComponents == pathComponents.Length - 1)
-            {
-                usePattern = true;
-                break;
-            }
-            
-            if (findEntryResult.PartsNotFound.Any())
-            {
-                throw new IOException(
-                    $"Path not found '{string.Join("/", pathComponents.Take(dirComponents).Concat(findEntryResult.PartsNotFound))}'");
-            }
-        }
-
-        rootPathComponents = pathComponents.Take(dirComponents).ToArray();
-        pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : Array.Empty<string>(), recursive);
     }
 
     public async Task<Stream> OpenEntry(Entry entry)
@@ -150,7 +170,7 @@ public class AmigaVolumeEntryIterator(
     /// </summary>
     /// <param name="currentPathComponents">Path to enqueue.</param>
     /// <returns>Number of entries enqueued.</returns>
-    private async Task<int> EnqueueDirectory(string[] currentPathComponents)
+    private async Task<(int, int)> EnqueueDirectory(string[] currentPathComponents)
     {
         await fileSystemVolume.ChangeDirectory("/");
 
@@ -180,7 +200,7 @@ public class AmigaVolumeEntryIterator(
                 { Constants.EntryPropertyNames.ProtectionBits, ((int)entry.ProtectionBits ^ 0xf).ToString() }
             };
 
-            var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, rootPathComponents,
+            var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, DirPathComponents,
                 recursive, entryPath, entryPath, isDir, entry.Date, entry.Size,
                 attributes, properties, dirAttributes);
 
@@ -215,7 +235,7 @@ public class AmigaVolumeEntryIterator(
             nextEntries.Push(directories[i]);
         }
 
-        return files.Count + directories.Count;
+        return (directories.Count, files.Count);
     }
 
     public UaeMetadata UaeMetadata { get; set; }

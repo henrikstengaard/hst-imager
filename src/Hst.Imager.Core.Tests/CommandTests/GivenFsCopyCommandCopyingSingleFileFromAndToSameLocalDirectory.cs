@@ -65,7 +65,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
     }
 
     [Fact]
-    public async Task When_CopyingFromAndToSameRootDirLocalDirectoryMediaFileExists_Then_FileIsCopied()
+    public async Task When_CopyingFromAndToSameRootDirLocalDirectoryMediaFileExists_Then_ErrorIsReturned()
     {
         var mediaPath = Guid.NewGuid().ToString();
         var srcPath = Path.Combine(mediaPath, "file2.txt");
@@ -86,6 +86,45 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
                 srcPath, destPath, recursive, false, true);
+            
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+
+            // assert - error is returned
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsFaulted);
+            Assert.NotNull(result.Error);
+            Assert.IsType<FileExistsError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingFromAndToSameRootDirLocalDirectoryMediaFileExistsWithForce_Then_FileIsCopied()
+    {
+        var mediaPath = Guid.NewGuid().ToString();
+        var srcPath = Path.Combine(mediaPath, "file2.txt");
+        var destPath = Path.Combine(mediaPath, "file2_copy.txt");
+        const bool recursive = false;
+        const bool force = true;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2.txt"), []);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), []);
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, recursive, false, true, forceOverwrite: force);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
@@ -148,6 +187,50 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - error is returned
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsFaulted);
+            Assert.NotNull(result.Error);
+            Assert.IsType<FileExistsError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingFromAndToSameRootDirLocalDirectoryMediaFileExistsIsAdfWithForce_Then_FileIsCopied()
+    {
+        var mediaPath = Guid.NewGuid().ToString();
+        var srcPath = Path.Combine(mediaPath, "file2.txt");
+        var destPath = Path.Combine(mediaPath, "file2_copy.txt");
+        const bool recursive = false;
+        const bool force = true;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2.txt"), []);
+
+            // arrange - create existing file2 copy as adf
+            var adfBytes = new byte[Amiga.FloppyDiskConstants.DoubleDensity.Size];
+            Array.Copy(MagicBytes.AdfDosMagicNumber, 0, adfBytes, 0,
+                MagicBytes.AdfDosMagicNumber.Length);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), adfBytes);
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, recursive, false, true, forceOverwrite: force);
+            
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
             
             // assert - directories exist
@@ -207,6 +290,50 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - error is returned
+            Assert.False(result.IsSuccess);
+            Assert.True(result.IsFaulted);
+            Assert.NotNull(result.Error);
+            Assert.IsType<FileExistsError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_CopyingFromAndToSameRootDirLocalDirectoryMediaFileExistsIsMbrImgWithForce_Then_FileIsCopied()
+    {
+        var mediaPath = Guid.NewGuid().ToString();
+        var srcPath = Path.Combine(mediaPath, "file2.txt");
+        var destPath = Path.Combine(mediaPath, "file2_copy.txt");
+        const bool recursive = false;
+        const bool force = true;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2.txt"), []);
+
+            // arrange - create existing file2 copy as mbr img
+            var mbrBytes = new byte[512];
+            Array.Copy(MagicBytes.MbrMagicNumber, 0, mbrBytes, 0x1fe,
+                MagicBytes.MbrMagicNumber.Length);
+            await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), mbrBytes);
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, recursive, false, true, forceOverwrite: true);
+            
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
             
             // assert - directories exist
@@ -235,6 +362,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             DeletePaths(mediaPath);
         }
     }
+
     
     [Fact]
     public async Task When_CopyingToDirFromAndToSameLocalMedia_Then_FileIsCopied()
@@ -242,6 +370,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
         var mediaPath = Guid.NewGuid().ToString();
         var srcPath = Path.Combine(mediaPath, "dir1", "file1.txt");
         var destPath = Path.Combine(mediaPath, "dir1", "dir3");
+        const bool recursive = false;
 
         try
         {
@@ -254,7 +383,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, true, false, true);
+                srcPath, destPath, recursive, false, true);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);

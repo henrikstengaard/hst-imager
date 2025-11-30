@@ -18,7 +18,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
     public async Task WhenCopyingFromAndToSameAdfThenDirectoriesAreCopied()
     {
         var mediaPath = $"{Guid.NewGuid()}.adf";
-        var srcPath = Path.Combine(mediaPath, "*");
+        var srcPath = Path.Combine(mediaPath, "dir1", "*");
         var destPath = Path.Combine(mediaPath, "copied");
 
         try
@@ -84,39 +84,98 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             entries = (await ffsVolume.ListEntries()).ToList();
             
             // assert - copied directory contains 2 entries
-            Assert.Equal(3, entries.Count);
-
-            // assert - copied directory contains dir1 directory
-            Assert.Equal("dir1",
-                entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir1", StringComparison.OrdinalIgnoreCase))?.Name);
-
-            // assert - copied directory contains dir2 directory
-            Assert.Equal("dir2",
-                entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir2", StringComparison.OrdinalIgnoreCase))?.Name);
-
-            // assert - copied directory contains copied directory
-            Assert.Equal("copied",
-                entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("copied", StringComparison.OrdinalIgnoreCase))?.Name);
-
-            await ffsVolume.ChangeDirectory("dir1");
-            
-            // assert - get dir1 entries
-            entries = (await ffsVolume.ListEntries()).ToList();
-
-            // assert - dir1 directory contains 1 entry
             Assert.Equal(2, entries.Count);
-            
-            // assert - dir1 directory contains dir3 directory
+
+            // assert - copied directory contains dir3 directory
             Assert.Equal("dir3",
                 entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir3", StringComparison.OrdinalIgnoreCase))?.Name);
 
-            // assert - dir1 directory contains file1.txt file
+            // assert - copied directory contains file1.txt file
             Assert.Equal("file1.txt",
                 entries.FirstOrDefault(x => x.Type == EntryType.File && x.Name.Equals("file1.txt", StringComparison.OrdinalIgnoreCase))?.Name);
         }
         finally
         {
             DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingAFileToAnExistingFile_Then_ErrorIsReturned()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.txt";
+        var destPath = $"{Guid.NewGuid()}.adf";
+        const bool force = false;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            await File.WriteAllBytesAsync(srcPath, []);
+            
+            // arrange - dest disk image file
+            await TestHelper.CreateFormattedAdfDisk(testCommandHelper, destPath, "Amiga");
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, false, false, true, forceOverwrite: force);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - copy failed with file exists error
+            Assert.True(result.IsFaulted);
+            Assert.IsType<FileExistsError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingAFileToAnExistingFileWithForce_Then_FileIsCopied()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.txt";
+        var destPath = $"{Guid.NewGuid()}.adf";
+        const bool force = true;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - source file
+            await File.WriteAllBytesAsync(srcPath, []);
+            
+            // arrange - dest disk image file
+            await TestHelper.CreateFormattedAdfDisk(testCommandHelper, destPath, "Amiga");
+
+            // arrange - clear active medias to avoid source and destination being reused between commands
+            testCommandHelper.ClearActiveMedias();
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, false, false, true, forceOverwrite: force);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - copy is successful and dest file is same length as source file
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, new FileInfo(destPath).Length);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
         }
     }
     

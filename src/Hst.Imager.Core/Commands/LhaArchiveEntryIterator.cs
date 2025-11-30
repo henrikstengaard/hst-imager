@@ -27,6 +27,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
     private Entry currentEntry;
     private readonly IDictionary<string, LzHeader> lhaEntryIndex;
 
+    public PartitionTableType PartitionTableType => PartitionTableType.None;
+    public int PartitionNumber => 0;
+
     public LhaArchiveEntryIterator(Stream stream, string rootPath, LhaArchive lhaArchive, bool recursive)
     {
         this.stream = stream;
@@ -40,7 +43,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
         this.lhaEntryIndex = new Dictionary<string, LzHeader>(StringComparer.OrdinalIgnoreCase);
 
         var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
+        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
         this.rootPathComponents = this.pathComponentMatcher.PathComponents;
     }
 
@@ -48,6 +51,14 @@ public class LhaArchiveEntryIterator : IEntryIterator
     {
     }
 
+    public Task Initialize()
+    {
+        return Task.CompletedTask;
+    }
+
+    public string[] PathComponents => rootPathComponents;
+
+    public string[] DirPathComponents => rootPathComponents;
     public Media Media => null;
     public string RootPath => rootPath;
 

@@ -662,12 +662,12 @@ namespace Hst.Imager.ConsoleApp
         }
         
         public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet,
-            UaeMetadata uaeMetadata, bool makeDirectory)
+            UaeMetadata uaeMetadata, bool makeDirectory, bool forceOverwrite)
         {
             using var commandHelper = GetCommandHelper();
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
-                makeDirectory: makeDirectory);
+                makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
             await Execute(command);
         }
 
@@ -684,12 +684,12 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes,
-            bool quiet, UaeMetadata uaeMetadata, bool makeDirectory)
+            bool quiet, UaeMetadata uaeMetadata, bool makeDirectory, bool forceOverwrite)
         {
             using var commandHelper = GetCommandHelper();
             var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
-                makeDirectory: makeDirectory);
+                makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
             await Execute(command);
         }
         

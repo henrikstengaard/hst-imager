@@ -195,6 +195,10 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
+            // assert - no directories extracted
+            var actualDirs = Directory.GetDirectories(destPath, "*.*", SearchOption.AllDirectories);
+            Assert.Empty(actualDirs);
+            
             // assert - get extracted files
             var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
             Assert.Single(files);
@@ -235,6 +239,10 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
+            // assert - no directories extracted
+            var actualDirs = Directory.GetDirectories(destPath, "*.*", SearchOption.AllDirectories);
+            Assert.Empty(actualDirs);
+            
             // assert - get extracted files
             var files = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
 
@@ -323,6 +331,10 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             var result = await fsExtractCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
+            // assert - no directories extracted
+            var actualDirs = Directory.GetDirectories(destPath, "*.*", SearchOption.AllDirectories);
+            Assert.Empty(actualDirs);
+            
             // assert - 1 file extracted
             var expectedFiles = new[]
             {
@@ -369,6 +381,76 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             // assert
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_ExtractingAFileToAnExistingFile_Then_ErrorIsReturned()
+    {
+        var srcPath = $"{Guid.NewGuid()}.txt";
+        var destPath = $"{Guid.NewGuid()}.adf";
+        const bool force = false;
+        
+        try
+        {
+            // arrange - create dos3 formatted adf
+            await CreateDos3FormattedAdf(srcPath);
+
+            // arrange - create destination file
+            await File.WriteAllBytesAsync(destPath, []);
+            
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, false, false, true, forceOverwrite: force);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(CancellationToken.None);
+            
+            // assert - copy failed with file exists error
+            Assert.True(result.IsFaulted);
+            Assert.IsType<FileExistsError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_ExtractingAFileToAnExistingFileWithForce_Then_FileIsCopied()
+    {
+        var srcPath = $"{Guid.NewGuid()}.txt";
+        var destPath = $"{Guid.NewGuid()}.adf";
+        const bool force = true;
+        
+        try
+        {
+            // arrange - create dos3 formatted adf
+            await CreateDos3FormattedAdf(srcPath);
+
+            // arrange - create destination file
+            await File.WriteAllBytesAsync(destPath, []);
+            
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, false, false, true, forceOverwrite: force);
+
+            // act - extract
+            var result = await fsExtractCommand.Execute(CancellationToken.None);
+            
+            // assert - copy is successful and dest file is same length as source file
+            Assert.True(result.IsSuccess);
+            Assert.Equal(0, new FileInfo(destPath).Length);
         }
         finally
         {

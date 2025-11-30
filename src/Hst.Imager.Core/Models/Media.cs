@@ -3,7 +3,7 @@
     using System;
     using System.IO;
 
-    public class Media : IDisposable
+    public class Media : IDisposable, IEquatable<Media>
     {
         public bool IsDisposed { get; private set; }
 
@@ -61,6 +61,26 @@
         {
             IsDisposed = false;
             this.Stream = stream;
+        }
+
+        public bool Equals(Media other)
+        {
+            if (other is null) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Path == other.Path;
+        }
+        
+        public override bool Equals(object obj)
+        {
+            if (obj is null) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((Media)obj);
+        }
+        
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Path);
         }
     }
 }

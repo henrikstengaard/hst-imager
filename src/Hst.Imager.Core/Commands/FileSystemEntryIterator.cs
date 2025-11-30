@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using DiscUtils.Ntfs;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -8,43 +10,58 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Ext;
 using DiscUtils.Fat;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using PathComponents;
+using UaeMetadatas;
 using Models;
 using Entry = Models.FileSystems.Entry;
 
-public class FileSystemEntryIterator : IEntryIterator
+/// <summary>
+/// File system entry iterator.
+/// </summary>
+/// <param name="media">Media used by iterator.</param>
+/// <param name="partitionTableType">Partition table type used by iterator.</param>
+/// <param name="partitionNumber">Partition number used by iterator.</param>
+/// <param name="fileSystem">File system to iterate through.</param>
+/// <param name="rootPathComponents">Root path components to root of iterator.</param>
+/// <param name="recursive">Iterate recursively.</param>
+public class FileSystemEntryIterator(
+    Media media,
+    PartitionTableType partitionTableType,
+    int partitionNumber,
+    IFileSystem fileSystem,
+    string[] rootPathComponents,
+    bool recursive) : IEntryIterator
 {
-    private readonly Media media;
-    private readonly IMediaPath mediaPath;
-    private readonly string rootPath;
-    private string[] rootPathComponents;
+    private readonly IMediaPath mediaPath = MediaPath.GenericMediaPath;
     private PathComponentMatcher pathComponentMatcher;
-    private readonly IFileSystem fileSystem;
-    private readonly bool recursive;
-    private readonly Stack<Entry> nextEntries;
-    private bool isFirst;
+    private readonly Stack<Entry> nextEntries = new();
+    private bool isFirst = true;
     private Entry currentEntry;
+    private bool initialized;
     private bool disposed;
-    private readonly HashSet<string> dirPathsIteratedIndex;
+    private readonly HashSet<string> dirPathsIteratedIndex = [];
 
-    public FileSystemEntryIterator(Media media, IFileSystem fileSystem, string rootPath, bool recursive)
-    {
-        this.media = media;
-        this.mediaPath = MediaPath.GenericMediaPath;
-        this.rootPath = rootPath;
-        this.recursive = recursive;
-        this.fileSystem = fileSystem;
-        this.nextEntries = new Stack<Entry>();
-        this.currentEntry = null;
-        this.isFirst = true;
+    public PartitionTableType PartitionTableType => partitionTableType;
+    public int PartitionNumber => partitionNumber;
 
-        var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
-        this.rootPathComponents = this.pathComponentMatcher.PathComponents;
-        this.dirPathsIteratedIndex = new HashSet<string>();
-    }
+    /// <summary>
+    /// Root path components of iterator.
+    /// </summary>
+    public string[] PathComponents => rootPathComponents;
 
+    /// <summary>
+    /// Dir path components from root path components that exist and is set during initialization.
+    /// </summary>
+    public string[] DirPathComponents { get; private set; } = [];
+
+    public Media Media => media;
+
+    public Entry Current => currentEntry;
+
+    public bool HasMoreEntries => nextEntries.Count > 0;
+
+    public bool IsSingleFileEntryNext { get; private set; }
+    
     private void Dispose(bool disposing)
     {
         if (disposed)
@@ -67,26 +84,74 @@ public class FileSystemEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
-    public Media Media => media;
-    public string RootPath => rootPath;
+    public Task Initialize()
+    {
+        if (rootPathComponents.Length == 0)
+        {
+            DirPathComponents = [];
+            pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
+            initialized = true;
+            return Task.CompletedTask;
+        }
 
-    public Entry Current => currentEntry;
+        var dirComponents = new List<string>();
+        var usePattern = false;
 
-    public bool HasMoreEntries => nextEntries.Count > 0;
-    public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
-                                         nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
+        var validDirComponents = new List<string>();
 
+        foreach (var pathComponent in rootPathComponents)
+        {
+            dirComponents.Add(pathComponent);
+
+            var dirPath = mediaPath.Join(dirComponents.ToArray());
+
+            if (fileSystem.DirectoryExists(dirPath))
+            {
+                validDirComponents.Add(pathComponent);
+                continue;
+            }
+
+            // use pattern, if last path componenets is not a directory
+            if (validDirComponents.Count == PathComponents.Length - 1)
+            {
+                usePattern = true;
+                IsSingleFileEntryNext = fileSystem.FileExists(dirPath) && PathComponents.Length > 0;
+                break;
+            }
+
+            // two or more path components doesnt exist, throw io exception
+            throw new IOException($"Path not found '{dirPath}'");
+        }
+
+        DirPathComponents = validDirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? dirComponents.ToArray() : [], recursive: recursive);
+
+        initialized = true;
+        return Task.CompletedTask;
+    }
+    
+    private void ThrowIfNotInitialized()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("File system entry iterator not initialized");
+    }
+    
     public Task<bool> Next()
     {
+        ThrowIfNotInitialized();
+        
         if (isFirst)
         {
             isFirst = false;
             currentEntry = null;
-            ResolveRootPath();
-            EnqueueDirectory(this.rootPathComponents);
+            EnqueueDirectory(DirPathComponents);
         }
 
-        if (this.nextEntries.Count <= 0)
+        if (nextEntries.Count <= 0)
         {
             return Task.FromResult(false);
         }
@@ -117,49 +182,6 @@ public class FileSystemEntryIterator : IEntryIterator
         return Task.FromResult(true);
     }
 
-    private void ResolveRootPath()
-    {
-        var pathComponents = GetPathComponents(rootPath);
-
-        if (pathComponents.Length == 0)
-        {
-            this.rootPathComponents = pathComponents;
-            this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive);
-            return;
-        }
-
-        var dirComponents = new List<string>();
-        var usePattern = false;
-
-        var validDirComponents = new List<string>();
-
-        foreach (var pathComponent in pathComponents)
-        {
-            dirComponents.Add(pathComponent);
-
-            var dirPath = mediaPath.Join(dirComponents.ToArray());
-
-            if (fileSystem.DirectoryExists(dirPath))
-            {
-                validDirComponents.Add(pathComponent);
-                continue;
-            }
-
-            // use pattern, if last path componenets is not a directory
-            if (validDirComponents.Count == pathComponents.Length - 1)
-            {
-                usePattern = true;
-                break;
-            }
-
-            // two or more path components doesnt exist, throw io exception
-            throw new IOException($"Path not found '{dirPath}'");
-        }
-
-        rootPathComponents = validDirComponents.ToArray();
-        pathComponentMatcher = new PathComponentMatcher(usePattern ? dirComponents.ToArray() : Array.Empty<string>(), recursive);
-    }
-
     private int EnqueueDirectory(string[] pathComponents)
     {
         var path = mediaPath.Join(pathComponents);
@@ -181,8 +203,6 @@ public class FileSystemEntryIterator : IEntryIterator
         foreach (var dirPath in fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
             .OrderByDescending(x => x).ToList())
         {
-            var fullPathComponents = mediaPath.Split(dirPath);
-
             var attributes = string.Empty;
             DateTime? lastWriteTime = null;
             try
@@ -199,7 +219,7 @@ public class FileSystemEntryIterator : IEntryIterator
 
             var dirAttributes = string.Empty;
 
-            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, dirPath, dirPath, true, lastWriteTime ?? DateTime.Now, 0,
                 attributes, properties, dirAttributes).ToList();
 
@@ -220,8 +240,6 @@ public class FileSystemEntryIterator : IEntryIterator
 
         foreach (var filePath in fileSystem.GetFiles(path, "*", SearchOption.TopDirectoryOnly).OrderByDescending(x => x).ToList())
         {
-            var fullPathComponents = mediaPath.Split(filePath);
-
             DiscFileInfo fileInfo = null;
 
             try
@@ -251,7 +269,7 @@ public class FileSystemEntryIterator : IEntryIterator
 
             var dirAttributes = string.Empty;
 
-            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, filePath, filePath, false, lastWriteTime, size,
                 attributes, properties, dirAttributes).ToList();
 
@@ -288,6 +306,9 @@ public class FileSystemEntryIterator : IEntryIterator
             case FatFileSystem fatFileSystem:
                 var fileAttributes = fatFileSystem.GetAttributes(path);
                 return Format(fileAttributes);
+            case NtfsFileSystem ntfsFileSystem:
+                var ntfsFileAttributes = ntfsFileSystem.GetAttributes(path);
+                return Format(ntfsFileAttributes);
             default:
                 return string.Empty;
         }
@@ -334,7 +355,7 @@ public class FileSystemEntryIterator : IEntryIterator
 
     private static string Format(FileAttributes? fileAttributes)
     {
-        var fatAttributes = "ARHS";
+        const string fatAttributes = "ARHS";
 
         if (fileAttributes == null)
         {
@@ -389,16 +410,6 @@ public class FileSystemEntryIterator : IEntryIterator
     }
 
     public bool SupportsUaeMetadata => false;
-
-    private bool SkipEntry(string[] pathComponents)
-    {
-        if (!UsesPattern)
-        {
-            return false;
-        }
-
-        return !pathComponentMatcher.IsMatch(pathComponents);
-    }
 
     public UaeMetadata UaeMetadata { get; set; }
 }

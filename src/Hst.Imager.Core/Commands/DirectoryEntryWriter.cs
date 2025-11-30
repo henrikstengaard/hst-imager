@@ -11,7 +11,14 @@ using System.Threading.Tasks;
 using UaeMetadatas;
 using Models.FileSystems;
 
-public class DirectoryEntryWriter(string path, bool recursive, bool createDirectory) : IEntryWriter
+/// <summary>
+/// Directory entry writer.
+/// </summary>
+/// <param name="path">Root path components.</param>
+/// <param name="recursive">Recursive creating directories and files.</param>
+/// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
+/// <param name="forceOverwrite">Force overwriting any existing files.</param>
+public class DirectoryEntryWriter(string path, bool recursive, bool createDirectory, bool forceOverwrite) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
@@ -187,6 +194,11 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
                 if (i == rootPathComponents.Length - 1)
                 {
                     lastPathComponentEntryType = dirExists ? EntryType.Dir : EntryType.File;
+
+                    if (!dirExists)
+                    {
+                        break;
+                    }
                 }
             }
 
@@ -255,13 +267,6 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
         if (!isInitialized)
         {
             return new Result(new Error("DirectoryEntryWriter is not initialized."));
-        }
-
-        // return, if it is a single file entry or if there are no entry path components.
-        // for single file entries, the create file method will create the directory.
-        if (isSingleFileEntry || entryPathComponents.Length == 0)
-        {
-            return new Result();
         }
 
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
@@ -373,6 +378,11 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
             ? fileName
             : Path.Combine(dirPath, fileName);
 
+        if (!forceOverwrite && File.Exists(filePath))
+        {
+            return new Result(new FileExistsError($"File already exists '{filePath}'"));
+        }
+        
         await using var fileStream = File.Open(filePath, FileMode.Create, FileAccess.ReadWrite);
 
         int bytesRead;
@@ -434,7 +444,61 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
             }.Concat(logs);
     }
 
-    public IEntryIterator CreateEntryIterator(string rootPath, bool recursive) => null;
+    public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
+    {
+        return new DirectoryEntryIterator(string.Join(Path.PathSeparator, rootPathComponents), recursive);
+    }
+
+    public bool ArePathComponentsSelfCopy(IEntryIterator entryIterator)
+    {
+        // return false, if iterator is not a directory entry iterator
+        // self copy/extract is only possible, when copying/extracting from and to same
+        if (entryIterator is not DirectoryEntryIterator)
+        {
+            return false;
+        }
+        
+        var sameDirPathComponents = entryIterator.DirPathComponents.Length == dirPathComponents.Length &&
+                                    entryIterator.DirPathComponents.SequenceEqual(dirPathComponents);
+
+        // return false, if it's not same dir path components or if it's not a single file copy
+        if (!sameDirPathComponents || !entryIterator.IsSingleFileEntryNext)
+        {
+            return false;
+        }
+
+        var lastPathComponent = rootPathComponents.Length > 0 ? rootPathComponents[^1] : string.Empty;
+        
+        // return true, if last writer path component is empty or if last writer path component exist and
+        // is same as last iterator path component
+        return string.IsNullOrEmpty(lastPathComponent) ||
+               lastPathComponentExist && entryIterator.PathComponents[^1].Equals(lastPathComponent);
+    }
+
+    public bool ArePathComponentsCyclic(IEntryIterator entryIterator)
+    {
+        // return false, if iterator is not a directory entry iterator
+        // cyclic copy/extract is only possible, when copying/extracting from and to same
+        if (entryIterator is not DirectoryEntryIterator)
+        {
+            return false;
+        }
+
+        // array of path components that in length is the same between iterator and writer
+        var sameDirPathComponents = entryIterator.DirPathComponents.Length > 0 && dirPathComponents.Length > 1
+            ? dirPathComponents.Take(entryIterator.DirPathComponents.Length).ToArray()
+            : [];
+
+        // true, if writer has same and more path components than iterator
+        var hasSameAndMoreDirPathComponents = dirPathComponents.Length > entryIterator.DirPathComponents.Length &&
+                                              (entryIterator.DirPathComponents.Length == 0 || entryIterator.DirPathComponents.SequenceEqual(sameDirPathComponents));
+        
+        // return true, if writer has same or more path components and it's recursive
+        return hasSameAndMoreDirPathComponents && recursive;
+    }
 
     public bool SupportsUaeMetadata => true;
+
+    private static string[] GetPathComponents(string path) => 
+        path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
 }

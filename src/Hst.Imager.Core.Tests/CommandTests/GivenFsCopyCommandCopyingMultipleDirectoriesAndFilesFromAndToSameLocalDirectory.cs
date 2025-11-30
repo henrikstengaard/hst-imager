@@ -15,8 +15,8 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameLo
     public async Task When_CopyingFromAndToSameLocalDirectory_Then_DirectoriesAndFilesAreCopied()
     {
         var mediaPath = Guid.NewGuid().ToString();
-        var srcPath = Path.Combine(mediaPath, "*");
-        var destPath = Path.Combine(mediaPath, "dir1");
+        var srcPath = Path.Combine(mediaPath, "dir1", "*");
+        var destPath = Path.Combine(mediaPath, "copied");
 
         try
         {
@@ -25,6 +25,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameLo
 
             // arrange - create directories and files
             await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            Directory.CreateDirectory(destPath);
 
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
@@ -38,10 +39,9 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameLo
             // assert - directories exist
             var expectedDirs = new[]
             {
+                Path.Combine(mediaPath, "copied"),
+                Path.Combine(mediaPath, "copied", "dir3"),
                 Path.Combine(mediaPath, "dir1"),
-                Path.Combine(mediaPath, "dir1", "dir1"),
-                Path.Combine(mediaPath, "dir1", "dir1", "dir3"),
-                Path.Combine(mediaPath, "dir1", "dir2"),
                 Path.Combine(mediaPath, "dir1", "dir3"),
                 Path.Combine(mediaPath, "dir2")
             };
@@ -52,12 +52,80 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameLo
             // assert - files exist
             var expectedFiles = new[]
             {
-                Path.Combine(mediaPath, "dir1", "dir1", "file1.txt"),
+                Path.Combine(mediaPath, "copied", "file1.txt"),
                 Path.Combine(mediaPath, "dir1", "file1.txt")
             };
             var actualFiles = Directory.GetFiles(mediaPath, "*.*", SearchOption.AllDirectories);
             Array.Sort(actualFiles);
             Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingFromAndToSameLocalDirectoryWithCyclicPath_Then_ErrorIsReturned()
+    {
+        var mediaPath = Guid.NewGuid().ToString();
+        var srcPath = Path.Combine(mediaPath, "*");
+        var destPath = Path.Combine(mediaPath, "copied");
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+            Directory.CreateDirectory(destPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - copy failed and returned cyclic error
+            Assert.True(result.IsFaulted);
+            Assert.IsType<CyclicPathError>(result.Error);
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CopyingFromAndToSameLocalDirectoryWithSelfCopyPath_Then_ErrorIsReturned()
+    {
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine([mediaPath, "dir1", "file1.txt"]);
+        var destPath = Path.Combine([mediaPath, "dir1", "file1.txt"]);
+        const bool force = true;
+        
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                srcPath, destPath, true, false, true, forceOverwrite: force);
+
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            
+            // assert - copy failed and returned self copy error
+            Assert.True(result.IsFaulted);
+            Assert.IsType<SelfCopyError>(result.Error);
         }
         finally
         {

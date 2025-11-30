@@ -77,8 +77,9 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         var dirPathComponents = resolvedMedia.FileSystemPath.Split(resolvedMedia.DirectorySeparatorChar);
 
         await using var fileSystemVolume = fileSystemVolumeResult.Value;
-        using var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(mediaResult.Value, string.Empty,
-            [], recursive, fileSystemVolume, false);
+        using var amigaVolumeEntryWriter = new AmigaVolumeEntryWriter(mediaResult.Value, PartitionTableType.RigidDiskBlock,
+            0, string.Empty, [], recursive, fileSystemVolume,
+            false, false);
 
         var initializeResult = await amigaVolumeEntryWriter.Initialize();
         if (initializeResult.IsFaulted)
@@ -171,7 +172,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
             return new Result(gptFileSystemResult.Error);
         }
 
-        var fileSystem = gptFileSystemResult.Value;
+        var (_, fileSystem) = gptFileSystemResult.Value;
         var fileSystemPath = string.Join("/", parts.Skip(1));
 
         try
@@ -199,7 +200,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
             return new Result(mbrFileSystemResult.Error);
         }
 
-        var fileSystem = mbrFileSystemResult.Value;
+        var (_, fileSystem) = mbrFileSystemResult.Value;
         var fileSystemPath = string.Join("/", parts.Skip(1));
 
         try
@@ -223,7 +224,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
             return new Result(fileSystemResult.Error);
         }
 
-        await using var fileSystem = fileSystemResult.Value;
+        await using var fileSystem = fileSystemResult.Value.Item2;
         var dirPaths = parts.Skip(1).ToArray();
 
         foreach (var dirPathComponent in dirPaths)

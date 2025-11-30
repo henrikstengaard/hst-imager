@@ -72,12 +72,17 @@ public static class FsCommandFactory
             new[] { "--makedir", "-md" },
             description: "Make destination directory, if it does not exist.",
             getDefaultValue: () => false);
+
+        var forceOption = new Option<bool>(
+            new[] { "--force", "-f" },
+            description: "Force overwriting any existing files.",
+            getDefaultValue: () => false);
         
         var command = new Command("copy", "Copy files or subdirectories from source to destination.");
         command.AddAlias("c");
         command.SetHandler(CommandHandler.FsCopy, sourcePathArgument, destinationPathArgument, 
             recursiveOption, skipAttributesOption, quietOption, uaeMetadataOption,
-            makeDirectoryOption);
+            makeDirectoryOption, forceOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
@@ -85,6 +90,7 @@ public static class FsCommandFactory
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
         command.AddOption(makeDirectoryOption);
+        command.AddOption(forceOption);
 
         return command;
     }
@@ -123,11 +129,16 @@ public static class FsCommandFactory
             new[] { "--makedir", "-md" },
             description: "Make destination directory, if it does not exist.",
             getDefaultValue: () => false);
+
+        var forceOption = new Option<bool>(
+            new[] { "--force", "-f" },
+            description: "Force overwriting any existing files.",
+            getDefaultValue: () => false);
         
         var command = new Command("extract", "Extract files or subdirectories from source to destination.");
         command.AddAlias("x");
         command.SetHandler(CommandHandler.FsExtract, sourcePathArgument, destinationPathArgument, recursiveOption,
-            skipAttributesOption, quietOption, uaeMetadataOption, makeDirectoryOption);
+            skipAttributesOption, quietOption, uaeMetadataOption, makeDirectoryOption, forceOption);
         command.AddArgument(sourcePathArgument);
         command.AddArgument(destinationPathArgument);
         command.AddOption(recursiveOption);
@@ -135,6 +146,7 @@ public static class FsCommandFactory
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
         command.AddOption(makeDirectoryOption);
+        command.AddOption(forceOption);
 
         return command;
     }

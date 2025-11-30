@@ -10,8 +10,25 @@ using Entry = Models.FileSystems.Entry;
 
 public interface IEntryIterator : IDisposable
 {
+    Task Initialize();
+    string[] PathComponents { get; }
+    string[] DirPathComponents { get; }
+    
+    /// <summary>
+    /// Media mounted.
+    /// </summary>
     Media Media { get; }
-    string RootPath { get; }
+
+    /// <summary>
+    /// Partition table type mounted.
+    /// </summary>
+    PartitionTableType PartitionTableType { get; }
+
+    /// <summary>
+    /// Partition number mounted.
+    /// </summary>
+    int PartitionNumber { get; }
+
     Entry Current { get; }
     Task<bool> Next();
     bool HasMoreEntries { get; }

@@ -10,6 +10,78 @@ namespace Hst.Imager.Core.Tests.MediaTests
     public class GivenPiStormRdbMedia
     {
         [Fact]
+        public void When_PiStormRdbMediasHasSamePathAndPartitionNumber_Then_EqualsReturnTrue()
+        {
+            // arrange - two pistorm rdb medias with same path
+            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false);
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+        
+            // act - equals
+            var equals = piStormRdbMedia1.Equals(piStormRdbMedia2);
+        
+            // assert - equals is true
+            Assert.True(equals);
+        }
+
+        [Fact]
+        public void When_PiStormRdbMediasHasSamePathAndDifferentPartitionNumber_Then_EqualsReturnFalse()
+        {
+            // arrange - two pistorm rdb medias with same path and different partition number
+            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false);
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 2, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+        
+            // act - equals
+            var equals = piStormRdbMedia1.Equals(piStormRdbMedia2);
+        
+            // assert - equals is false
+            Assert.False(equals);
+        }
+
+        [Fact]
+        public void When_PiStormRdbMediasHasDifferentPathAndSamePartitionNumber_Then_EqualsReturnFalse()
+        {
+            // arrange - two pistorm rdb medias with different path and same partition number
+            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false);
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+        
+            // act - equals
+            var equals = piStormRdbMedia1.Equals(piStormRdbMedia2);
+        
+            // assert - equals is false
+            Assert.False(equals);
+        }
+        
+        [Fact]
+        public void When_PiStormRdbMediasHasDifferentPathAndPartitionNumber_Then_EqualsReturnFalse()
+        {
+            // arrange - two pistorm rdb medias with different path and partition number
+            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false);
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 2, "Disk", 100.MB(), Media.MediaType.Raw, 
+                false, new MemoryStream(), false, media);
+        
+            // act - equals
+            var equals = piStormRdbMedia1.Equals(piStormRdbMedia2);
+        
+            // assert - equals is false
+            Assert.False(equals);
+        }
+
+        [Fact]
         public async Task When_WritingToPiStormRdbMediaStream_Then_DataIsWrittenToBaseStream()
         {
             // arrange - base stream with monitor in sector stream
@@ -24,7 +96,9 @@ namespace Hst.Imager.Core.Tests.MediaTests
             var virtualStream = new VirtualStream(media.Stream, 1024, 1.MB());
 
             // act - create pistorm rdb media and write data to stream
-            using (var piStormRdbMedia = new PiStormRdbMedia("\\disk1", Constants.FileSystemNames.PiStormRdb, 1.MB(), Media.MediaType.Raw, false, virtualStream, false, media))
+            using (var piStormRdbMedia = new PiStormRdbMedia("\\disk1", 0, 
+                       Constants.FileSystemNames.PiStormRdb, 1.MB(), Media.MediaType.Raw, false,
+                       virtualStream, false, media))
             {
                 var data = new byte[512];
                 Array.Fill<byte>(data, 1);
