@@ -154,6 +154,11 @@ public static class UaeMetadataHelper
     {
         var uaeMetadataNodes = new List<DirectoryEntryIterator.UaeMetadataNode>();
 
+        if (!Directory.Exists(path))
+        {
+            return uaeMetadataNodes;
+        }
+        
         var dirInfo = new DirectoryInfo(path);
 
         var uaeFsDbAlternativeStreamPaths = dirInfo.GetDirectories().Select(x => string.Concat(x.FullName, ":", Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName))
@@ -183,9 +188,14 @@ public static class UaeMetadataHelper
     private static IEnumerable<DirectoryEntryIterator.UaeMetadataNode> ReadUaeMetafiles(string path,
         string amigaNameFilter = null)
     {
-        var dirInfo = new DirectoryInfo(path);
-
         var uaeMetadataNodes = new List<DirectoryEntryIterator.UaeMetadataNode>();
+        
+        if (!Directory.Exists(path))
+        {
+            return uaeMetadataNodes;
+        }
+        
+        var dirInfo = new DirectoryInfo(path);
 
         foreach (var file in dirInfo.GetFiles($"*{Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension}", SearchOption.TopDirectoryOnly))
         {
