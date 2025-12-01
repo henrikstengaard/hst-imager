@@ -67,12 +67,10 @@ public class DirectoryEntryWriter : IEntryWriter
         var hasRootPathComponent = entryPathComponents.Length > 1 && IsRootPathComponent(entryPathComponents[0]);
 
         var entryPathComponentsNormalised = hasRootPathComponent
-            ? entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename)
+            ? new[]{ entryPathComponents[0] }.Concat(entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename))
             : entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename);
 
-        return string.Concat(
-            hasRootPathComponent ? entryPathComponents[0] : string.Empty,
-            Path.Combine(entryPathComponentsNormalised.ToArray()));
+        return Path.Combine(entryPathComponentsNormalised.ToArray());
     }
     
     private static bool IsRootPathComponent(string pathComponent)
