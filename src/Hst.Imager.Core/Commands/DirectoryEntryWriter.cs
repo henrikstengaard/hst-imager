@@ -11,19 +11,17 @@ using System.Threading.Tasks;
 using UaeMetadatas;
 using Models.FileSystems;
 
-/// <summary>
-/// Directory entry writer.
-/// </summary>
-/// <param name="path">Root path components.</param>
-/// <param name="recursive">Recursive creating directories and files.</param>
-/// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
-/// <param name="forceOverwrite">Force overwriting any existing files.</param>
-public class DirectoryEntryWriter(string path, bool recursive, bool createDirectory, bool forceOverwrite) : IEntryWriter
+public class DirectoryEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
     private readonly MemoryCache cache = new($"{nameof(DirectoryEntryWriter)}_CACHE");
     private readonly DateTimeOffset cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
+
+    private readonly string rootPath;
+    private readonly bool recursive;
+    private readonly bool createDirectory;
+    private readonly bool forceOverwrite;
 
     private string[] rootPathComponents = [];
     /// <summary>
@@ -36,7 +34,22 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
     private EntryType lastPathComponentEntryType = EntryType.Dir;
     private bool isInitialized;
 
-    public string MediaPath => path;
+    /// <summary>
+    /// Directory entry writer.
+    /// </summary>
+    /// <param name="rootPath">Root path components.</param>
+    /// <param name="recursive">Recursive creating directories and files.</param>
+    /// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
+    /// <param name="forceOverwrite">Force overwriting any existing files.</param>
+    public DirectoryEntryWriter(string rootPath, bool recursive, bool createDirectory, bool forceOverwrite)
+    {
+        this.rootPath = rootPath;
+        this.recursive = recursive;
+        this.createDirectory = createDirectory;
+        this.forceOverwrite = forceOverwrite;
+    }
+
+    public string MediaPath => rootPath;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
     
@@ -51,20 +64,22 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
     private string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
     {
-        // has windows drive letter first, if entry has more than 1 entry path component (a directory is present)
-        // and first entry path component is a valid Windows drive letter (like c:).
-        // this is to allow Windows drive containing semicolon in name
-        var hasWindowsDriveLetterFirst = entryPathComponents.Length > 1 &&
-                                         OperatingSystem.IsWindows() &&
-                                         Regexs.WindowsDriveRegex.IsMatch(entryPathComponents[0]);
-        
-        var entryPathComponentsNormalised = hasWindowsDriveLetterFirst
-            ? new List<string>{entryPathComponents[0]}.Concat(entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename))
+        var hasRootPathComponent = entryPathComponents.Length > 1 && IsRootPathComponent(entryPathComponents[0]);
+
+        var entryPathComponentsNormalised = hasRootPathComponent
+            ? entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename)
             : entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename);
-        
+
         return string.Concat(
-            Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
+            hasRootPathComponent ? entryPathComponents[0] : string.Empty,
             Path.Combine(entryPathComponentsNormalised.ToArray()));
+    }
+    
+    private static bool IsRootPathComponent(string pathComponent)
+    {
+        return OperatingSystem.IsWindows()
+            ? Regexs.WindowsDriveRegex.IsMatch(pathComponent)
+            : pathComponent.Equals("/");
     }
     
     private async Task<string> CreateUaeEntryPath(Entry entry, string[] entryPathComponents)
@@ -83,12 +98,16 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
             return uaeCacheEntry.UaeEntryPath;
         }
 
-        var uaeEntryPath = Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty;
+        var uaeEntryPath = Path.IsPathRooted(rootPath) && !OperatingSystem.IsWindows() ? "/" : string.Empty;
 
         var uaeEntryPathComponents = new List<string>();
         
-        foreach (var entryPathComponent in entryPathComponents)
+        for (var i = 0; i < entryPathComponents.Length; i++)
         {
+            var entryPathComponent = entryPathComponents[i];
+
+            var isRootPathComponent = i == 0 && IsRootPathComponent(entryPathComponent);
+
             cacheKey = string.Join("|", uaeEntryPathComponents.Concat([entryPathComponent]));
         
             uaeCacheEntry = cache.Get(cacheKey) as UaeCacheEntry;
@@ -104,7 +123,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
             }
 
             // if not use uae metadata, then add to cache and continue
-            if (!UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryPathComponent))
+            if (isRootPathComponent || !UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryPathComponent))
             {
                 uaeEntryPathComponents.Add(entryPathComponent);
                 
@@ -152,7 +171,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
     public Task<Result> Initialize()
     {
-        rootPathComponents = path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        rootPathComponents = GetPathComponents(rootPath);
         
         var exisingPathComponents = new List<string>(10);
 
@@ -161,7 +180,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
         for (var i = 0; i < rootPathComponents.Length; i++)
         {
             var dirPath = string.Concat(
-                Path.IsPathRooted(path) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
+                Path.IsPathRooted(rootPath) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
                 Path.Combine(rootPathComponents.Take(i + 1).ToArray()));
             
             var dirExists = Directory.Exists(dirPath);
@@ -207,7 +226,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
         if (recursive && !lastPathComponentExist)
         {
-            return Task.FromResult(new Result(new PathNotFoundError($"Path '{path}' not found. Directory must exist when using recursive!", path)));
+            return Task.FromResult(new Result(new PathNotFoundError($"Path '{rootPath}' not found. Directory must exist when using recursive!", rootPath)));
         }
 
         dirPathComponents = exisingPathComponents.ToArray();
@@ -233,15 +252,6 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
             return UaeMetadataHelper.CreateNormalFilename(amigaName);
         }
 
-        // return amiga name, if dir path is empty and amiga name is a valid Windows drive letter (c:)
-        // this is to allow Windows drive containing semicolon in name
-        if (string.IsNullOrEmpty(dirPath) &&
-            OperatingSystem.IsWindows() &&
-            Regexs.WindowsDriveRegex.IsMatch(amigaName))
-        {
-            return amigaName;
-        }
-        
         var uaeMetadataDir = string.IsNullOrEmpty(dirPath) ? Directory.GetCurrentDirectory() : dirPath;
 
         var uaeMetadataNode = (await UaeMetadataHelper.ReadUaeMetadataNodes(UaeMetadata, uaeMetadataDir, amigaName))
@@ -276,7 +286,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
         if (!lastPathComponentExist)
         {
-            return new Result(new PathNotFoundError($"Path not found '{path}'", path));
+            return new Result(new PathNotFoundError($"Path not found '{rootPath}'", rootPath));
         }
 
         int? protectionBits = null;
@@ -309,7 +319,7 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
         if (File.Exists(fullPath))
         {
-            return new Result(new Error($"Create directory path '{path}' failed. Path already exists as a file!"));
+            return new Result(new Error($"Create directory path '{fullPath}' failed. Path already exists as a file!"));
         }
         
         if (!string.IsNullOrEmpty(fullPath) && !Directory.Exists(fullPath))
@@ -499,6 +509,9 @@ public class DirectoryEntryWriter(string path, bool recursive, bool createDirect
 
     public bool SupportsUaeMetadata => true;
 
-    private static string[] GetPathComponents(string path) => 
-        path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+    private static string[] GetPathComponents(string path)
+    {
+        return (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
+    }
 }
