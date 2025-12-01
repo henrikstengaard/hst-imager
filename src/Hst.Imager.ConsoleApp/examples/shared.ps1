@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-12-01
 #
 # A powershell module with shared functions for example scripts.
 
@@ -45,13 +45,6 @@ Function QuestionDialog($title, $message)
     {
         return $true
     }
-
-#     $result = [System.Windows.Forms.MessageBox]::Show($message, $title, [System.Windows.Forms.MessageBoxButtons]::YesNo, $icon, [System.Windows.Forms.MessageBoxOptions]::DefaultDesktopOnly)
-#     $result = [Microsoft.VisualBasic.Interaction]::MsgBox($message,"YesNo,SystemModal,$icon", $title)
-#     if($result -eq "YES")
-#     {
-#         return $true
-#     }
 
     return $false
 }
@@ -488,10 +481,10 @@ function InstallMinimalAmigaOs($hstImagerPath, $imagePath, $useAmigaOs31)
     $amigaOsInstallAdfPath = GetAmigaOsInstallAdfPath $imageDir $useAmigaOs31
 
     # extract amiga os install adf to image file
-    & $hstImagerPath fs extract $amigaOsInstallAdfPath "$imagePath\rdb\dh0"
+    & $hstImagerPath fs extract $amigaOsInstallAdfPath "$imagePath\rdb\dh0" --force
 
     # extract amiga os workbench adf to image file
-    & $hstImagerPath fs extract $amigaOsWorkbenchAdfPath "$imagePath\rdb\dh0"
+    & $hstImagerPath fs extract $amigaOsWorkbenchAdfPath "$imagePath\rdb\dh0" --force
 }
 
 function InstallKickstartRoms($hstImagerPath, $imagePath)
@@ -540,16 +533,16 @@ function InstallKickstartRoms($hstImagerPath, $imagePath)
     
     # copy kickstart roms to image file
     & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs copy $kickstart12A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs copy $kickstart13A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs copy $kickstart31A600RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs copy $kickstart31A1200RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs copy $kickstart31A4000RomPath "$imagePath\rdb\dh0\Devs\Kickstarts"
+    & $hstImagerPath fs copy $kickstart12A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
+    & $hstImagerPath fs copy $kickstart13A500RomPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
+    & $hstImagerPath fs copy $kickstart31A600RomPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
+    & $hstImagerPath fs copy $kickstart31A1200RomPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
+    & $hstImagerPath fs copy $kickstart31A4000RomPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
 
     # copy rom.key to image file, if present
     if (Test-Path $romKeyPath)
     {
-        & $hstImagerPath fs copy $romKeyPath "$imagePath\rdb\dh0\Devs\Kickstarts"
+        & $hstImagerPath fs copy $romKeyPath "$imagePath\rdb\dh0\Devs\Kickstarts" --force
     }
 }
 
@@ -609,22 +602,22 @@ function InstallMinimalWhdload($hstImagerPath, $imagePath)
 
     # extract soft-kicker lha to image file
     & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Devs\Kickstarts"
-    & $hstImagerPath fs extract "$sKickLhaPath\Kickstarts" "$imagePath\rdb\dh0\Devs\Kickstarts"
+    & $hstImagerPath fs extract "$sKickLhaPath\Kickstarts" "$imagePath\rdb\dh0\Devs\Kickstarts" --force
 
     # extract whdload lha to image file
     & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\C"
-    & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\C" "$imagePath\rdb\dh0\C"
+    & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\C" "$imagePath\rdb\dh0\C" --force
     & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
-    & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\S" "$imagePath\rdb\dh0\S"
+    & $hstImagerPath fs extract "$whdloadUsrLhaPath\WHDLoad\S" "$imagePath\rdb\dh0\S" --force
 
     # extract iconlib lha to image file
     & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Libs"
-    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\Libs\68000\icon.library" "$imagePath\rdb\dh0\Libs"
-    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\RemLib\RemLib" "$imagePath\rdb\dh0\C"
-    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\LoadResident\LoadResident" "$imagePath\rdb\dh0\C"
+    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\Libs\68000\icon.library" "$imagePath\rdb\dh0\Libs" --force
+    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\RemLib\RemLib" "$imagePath\rdb\dh0\C" --force
+    & $hstImagerPath fs extract "$iconLibLhaPath\IconLib_46.4\ThirdParty\LoadResident\LoadResident" "$imagePath\rdb\dh0\C" --force
 
     # extract image file startup sequence
-    & $hstImagerPath fs copy "$imagePath\rdb\dh0\S\Startup-Sequence" $imageDir
+    & $hstImagerPath fs copy "$imagePath\rdb\dh0\S\Startup-Sequence" $imageDir --force
 
     # read startup sequence
     $startupSequencePath = Join-Path $imageDir -ChildPath "Startup-Sequence"
@@ -648,5 +641,5 @@ function InstallMinimalWhdload($hstImagerPath, $imagePath)
     WriteTextLinesForAmiga $startupSequencePath $startupSequenceLines
 
     # copy startup sequence to image file
-    & $hstImagerPath fs copy $startupSequencePath "$imagePath\rdb\dh0\S"
+    & $hstImagerPath fs copy $startupSequencePath "$imagePath\rdb\dh0\S" --force
 }

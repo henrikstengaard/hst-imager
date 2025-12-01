@@ -3,7 +3,7 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-12-01
 #
 # A python script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
@@ -92,6 +92,6 @@ for root, directories, filenames in os.walk(whdloads_path):
             index_dirs_created[index_dir] = True
 
         # extract whdload file to image file
-        shared.run_command([hst_imager_path, 'fs', 'extract', whdload_file, os.path.join(*[image_path, 'rdb'] + target_dir.split('/') + [index_dir]), '--quiet'])
+        shared.run_command([hst_imager_path, 'fs', 'extract', whdload_file, os.path.join(*[image_path, 'rdb'] + target_dir.split('/') + [index_dir]), '--quiet', '--force'])
 
 print('Done')

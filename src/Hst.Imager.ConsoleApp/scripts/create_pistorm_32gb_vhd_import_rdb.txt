@@ -25,10 +25,10 @@ mbr part add pistorm_32gb.vhd pistormrdb *
 mbr part format pistorm_32gb.vhd 1 BOOT
 
 # extract emu68 pistorm32 lite files to mbr partition 1
-fs extract Emu68-pistorm32lite.zip pistorm_32gb.vhd\mbr\1
+fs extract Emu68-pistorm32lite.zip pistorm_32gb.vhd\mbr\1 --force
 
 # copy kick.rom to mbr partition 1 
-fs copy kick.rom pistorm_32gb.vhd\mbr\1
+fs copy kick.rom pistorm_32gb.vhd\mbr\1 --force
 
 # import amigaos 3.2 vhd hard disk image to mbr partition 2
 mbr part import amigaos-3.2.vhd pistorm_32gb.vhd 2

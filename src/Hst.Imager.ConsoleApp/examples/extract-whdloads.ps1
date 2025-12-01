@@ -2,7 +2,7 @@
 # ----------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-12-01
 #
 # A powershell script to extract whdloads .lha files recursively from a directory
 # to an amiga harddisk file and install minimal Amiga OS 3.1 from adf files using
@@ -104,7 +104,7 @@ foreach ($whdloadFile in $whdloadFiles)
     }
 
     # extract whdload file to image file
-    & $hstImagerPath fs extract $whdloadFile.FullName "$imagePath\rdb\$targetDir\$indexDir" --quiet
+    & $hstImagerPath fs extract $whdloadFile.FullName "$imagePath\rdb\$targetDir\$indexDir" --quiet --force
 }
 
 Write-Output "Done"

@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-21
+# Date:   2025-12-01
 #
 # A powershell script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -92,39 +92,39 @@ else
 }
 
 # extract workbench adf to image file
-& $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0" --force
 
 # extract locale adf to image file
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Locale"
-& $hstImagerPath fs extract $localeAdfPath "$imagePath\rdb\dh0\Locale"
+& $hstImagerPath fs extract $localeAdfPath "$imagePath\rdb\dh0\Locale" --force
 
 # extract extras adf to image file
-& $hstImagerPath fs extract $extrasAdfPath "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract $extrasAdfPath "$imagePath\rdb\dh0" --force
 
 # extract fonts adf to image file
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Fonts"
-& $hstImagerPath fs extract $fontsAdfPath "$imagePath\rdb\dh0\Fonts"
+& $hstImagerPath fs extract $fontsAdfPath "$imagePath\rdb\dh0\Fonts" --force
 
 # extract install adf to image file
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\BRU") "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup") "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.help") "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox") "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.info") "$imagePath\rdb\dh0\Tools"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox.info") "$imagePath\rdb\dh0\Tools"
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\BRU") "$imagePath\rdb\dh0\Tools" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup") "$imagePath\rdb\dh0\Tools" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.help") "$imagePath\rdb\dh0\Tools" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox") "$imagePath\rdb\dh0\Tools" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDBackup.info") "$imagePath\rdb\dh0\Tools" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\HDToolBox.info") "$imagePath\rdb\dh0\Tools" --force
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\BRUtab") "$imagePath\rdb\dh0\S"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\HDBackup.config") "$imagePath\rdb\dh0\S"
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\BRUtab") "$imagePath\rdb\dh0\S" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "HDTools\S\HDBackup.config") "$imagePath\rdb\dh0\S" --force
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\L"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "L\FastFileSystem") "$imagePath\rdb\dh0\L"
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "L\FastFileSystem") "$imagePath\rdb\dh0\L" --force
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Libs"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Libs\*.library") "$imagePath\rdb\dh0\Libs"
-& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Update\Disk.info") "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Libs\*.library") "$imagePath\rdb\dh0\Libs" --force
+& $hstImagerPath fs extract (Join-Path $installAdfPath -ChildPath "Update\Disk.info") "$imagePath\rdb\dh0" --force
 
 # extract storage adf to image file
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\Storage"
-& $hstImagerPath fs extract $storageAdfPath "$imagePath\rdb\dh0\Storage"
+& $hstImagerPath fs extract $storageAdfPath "$imagePath\rdb\dh0\Storage" --force
 
 # create temp directory
 $tempPath = Join-Path $currentPath -ChildPath "temp"
@@ -135,7 +135,7 @@ if (Test-Path $tempPath)
 
 # copy icons from image file to local directory
 $iconsPath = Join-Path $tempPath -ChildPath "icons"
-& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir
+& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir --force
 Copy-Item (Join-Path $iconsPath -ChildPath "storage\Printers.info") (Join-Path $iconsPath -ChildPath "Storage.info") -Force
 
 # update icons
@@ -164,4 +164,4 @@ Copy-Item (Join-Path $iconsPath -ChildPath "storage\Printers.info") (Join-Path $
 & $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Disk.info") -dx 28 -dy 29 -dw 452 -dh 93
 
 # copy icons from local directory to image file
-& $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive
+& $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive --force

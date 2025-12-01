@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-21
+# Date:   2025-12-01
 #
 # A powershell script to install Amiga OS 3.2 adf files to an amiga harddisk file
 # using Hst Imager console and Hst Amiga console.
@@ -143,15 +143,15 @@ else
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\L"
 & $hstImagerPath fs mkdir "$imagePath\rdb\dh0\S"
 
-& $hstImagerPath fs extract "$installAdfPath\C" "$imagePath\rdb\dh0\C"
+& $hstImagerPath fs extract "$installAdfPath\C" "$imagePath\rdb\dh0\C" --force
 
-& $hstImagerPath fs extract "$installAdfPath\HDTools\hd*" "$imagePath\rdb\dh0\Tools"
+& $hstImagerPath fs extract "$installAdfPath\HDTools\hd*" "$imagePath\rdb\dh0\Tools" --force
 
-& $hstImagerPath fs extract "$installAdfPath\Installer" "$imagePath\rdb\dh0\System"
+& $hstImagerPath fs extract "$installAdfPath\Installer" "$imagePath\rdb\dh0\System" --force
 
-& $hstImagerPath fs extract "$installAdfPath\Libs\workbench.library" "$imagePath\rdb\dh0\Libs"
+& $hstImagerPath fs extract "$installAdfPath\Libs\workbench.library" "$imagePath\rdb\dh0\Libs" --force
 
-& $hstImagerPath fs extract "$installAdfPath\Libs\icon.library" "$imagePath\rdb\dh0\Libs"
+& $hstImagerPath fs extract "$installAdfPath\Libs\icon.library" "$imagePath\rdb\dh0\Libs" --force
 
 # create temp directory
 $tempPath = Join-Path $currentPath -ChildPath "temp"
@@ -161,84 +161,84 @@ if (Test-Path $tempPath)
 }
 
 $updatePath = Join-Path $tempPath -ChildPath "update"
-& $hstImagerPath fs extract "$installAdfPath\Update" "$updatePath" --makedir
+& $hstImagerPath fs extract "$installAdfPath\Update" "$updatePath" --makedir --force
 
 # copy fastfilesystem
-& $hstImagerPath fs extract "$installAdfPath\L\FastFileSystem" "$imagePath\rdb\dh0\L"
+& $hstImagerPath fs extract "$installAdfPath\L\FastFileSystem" "$imagePath\rdb\dh0\L" --force
 
 
 
 # workbench
 # ---------
 
-& $hstImagerPath fs extract "$workbenchAdfPath" "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract "$workbenchAdfPath" "$imagePath\rdb\dh0" --force
 
 # extras
 # ------
 
-& $hstImagerPath fs extract "$extrasAdfPath\*.info" "$imagePath\rdb\dh0" --recursive false
-& $hstImagerPath fs extract "$extrasAdfPath\L" "$imagePath\rdb\dh0\L"
-& $hstImagerPath fs extract "$extrasAdfPath\Prefs" "$imagePath\rdb\dh0\Prefs"
-& $hstImagerPath fs extract "$extrasAdfPath\System" "$imagePath\rdb\dh0\System"
-& $hstImagerPath fs extract "$extrasAdfPath\Tools" "$imagePath\rdb\dh0\Tools"
+& $hstImagerPath fs extract "$extrasAdfPath\*.info" "$imagePath\rdb\dh0" --recursive false --force
+& $hstImagerPath fs extract "$extrasAdfPath\L" "$imagePath\rdb\dh0\L" --force
+& $hstImagerPath fs extract "$extrasAdfPath\Prefs" "$imagePath\rdb\dh0\Prefs" --force
+& $hstImagerPath fs extract "$extrasAdfPath\System" "$imagePath\rdb\dh0\System" --force
+& $hstImagerPath fs extract "$extrasAdfPath\Tools" "$imagePath\rdb\dh0\Tools" --force
 
 $sPath = Join-Path $tempPath -ChildPath "s"
-& $hstImagerPath fs extract "$extrasAdfPath\S" "$sPath" --makedir
+& $hstImagerPath fs extract "$extrasAdfPath\S" "$sPath" --makedir --force
 Remove-Item (Join-Path $sPath -ChildPath "User-startup") -Recurse
     
-& $hstImagerPath fs copy "$sPath" "$imagePath\rdb\dh0\S"
+& $hstImagerPath fs copy "$sPath" "$imagePath\rdb\dh0\S" --force
 
 # classes
 # -------
 
-& $hstImagerPath fs extract "$classesAdfPath" "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract "$classesAdfPath" "$imagePath\rdb\dh0" --force
 
 # fonts
 # -----
 
-& $hstImagerPath fs extract "$fontsAdfPath" "$imagePath\rdb\dh0\Fonts"
+& $hstImagerPath fs extract "$fontsAdfPath" "$imagePath\rdb\dh0\Fonts" --force
 
 # storage
 # -------
 
-& $hstImagerPath fs extract "$storageAdfPath\DataTypes.info" "$imagePath\rdb\dh0\Storage"
-& $hstImagerPath fs extract "$storageAdfPath\DOSDrivers.info" "$imagePath\rdb\dh0\Storage"
-& $hstImagerPath fs extract "$storageAdfPath\Keymaps.info" "$imagePath\rdb\dh0\Storage"
-& $hstImagerPath fs extract "$storageAdfPath\Monitors.info" "$imagePath\rdb\dh0\Storage"
-& $hstImagerPath fs extract "$storageAdfPath\Printers.info" "$imagePath\rdb\dh0\Storage"
+& $hstImagerPath fs extract "$storageAdfPath\DataTypes.info" "$imagePath\rdb\dh0\Storage" --force
+& $hstImagerPath fs extract "$storageAdfPath\DOSDrivers.info" "$imagePath\rdb\dh0\Storage" --force
+& $hstImagerPath fs extract "$storageAdfPath\Keymaps.info" "$imagePath\rdb\dh0\Storage" --force
+& $hstImagerPath fs extract "$storageAdfPath\Monitors.info" "$imagePath\rdb\dh0\Storage" --force
+& $hstImagerPath fs extract "$storageAdfPath\Printers.info" "$imagePath\rdb\dh0\Storage" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Classes\DataTypes" "$imagePath\rdb\dh0\Classes\DataTypes"
+& $hstImagerPath fs extract "$storageAdfPath\Classes\DataTypes" "$imagePath\rdb\dh0\Classes\DataTypes" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\C" "$imagePath\rdb\dh0\C"
+& $hstImagerPath fs extract "$storageAdfPath\C" "$imagePath\rdb\dh0\C" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\DefIcons\*.info" "$imagePath\rdb\dh0\Prefs\Env-Archive\Sys"
+& $hstImagerPath fs extract "$storageAdfPath\DefIcons\*.info" "$imagePath\rdb\dh0\Prefs\Env-Archive\Sys" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Presets\Pointers" "$imagePath\rdb\dh0\Prefs\Presets\Pointers"
+& $hstImagerPath fs extract "$storageAdfPath\Presets\Pointers" "$imagePath\rdb\dh0\Prefs\Presets\Pointers" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Monitors" "$imagePath\rdb\dh0\Storage\Monitors"
+& $hstImagerPath fs extract "$storageAdfPath\Monitors" "$imagePath\rdb\dh0\Storage\Monitors" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\DOSDrivers" "$imagePath\rdb\dh0\Storage\DOSDrivers"
+& $hstImagerPath fs extract "$storageAdfPath\DOSDrivers" "$imagePath\rdb\dh0\Storage\DOSDrivers" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\WBStartup" "$imagePath\rdb\dh0\WBStartup"
+& $hstImagerPath fs extract "$storageAdfPath\WBStartup" "$imagePath\rdb\dh0\WBStartup" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Env-Archive\deficons.prefs" "$imagePath\rdb\dh0\Prefs\Env-Archive"
+& $hstImagerPath fs extract "$storageAdfPath\Env-Archive\deficons.prefs" "$imagePath\rdb\dh0\Prefs\Env-Archive" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Env-Archive\Pointer.prefs" "$imagePath\rdb\dh0\Prefs\Env-Archive\Sys"
+& $hstImagerPath fs extract "$storageAdfPath\Env-Archive\Pointer.prefs" "$imagePath\rdb\dh0\Prefs\Env-Archive\Sys" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Printers" "$imagePath\rdb\dh0\Devs\Printers"
+& $hstImagerPath fs extract "$storageAdfPath\Printers" "$imagePath\rdb\dh0\Devs\Printers" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\Keymaps" "$imagePath\rdb\dh0\Devs\Keymaps"
+& $hstImagerPath fs extract "$storageAdfPath\Keymaps" "$imagePath\rdb\dh0\Devs\Keymaps" --force
 
-& $hstImagerPath fs extract "$storageAdfPath\LIBS" "$imagePath\rdb\dh0\Libs"
+& $hstImagerPath fs extract "$storageAdfPath\LIBS" "$imagePath\rdb\dh0\Libs" --force
 
 # finalize
 # --------
 
 # copy disk.info
-& $hstImagerPath fs copy (Join-Path $updatePath -ChildPath "disk.info") "$imagePath\rdb\dh0"
+& $hstImagerPath fs copy (Join-Path $updatePath -ChildPath "disk.info") "$imagePath\rdb\dh0" --force
 
 # copy release to versions
-& $hstImagerPath fs copy (Join-Path $updatePath -ChildPath "Release") "$imagePath\rdb\dh0\Prefs\Env-Archive\Versions" --recursive
+& $hstImagerPath fs copy (Join-Path $updatePath -ChildPath "Release") "$imagePath\rdb\dh0\Prefs\Env-Archive\Versions" --recursive --force
 
 # copy startup-sequence
 $startupHardDrivePath = Join-Path $updatePath -ChildPath "Startup-HardDrive"
@@ -248,14 +248,14 @@ if (Test-Path $startupSequencePath)
     Remove-Item $startupSequencePath
 }
 Rename-Item -Path $startupHardDrivePath -NewName "Startup-sequence"
-& $hstImagerPath fs copy "$startupSequencePath" "$imagePath\rdb\dh0\S"
+& $hstImagerPath fs copy "$startupSequencePath" "$imagePath\rdb\dh0\S" --force
 
 # clean up
 # --------
 
 # copy icons from image file to local directory
 $iconsPath = Join-Path $tempPath -ChildPath "icons"
-& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir
+& $hstImagerPath fs copy "$imagePath\rdb\dh0\*.info" "$iconsPath" --recursive --makedir --force
 
 # update icons
 & $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Prefs.info") -x 12 -y 20
@@ -282,21 +282,21 @@ Copy-Item (Join-Path $iconsPath -ChildPath "Devs.info") (Join-Path $iconsPath -C
 & $hstAmigaPath icon update (Join-Path $iconsPath -ChildPath "Disk.info") -dx 28 -dy 29 -dw 462 -dh 103
 
 # copy icons from local directory to image file
-& $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive
+& $hstImagerPath fs copy "$iconsPath" "$imagePath\rdb\dh0" --recursive --force
 
 # copy files from disk doctor for mounting adf in amigaos
 if (Test-Path $diskDoctorAdfPath)
 {
-    & $hstImagerPath fs extract "$diskDoctorAdfPath\C\DAControl" "$imagePath\rdb\dh0\C"
-    & $hstImagerPath fs extract "$diskDoctorAdfPath\Devs\trackfile.device" "$imagePath\rdb\dh0\Devs"
+    & $hstImagerPath fs extract "$diskDoctorAdfPath\C\DAControl" "$imagePath\rdb\dh0\C" --force
+    & $hstImagerPath fs extract "$diskDoctorAdfPath\Devs\trackfile.device" "$imagePath\rdb\dh0\Devs" --force
 }
 
 # copy files from mmulibs
 if (Test-Path $mmuLibsAdfPath)
 {
-    & $hstImagerPath fs extract "$mmuLibsAdfPath\C" "$imagePath\rdb\dh0\C"
-    & $hstImagerPath fs extract "$mmuLibsAdfPath\Libs" "$imagePath\rdb\dh0\Libs" --recursive
-    & $hstImagerPath fs extract "$mmuLibsAdfPath\Locale" "$imagePath\rdb\dh0\Locale" --recursive
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\C" "$imagePath\rdb\dh0\C" --force
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\Libs" "$imagePath\rdb\dh0\Libs" --recursive --force
+    & $hstImagerPath fs extract "$mmuLibsAdfPath\Locale" "$imagePath\rdb\dh0\Locale" --recursive --force
 }
 
 Write-Host "Done"

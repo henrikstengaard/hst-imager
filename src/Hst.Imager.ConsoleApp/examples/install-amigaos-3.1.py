@@ -3,7 +3,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-21
+# Date:   2025-12-01
 #
 # A python script to install AmigaOS 3.1 adf files to an amiga harddisk
 # image file using Hst Imager console and Hst Amiga console.
@@ -90,39 +90,39 @@ install_adf_path = os.path.join(current_path, "amiga-os-310-install.adf")
 storage_adf_path = os.path.join(current_path, "amiga-os-310-storage.adf")
 
 # extract workbench adf to image file
-shared.run_command([hst_imager_path, 'fs', 'extract', workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0')])
+shared.run_command([hst_imager_path, 'fs', 'extract', workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0'), '--force'])
 
 # extract locale adf to image file
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Locale')])
-shared.run_command([hst_imager_path, 'fs', 'extract', locale_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Locale')])
+shared.run_command([hst_imager_path, 'fs', 'extract', locale_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Locale'), '--force'])
 
 # extract extras adf to image file
-shared.run_command([hst_imager_path, 'fs', 'extract', extras_adf_path, os.path.join(image_path, 'rdb', 'dh0')])
+shared.run_command([hst_imager_path, 'fs', 'extract', extras_adf_path, os.path.join(image_path, 'rdb', 'dh0'), '--force'])
 
 # extract fonts adf to image file
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Fonts')])
-shared.run_command([hst_imager_path, 'fs', 'extract', fonts_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Fonts')])
+shared.run_command([hst_imager_path, 'fs', 'extract', fonts_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Fonts'), '--force'])
 
 # extract install adf to image file
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'BRU'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup.help'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDToolBox'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup.info'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDToolBox.info'), os.path.join(image_path, 'rdb', 'dh0', 'Tools')])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'BRU'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup.help'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDToolBox'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDBackup.info'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'HDToolBox.info'), os.path.join(image_path, 'rdb', 'dh0', 'Tools'), '--force'])
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'S')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'S', 'BRUtab'), os.path.join(image_path, 'rdb', 'dh0', 'S')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'S', 'HDBackup.config'), os.path.join(image_path, 'rdb', 'dh0', 'S')])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'S', 'BRUtab'), os.path.join(image_path, 'rdb', 'dh0', 'S'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'HDTools', 'S', 'HDBackup.config'), os.path.join(image_path, 'rdb', 'dh0', 'S'), '--force'])
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'L')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'L', 'FastFileSystem'), os.path.join(image_path, 'rdb', 'dh0', 'L')])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'L', 'FastFileSystem'), os.path.join(image_path, 'rdb', 'dh0', 'L'), '--force'])
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Libs', '*.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
-shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Update', 'Disk.info'), os.path.join(image_path, 'rdb', 'dh0')])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Libs', '*.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs'), '--force'])
+shared.run_command([hst_imager_path, 'fs', 'extract', os.path.join(install_adf_path, 'Update', 'Disk.info'), os.path.join(image_path, 'rdb', 'dh0'), '--force'])
 
 # extract storage adf to image file
 shared.run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
-shared.run_command([hst_imager_path, 'fs', 'extract', storage_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Storage')])
+shared.run_command([hst_imager_path, 'fs', 'extract', storage_adf_path, os.path.join(image_path, 'rdb', 'dh0', 'Storage'), '--force'])
 
 # create temp directory
 temp_path = os.path.join(current_path, 'temp')
@@ -133,7 +133,7 @@ os.mkdir(temp_path)
 
 # copy icons from image file to local directory
 icons_path = os.path.join(temp_path, 'icons')
-shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', '*.info'), icons_path, '--recursive', '--makedir'])
+shared.run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', '*.info'), icons_path, '--recursive', '--makedir', '--force'])
 shutil.copyfile(os.path.join(icons_path, 'Storage', 'Printers.info'), os.path.join(icons_path, 'Storage.info'))
 
 # update icons
@@ -162,6 +162,6 @@ shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, '
 shared.run_command([hst_amiga_path, 'icon', 'update', os.path.join(icons_path, 'Disk.info')] + '-dx 28 -dy 29 -dw 452 -dh 93'.split(' '))
 
 # copy icons from local directory to image file
-shared.run_command([hst_imager_path, 'fs', 'copy', icons_path, os.path.join(image_path, 'rdb', 'dh0'), '--recursive'])
+shared.run_command([hst_imager_path, 'fs', 'copy', icons_path, os.path.join(image_path, 'rdb', 'dh0'), '--recursive', '--force'])
 
 print('Done')

@@ -2,7 +2,7 @@
 # ------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-10-11
+# Date:   2025-12-01
 #
 # A python script with shared functions for example scripts.
 
@@ -458,10 +458,10 @@ def install_minimal_amigaos(hst_imager_path, image_path, use_amigaos_31):
     amigaos_install_adf_path = get_amigaos_install_adf_path(image_dir, use_amigaos_31)
 
     # extract amiga os install adf to image file
-    run_command([hst_imager_path, 'fs', 'extract', amigaos_install_adf_path, os.path.join(image_path, 'rdb', 'dh0')])
+    run_command([hst_imager_path, 'fs', 'extract', amigaos_install_adf_path, os.path.join(image_path, 'rdb', 'dh0'), '--force'])
 
     # extract amiga os workbench adf to image file
-    run_command([hst_imager_path, 'fs', 'extract', amigaos_workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0')])
+    run_command([hst_imager_path, 'fs', 'extract', amigaos_workbench_adf_path, os.path.join(image_path, 'rdb', 'dh0'), '--force'])
 
 def install_kickstart_roms(hst_imager_path, image_path):
     # kickstart rom files
@@ -510,15 +510,15 @@ def install_kickstart_roms(hst_imager_path, image_path):
 
     # copy kickstart roms to image file
     run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'copy', kickstart12_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a600_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a1200_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a4000_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart12_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart13_a500_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a600_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a1200_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
+    run_command([hst_imager_path, 'fs', 'copy', kickstart31_a4000_rom_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
 
     # copy rom key to image, if present
     if os.path.exists(rom_key_path):
-        run_command([hst_imager_path, 'fs', 'copy', rom_key_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
+        run_command([hst_imager_path, 'fs', 'copy', rom_key_path, os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
 
 # install minimal whdload
 def install_minimal_whdload(hst_imager_path, image_path):
@@ -534,22 +534,22 @@ def install_minimal_whdload(hst_imager_path, image_path):
 
     # extract soft-kicker lha to image file
     run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(skick_lha_path, 'Kickstarts'), os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts')])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(skick_lha_path, 'Kickstarts'), os.path.join(image_path, 'rdb', 'dh0', 'Devs', 'Kickstarts'), '--force'])
 
     # extract whdload lha to image file
     run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'C')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'C')), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'C')), os.path.join(image_path, 'rdb', 'dh0', 'C'), '--force'])
     run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'S')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'S')), os.path.join(image_path, 'rdb', 'dh0', 'S')])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(whdload_usr_lha_path, os.path.join('WHDLoad', 'S')), os.path.join(image_path, 'rdb', 'dh0', 'S'), '--force'])
 
     # extract iconlib lha to image file
     run_command([hst_imager_path, 'fs', 'mkdir', os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'Libs', '68000', 'icon.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'RemLib', 'RemLib'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
-    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'LoadResident', 'LoadResident'), os.path.join(image_path, 'rdb', 'dh0', 'C')])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'Libs', '68000', 'icon.library'), os.path.join(image_path, 'rdb', 'dh0', 'Libs'), '--force'])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'RemLib', 'RemLib'), os.path.join(image_path, 'rdb', 'dh0', 'C'), '--force'])
+    run_command([hst_imager_path, 'fs', 'extract', os.path.join(iconlib_lha_path, 'IconLib_46.4', 'ThirdParty', 'LoadResident', 'LoadResident'), os.path.join(image_path, 'rdb', 'dh0', 'C'), '--force'])
 
     # extract image file startup sequence
-    run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', 'S', 'Startup-Sequence'), image_dir])
+    run_command([hst_imager_path, 'fs', 'copy', os.path.join(image_path, 'rdb', 'dh0', 'S', 'Startup-Sequence'), image_dir, '--force'])
 
     # read startup sequence
     startup_sequence_path = os.path.join(image_dir, 'Startup-Sequence')
@@ -573,4 +573,4 @@ def install_minimal_whdload(hst_imager_path, image_path):
     write_text_lines_for_amiga(startup_sequence_path, startup_sequence_lines)
 
     # copy startup sequence to image file
-    run_command([hst_imager_path, 'fs', 'copy', startup_sequence_path, os.path.join(image_path, 'rdb', 'dh0', 'S')])
+    run_command([hst_imager_path, 'fs', 'copy', startup_sequence_path, os.path.join(image_path, 'rdb', 'dh0', 'S'), '--force'])

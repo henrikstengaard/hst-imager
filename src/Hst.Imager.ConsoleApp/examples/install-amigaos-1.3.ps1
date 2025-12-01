@@ -2,7 +2,7 @@
 # -------------------
 #
 # Author: Henrik Nørfjand Stengaard
-# Date:   2025-07-26
+# Date:   2025-12-01
 #
 # A powershell script to install AmigaOS 1.3 adf files to an amiga harddisk
 # image file using Hst Imager console.
@@ -58,7 +58,7 @@ if (!(Test-Path $imagePath))
 }
 
 # extract workbench adf to image file
-& $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract $workbenchAdfPath "$imagePath\rdb\dh0" --force
 
 # extract extras adf to image file
-& $hstImagerPath fs extract $extrasAdfPath "$imagePath\rdb\dh0"
+& $hstImagerPath fs extract $extrasAdfPath "$imagePath\rdb\dh0" --force
