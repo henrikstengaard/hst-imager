@@ -46,7 +46,11 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
     public int PartitionNumber => partitionNumber;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
-    
+    public Task FlushCache()
+    {
+        return Task.CompletedTask;
+    }
+
     private void Dispose(bool disposing)
     {
         if (disposed)

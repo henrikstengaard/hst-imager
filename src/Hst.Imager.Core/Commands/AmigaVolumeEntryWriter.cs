@@ -457,4 +457,14 @@ public class AmigaVolumeEntryWriter(
     {
         await fileSystemVolume.Flush();
     }
+    
+    public async Task FlushCache()
+    {
+        await Flush();
+
+        if (media.Stream is LayeredStream layeredStream)
+        {
+            await layeredStream.FlushLayer();
+        }
+    }
 }

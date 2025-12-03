@@ -52,7 +52,11 @@ public class DirectoryEntryWriter : IEntryWriter
     public string MediaPath => rootPath;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
-    
+    public Task FlushCache()
+    {
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
     }

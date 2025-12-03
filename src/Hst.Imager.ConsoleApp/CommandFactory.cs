@@ -21,6 +21,16 @@ namespace Hst.Imager.ConsoleApp
             ["--format", "-f"],
             description: "Format of output.",
             getDefaultValue: () => FormatEnum.Table);
+
+        public static readonly Option<bool> UseCacheOption = new(
+            ["--use-cache"],
+            description: "Use cache.",
+            getDefaultValue: () => false);
+
+        public static readonly Option<int> BlockSizeOption = new(
+            ["--block-size"],
+            description: "Block size.",
+            getDefaultValue: () => 1024 * 1024);
         
         public static Command CreateRootCommand()
         {
@@ -31,6 +41,8 @@ namespace Hst.Imager.ConsoleApp
 
             rootCommand.AddGlobalOption(LogFileOption);
             rootCommand.AddGlobalOption(VerboseOption);
+            rootCommand.AddGlobalOption(UseCacheOption);
+            rootCommand.AddGlobalOption(BlockSizeOption);
             rootCommand.AddCommand(CreateBlankCommand());
             rootCommand.AddCommand(CreateConvertCommand());
             rootCommand.AddCommand(CreateTransferCommand());

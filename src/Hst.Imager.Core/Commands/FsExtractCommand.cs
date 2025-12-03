@@ -148,7 +148,8 @@ public class FsExtractCommand(
                 await srcEntryIterator.Flush();
             }
 
-            await destEntryWriter.Flush();
+            OnInformationMessage("Flushing cache...");
+            await destEntryWriter.FlushCache();
             
             foreach (var log in destEntryWriter.GetDebugLogs())
             {

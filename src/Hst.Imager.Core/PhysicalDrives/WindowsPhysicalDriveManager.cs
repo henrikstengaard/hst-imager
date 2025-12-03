@@ -16,9 +16,14 @@
         private readonly ILogger<WindowsPhysicalDriveManager> logger;
         private const bool SupportFloppyDrives = false;
 
-        public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger)
+        public readonly bool useCache;
+        private readonly int blockSize = 1024 * 1024;
+
+        public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger, bool useCache, int blockSize)
         {
             this.logger = logger;
+            this.useCache = useCache;
+            this.blockSize = blockSize;
         }
 
         public Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
@@ -83,7 +88,8 @@
                         var size = diskGeometry.Cylinders * diskGeometry.TracksPerCylinder * diskGeometry.SectorsPerTrack * diskGeometry.BytesPerSector;                        
                         
                         var physicalDrive = new WindowsPhysicalDrive(0, drive.Name, "Floppy",
-                            storagePropertyQueryResult.BusType, drive.Name, size, true, false, [driveName]);
+                            storagePropertyQueryResult.BusType, drive.Name, size, true, false, 
+                            [driveName]);
 
                         physicalDrives.Add(physicalDrive);
                         logger.LogDebug(
@@ -141,7 +147,7 @@
                     var physicalDrive = new WindowsPhysicalDrive(i, physicalDrivePath, diskGeometryExResult.MediaType,
                         storagePropertyQueryResult.BusType, name, size,
                         IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), 
-                        systemDrive, driveLetters);
+                        systemDrive, driveLetters, useCache, blockSize);
                     physicalDrives.Add(physicalDrive);
                     logger.LogDebug(
                         $"Physical drive: Path '{physicalDrive.Path}', SystemDrive '{systemDrive}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");

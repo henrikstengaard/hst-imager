@@ -55,7 +55,8 @@ namespace Hst.Imager.ConsoleApp
             }
 
             var physicalDriveManager =
-                new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>()).Create();
+                new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>(),
+                    AppState.Instance.UseCache, AppState.Instance.BlockSize).Create();
             return (await physicalDriveManager.GetPhysicalDrives(AppState.Instance.Settings.AllPhysicalDrives)).ToList();
         }
 

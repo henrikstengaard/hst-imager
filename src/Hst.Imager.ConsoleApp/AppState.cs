@@ -20,6 +20,9 @@ namespace Hst.Imager.ConsoleApp
         public readonly DateTime BuildDate;
         public Settings Settings { get; set; }
 
+        public bool UseCache { get; set; }
+        public int BlockSize { get; set; }
+        
         private AppState()
         {
             LoggingLevelSwitch = new LoggingLevelSwitch();
@@ -33,6 +36,8 @@ namespace Hst.Imager.ConsoleApp
             Version = assembly.GetName().Version;
             BuildDate = GetBuildDate(assembly);
             Settings = new Settings();
+            UseCache = false;
+            BlockSize = 1024 * 1024;
         }
 
         public static AppState Instance => AppStateInstance.Value;

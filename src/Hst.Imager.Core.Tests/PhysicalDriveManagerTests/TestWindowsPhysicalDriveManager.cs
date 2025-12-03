@@ -9,7 +9,7 @@ public class TestWindowsPhysicalDriveManager : WindowsPhysicalDriveManager
     private readonly IEnumerable<IPhysicalDrive> physicalDrives;
 
     public TestWindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger,
-        IEnumerable<IPhysicalDrive> physicalDrives) : base(logger)
+        IEnumerable<IPhysicalDrive> physicalDrives) : base(logger, false, 1024 * 1024)
     {
         this.physicalDrives = physicalDrives;
     }

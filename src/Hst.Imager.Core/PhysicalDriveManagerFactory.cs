@@ -8,17 +8,22 @@
     public class PhysicalDriveManagerFactory
     {
         private readonly ILoggerFactory loggerFactory;
+        private readonly bool useCache;
+        private readonly int blockSize;
 
-        public PhysicalDriveManagerFactory(ILoggerFactory loggerFactory)
+        public PhysicalDriveManagerFactory(ILoggerFactory loggerFactory, bool useCache, int blockSize)
         {
             this.loggerFactory = loggerFactory;
+            this.useCache = useCache;
+            this.blockSize = blockSize;
         }
 
         public IPhysicalDriveManager Create()
         {
             if (OperatingSystem.IsWindows())
             {
-                return new WindowsPhysicalDriveManager(this.loggerFactory.CreateLogger<WindowsPhysicalDriveManager>());
+                return new WindowsPhysicalDriveManager(this.loggerFactory.CreateLogger<WindowsPhysicalDriveManager>(),
+                    useCache, blockSize);
             }
 
             if (OperatingSystem.IsMacOs())

@@ -15,7 +15,9 @@
         long size,
         bool removable,
         bool systemDrive,
-        string[] driveLetters)
+        string[] driveLetters,
+        bool useCache = false,
+        int blockSize = 1024 * 1024)
         : GenericPhysicalDrive(path, type, name, size, removable: removable,
             systemDrive: systemDrive)
     {
@@ -36,8 +38,18 @@
             dismountedDrives.AddRange(LockAndDismountVolumes(physicalDeviceNumber));
             dismountedDrives.AddRange(LockAndDismountDriveLetters(physicalDeviceNumber, driveLetters));
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
+            var baseStream = new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
                 byteSwap: ByteSwap, leaveOpen: false);
+
+            if (!useCache)
+            {
+                return baseStream;
+            }
+            
+            var layerPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"hst.imager.{Guid.NewGuid()}.bin");
+            var layerStream = File.Open(layerPath, FileMode.Create, FileAccess.ReadWrite);
+            
+            return new LayeredStream(baseStream, layerPath, layerStream, Size, blockSize);
         }
 
         private static int GetPhysicalDriveNumber(string path)

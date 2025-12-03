@@ -69,4 +69,6 @@ public interface IEntryWriter : IDisposable
     bool SupportsUaeMetadata { get; }
 
     UaeMetadata UaeMetadata { get; set; }
+
+    Task FlushCache();
 }
