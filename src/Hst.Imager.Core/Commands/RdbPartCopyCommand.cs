@@ -23,8 +23,6 @@
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         public RdbPartCopyCommand(ILogger<RdbPartCopyCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, int partitionNumber, string destinationPath,
             string name)
@@ -164,14 +162,6 @@
             OnInformationMessage($"Copied '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
             return new Result();
-        }
-        
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

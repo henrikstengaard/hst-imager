@@ -16,14 +16,12 @@
         private readonly ILogger<WindowsPhysicalDriveManager> logger;
         private const bool SupportFloppyDrives = false;
 
-        public readonly bool useCache;
-        private readonly int blockSize = 1024 * 1024;
+        public readonly bool UseCache;
 
-        public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger, bool useCache, int blockSize)
+        public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger, bool useCache)
         {
             this.logger = logger;
-            this.useCache = useCache;
-            this.blockSize = blockSize;
+            this.UseCache = useCache;
         }
 
         public Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
@@ -147,7 +145,7 @@
                     var physicalDrive = new WindowsPhysicalDrive(i, physicalDrivePath, diskGeometryExResult.MediaType,
                         storagePropertyQueryResult.BusType, name, size,
                         IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), 
-                        systemDrive, driveLetters, useCache, blockSize);
+                        systemDrive, driveLetters, UseCache);
                     physicalDrives.Add(physicalDrive);
                     logger.LogDebug(
                         $"Physical drive: Path '{physicalDrive.Path}', SystemDrive '{systemDrive}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");

@@ -44,24 +44,31 @@ public static class SettingsCommandFactory
             ["--skip-unused-sectors"],
             description: "Skip unused sectors.");
         
+        var useCacheOption = new Option<bool?>(
+            ["--use-cache"],
+            description: "Use cache.");
+
         var command = new Command("update", "Update settings.");
         command.AddOption(allOption);
         command.AddOption(retriesOption);
         command.AddOption(forceOption);
         command.AddOption(verifyOption);
         command.AddOption(skipUnusedSectorsOption);
+        command.AddOption(useCacheOption);
         command.AddValidator(validate =>
         {
             if (validate.FindResultFor(allOption) is null &&
                 validate.FindResultFor(retriesOption) is null &&
                 validate.FindResultFor(forceOption) is null &&
                 validate.FindResultFor(verifyOption) is null &&
-                validate.FindResultFor(skipUnusedSectorsOption) is null)
+                validate.FindResultFor(skipUnusedSectorsOption) is null &&
+                validate.FindResultFor(useCacheOption) is null)
             {
                 validate.ErrorMessage = "At least one option must be specified";
             }
         });
-        command.SetHandler(CommandHandler.SettingsUpdate, allOption, retriesOption, forceOption, verifyOption, skipUnusedSectorsOption);
+        command.SetHandler(CommandHandler.SettingsUpdate, allOption, retriesOption, forceOption,
+            verifyOption, skipUnusedSectorsOption, useCacheOption);
 
         return command;
     }

@@ -43,6 +43,7 @@ public class AmigaVolumeEntryWriter(
     private uint currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
     private bool disposed;
 
+    public Media Media => media;
     public string MediaPath => media.Path;
     public string FileSystemPath { get; } = fileSystemPath;
 
@@ -456,15 +457,5 @@ public class AmigaVolumeEntryWriter(
     public async Task Flush()
     {
         await fileSystemVolume.Flush();
-    }
-    
-    public async Task FlushCache()
-    {
-        await Flush();
-
-        if (media.Stream is LayeredStream layeredStream)
-        {
-            await layeredStream.FlushLayer();
-        }
     }
 }

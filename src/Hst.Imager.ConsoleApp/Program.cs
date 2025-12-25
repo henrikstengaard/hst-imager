@@ -69,15 +69,10 @@ namespace Hst.Imager.ConsoleApp
                 var verbose = context.ParseResult.GetValueForOption(CommandFactory.VerboseOption);
                 var logFile = context.ParseResult.GetValueForOption(CommandFactory.LogFileOption);
                 var format = context.ParseResult.GetValueForOption(CommandFactory.FormatOption);
-                var useCache = context.ParseResult.GetValueForOption(CommandFactory.UseCacheOption);
-                var blockSize = context.ParseResult.GetValueForOption(CommandFactory.BlockSizeOption);
 
                 AppState.Instance.LoggingLevelSwitch.MinimumLevel =
                     verbose ? LogEventLevel.Debug : LogEventLevel.Information;
 
-                AppState.Instance.UseCache = useCache;
-                AppState.Instance.BlockSize = blockSize;
-                
                 if (format == FormatEnum.Json)
                 {
                     AppState.Instance.LoggingLevelSwitch.MinimumLevel = LogEventLevel.Error;

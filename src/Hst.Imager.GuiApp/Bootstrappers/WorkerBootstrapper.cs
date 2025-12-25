@@ -116,7 +116,7 @@
                 loggerFactory.CreateLogger<QueuedHostedService>());
             var appState = AppState.Create(appDataPath, baseUrl, true);
 
-            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory, false, 1024 * 1024);
+            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory, false);
 
             var backgroundTaskHandler = new BackgroundTaskHandler(
                 loggerFactory.CreateLogger<BackgroundTaskHandler>(),

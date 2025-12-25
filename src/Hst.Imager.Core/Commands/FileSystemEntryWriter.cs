@@ -41,15 +41,12 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
     private Models.FileSystems.EntryType lastPathComponentEntryType = Models.FileSystems.EntryType.Dir;
     private bool isInitialized = false;
 
+    public Media Media => media;
     public string MediaPath => media.Path;
     public PartitionTableType PartitionTableType => partitionTableType;
     public int PartitionNumber => partitionNumber;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
-    public Task FlushCache()
-    {
-        return Task.CompletedTask;
-    }
 
     private void Dispose(bool disposing)
     {

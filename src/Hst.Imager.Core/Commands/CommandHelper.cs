@@ -23,19 +23,48 @@ namespace Hst.Imager.Core.Commands
     using OperatingSystem = Hst.Core.OperatingSystem;
     using Microsoft.Extensions.Logging;
 
-    public class CommandHelper : ICommandHelper
+    public class CommandHelper : ICommandHelper, INotification
     {
         private readonly ILogger<ICommandHelper> logger;
         private readonly bool isAdministrator;
-
         private readonly IList<IPhysicalDrive> activePhysicalDrives;
+        
+        public event EventHandler<string> DebugMessage;
+        public event EventHandler<string> WarningMessage;
+        public event EventHandler<string> InformationMessage;
+        public event EventHandler<DataProcessedEventArgs> DataProcessed;
+        
+        public void OnDebugMessage(string message)
+        {
+            DebugMessage?.Invoke(this, message);
+        }        
+
+        public void OnWarningMessage(string message)
+        {
+            WarningMessage?.Invoke(this, message);
+        }
+
+        public void OnInformationMessage(string message)
+        {
+            InformationMessage?.Invoke(this, message);
+        }        
+
+        public virtual void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed,
+            long bytesRemaining, long bytesTotal,
+            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
+        {
+            DataProcessed?.Invoke(this,
+                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal,
+                    timeElapsed,
+                    timeRemaining, timeTotal, bytesPerSecond));
+        }
         
         /// <summary>
         /// Active medias contains opened medias and is used to get reuse medias without opening same media twice
         /// </summary>
         private readonly IList<Media> activeMedias;
 
-        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator)
+        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false)
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
@@ -1211,6 +1240,11 @@ namespace Hst.Imager.Core.Commands
 
         public void Dispose()
         {
+            foreach (var activeMedia in activeMedias)
+            {
+                MediaHelper.FlushCache(this, activeMedia).GetAwaiter().GetResult();
+            }
+            
             ClearActiveMedias();
             ClearActivePhysicalDrives();
         }
@@ -1220,6 +1254,14 @@ namespace Hst.Imager.Core.Commands
             foreach (var activePhysicalDrive in activePhysicalDrives)
             {
                 activePhysicalDrive.Dispose();
+                
+                var layerPath = PathHelper.GetLayerPath(activePhysicalDrive.Path);
+
+                // delete layer path, if file exists 
+                if (File.Exists(layerPath))
+                {
+                    File.Delete(layerPath);
+                }
             }
 
             activePhysicalDrives.Clear();

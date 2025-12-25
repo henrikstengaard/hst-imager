@@ -26,7 +26,6 @@ namespace Hst.Imager.Core.Commands.RdbCommands
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
 
@@ -186,16 +185,6 @@ namespace Hst.Imager.Core.Commands.RdbCommands
         private static bool IsOverlapping(uint startCylinder1, uint endCylinder1, uint startCylinder2, uint endCylinder2)
         {
             return startCylinder1 <= endCylinder2 && startCylinder2 <= endCylinder1;
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed,
-            long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal,
-                    timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
 
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);

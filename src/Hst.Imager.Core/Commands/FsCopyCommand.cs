@@ -147,9 +147,6 @@ public class FsCopyCommand(
                 await srcEntryIterator.Flush();
             }
 
-            OnInformationMessage("Flushing cache...");
-            await destEntryWriter.FlushCache();
-
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
                 OnDebugMessage(log);

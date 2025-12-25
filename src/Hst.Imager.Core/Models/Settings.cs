@@ -33,6 +33,11 @@
         /// </summary>
         public bool SkipUnusedSectors { get; set; }
         
+        /// <summary>
+        /// Use cache for physical drive operations
+        /// </summary>
+        public bool UseCache { get; set; }
+
         public Settings()
         {
             AllPhysicalDrives = false;
@@ -42,6 +47,7 @@
             Force = false;
             Retries = 5;
             SkipUnusedSectors = false;
+            UseCache = true;
         }
     }
 }
