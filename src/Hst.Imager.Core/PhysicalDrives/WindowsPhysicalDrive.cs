@@ -1,5 +1,4 @@
-﻿using Hst.Core.IO;
-using Hst.Imager.Core.Helpers;
+﻿using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.PhysicalDrives
 {
@@ -43,27 +42,10 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var baseStream = new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
                 byteSwap: ByteSwap, leaveOpen: false);
-
-            if (!useCache)
-            {
-                return baseStream;
-            }
             
-            var layerPath = PathHelper.GetLayerPath(Path);
-
-            // delete layer path, if file exists 
-            if (File.Exists(layerPath))
-            {
-                File.Delete(layerPath);
-            }
-            
-            var layerStream = File.Open(layerPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
-            
-            return new LayeredStream(baseStream, layerStream, new LayeredStreamOptions
-            {
-                FlushLayerOnDispose = Writable,
-                BlockSize = blockSize
-            });
+            return useCache
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize)
+                : baseStream;
         }
 
         private static int GetPhysicalDriveNumber(string path)

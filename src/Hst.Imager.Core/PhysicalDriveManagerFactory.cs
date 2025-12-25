@@ -26,12 +26,14 @@
 
             if (OperatingSystem.IsMacOs())
             {
-                return new MacOsPhysicalDriveManager(this.loggerFactory.CreateLogger<MacOsPhysicalDriveManager>());
+                return new MacOsPhysicalDriveManager(this.loggerFactory.CreateLogger<MacOsPhysicalDriveManager>(),
+                    useCache);
             }
 
             if (OperatingSystem.IsLinux())
             {
-                return new LinuxPhysicalDriveManager(this.loggerFactory.CreateLogger<LinuxPhysicalDriveManager>());
+                return new LinuxPhysicalDriveManager(this.loggerFactory.CreateLogger<LinuxPhysicalDriveManager>(),
+                    useCache);
             }
             
             throw new NotSupportedException("Unsupported operating system");

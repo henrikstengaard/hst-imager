@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.PhysicalDrives
 {
@@ -7,6 +8,9 @@ namespace Hst.Imager.Core.PhysicalDrives
 
     public class GenericPhysicalDrive : IPhysicalDrive, IAsyncDisposable
     {
+        protected readonly bool UseCache;
+        protected readonly int BlockSize;
+        
         public string Path { get; }
         public string Type { get; }
         public string Name { get; }
@@ -15,12 +19,14 @@ namespace Hst.Imager.Core.PhysicalDrives
         public bool Writable { get; private set; }
         public bool ByteSwap { get; private set; }
         public bool SystemDrive { get; private set; }
-        
+
         private Stream stream;
         public bool IsDisposed { get; private set; }
 
-        public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false, bool writable = false, bool systemDrive = false)
+        public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false,
+            bool writable = false, bool systemDrive = false, bool useCache = false, int blockSize = 1024 * 1024)
         {
+            BlockSize = blockSize;
             Path = path;
             Type = type;
             Name = name;
@@ -28,6 +34,8 @@ namespace Hst.Imager.Core.PhysicalDrives
             Removable = removable;
             Writable = writable;
             SystemDrive = systemDrive;
+            UseCache = useCache;
+            BlockSize = blockSize;
             stream = null;
         }
 
@@ -46,7 +54,11 @@ namespace Hst.Imager.Core.PhysicalDrives
             IsDisposed = false;
             stream ??= File.Open(Path, FileMode.Open, FileAccess.ReadWrite);
             
-            return new MediaStream(stream, Size);
+            var baseStream = new MediaStream(stream, Size);
+            
+            return UseCache
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, BlockSize)
+                : baseStream;
         }
 
         public void SetWritable(bool writable)

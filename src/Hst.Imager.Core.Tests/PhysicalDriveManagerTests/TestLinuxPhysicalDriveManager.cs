@@ -9,7 +9,7 @@ public class TestLinuxPhysicalDriveManager(
     ILogger<LinuxPhysicalDriveManager> logger,
     string bootPath,
     Func<string> lsBlkHandler)
-    : LinuxPhysicalDriveManager(logger)
+    : LinuxPhysicalDriveManager(logger, false)
 {
     protected override Task<string> GetBootPath()
     {

@@ -11,7 +11,7 @@ public class TestMacOsPhysicalDriveManager : MacOsPhysicalDriveManager
     private readonly Func<string, string> infoHandler;
 
     public TestMacOsPhysicalDriveManager(ILogger<MacOsPhysicalDriveManager> logger,
-        Func<bool, string> listHandler, Func<string, string> infoHandler) : base(logger)
+        Func<bool, string> listHandler, Func<string, string> infoHandler) : base(logger, false)
     {
         this.listHandler = listHandler;
         this.infoHandler = infoHandler;

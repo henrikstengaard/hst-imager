@@ -9,8 +9,8 @@
         public readonly IEnumerable<string> PartitionDevices;
 
         public MacOsPhysicalDrive(string path, string type, string name, long size, bool removable,
-            bool systemDrive, IEnumerable<string> partitionDevices) : base(path, type, name, size, removable: removable,
-            systemDrive: systemDrive)
+            bool systemDrive, IEnumerable<string> partitionDevices, bool useCache = false) : base(path, type, name, size, removable: removable,
+            systemDrive: systemDrive, useCache: useCache)
         {
             this.PartitionDevices = partitionDevices;
         }
