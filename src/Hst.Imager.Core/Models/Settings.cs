@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Models
+﻿using Hst.Amiga.FileSystems.Pfs3;
+
+namespace Hst.Imager.Core.Models
 {
     public class Settings
     {
@@ -29,14 +31,19 @@
         public int Retries { get; set; }
         
         /// <summary>
-        /// Skip unused sectors
+        /// Skip unused sectors.
         /// </summary>
         public bool SkipUnusedSectors { get; set; }
         
         /// <summary>
-        /// Use cache for physical drive operations
+        /// Use cache for physical drive operations.
         /// </summary>
         public bool UseCache { get; set; }
+
+        /// <summary>
+        /// Type of cache to use.
+        /// </summary>
+        public CacheType CacheType { get; set; }
 
         public Settings()
         {
@@ -48,6 +55,7 @@
             Retries = 5;
             SkipUnusedSectors = false;
             UseCache = true;
+            CacheType = CacheType.Memory;
         }
     }
 }

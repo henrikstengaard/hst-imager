@@ -1,4 +1,5 @@
 ﻿using System.CommandLine;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.ConsoleApp.Commands;
 
@@ -48,6 +49,10 @@ public static class SettingsCommandFactory
             ["--use-cache"],
             description: "Use cache.");
 
+        var cacheTypeOption = new Option<CacheType?>(
+            ["--cache-type"],
+            description: "Type of cache to use.");
+        
         var command = new Command("update", "Update settings.");
         command.AddOption(allOption);
         command.AddOption(retriesOption);
@@ -55,6 +60,7 @@ public static class SettingsCommandFactory
         command.AddOption(verifyOption);
         command.AddOption(skipUnusedSectorsOption);
         command.AddOption(useCacheOption);
+        command.AddOption(cacheTypeOption);
         command.AddValidator(validate =>
         {
             if (validate.FindResultFor(allOption) is null &&
@@ -62,13 +68,14 @@ public static class SettingsCommandFactory
                 validate.FindResultFor(forceOption) is null &&
                 validate.FindResultFor(verifyOption) is null &&
                 validate.FindResultFor(skipUnusedSectorsOption) is null &&
-                validate.FindResultFor(useCacheOption) is null)
+                validate.FindResultFor(useCacheOption) is null &&
+                validate.FindResultFor(cacheTypeOption) is null)
             {
                 validate.ErrorMessage = "At least one option must be specified";
             }
         });
         command.SetHandler(CommandHandler.SettingsUpdate, allOption, retriesOption, forceOption,
-            verifyOption, skipUnusedSectorsOption, useCacheOption);
+            verifyOption, skipUnusedSectorsOption, useCacheOption, cacheTypeOption);
 
         return command;
     }

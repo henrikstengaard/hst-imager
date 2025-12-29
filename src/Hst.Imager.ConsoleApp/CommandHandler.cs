@@ -63,7 +63,7 @@ namespace Hst.Imager.ConsoleApp
 
             var physicalDriveManager =
                 new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>(),
-                    AppState.Instance.Settings.UseCache).Create();
+                    AppState.Instance.Settings.UseCache, AppState.Instance.Settings.CacheType).Create();
             return (await physicalDriveManager.GetPhysicalDrives(AppState.Instance.Settings.AllPhysicalDrives)).ToList();
         }
 
@@ -163,7 +163,7 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task SettingsUpdate(bool? allPhysicalDrives, int? retries, bool? force, bool? verify,
-            bool? skipUnusedSectors, bool? useCache)
+            bool? skipUnusedSectors, bool? useCache, CacheType? cacheType)
         {
             var settingsUpdated = false;
             
@@ -202,7 +202,13 @@ namespace Hst.Imager.ConsoleApp
                 AppState.Instance.Settings.UseCache = useCache.Value;
                 settingsUpdated = true;
             }
-            
+
+            if (cacheType.HasValue)
+            {
+                AppState.Instance.Settings.CacheType = cacheType.Value;
+                settingsUpdated = true;
+            }
+
             Log.Logger.Information(SettingsPresenter.PresentSettings(AppState.Instance.Settings));
             
             if (!settingsUpdated)

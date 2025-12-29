@@ -1,4 +1,5 @@
 ﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.PhysicalDrives
 {
@@ -19,6 +20,7 @@ namespace Hst.Imager.Core.PhysicalDrives
         bool systemDrive,
         string[] driveLetters,
         bool useCache = false,
+        CacheType cacheType = CacheType.Memory,
         int blockSize = 1024 * 1024)
         : GenericPhysicalDrive(path, type, name, size, removable: removable,
             systemDrive: systemDrive)
@@ -44,7 +46,7 @@ namespace Hst.Imager.Core.PhysicalDrives
                 byteSwap: ByteSwap, leaveOpen: false);
             
             return useCache
-                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize)
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize, cacheType)
                 : baseStream;
         }
 

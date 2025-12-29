@@ -22,7 +22,8 @@ public static class SettingsPresenter
                 new Row { Columns = ["Force", settings.Force.ToString()] },
                 new Row { Columns = ["Retries", settings.Retries.ToString(CultureInfo.InvariantCulture)] },
                 new Row { Columns = ["Skip unused sectors", settings.SkipUnusedSectors.ToString()] },
-                new Row { Columns = ["Use cache", settings.UseCache.ToString()] }
+                new Row { Columns = ["Use cache", settings.UseCache.ToString()] },
+                new Row { Columns = ["Cache type", settings.CacheType.ToString()] }
             ]
         };
 

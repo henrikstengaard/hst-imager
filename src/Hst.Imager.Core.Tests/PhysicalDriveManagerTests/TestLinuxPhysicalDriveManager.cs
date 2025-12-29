@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PhysicalDrives;
 using Microsoft.Extensions.Logging;
 
@@ -9,7 +10,7 @@ public class TestLinuxPhysicalDriveManager(
     ILogger<LinuxPhysicalDriveManager> logger,
     string bootPath,
     Func<string> lsBlkHandler)
-    : LinuxPhysicalDriveManager(logger, false)
+    : LinuxPhysicalDriveManager(logger, false, CacheType.Memory)
 {
     protected override Task<string> GetBootPath()
     {

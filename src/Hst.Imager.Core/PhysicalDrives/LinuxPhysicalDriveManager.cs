@@ -10,18 +10,12 @@ namespace Hst.Imager.Core.PhysicalDrives
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class LinuxPhysicalDriveManager : IPhysicalDriveManager
+    public class LinuxPhysicalDriveManager(
+        ILogger<LinuxPhysicalDriveManager> logger,
+        bool useCache,
+        CacheType cacheType)
+        : IPhysicalDriveManager
     {
-        private readonly ILogger<LinuxPhysicalDriveManager> logger;
-
-        public readonly bool UseCache;
-
-        public LinuxPhysicalDriveManager(ILogger<LinuxPhysicalDriveManager> logger, bool useCache)
-        {
-            this.logger = logger;
-            UseCache = useCache;
-        }
-        
         protected virtual void VerifyLinuxOperatingSystem()
         {
             if (OperatingSystem.IsLinux())
@@ -40,7 +34,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             
             var lsBlkJson = await GetLsBlkJson();
 
-            var physicalDrives = Parse(lsBlkJson, UseCache)
+            var physicalDrives = Parse(lsBlkJson, useCache, cacheType)
                 .Where(x => x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase)).ToList();
 
             foreach (var physicalDrive in physicalDrives)
@@ -82,7 +76,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             return output;
         }
 
-        private static IEnumerable<IPhysicalDrive> Parse(string json, bool useCache)
+        private static IEnumerable<IPhysicalDrive> Parse(string json, bool useCache, CacheType cacheType)
         {
             var lsBlk = LsBlkReader.ParseLsBlk(json);
 
@@ -93,7 +87,7 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var physicalDrives = lsBlk.BlockDevices.Select(x =>
                 new GenericPhysicalDrive(x.Path, x.Type ?? string.Empty, GetPhysicalDriveName(x),
-                    x.Size ?? 0, IsRemovable(x), useCache: useCache)).ToList();
+                    x.Size ?? 0, IsRemovable(x), useCache: useCache, cacheType: cacheType)).ToList();
 
             return physicalDrives;
         }

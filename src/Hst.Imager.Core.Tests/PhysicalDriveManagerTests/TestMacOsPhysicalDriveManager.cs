@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PhysicalDrives;
 using Microsoft.Extensions.Logging;
 
@@ -11,7 +12,8 @@ public class TestMacOsPhysicalDriveManager : MacOsPhysicalDriveManager
     private readonly Func<string, string> infoHandler;
 
     public TestMacOsPhysicalDriveManager(ILogger<MacOsPhysicalDriveManager> logger,
-        Func<bool, string> listHandler, Func<string, string> infoHandler) : base(logger, false)
+        Func<bool, string> listHandler, Func<string, string> infoHandler)
+        : base(logger, false, CacheType.Memory)
     {
         this.listHandler = listHandler;
         this.infoHandler = infoHandler;

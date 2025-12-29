@@ -9,22 +9,16 @@ namespace Hst.Imager.Core.PhysicalDrives
     using System.Text;
     using System.Threading.Tasks;
     using Hst.Core.Extensions;
-    using Hst.Imager.Core.Commands;
+    using Commands;
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class MacOsPhysicalDriveManager : IPhysicalDriveManager
+    public class MacOsPhysicalDriveManager(
+        ILogger<MacOsPhysicalDriveManager> logger,
+        bool useCache,
+        CacheType cacheType)
+        : IPhysicalDriveManager
     {
-        private readonly ILogger<MacOsPhysicalDriveManager> logger;
-
-        public readonly bool UseCache;
-
-        public MacOsPhysicalDriveManager(ILogger<MacOsPhysicalDriveManager> logger, bool useCache)
-        {
-            this.logger = logger;
-            this.UseCache = useCache;
-        }
-
         protected virtual void VerifyMacOs()
         {
             if (OperatingSystem.IsMacOs())
@@ -52,7 +46,7 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var bootDisk = bootDiskMatch.Groups[1].Value;
 
-            this.logger.LogDebug($"Boot disk '{bootDiskInfo.ParentWholeDisk}'");
+            logger.LogDebug($"Boot disk '{bootDiskInfo.ParentWholeDisk}'");
 
             var listOutput = await GetDiskUtilExternalDisks(all);
 
@@ -90,7 +84,8 @@ namespace Hst.Imager.Core.PhysicalDrives
                 }
 
                 var physicalDrive = new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName,
-                    info.Size, IsRemovable(info.BusProtocol), isSystemDrive, partitionDevices, useCache: UseCache);
+                    info.Size, IsRemovable(info.BusProtocol), isSystemDrive, partitionDevices, useCache: useCache,
+                    cacheType: cacheType);
                 physicalDrives.Add(physicalDrive);
                 physicalDriveIndex[disk.DeviceIdentifier] = physicalDrive;
             }

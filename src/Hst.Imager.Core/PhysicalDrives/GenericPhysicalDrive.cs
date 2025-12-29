@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.PhysicalDrives
 {
@@ -9,6 +10,7 @@ namespace Hst.Imager.Core.PhysicalDrives
     public class GenericPhysicalDrive : IPhysicalDrive, IAsyncDisposable
     {
         protected readonly bool UseCache;
+        protected readonly CacheType CacheType;
         protected readonly int BlockSize;
         
         public string Path { get; }
@@ -24,7 +26,8 @@ namespace Hst.Imager.Core.PhysicalDrives
         public bool IsDisposed { get; private set; }
 
         public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false,
-            bool writable = false, bool systemDrive = false, bool useCache = false, int blockSize = 1024 * 1024)
+            bool writable = false, bool systemDrive = false, bool useCache = false, CacheType cacheType = CacheType.Memory,
+            int blockSize = 1024 * 1024)
         {
             BlockSize = blockSize;
             Path = path;
@@ -35,6 +38,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             Writable = writable;
             SystemDrive = systemDrive;
             UseCache = useCache;
+            CacheType = cacheType;
             BlockSize = blockSize;
             stream = null;
         }
@@ -57,7 +61,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             var baseStream = new MediaStream(stream, Size);
             
             return UseCache
-                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, BlockSize)
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, BlockSize, CacheType)
                 : baseStream;
         }
 
