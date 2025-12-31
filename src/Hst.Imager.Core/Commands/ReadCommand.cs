@@ -102,7 +102,7 @@ namespace Hst.Imager.Core.Commands
                 destStream.SetLength(readSize);
             }
             
-            var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
+            using var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

@@ -118,8 +118,7 @@ namespace Hst.Imager.GuiApp.Bootstrappers
                 loggerFactory.CreateLogger<QueuedHostedService>());
             var appState = AppState.Create(appDataPath, baseUrl, true);
 
-            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory, false,
-                CacheType.Memory);
+            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory);
 
             var backgroundTaskHandler = new BackgroundTaskHandler(
                 loggerFactory.CreateLogger<BackgroundTaskHandler>(),

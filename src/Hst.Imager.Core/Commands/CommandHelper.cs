@@ -27,6 +27,8 @@ namespace Hst.Imager.Core.Commands
     {
         private readonly ILogger<ICommandHelper> logger;
         private readonly bool isAdministrator;
+        private readonly bool useCache;
+        private readonly CacheType cacheType;
         private readonly IList<IPhysicalDrive> activePhysicalDrives;
         
         public event EventHandler<string> DebugMessage;
@@ -64,10 +66,13 @@ namespace Hst.Imager.Core.Commands
         /// </summary>
         private readonly IList<Media> activeMedias;
 
-        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false)
+        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false,
+            CacheType cacheType = CacheType.Memory)
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
+            this.useCache = useCache;
+            this.cacheType = cacheType;
             this.activePhysicalDrives = new List<IPhysicalDrive>();
             this.activeMedias = new List<Media>();
             DiscUtils.Containers.SetupHelper.SetupContainers();
@@ -226,7 +231,7 @@ namespace Hst.Imager.Core.Commands
             physicalDrive.SetWritable(writeable);
             physicalDrive.SetByteSwap(byteSwap);
             var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
-                Media.MediaType.Raw, true, physicalDrive, byteSwap);
+                Media.MediaType.Raw, true, physicalDrive, byteSwap, useCache: useCache, cacheType: cacheType);
 
             // add physical drive to active drives if not already present
             if (activePhysicalDrives.All(x => x.Path != physicalDrivePath))

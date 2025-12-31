@@ -125,7 +125,7 @@ namespace Hst.Imager.Core.Commands.RdbCommands
             var destOffset = startCylinder * cylinderSize;
             var copySize = partitionBlock.PartitionSize;
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

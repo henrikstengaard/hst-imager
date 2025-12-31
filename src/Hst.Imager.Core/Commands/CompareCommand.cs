@@ -167,7 +167,7 @@ namespace Hst.Imager.Core.Commands
                     $"Compare size {compareSize} is larger than size {destPartSize}"));
             }
 
-            var imageVerifier = new ImageVerifier(retries: retries, force: force);
+            using var imageVerifier = new ImageVerifier(retries: retries, force: force);
             imageVerifier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

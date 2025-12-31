@@ -183,7 +183,7 @@ namespace Hst.Imager.Core.Commands
                 var emptyPartitionTableData = new byte[diskSize < 10.MB().ToSectorSize() ? diskSize : 10.MB().ToSectorSize()];
                 var emptyPartitionTableStream = new MemoryStream(emptyPartitionTableData);
 
-                var streamCopier = new StreamCopier();
+                using var streamCopier = new StreamCopier();
                 await streamCopier.Copy(token, emptyPartitionTableStream, disk.Content, 
                     emptyPartitionTableData.Length, 0, 0);
             }

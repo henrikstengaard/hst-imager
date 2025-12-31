@@ -42,9 +42,10 @@ namespace Hst.Imager.ConsoleApp
             return loggerFactory.CreateLogger<T>();
         }
 
-        private static ICommandHelper GetCommandHelper()
+        private static ICommandHelper GetCommandHelper(bool useCache = false)
         {
-            var commandHelper = new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator);
+            var commandHelper = new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator,
+                AppState.Instance.Settings.UseCache && useCache, AppState.Instance.Settings.CacheType);
 
             commandHelper.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
             commandHelper.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
@@ -61,9 +62,8 @@ namespace Hst.Imager.ConsoleApp
                 return new List<IPhysicalDrive>();
             }
 
-            var physicalDriveManager =
-                new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>(),
-                    AppState.Instance.Settings.UseCache, AppState.Instance.Settings.CacheType).Create();
+            var physicalDriveManager = new PhysicalDriveManagerFactory(ServiceProvider.GetService<ILoggerFactory>())
+                .Create();
             return (await physicalDriveManager.GetPhysicalDrives(AppState.Instance.Settings.AllPhysicalDrives)).ToList();
         }
 
@@ -133,6 +133,7 @@ namespace Hst.Imager.ConsoleApp
             command.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
             command.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
             command.InformationMessage += (_, message) => { Log.Logger.Information(message); };
+            command.DataProcessed += async (sender, args) => await WriteProcessMessage(sender, args);
 
             var cancellationTokenSource = new CancellationTokenSource();
             Result result = null;
@@ -653,7 +654,7 @@ namespace Hst.Imager.ConsoleApp
         
         public static async Task FsDir(string path, bool recursive, FormatEnum format)
         {
-            using var commandHelper = GetCommandHelper();
+            using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, recursive);
             command.EntriesRead += (_, args) =>
@@ -665,7 +666,7 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task FsMkDir(string path)
         {
-            using var commandHelper = GetCommandHelper();
+            using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsMkDirCommand(GetLogger<FsMkDirCommand>(), commandHelper,
                 await GetPhysicalDrives(), path);
             await Execute(command);
@@ -674,7 +675,7 @@ namespace Hst.Imager.ConsoleApp
         public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet,
             UaeMetadata uaeMetadata, bool makeDirectory, bool forceOverwrite)
         {
-            using var commandHelper = GetCommandHelper();
+            using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
                 makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
@@ -696,7 +697,7 @@ namespace Hst.Imager.ConsoleApp
         public static async Task FsExtract(string srcPath, string destPath, bool recursive, bool skipAttributes,
             bool quiet, UaeMetadata uaeMetadata, bool makeDirectory, bool forceOverwrite)
         {
-            using var commandHelper = GetCommandHelper();
+            using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsExtractCommand(GetLogger<FsExtractCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
                 makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
@@ -710,8 +711,8 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), adfPath, format, name, dosType, recursive);
             await Execute(command);
         }
-        
-        private static async Task WriteProcessMessage(object sender, DataProcessedEventArgs args)
+
+        private static Task WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
             var parts = new List<string>();
 
@@ -722,17 +723,11 @@ namespace Hst.Imager.ConsoleApp
             parts.Add($"[{args.BytesPerSecond.FormatBytes(format: "0.0")}/s]");
             parts.Add($"[{args.BytesProcessed.FormatBytes()}{(!args.Indeterminate ? $" / {args.BytesTotal.FormatBytes()}" : string.Empty)}]");
             parts.Add($"[{args.TimeElapsed.FormatElapsed()}{(!args.Indeterminate ? $" / {args.TimeTotal.FormatElapsed()}" : string.Empty)}]");
-            parts.Add("   \r");
-
-            if (args.PercentComplete >= 100)
-            {
-                await Task.Delay(200);
-            }
+            parts.Add($"{(args.PercentComplete >= 100 ? "      " : "   ")}\r");
             
-            var progressMessage = string.Join(" ", parts);
-            Console.Write(args.PercentComplete >= 100
-                ? string.Concat(new string(' ', progressMessage.Length + 3), "\r")
-                : progressMessage);
+            Console.Write(string.Join(" ", parts));
+            
+            return Task.CompletedTask;
         }
         
         private static void WriteIoErrors(string target, IList<IoError> ioErrors)

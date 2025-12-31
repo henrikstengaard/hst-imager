@@ -118,7 +118,7 @@ namespace Hst.Imager.Core.Commands
                 destStartOffset += destStartOffsetAndSizeResult.Value.Item1;
             }
             
-            var streamCopier = new StreamCopier(verify: verify, retries: 0);
+            using var streamCopier = new StreamCopier(verify: verify, retries: 0);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

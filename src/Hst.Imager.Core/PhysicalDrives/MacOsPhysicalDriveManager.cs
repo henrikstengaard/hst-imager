@@ -13,10 +13,7 @@ namespace Hst.Imager.Core.PhysicalDrives
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class MacOsPhysicalDriveManager(
-        ILogger<MacOsPhysicalDriveManager> logger,
-        bool useCache,
-        CacheType cacheType)
+    public class MacOsPhysicalDriveManager(ILogger<MacOsPhysicalDriveManager> logger)
         : IPhysicalDriveManager
     {
         protected virtual void VerifyMacOs()
@@ -84,8 +81,7 @@ namespace Hst.Imager.Core.PhysicalDrives
                 }
 
                 var physicalDrive = new MacOsPhysicalDrive(info.DeviceNode, info.MediaType, info.IoRegistryEntryName,
-                    info.Size, IsRemovable(info.BusProtocol), isSystemDrive, partitionDevices, useCache: useCache,
-                    cacheType: cacheType);
+                    info.Size, IsRemovable(info.BusProtocol), isSystemDrive, partitionDevices);
                 physicalDrives.Add(physicalDrive);
                 physicalDriveIndex[disk.DeviceIdentifier] = physicalDrive;
             }

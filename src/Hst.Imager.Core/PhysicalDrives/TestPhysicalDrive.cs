@@ -1,3 +1,5 @@
+using Hst.Imager.Core.Models;
+
 namespace Hst.Imager.Core.PhysicalDrives
 {
     using System.IO;
@@ -19,7 +21,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             this.data = data;
         }
         
-        public override Stream Open()
+        public override Stream Open(bool useCache, CacheType cacheType, int blockSize)
         {
             return new MemoryStream(data);
         }

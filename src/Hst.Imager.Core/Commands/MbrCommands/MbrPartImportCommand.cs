@@ -113,7 +113,7 @@
 
             var isVhd = commandHelper.IsVhd(destinationPath);
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

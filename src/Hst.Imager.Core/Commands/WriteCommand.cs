@@ -109,7 +109,7 @@ namespace Hst.Imager.Core.Commands
                         $"Source size {writeSize.FormatBytes()} ({writeSize} bytes) is too large for destination size {destSize.FormatBytes()} ({destSize} bytes)"));
             }
 
-            var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
+            using var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

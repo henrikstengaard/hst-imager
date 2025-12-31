@@ -280,18 +280,23 @@ namespace Hst.Imager.Core.Helpers
             var statusBytesProcessed = 0L;
             var statusTimeElapsed = TimeSpan.Zero;
 
-            layeredStream.DataFlushed += (sender, args) =>
+            layeredStream.DataFlushed += Handler;
+
+            await layeredStream.FlushLayer();
+                
+            layeredStream.DataFlushed -= Handler;
+            
+            notification.OnInformationMessage(
+                $"Flushed '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            return;
+
+            void Handler(object sender, LayeredStream.DataFlushedEventArgs args)
             {
                 statusBytesProcessed = args.BytesProcessed;
                 statusTimeElapsed = args.TimeElapsed;
                 notification.OnDataProcessed(false, args.PercentComplete, args.BytesProcessed, args.BytesRemaining,
                     args.BytesTotal, args.TimeElapsed, args.TimeRemaining, args.TimeTotal, args.BytesPerSecond);
-            };
-
-            await layeredStream.FlushLayer();
-                
-            notification.OnInformationMessage(
-                $"Flushed '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            }
         }
     }
 

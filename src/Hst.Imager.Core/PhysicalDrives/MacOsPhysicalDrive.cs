@@ -11,15 +11,13 @@ namespace Hst.Imager.Core.PhysicalDrives
         public readonly IEnumerable<string> PartitionDevices;
 
         public MacOsPhysicalDrive(string path, string type, string name, long size, bool removable,
-            bool systemDrive, IEnumerable<string> partitionDevices, bool useCache = false,
-            CacheType cacheType = CacheType.Memory)
-            : base(path, type, name, size, removable: removable, systemDrive: systemDrive, useCache: useCache,
-                cacheType: cacheType)
+            bool systemDrive, IEnumerable<string> partitionDevices)
+            : base(path, type, name, size, removable: removable, systemDrive: systemDrive)
         {
-            this.PartitionDevices = partitionDevices;
+            PartitionDevices = partitionDevices;
         }
 
-        public override Stream Open()
+        public override Stream Open(bool useCache, CacheType cacheType, int blockSize)
         {
             if (SystemDrive)
             {

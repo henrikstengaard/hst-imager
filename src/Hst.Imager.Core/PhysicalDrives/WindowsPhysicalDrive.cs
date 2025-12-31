@@ -18,17 +18,14 @@ namespace Hst.Imager.Core.PhysicalDrives
         long size,
         bool removable,
         bool systemDrive,
-        string[] driveLetters,
-        bool useCache = false,
-        CacheType cacheType = CacheType.Memory,
-        int blockSize = 1024 * 1024)
+        string[] driveLetters)
         : GenericPhysicalDrive(path, type, name, size, removable: removable,
             systemDrive: systemDrive)
     {
         public readonly int PhysicalDriveNumber = physicalDriveNumber;
         public readonly string BusType = busType;
 
-        public override Stream Open()
+        public override Stream Open(bool useCache, CacheType cacheType, int blockSize)
         {
             if (SystemDrive)
             {

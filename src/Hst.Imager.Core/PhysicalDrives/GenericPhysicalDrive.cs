@@ -9,10 +9,6 @@ namespace Hst.Imager.Core.PhysicalDrives
 
     public class GenericPhysicalDrive : IPhysicalDrive, IAsyncDisposable
     {
-        protected readonly bool UseCache;
-        protected readonly CacheType CacheType;
-        protected readonly int BlockSize;
-        
         public string Path { get; }
         public string Type { get; }
         public string Name { get; }
@@ -26,10 +22,8 @@ namespace Hst.Imager.Core.PhysicalDrives
         public bool IsDisposed { get; private set; }
 
         public GenericPhysicalDrive(string path, string type, string name, long size, bool removable = false,
-            bool writable = false, bool systemDrive = false, bool useCache = false, CacheType cacheType = CacheType.Memory,
-            int blockSize = 1024 * 1024)
+            bool writable = false, bool systemDrive = false)
         {
-            BlockSize = blockSize;
             Path = path;
             Type = type;
             Name = name;
@@ -37,9 +31,6 @@ namespace Hst.Imager.Core.PhysicalDrives
             Removable = removable;
             Writable = writable;
             SystemDrive = systemDrive;
-            UseCache = useCache;
-            CacheType = cacheType;
-            BlockSize = blockSize;
             stream = null;
         }
 
@@ -48,7 +39,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             this.SystemDrive = systemDrive;
         }
 
-        public virtual Stream Open()
+        public virtual Stream Open(bool useCache, CacheType cacheType, int blockSize)
         {
             if (SystemDrive)
             {
@@ -60,8 +51,8 @@ namespace Hst.Imager.Core.PhysicalDrives
             
             var baseStream = new MediaStream(stream, Size);
             
-            return UseCache
-                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, BlockSize, CacheType)
+            return useCache
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize, cacheType)
                 : baseStream;
         }
 

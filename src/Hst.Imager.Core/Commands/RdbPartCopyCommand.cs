@@ -149,7 +149,7 @@
 
             OnDebugMessage($"Copying partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
             
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

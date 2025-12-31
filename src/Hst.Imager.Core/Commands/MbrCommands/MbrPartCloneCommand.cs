@@ -145,7 +145,7 @@ namespace Hst.Imager.Core.Commands.MbrCommands
 
             OnDebugMessage($"Cloning partition from source offset '{srcOffset}' to destination offset '{destOffset}'");
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;

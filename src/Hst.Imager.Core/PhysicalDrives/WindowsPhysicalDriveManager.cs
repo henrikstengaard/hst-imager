@@ -11,10 +11,7 @@
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class WindowsPhysicalDriveManager(
-        ILogger<WindowsPhysicalDriveManager> logger,
-        bool useCache,
-        CacheType cacheType)
+    public class WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger)
         : IPhysicalDriveManager
     {
         private const bool SupportFloppyDrives = false;
@@ -140,7 +137,7 @@
                     var physicalDrive = new WindowsPhysicalDrive(i, physicalDrivePath, diskGeometryExResult.MediaType,
                         storagePropertyQueryResult.BusType, name, size,
                         IsRemovable(diskGeometryExResult.MediaType, storagePropertyQueryResult.BusType), 
-                        systemDrive, driveLetters, useCache: useCache, cacheType: cacheType);
+                        systemDrive, driveLetters);
                     physicalDrives.Add(physicalDrive);
                     logger.LogDebug(
                         $"Physical drive: Path '{physicalDrive.Path}', SystemDrive '{systemDrive}', Name '{physicalDrive.Name}', Type = '{physicalDrive.Type}', BusType = '{physicalDrive.BusType}', Size = '{physicalDrive.Size}'");

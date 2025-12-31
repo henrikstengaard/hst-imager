@@ -10,10 +10,7 @@ namespace Hst.Imager.Core.PhysicalDrives
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class LinuxPhysicalDriveManager(
-        ILogger<LinuxPhysicalDriveManager> logger,
-        bool useCache,
-        CacheType cacheType)
+    public class LinuxPhysicalDriveManager(ILogger<LinuxPhysicalDriveManager> logger)
         : IPhysicalDriveManager
     {
         protected virtual void VerifyLinuxOperatingSystem()
@@ -34,7 +31,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             
             var lsBlkJson = await GetLsBlkJson();
 
-            var physicalDrives = Parse(lsBlkJson, useCache, cacheType)
+            var physicalDrives = Parse(lsBlkJson)
                 .Where(x => x.Type.Equals("disk", StringComparison.OrdinalIgnoreCase)).ToList();
 
             foreach (var physicalDrive in physicalDrives)
@@ -76,7 +73,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             return output;
         }
 
-        private static IEnumerable<IPhysicalDrive> Parse(string json, bool useCache, CacheType cacheType)
+        private static IEnumerable<IPhysicalDrive> Parse(string json)
         {
             var lsBlk = LsBlkReader.ParseLsBlk(json);
 
@@ -87,7 +84,7 @@ namespace Hst.Imager.Core.PhysicalDrives
 
             var physicalDrives = lsBlk.BlockDevices.Select(x =>
                 new GenericPhysicalDrive(x.Path, x.Type ?? string.Empty, GetPhysicalDriveName(x),
-                    x.Size ?? 0, IsRemovable(x), useCache: useCache, cacheType: cacheType)).ToList();
+                    x.Size ?? 0, IsRemovable(x))).ToList();
 
             return physicalDrives;
         }
