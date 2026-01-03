@@ -27,7 +27,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
 
@@ -84,7 +84,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create rdb disk with 2 partitions
             await TestHelper.CreateRdbDisk(testCommandHelper, mediaPath, 100.MB());
@@ -139,7 +139,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
 
@@ -179,7 +179,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
 
@@ -219,7 +219,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -260,7 +260,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameRd
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -401,11 +401,11 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSamePi
         var rdbDiskSize = 100.MB();
 
         // add mbr disk media
-        testCommandHelper.AddTestMedia(mediaPath, mbrDiskSize);
+        testCommandHelper.AddTestMedia(mediaPath, 0);
 
         // add rdb disk media
         var rdbDiskPath = $"rdb_{Guid.NewGuid()}.vhd";
-        testCommandHelper.AddTestMedia(rdbDiskPath, rdbDiskSize);
+        testCommandHelper.AddTestMedia(rdbDiskPath, 0);
 
         // calculate mbr partition start and end sectors
         var mbrPartition1StartSector = 63;

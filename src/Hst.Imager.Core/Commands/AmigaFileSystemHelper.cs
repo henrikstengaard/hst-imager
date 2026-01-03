@@ -252,13 +252,18 @@ namespace Hst.Imager.Core.Commands
                 return [];
             }
 
+            if (!biosPartitionTable.DiskGeometry.HasValue)
+            {
+                throw new InvalidOperationException("Disk geometry is not available in BIOS partition table");
+            }
+            
             var fileSystems = new List<Tuple<string, byte[]>>();
 
             foreach (var partitionInfo in biosPartitionTable.Partitions
                          .Where(x => x.BiosType == Constants.BiosPartitionTypes.PiStormRdb))
             {
-                var partitionStartOffset = partitionInfo.FirstSector * biosPartitionTable.DiskGeometry.BytesPerSector;
-                var partitionSize = (partitionInfo.LastSector - partitionInfo.FirstSector + 1) * biosPartitionTable.DiskGeometry.BytesPerSector;
+                var partitionStartOffset = partitionInfo.FirstSector * biosPartitionTable.DiskGeometry.Value.BytesPerSector;
+                var partitionSize = (partitionInfo.LastSector - partitionInfo.FirstSector + 1) * biosPartitionTable.DiskGeometry.Value.BytesPerSector;
                 
                 var partitionStream = new SubStream(stream, partitionStartOffset, partitionSize);
                 

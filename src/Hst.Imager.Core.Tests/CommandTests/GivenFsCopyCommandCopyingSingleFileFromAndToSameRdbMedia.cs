@@ -28,7 +28,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -74,7 +74,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -119,7 +119,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -166,7 +166,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -211,7 +211,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -256,7 +256,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -306,7 +306,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
@@ -350,7 +350,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameRdbMedia : FsComman
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create pfs3 formatted disk
             await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);

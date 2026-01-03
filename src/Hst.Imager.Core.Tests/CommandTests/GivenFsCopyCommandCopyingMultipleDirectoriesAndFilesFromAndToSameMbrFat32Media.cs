@@ -26,7 +26,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -88,7 +88,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrDisk(testCommandHelper, mediaPath, 100.MB());
@@ -144,7 +144,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -183,7 +183,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             // arrange - test command helper
             using var testCommandHelper = new TestCommandHelper();
 
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -222,7 +222,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -260,7 +260,7 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSameMb
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);

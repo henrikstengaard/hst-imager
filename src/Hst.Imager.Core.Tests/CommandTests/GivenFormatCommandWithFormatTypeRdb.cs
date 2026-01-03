@@ -31,7 +31,7 @@ public class GivenFormatCommandWithFormatTypeRdb : FsCommandTestBase
         await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
         // arrange - add disk
-        testCommandHelper.AddTestMedia(diskPath, diskSize);
+        testCommandHelper.AddTestMedia(diskPath, 0);
         await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
         try
@@ -101,7 +101,7 @@ public class GivenFormatCommandWithFormatTypeRdb : FsCommandTestBase
         await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
         // arrange - add disk
-        testCommandHelper.AddTestMedia(diskPath, diskSize);
+        testCommandHelper.AddTestMedia(diskPath, 0);
         await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
         try
