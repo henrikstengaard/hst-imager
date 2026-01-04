@@ -96,7 +96,9 @@ public class GptPartFormatCommand : CommandBase
                     partitionInfo.FirstSector, partitionInfo.SectorCount);
                 break;
             case GptPartType.ExFat:
-                ExFat.Filesystem.ExFatEntryFilesystem.Format(partitionInfo.Open(), new ExFat.ExFatFormatOptions(), name);
+                var volumeManager = new VolumeManager(disk);
+                var physicalVolumes = volumeManager.GetPhysicalVolumes();
+                DiscUtils.ExFat.ExFatFileSystem.Format(physicalVolumes[partitionNumber - 1], label: name);
                 break;
             default:
                 return new Result(new Error("Unsupported partition type"));

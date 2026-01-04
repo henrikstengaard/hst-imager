@@ -330,7 +330,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             // arrange - create fs copy command
             var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(),
-                srcPath, destPath, recursive, false, true, forceOverwrite: true);
+                srcPath, destPath, recursive, false, true, forceOverwrite: force);
             
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);

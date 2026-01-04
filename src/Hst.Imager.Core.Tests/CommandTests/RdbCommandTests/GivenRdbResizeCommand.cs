@@ -24,7 +24,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arange - add disk media
-            testCommandHelper.AddTestMedia(imgPath, diskSize);
+            testCommandHelper.AddTestMedia(imgPath, 0);
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
@@ -63,7 +63,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arange - add disk media
-            testCommandHelper.AddTestMedia(imgPath, diskSize);
+            testCommandHelper.AddTestMedia(imgPath, 0);
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
@@ -102,7 +102,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arange - add disk media
-            testCommandHelper.AddTestMedia(imgPath, diskSize);
+            testCommandHelper.AddTestMedia(imgPath, 0);
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk
@@ -141,7 +141,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arange - add disk media
-            testCommandHelper.AddTestMedia(imgPath, diskSize);
+            testCommandHelper.AddTestMedia(imgPath, 0);
             await testCommandHelper.GetWritableFileMedia(imgPath, size: diskSize, create: true);
 
             // arrange - pfs3 formatted disk

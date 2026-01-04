@@ -86,11 +86,11 @@ public static class MbrTestHelper
         var rdbDiskSize = 20.MB();
 
         // add mbr disk media
-        testCommandHelper.AddTestMedia(mbrDiskPath, mbrDiskSize);
+        testCommandHelper.AddTestMedia(mbrDiskPath, 0);
 
         // add rdb disk media
         var rdbDiskPath = $"rdb_{Guid.NewGuid()}.vhd";
-        testCommandHelper.AddTestMedia(rdbDiskPath, rdbDiskSize);
+        testCommandHelper.AddTestMedia(rdbDiskPath, 0);
 
         // calculate mbr partition start and end sectors
         var mbrPartition1StartSector = 63;

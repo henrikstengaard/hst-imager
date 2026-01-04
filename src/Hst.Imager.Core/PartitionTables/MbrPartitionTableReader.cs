@@ -28,6 +28,11 @@ public static class MbrPartitionTableReader
 
     public static async Task<PartitionTableInfo> Read(VirtualDisk disk, BiosPartitionTable biosPartitionTable)
     {
+        if (!biosPartitionTable.DiskGeometry.HasValue)
+        {
+            throw new InvalidOperationException("Disk geometry is not available in BIOS partition table");
+        }
+
         var totalSectors = disk.Capacity / disk.SectorSize;
         var lastSector = totalSectors - 100;
 
@@ -45,10 +50,10 @@ public static class MbrPartitionTableReader
             {
                 Capacity = disk.Capacity,
                 TotalSectors = totalSectors,
-                BytesPerSector = biosPartitionTable.DiskGeometry.BytesPerSector,
-                HeadsPerCylinder = biosPartitionTable.DiskGeometry.HeadsPerCylinder,
-                Cylinders = biosPartitionTable.DiskGeometry.Cylinders,
-                SectorsPerTrack = biosPartitionTable.DiskGeometry.SectorsPerTrack
+                BytesPerSector = biosPartitionTable.DiskGeometry.Value.BytesPerSector,
+                HeadsPerCylinder = biosPartitionTable.DiskGeometry.Value.HeadsPerCylinder,
+                Cylinders = biosPartitionTable.DiskGeometry.Value.Cylinders,
+                SectorsPerTrack = biosPartitionTable.DiskGeometry.Value.SectorsPerTrack
             },
             Size = disk.Capacity,
             Sectors = totalSectors,

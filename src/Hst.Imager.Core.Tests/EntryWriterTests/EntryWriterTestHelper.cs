@@ -34,9 +34,11 @@ public static class EntryWriterTestHelper
         switch (entryWriterType)
         {
             case EntryWriterType.AmigaVolumeEntryWriter:
+                testCommandHelper.AddTestMedia(path, 0);
                 await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, path, 100.MB());
                 break;
             case EntryWriterType.FileSystemEntryWriter:
+                testCommandHelper.AddTestMedia(path, 0);
                 await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, path, 100.MB());
                 break;
             case EntryWriterType.DirectoryEntryWriter:
@@ -101,7 +103,7 @@ public static class EntryWriterTestHelper
             : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
         var biosPartitionTable = new BiosPartitionTable(disk);
-        using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
+        var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
 
         return new FileSystemEntryWriter(media, PartitionTableType.MasterBootRecord, 0, fatFileSystem,
             initializePathComponents, false, createDestDirectory, false);

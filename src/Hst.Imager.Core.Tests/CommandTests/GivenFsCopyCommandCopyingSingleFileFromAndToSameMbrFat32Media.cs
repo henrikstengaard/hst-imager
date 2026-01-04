@@ -28,7 +28,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -74,7 +74,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -119,7 +119,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -166,7 +166,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -211,7 +211,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -256,7 +256,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -307,7 +307,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
@@ -348,7 +348,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             using var testCommandHelper = new TestCommandHelper();
 
             // arrange - add test media
-            testCommandHelper.AddTestMedia(mediaPath, 100.MB());
+            testCommandHelper.AddTestMedia(mediaPath, 0);
             
             // arrange - create fat formatted disk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);

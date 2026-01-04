@@ -1,4 +1,5 @@
-﻿using DiscUtils.Ntfs;
+﻿using DiscUtils.ExFat;
+using DiscUtils.Ntfs;
 using Hst.Imager.Core.Extensions;
 
 namespace Hst.Imager.Core.Commands;
@@ -28,7 +29,6 @@ using Models;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 using PathComponents;
-using ExFat.DiscUtils;
 using System.Text.RegularExpressions;
 
 public abstract partial class FsCommandBase : CommandBase
