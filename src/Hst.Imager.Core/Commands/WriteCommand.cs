@@ -30,7 +30,6 @@ namespace Hst.Imager.Core.Commands
         private long statusBytesProcessed = 0;
         private TimeSpan statusTimeElapsed = TimeSpan.Zero;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
 
@@ -110,7 +109,7 @@ namespace Hst.Imager.Core.Commands
                         $"Source size {writeSize.FormatBytes()} ({writeSize} bytes) is too large for destination size {destSize.FormatBytes()} ({destSize} bytes)"));
             }
 
-            var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
+            using var streamCopier = new StreamCopier(verify: verify, retries: retries, force: force);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -144,16 +143,6 @@ namespace Hst.Imager.Core.Commands
             }
             
             return new Result();
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed,
-            long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal,
-                    timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
 
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);

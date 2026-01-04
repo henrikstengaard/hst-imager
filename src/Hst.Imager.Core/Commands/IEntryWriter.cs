@@ -1,4 +1,5 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -11,6 +12,7 @@ using Models.FileSystems;
 
 public interface IEntryWriter : IDisposable
 {
+    Media Media { get; }
     string MediaPath { get; }
     string FileSystemPath { get; }
 

@@ -44,8 +44,6 @@ namespace Hst.Imager.Core.Commands
 
         private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         /// <summary>
         /// Format command.
         /// </summary>
@@ -185,7 +183,7 @@ namespace Hst.Imager.Core.Commands
                 var emptyPartitionTableData = new byte[diskSize < 10.MB().ToSectorSize() ? diskSize : 10.MB().ToSectorSize()];
                 var emptyPartitionTableStream = new MemoryStream(emptyPartitionTableData);
 
-                var streamCopier = new StreamCopier();
+                using var streamCopier = new StreamCopier();
                 await streamCopier.Copy(token, emptyPartitionTableStream, disk.Content, 
                     emptyPartitionTableData.Length, 0, 0);
             }
@@ -771,8 +769,8 @@ namespace Hst.Imager.Core.Commands
 
         private void UpdatePercentComplete(double percentComplete)
         {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(false, percentComplete, 0, 0, 0, TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0));
+            OnDataProcessed(false, percentComplete, 0, 0, 0,
+                TimeSpan.Zero, TimeSpan.Zero, TimeSpan.Zero, 0);
         }
 
         private void AddMessageEvents(CommandBase command)

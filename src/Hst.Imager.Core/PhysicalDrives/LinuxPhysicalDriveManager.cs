@@ -10,15 +10,9 @@ namespace Hst.Imager.Core.PhysicalDrives
     using Microsoft.Extensions.Logging;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class LinuxPhysicalDriveManager : IPhysicalDriveManager
+    public class LinuxPhysicalDriveManager(ILogger<LinuxPhysicalDriveManager> logger)
+        : IPhysicalDriveManager
     {
-        private readonly ILogger<LinuxPhysicalDriveManager> logger;
-
-        public LinuxPhysicalDriveManager(ILogger<LinuxPhysicalDriveManager> logger)
-        {
-            this.logger = logger;
-        }
-        
         protected virtual void VerifyLinuxOperatingSystem()
         {
             if (OperatingSystem.IsLinux())

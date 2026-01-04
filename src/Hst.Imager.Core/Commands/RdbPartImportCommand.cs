@@ -26,8 +26,6 @@
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         public RdbPartImportCommand(ILogger<RdbPartImportCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string destinationPath, string name,
             string dosType, int fileSystemBlockSize, bool bootable)
@@ -132,7 +130,7 @@
 
             var isVhd = commandHelper.IsVhd(destinationPath);
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -149,14 +147,6 @@
             OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
             return new Result();
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

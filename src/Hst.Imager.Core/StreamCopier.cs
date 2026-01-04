@@ -8,7 +8,7 @@
     using Helpers;
     using Hst.Core;
 
-    public class StreamCopier
+    public class StreamCopier : IDisposable
     {
         private readonly bool verify;
         private readonly int bufferSize;
@@ -34,14 +34,18 @@
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
-            timer.Elapsed += (_, _) =>
+            timer.Elapsed += SendDataProcessed;
+            dataProcessedEventArgs = null;
+        }
+        
+        private void SendDataProcessed(object sender, EventArgs args)
+        {
+            if (dataProcessedEventArgs == null)
             {
-                if (dataProcessedEventArgs == null)
-                {
-                    return;
-                }
-                DataProcessed?.Invoke(this, dataProcessedEventArgs);
-            };
+                return;
+            }
+
+            DataProcessed?.Invoke(this, dataProcessedEventArgs);
             dataProcessedEventArgs = null;
         }
 
@@ -188,9 +192,8 @@
                 destOffset += copyRightToLeft ? -destDecrementStep : destIncrementStep;
 
                 var indeterminate = size == 0;
-                dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size,
-                    timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond);
+                OnDataProcessed(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size,
+                    timeElapsed, timeRemaining, timeTotal, bytesPerSecond);
 
                 endOfStream = size == 0 ? bytesRead == 0 : bytesRead == 0 || bytesProcessed >= size;
             } while (!endOfStream);
@@ -227,9 +230,13 @@
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
+            dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed,
+                bytesRemaining, bytesTotal, timeElapsed, timeRemaining, timeTotal, bytesPerSecond);
+                        
+            if (percentComplete >= 100)
+            {
+                SendDataProcessed(this, EventArgs.Empty);
+            }
         }
         
         private void OnSrcError(long offset, int count, string errorMessage)
@@ -240,6 +247,14 @@
         private void OnDestError(long offset, int count, string errorMessage)
         {
             DestError?.Invoke(this, new IoErrorEventArgs(new IoError(offset, count, errorMessage)));
+        }
+
+        public void Dispose()
+        {
+            timer.Elapsed -= SendDataProcessed;
+            timer.Stop();
+            SendDataProcessed(this, EventArgs.Empty);
+            timer?.Dispose();
         }
     }
 }

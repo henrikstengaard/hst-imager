@@ -19,7 +19,7 @@ namespace Hst.Imager.ConsoleApp
         public readonly Version Version;
         public readonly DateTime BuildDate;
         public Settings Settings { get; set; }
-
+        
         private AppState()
         {
             LoggingLevelSwitch = new LoggingLevelSwitch();

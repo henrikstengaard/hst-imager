@@ -9,6 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Core;
+using Hst.Core.IO;
+using Hst.Imager.Core.Extensions;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -255,6 +257,46 @@ namespace Hst.Imager.Core.Helpers
             return partition == null 
                 ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
                 : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
+        }
+
+        public static async Task FlushCache(INotification notification, Media media)
+        {
+            if (media.Stream is not LayeredStream layeredStream)
+            {
+                return;
+            }
+            
+            layeredStream.Flush();
+
+            var layerStatus = layeredStream.GetLayerStatus();
+
+            if (layerStatus.ChangedBlocks == 0)
+            {
+                return;
+            }
+
+            notification.OnInformationMessage($"Flushing cache to destination path '{media.Path}'");
+
+            var statusBytesProcessed = 0L;
+            var statusTimeElapsed = TimeSpan.Zero;
+
+            layeredStream.DataFlushed += Handler;
+
+            await layeredStream.FlushLayer();
+                
+            layeredStream.DataFlushed -= Handler;
+            
+            notification.OnInformationMessage(
+                $"Flushed '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            return;
+
+            void Handler(object sender, LayeredStream.DataFlushedEventArgs args)
+            {
+                statusBytesProcessed = args.BytesProcessed;
+                statusTimeElapsed = args.TimeElapsed;
+                notification.OnDataProcessed(false, args.PercentComplete, args.BytesProcessed, args.BytesRemaining,
+                    args.BytesTotal, args.TimeElapsed, args.TimeRemaining, args.TimeTotal, args.BytesPerSecond);
+            }
         }
     }
 

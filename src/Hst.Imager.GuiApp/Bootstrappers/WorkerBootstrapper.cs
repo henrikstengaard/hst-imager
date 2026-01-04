@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.GuiApp.Bootstrappers
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.GuiApp.Bootstrappers
 {
     using System;
     using System.Diagnostics;
@@ -9,7 +11,6 @@
     using Extensions;
     using Helpers;
     using Hst.Imager.Core;
-    using Hst.Imager.Core.Helpers;
     using Microsoft.AspNetCore.SignalR.Client;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -111,13 +112,13 @@
             logger.LogDebug($"WorkerHubConnection = {workerHubConnection.State}");
             logger.LogDebug($"ResultHubConnection = {resultHubConnection.State}");
 
-            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory);
-
             var backgroundTaskQueue = new BackgroundTaskQueue(100);
             var activeBackgroundTaskList = new ActiveBackgroundTaskList();
             var queuedHostedService = new QueuedHostedService(backgroundTaskQueue, activeBackgroundTaskList,
                 loggerFactory.CreateLogger<QueuedHostedService>());
             var appState = AppState.Create(appDataPath, baseUrl, true);
+
+            var physicalDriveManagerFactory = new PhysicalDriveManagerFactory(loggerFactory);
 
             var backgroundTaskHandler = new BackgroundTaskHandler(
                 loggerFactory.CreateLogger<BackgroundTaskHandler>(),

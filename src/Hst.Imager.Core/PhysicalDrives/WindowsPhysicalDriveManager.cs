@@ -11,15 +11,10 @@
     using Microsoft.Extensions.Logging;
     using Models;
 
-    public class WindowsPhysicalDriveManager : IPhysicalDriveManager
+    public class WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger)
+        : IPhysicalDriveManager
     {
-        private readonly ILogger<WindowsPhysicalDriveManager> logger;
         private const bool SupportFloppyDrives = false;
-
-        public WindowsPhysicalDriveManager(ILogger<WindowsPhysicalDriveManager> logger)
-        {
-            this.logger = logger;
-        }
 
         public Task<IEnumerable<IPhysicalDrive>> GetPhysicalDrives(bool all = false)
         {
@@ -83,7 +78,8 @@
                         var size = diskGeometry.Cylinders * diskGeometry.TracksPerCylinder * diskGeometry.SectorsPerTrack * diskGeometry.BytesPerSector;                        
                         
                         var physicalDrive = new WindowsPhysicalDrive(0, drive.Name, "Floppy",
-                            storagePropertyQueryResult.BusType, drive.Name, size, true, false, [driveName]);
+                            storagePropertyQueryResult.BusType, drive.Name, size, true, false, 
+                            [driveName]);
 
                         physicalDrives.Add(physicalDrive);
                         logger.LogDebug(

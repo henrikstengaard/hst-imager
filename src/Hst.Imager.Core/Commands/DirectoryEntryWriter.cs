@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Caching;
 using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -49,10 +50,15 @@ public class DirectoryEntryWriter : IEntryWriter
         this.forceOverwrite = forceOverwrite;
     }
 
+    public Media Media => null;
     public string MediaPath => rootPath;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
-    
+    public Task FlushCache(int t = 0)
+    {
+        return Task.CompletedTask;
+    }
+
     public void Dispose()
     {
     }

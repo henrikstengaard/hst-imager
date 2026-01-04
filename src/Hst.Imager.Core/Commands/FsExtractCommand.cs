@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Hst.Imager.Core.Commands;
+﻿namespace Hst.Imager.Core.Commands;
 
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -148,8 +146,6 @@ public class FsExtractCommand(
                 await srcEntryIterator.Flush();
             }
 
-            await destEntryWriter.Flush();
-            
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
                 OnDebugMessage(log);                

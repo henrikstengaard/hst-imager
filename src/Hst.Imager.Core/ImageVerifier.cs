@@ -9,7 +9,7 @@
     using Helpers;
     using Hst.Core;
 
-    public class ImageVerifier
+    public class ImageVerifier : IDisposable
     {
         private readonly int retries;
         private readonly bool force;
@@ -29,17 +29,21 @@
             timer = new System.Timers.Timer();
             timer.Enabled = true;
             timer.Interval = 1000;
-            timer.Elapsed += (_, _) =>
-            {
-                if (dataProcessedEventArgs == null)
-                {
-                    return;
-                }
-                DataProcessed?.Invoke(this, dataProcessedEventArgs);
-            };
+            timer.Elapsed += SendDataProcessed;
             dataProcessedEventArgs = null;
         }
 
+        private void SendDataProcessed(object sender, EventArgs args)
+        {
+            if (dataProcessedEventArgs == null)
+            {
+                return;
+            }
+
+            DataProcessed?.Invoke(this, dataProcessedEventArgs);
+            dataProcessedEventArgs = null;
+        }
+        
         public async Task<Result> Verify(CancellationToken token, Stream source, long sourceOffset, Stream destination,
             long destinationOffset, long size, bool skipZeroFilled = false)
         {
@@ -178,8 +182,8 @@
                 destinationOffset += srcBytesRead;
                 
                 var indeterminate = size == 0;
-                dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size, timeElapsed, timeRemaining, timeTotal,
-                    bytesPerSecond);
+                OnDataProcessed(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size,
+                    timeElapsed, timeRemaining, timeTotal, bytesPerSecond);
                 endOfStream = srcBytesRead == 0 || bytesProcessed >= size;
             } while (!endOfStream);
 
@@ -194,9 +198,13 @@
         private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
             TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
         {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
+            dataProcessedEventArgs = new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed,
+                bytesRemaining, bytesTotal, timeElapsed, timeRemaining, timeTotal, bytesPerSecond);
+                        
+            if (percentComplete >= 100)
+            {
+                SendDataProcessed(this, EventArgs.Empty);
+            }
         }
         
         private void OnSrcError(long offset, int count, string errorMessage)
@@ -207,6 +215,14 @@
         private void OnDestError(long offset, int count, string errorMessage)
         {
             DestError?.Invoke(this, new IoErrorEventArgs(new IoError(offset, count, errorMessage)));
+        }
+
+        public void Dispose()
+        {
+            timer.Elapsed -= SendDataProcessed;
+            timer.Stop();
+            SendDataProcessed(this, EventArgs.Empty);
+            timer?.Dispose();
         }
     }
 }

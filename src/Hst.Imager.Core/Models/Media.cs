@@ -30,7 +30,6 @@
         {
             Path = path;
             Model = name;
-            //Size = size;
             Type = type;
             IsPhysicalDrive = isPhysicalDrive; 
             Stream = stream;

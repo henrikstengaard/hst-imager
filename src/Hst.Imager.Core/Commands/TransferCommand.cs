@@ -22,7 +22,6 @@ namespace Hst.Imager.Core.Commands
         private long statusBytesProcessed = 0;
         private TimeSpan statusTimeElapsed = TimeSpan.Zero;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
         public event EventHandler<IoErrorEventArgs> SrcError;
         public event EventHandler<IoErrorEventArgs> DestError;
 
@@ -119,7 +118,7 @@ namespace Hst.Imager.Core.Commands
                 destStartOffset += destStartOffsetAndSizeResult.Value.Item1;
             }
             
-            var streamCopier = new StreamCopier(verify: verify, retries: 0);
+            using var streamCopier = new StreamCopier(verify: verify, retries: 0);
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -145,14 +144,6 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"Transferred '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
             return new Result();
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
 
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);

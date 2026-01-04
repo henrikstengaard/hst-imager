@@ -1,34 +1,29 @@
-﻿namespace Hst.Imager.Core
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core
 {
     using System;
     using Microsoft.Extensions.Logging;
     using PhysicalDrives;
     using OperatingSystem = Hst.Core.OperatingSystem;
 
-    public class PhysicalDriveManagerFactory
+    public class PhysicalDriveManagerFactory(ILoggerFactory loggerFactory)
     {
-        private readonly ILoggerFactory loggerFactory;
-
-        public PhysicalDriveManagerFactory(ILoggerFactory loggerFactory)
-        {
-            this.loggerFactory = loggerFactory;
-        }
-
         public IPhysicalDriveManager Create()
         {
             if (OperatingSystem.IsWindows())
             {
-                return new WindowsPhysicalDriveManager(this.loggerFactory.CreateLogger<WindowsPhysicalDriveManager>());
+                return new WindowsPhysicalDriveManager(loggerFactory.CreateLogger<WindowsPhysicalDriveManager>());
             }
 
             if (OperatingSystem.IsMacOs())
             {
-                return new MacOsPhysicalDriveManager(this.loggerFactory.CreateLogger<MacOsPhysicalDriveManager>());
+                return new MacOsPhysicalDriveManager(loggerFactory.CreateLogger<MacOsPhysicalDriveManager>());
             }
 
             if (OperatingSystem.IsLinux())
             {
-                return new LinuxPhysicalDriveManager(this.loggerFactory.CreateLogger<LinuxPhysicalDriveManager>());
+                return new LinuxPhysicalDriveManager(loggerFactory.CreateLogger<LinuxPhysicalDriveManager>());
             }
             
             throw new NotSupportedException("Unsupported operating system");

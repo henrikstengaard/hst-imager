@@ -25,8 +25,6 @@
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         public MbrPartExportCommand(ILogger<MbrPartExportCommand> logger, ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string partition, string destinationPath)
         {
@@ -106,7 +104,7 @@
 
             OnDebugMessage($"Exporting partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -155,14 +153,6 @@
                 MbrPartType.PiStormRdb => 0x76,
                 _ => throw new ArgumentOutOfRangeException(nameof(mbrPartType), $"Unsupported partition type '{mbrPartType}'")
             };
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

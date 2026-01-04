@@ -23,8 +23,6 @@
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         public MbrPartImportCommand(ILogger<MbrPartImportCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, string destinationPath, string partition)
         {
@@ -37,6 +35,7 @@
             this.statusBytesProcessed = 0;
             this.statusTimeElapsed = TimeSpan.Zero;
         }
+
         public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Importing partition from '{sourcePath}' to '{destinationPath}'");
@@ -76,7 +75,8 @@
 
             OnDebugMessage($"Reading disk info from destination path '{destinationPath}'");
 
-            var destinationDiskInfo = await commandHelper.ReadDiskInfo(destinationMedia, PartitionTableType.MasterBootRecord);
+            var destinationDiskInfo =
+                await commandHelper.ReadDiskInfo(destinationMedia, PartitionTableType.MasterBootRecord);
 
             if (destinationDiskInfo.MbrPartitionTablePart == null)
             {
@@ -94,7 +94,8 @@
 
             if (sourceMedia.Size > partitionPartInfo.Size)
             {
-                return new Result(new Error($"Source is '{partitionPartInfo.Size}' bytes and larger than partition size of '{partitionPartInfo.Size}' bytes"));
+                return new Result(new Error(
+                    $"Source is '{partitionPartInfo.Size}' bytes and larger than partition size of '{partitionPartInfo.Size}' bytes"));
             }
 
             const int sourceOffset = 0;
@@ -107,22 +108,25 @@
             OnInformationMessage($"- End sector '{partitionPartInfo.EndSector}'");
             OnInformationMessage($"- Size '{partitionPartInfo.Size.FormatBytes()}' ({partitionPartInfo.Size} bytes)");
 
-            OnDebugMessage($"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
+            OnDebugMessage(
+                $"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
             var isVhd = commandHelper.IsVhd(destinationPath);
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
                 statusTimeElapsed = e.TimeElapsed;
-                OnDataProcessed(e.Indeterminate, e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal, e.TimeElapsed,
+                OnDataProcessed(e.Indeterminate, e.PercentComplete, e.BytesProcessed, e.BytesRemaining, e.BytesTotal,
+                    e.TimeElapsed,
                     e.TimeRemaining, e.TimeTotal, e.BytesPerSecond);
             };
             await streamCopier.Copy(token, sourceStream, destinationStream, sourceSize, 0, destinationOffset,
                 isVhd);
 
-            OnInformationMessage($"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
+            OnInformationMessage(
+                $"Imported '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
 
             if (destinationMedia.IsPhysicalDrive)
             {
@@ -143,18 +147,11 @@
             if (Enum.TryParse<MbrPartType>(partition, true, out var partitionType))
             {
                 return mbrPartitionTablePart.Parts
-                    .FirstOrDefault(x => x.PartType == PartType.Partition && x.BiosType == ((int)partitionType).ToString());
+                    .FirstOrDefault(x =>
+                        x.PartType == PartType.Partition && x.BiosType == ((int)partitionType).ToString());
             }
 
             return null;
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-            TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

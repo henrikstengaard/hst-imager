@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.Core.PhysicalDrives
+﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.PhysicalDrives
 {
     using System;
     using System.Collections.Generic;
@@ -22,7 +25,7 @@
         public readonly int PhysicalDriveNumber = physicalDriveNumber;
         public readonly string BusType = busType;
 
-        public override Stream Open()
+        public override Stream Open(bool useCache, CacheType cacheType, int blockSize)
         {
             if (SystemDrive)
             {
@@ -36,8 +39,12 @@
             dismountedDrives.AddRange(LockAndDismountVolumes(physicalDeviceNumber));
             dismountedDrives.AddRange(LockAndDismountDriveLetters(physicalDeviceNumber, driveLetters));
 
-            return new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
+            var baseStream = new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
                 byteSwap: ByteSwap, leaveOpen: false);
+            
+            return useCache
+                ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize, cacheType)
+                : baseStream;
         }
 
         private static int GetPhysicalDriveNumber(string path)

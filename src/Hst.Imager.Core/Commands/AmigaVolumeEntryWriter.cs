@@ -43,6 +43,7 @@ public class AmigaVolumeEntryWriter(
     private uint currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
     private bool disposed;
 
+    public Media Media => media;
     public string MediaPath => media.Path;
     public string FileSystemPath { get; } = fileSystemPath;
 

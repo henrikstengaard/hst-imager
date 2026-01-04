@@ -27,8 +27,6 @@ namespace Hst.Imager.Core.Commands.MbrCommands
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
-        public event EventHandler<DataProcessedEventArgs> DataProcessed;
-
         public MbrPartCloneCommand(ILogger<MbrPartCloneCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string srcPath, int srcPartitionNumber, string destPath,
             int destPartitionNumber)
@@ -147,7 +145,7 @@ namespace Hst.Imager.Core.Commands.MbrCommands
 
             OnDebugMessage($"Cloning partition from source offset '{srcOffset}' to destination offset '{destOffset}'");
 
-            var streamCopier = new StreamCopier();
+            using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>
             {
                 statusBytesProcessed = e.BytesProcessed;
@@ -165,14 +163,6 @@ namespace Hst.Imager.Core.Commands.MbrCommands
             }
 
             return new Result();
-        }
-
-        private void OnDataProcessed(bool indeterminate, double percentComplete, long bytesProcessed, long bytesRemaining, long bytesTotal,
-    TimeSpan timeElapsed, TimeSpan timeRemaining, TimeSpan timeTotal, long bytesPerSecond)
-        {
-            DataProcessed?.Invoke(this,
-                new DataProcessedEventArgs(indeterminate, percentComplete, bytesProcessed, bytesRemaining, bytesTotal, timeElapsed,
-                    timeRemaining, timeTotal, bytesPerSecond));
         }
     }
 }

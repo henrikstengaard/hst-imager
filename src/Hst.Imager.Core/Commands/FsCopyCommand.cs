@@ -147,8 +147,6 @@ public class FsCopyCommand(
                 await srcEntryIterator.Flush();
             }
 
-            await destEntryWriter.Flush();
-
             foreach (var log in destEntryWriter.GetDebugLogs())
             {
                 OnDebugMessage(log);

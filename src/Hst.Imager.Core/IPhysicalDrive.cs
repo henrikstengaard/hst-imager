@@ -1,4 +1,5 @@
 ﻿using System;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core
 {
@@ -15,7 +16,7 @@ namespace Hst.Imager.Core
         bool ByteSwap { get; }
         bool SystemDrive { get; }
 
-        Stream Open();
+        Stream Open(bool useCache, CacheType cacheType, int blockSize);
         void SetWritable(bool writable);
         void SetByteSwap(bool byteSwap);
         void SetSystemDrive(bool systemDrive);
