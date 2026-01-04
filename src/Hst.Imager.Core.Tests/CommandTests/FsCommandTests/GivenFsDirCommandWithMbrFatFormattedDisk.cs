@@ -650,10 +650,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
         private async Task CreateMbrTestDisk(TestCommandHelper testCommandHelper, string mbrDiskPath)
         {
             // disk sizes
-            var mbrDiskSize = 100.MB();
+            var mbrDiskSize = 100.MB().ToSectorSize();
 
             // add mbr disk media
-            testCommandHelper.AddTestMedia(mbrDiskPath, mbrDiskSize);
+            testCommandHelper.AddTestMedia(mbrDiskPath, 0);
 
             // mbr disk
             await CreateMbrFatFormattedDisk(testCommandHelper, mbrDiskPath, mbrDiskSize);

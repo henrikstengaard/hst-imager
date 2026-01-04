@@ -15,7 +15,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
     public class GivenRdbInitCommandWithPiStormRdb : FsCommandTestBase
     {
         [Fact]
-        public async Task When_Iniatializing2ndPiStormRdb_Then()
+        public async Task When_InitializingTwoPiStormRdbs_Then_PiStormRdbsAreInitialized()
         {
             // arrange - paths
             var mbrDiskPath = $"mbr_{Guid.NewGuid()}.vhd";
@@ -67,7 +67,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             var mbrDiskSize = 100.MB();
 
             // add mbr disk media
-            testCommandHelper.AddTestMedia(mbrDiskPath, mbrDiskSize);
+            testCommandHelper.AddTestMedia(mbrDiskPath, 0);
 
             // calculate mbr parttion start and end sectors
             var mbrPartition1StartSector = 63;

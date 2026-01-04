@@ -26,7 +26,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             // arrange - create format command
@@ -71,7 +71,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize,
                 create: true);
 
@@ -117,7 +117,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             // arrange - create format command
@@ -162,7 +162,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             // arrange - create format command
@@ -215,7 +215,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             // arrange - create format command
@@ -267,7 +267,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             var testCommandHelper = new TestCommandHelper();
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             // arrange - create format command
@@ -324,7 +324,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -386,7 +386,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -451,7 +451,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize,
                 create: true);
 
@@ -514,7 +514,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize,
                 create: true);
 
@@ -589,7 +589,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -663,7 +663,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.Pfs3AioBytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -705,7 +705,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos7Bytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -767,7 +767,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos3Bytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try
@@ -829,7 +829,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos3Bytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia(new List<IPhysicalDrive>(), diskPath, size: diskSize, create: true);
 
             try

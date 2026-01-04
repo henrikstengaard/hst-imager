@@ -21,7 +21,7 @@
             }
         }
 
-        private static readonly int consoleWindowWidth = GetConsoleWindowWidth();
+        private static readonly int ConsoleWindowWidth = GetConsoleWindowWidth();
 
         public static string PresentInfo(IEnumerable<MediaInfo> mediaInfos)
         {
@@ -99,15 +99,15 @@
             {
                 var row = new Row
                 {
-                    Columns = new[]
-                    {
+                    Columns =
+                    [
                         part.PartitionNumber.HasValue ? part.PartitionNumber.Value.ToString() : string.Empty,
                         FormatType(part),
                         part.Size.FormatBytes(),
                         part.StartOffset.ToString(),
                         part.EndOffset.ToString(),
                         string.Empty
-                    }
+                    ]
                 };
                 for (var i = 0; i < row.Columns.Length; i++)
                 {
@@ -123,7 +123,7 @@
                 rows.Add(row);
             }
 
-            var layoutWidth = consoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
+            var layoutWidth = ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
 
             if (layoutWidth < 10)
             {
@@ -182,8 +182,8 @@
             {
                 var row = new Row
                 {
-                    Columns = new[]
-                    {
+                    Columns =
+                    [
                         FormatStyle(part.PartitionTableType),
                         part.PartType == PartType.PartitionTable ? "Partition Table" : $"{part.PartitionType}",
                         $"{part.FileSystem}",
@@ -192,7 +192,7 @@
                         part.StartOffset.ToString(),
                         part.EndOffset.ToString(),
                         string.Empty
-                    }
+                    ]
                 };
                 for (var i = 0; i < row.Columns.Length; i++)
                 {
@@ -208,7 +208,7 @@
                 rows.Add(row);
             }
 
-            var layoutWidth = consoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
+            var layoutWidth = ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
 
             if (layoutWidth < 10)
             {
@@ -297,9 +297,14 @@
                 layoutLength = 1;
             }
 
-            var layoutEnd = layoutStart + layoutLength;
+            var layoutEnd = maxWidth - layoutStart - layoutLength;
+
+            if (layoutEnd < 0)
+            {
+                layoutEnd = 0;
+            }
             
-            return string.Concat(new string(' ', layoutStart), new string('=', layoutLength), new string(' ', maxWidth - layoutEnd));
+            return string.Concat(new string(' ', layoutStart), new string('=', layoutLength), new string(' ', layoutEnd));
         }
     }
 }

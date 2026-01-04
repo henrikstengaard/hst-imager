@@ -10,7 +10,6 @@ using Hst.Core.Extensions;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
-using System.IO.Enumeration;
 using System.Threading;
 
 namespace Hst.Imager.Core.Tests.CommandTests
@@ -244,7 +243,7 @@ namespace Hst.Imager.Core.Tests.CommandTests
             await testCommandHelper.AddTestMedia(fileSystemPath, fileSystemPath, data: TestHelper.FastFileSystemDos7Bytes);
 
             // arrange - add disk
-            testCommandHelper.AddTestMedia(diskPath, diskSize);
+            testCommandHelper.AddTestMedia(diskPath, 0);
             await testCommandHelper.GetWritableMedia([], diskPath, size: diskSize, create: true);
 
             try

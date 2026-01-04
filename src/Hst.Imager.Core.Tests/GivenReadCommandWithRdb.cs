@@ -31,7 +31,7 @@ public class GivenReadCommandWithRdb : CommandTestBase
         var testCommandHelper = new TestCommandHelper();
 
         // arrange - create src and dest medias
-        testCommandHelper.AddTestMedia(srcPath, 100.MB().ToSectorSize());
+        testCommandHelper.AddTestMedia(srcPath, 0);
         await testCommandHelper.AddTestMedia(destPath, destPath);
 
         // arrange - create src rdb disk with 2 partitions
@@ -73,7 +73,7 @@ public class GivenReadCommandWithRdb : CommandTestBase
         var testCommandHelper = new TestCommandHelper();
 
         // arrange - create src and dest medias
-        testCommandHelper.AddTestMedia(srcPath, 100.MB().ToSectorSize());
+        testCommandHelper.AddTestMedia(srcPath, 0);
         await testCommandHelper.AddTestMedia(destPath, destPath);
 
         // arrange - create src rdb disk with 2 partitions

@@ -82,7 +82,8 @@ namespace Hst.Imager.Core.Tests
         
         public async Task CreateTestMedia(string path, long size = 0, byte[] data = null, bool createTestData = false)
         {
-            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), size));
+            TestMedias.Add(new TestMedia(path, Path.GetFileNameWithoutExtension(path), 
+                Path.GetExtension(path).Equals(".vhd", StringComparison.OrdinalIgnoreCase) ? 0 : size));
 
             var mediaResult = await GetWritableFileMedia(path, size: size, create: true);
             using var media = mediaResult.Value;
@@ -231,9 +232,11 @@ namespace Hst.Imager.Core.Tests
             }
 
             var stream = testMedia.Stream;
-            var vhdDisk = create || testMedia.Stream.Length == 0
-                ? DiscUtils.Vhd.Disk.InitializeDynamic(testMedia.Stream, Ownership.None, size ?? 0)
+            var isEmptyStream = stream.Length == 0;
+            var vhdDisk = create || isEmptyStream
+                ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
+
             var sectorStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true);
             return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, 
                 Media.MediaType.Vhd, false, vhdDisk, false, sectorStream)));

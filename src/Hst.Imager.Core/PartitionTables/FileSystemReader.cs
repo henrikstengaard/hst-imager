@@ -1,12 +1,11 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using DiscUtils;
+using DiscUtils.ExFat;
 using DiscUtils.Fat;
 using DiscUtils.HfsPlus;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
-using ExFat.DiscUtils;
 using Hst.Imager.Core.FileSystems.Ext;
 
 namespace Hst.Imager.Core.PartitionTables;
