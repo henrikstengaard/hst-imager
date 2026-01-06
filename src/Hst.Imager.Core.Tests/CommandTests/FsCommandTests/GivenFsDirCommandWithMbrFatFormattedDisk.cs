@@ -647,6 +647,34 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             Assert.Equal(expectedFileNames, fileNames);
         }
 
+        [Fact]
+        public async Task When_ListingEntriesInNonExistingDirectory_Then_ErrorIsReturned()
+        {
+            // arrange - paths
+            var mediaPath = $"mbr_{Guid.NewGuid()}.vhd";
+            var dirPath = Path.Combine(mediaPath, "mbr", "1", Guid.NewGuid().ToString());
+            const bool recursive = false;
+
+            // arrange - test command helper
+            var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create mdr disk
+            await CreateMbrTestDisk(testCommandHelper, mediaPath);
+
+            // arrange - create fs dir command
+            var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                dirPath, recursive);
+
+            // act - execute fs dir command
+            var result = await fsDirCommand.Execute(CancellationToken.None);
+            
+            // assert - result is faulted with path not found error
+            Assert.NotNull(result);
+            Assert.True(result.IsFaulted); 
+            Assert.IsType<PathNotFoundError>(result.Error);
+        }
+        
         private async Task CreateMbrTestDisk(TestCommandHelper testCommandHelper, string mbrDiskPath)
         {
             // disk sizes
@@ -678,27 +706,27 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
 
             using var fatFileSystem = new FatFileSystem(partition.Open());
 
-            using (fatFileSystem.OpenFile("file1.txt", FileMode.Create))
+            await using (fatFileSystem.OpenFile("file1.txt", FileMode.Create))
             {
             }
 
             fatFileSystem.CreateDirectory("dir1");
 
-            using (fatFileSystem.OpenFile("dir1\\file2.txt", FileMode.Create))
+            await using (fatFileSystem.OpenFile("dir1\\file2.txt", FileMode.Create))
             {
             }
 
             fatFileSystem.CreateDirectory("dir1\\dir2");
 
-            using (fatFileSystem.OpenFile("dir1\\dir2\\file3.txt", FileMode.Create))
+            await using (fatFileSystem.OpenFile("dir1\\dir2\\file3.txt", FileMode.Create))
             {
             }
 
-            using (fatFileSystem.OpenFile("dir1\\dir2\\file4.txt", FileMode.Create))
+            await using (fatFileSystem.OpenFile("dir1\\dir2\\file4.txt", FileMode.Create))
             {
             }
 
-            using (fatFileSystem.OpenFile("dir1\\dir2\\data.bin", FileMode.Create))
+            await using (fatFileSystem.OpenFile("dir1\\dir2\\data.bin", FileMode.Create))
             {
             }
         }

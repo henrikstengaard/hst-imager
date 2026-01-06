@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -9,8 +10,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lzx;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using PathComponents;
+using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class LzxArchiveEntryIterator : IEntryIterator
@@ -18,7 +19,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
     private readonly Stream stream;
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
-    private string[] rootPathComponents;
+    private readonly string[] rootPathComponents;
     private PathComponentMatcher pathComponentMatcher;
     private readonly LzxArchive lzxArchive;
     private readonly bool recursive;
@@ -27,6 +28,9 @@ public class LzxArchiveEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool disposed;
     private readonly IDictionary<string, byte[]> lzxEntryIndex;
+    private readonly IList<LzxEntry> lzxEntries = new List<LzxEntry>();
+    private bool initialized;
+    private readonly HashSet<string> dirHasEntries = [];
 
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
@@ -34,21 +38,15 @@ public class LzxArchiveEntryIterator : IEntryIterator
     public LzxArchiveEntryIterator(Stream stream, string rootPath, LzxArchive lzxArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = MediaPath.LzxArchivePath;
+        mediaPath = MediaPath.LzxArchivePath;
         this.rootPath = rootPath;
         this.lzxArchive = lzxArchive;
         this.recursive = recursive;
-        this.nextEntries = new Stack<Entry>();
-        this.currentEntry = null;
-        this.isFirst = true;
-        this.lzxEntryIndex = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
-
-        var pathComponents = GetPathComponents(rootPath);
-        var hasPattern = pathComponents.Length > 0 &&
-            pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
-        this.rootPathComponents =
-            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
+        nextEntries = new Stack<Entry>();
+        currentEntry = null;
+        isFirst = true;
+        lzxEntryIndex = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
+        rootPathComponents = GetPathComponents(rootPath);
     }
 
     private void Dispose(bool disposing)
@@ -68,14 +66,75 @@ public class LzxArchiveEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
-    public Task Initialize()
+    public async Task<Result> Initialize()
     {
-        return Task.CompletedTask;
+        var hasWildcard = rootPathComponents.Length > 0 && PathComponentHelper.HasWildcard(rootPathComponents[^1]);
+        var validDirComponents = Array.Empty<string>();
+        var entriesExist = false;
+
+        while (await lzxArchive.Next() is { } lzxEntry)
+        {
+            lzxEntries.Add(lzxEntry);
+            
+            var entryPath = lzxEntry.Name;
+            
+            // extract lzx entry
+            using (var memoryStream = new MemoryStream())
+            {
+                await lzxArchive.Extract(memoryStream);
+                lzxEntryIndex.Add(entryPath, memoryStream.ToArray());
+            }
+            
+            var entryPathComponents = mediaPath.Split(entryPath);
+
+            var pathComponentMatch = PathComponentHelper.MatchPathComponents(rootPathComponents, entryPathComponents);
+
+            if (!pathComponentMatch.Success)
+            {
+                continue;
+            }
+            
+            entriesExist = true;
+                
+            if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
+            {
+                validDirComponents = pathComponentMatch.MatchingPathComponents;
+            }
+        }
+        
+        if (!entriesExist)
+        {
+            return new Result(new PathNotFoundError($"Path not found '{rootPath}'", rootPath));
+        }        
+
+        DirPathComponents = rootPathComponents.Length > 0 ? validDirComponents.ToArray() : [];
+        pathComponentMatcher = new PathComponentMatcher(hasWildcard && rootPathComponents.Length > 0
+            ? rootPathComponents.ToArray() : [], recursive: recursive);
+        initialized = true;
+
+        return new Result();
     }
 
+    private void ThrowIfNotInitialized()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("File system entry iterator not initialized");
+    }
+
+    /// <summary>
+    /// Root path components of iterator.
+    /// </summary>
     public string[] PathComponents => rootPathComponents;
 
-    public string[] DirPathComponents => rootPathComponents;
+    /// <summary>
+    /// Dir path components from root path components that exist and is set during initialization.
+    /// </summary>
+    public string[] DirPathComponents { get; private set; } = [];
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -85,71 +144,90 @@ public class LzxArchiveEntryIterator : IEntryIterator
     public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
                                          nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
-    public async Task<bool> Next()
+    public Task<bool> Next()
     {
+        ThrowIfNotInitialized();
+        
         if (isFirst)
         {
             isFirst = false;
             currentEntry = null;
-            await EnqueueEntries();
+            EnqueueEntries();
         }
 
-        if (this.nextEntries.Count <= 0)
+        if (nextEntries.Count <= 0)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        currentEntry = this.nextEntries.Pop();
+        bool skipEntry;
+        do
+        {
+            currentEntry = nextEntries.Pop();
+            
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
+            {
+                return Task.FromResult(true);
+            }
 
-        return true;
+            if (recursive)
+            {
+                var dirPath = mediaPath.Join(currentEntry.FullPathComponents);
+                skipEntry = pathComponentMatcher.UsesPattern && !dirHasEntries.Contains(dirPath);
+            }
+            else
+            {
+                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
+                    currentEntry.RelativePathComponents, recursive);
+            }
+        } while (nextEntries.Count > 0 && skipEntry);
+
+        return Task.FromResult(true);
     }
     
     public Task<Stream> OpenEntry(Entry entry)
     {
-        if (!lzxEntryIndex.ContainsKey(entry.RawPath))
-        {
-            throw new IOException($"Entry '{entry.RawPath}' not found");
-        }
-
-        return Task.FromResult<Stream>(new MemoryStream(lzxEntryIndex[entry.RawPath]));
+        return !lzxEntryIndex.TryGetValue(entry.RawPath, out var zipEntry)
+            ? throw new IOException($"Entry '{entry.RawPath}' not found")
+            : Task.FromResult<Stream>(new MemoryStream(zipEntry));
     }
     
-    private async Task EnqueueEntries()
+    private void EnqueueEntries()
     {
         var uniqueEntries = new Dictionary<string, Entry>();
 
-        while (await lzxArchive.Next() is { } lzxEntry)
+        foreach (var lzxEntry in lzxEntries)
         {
             var entryPath = lzxEntry.Name;
-
-            // extract lzx entry
-            using (var memoryStream = new MemoryStream())
-            {
-                await lzxArchive.Extract(memoryStream);
-                lzxEntryIndex.Add(entryPath, memoryStream.ToArray());
-            }
             
             var isDir = entryPath.EndsWith("//");
 
             var protectionBits = GetProtectionBits(lzxEntry.Attributes);
             var properties = new Dictionary<string, string>
             {
-                { Core.Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
+                { Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
             };
 
             if (!string.IsNullOrEmpty(lzxEntry.Comment))
             {
-                properties.Add(Core.Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
+                properties.Add(Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
             }
 
             var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
 
-            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryPath, lzxEntry.Name, isDir, lzxEntry.Date, lzxEntry.UnpackedSize,
                 EntryFormatter.FormatProtectionBits(protectionBits), properties, dirAttributes).ToList();
 
             foreach (var entry in entries)
             {
+                if (entry.Type == Models.FileSystems.EntryType.File)
+                {
+                    var dirPath =
+                        mediaPath.Join(entry.FullPathComponents.Take(entry.FullPathComponents.Length - 1).ToArray());
+                    dirHasEntries.Add(dirPath);
+                }
+                
                 uniqueEntries[entry.Name] = entry;
             }
         }
@@ -158,37 +236,6 @@ public class LzxArchiveEntryIterator : IEntryIterator
         {
             nextEntries.Push(entry);
         }
-    }
-
-    private static Entry CreateFileEntry(IMediaPath mediaPath, LzxEntry lzxEntry,
-        string[] fullPathComponents, string[] relativePathComponents)
-    {
-        var protectionBits = GetProtectionBits(lzxEntry.Attributes);
-        var properties = new Dictionary<string, string>
-        {
-            { Core.Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
-        };
-
-        if (!string.IsNullOrEmpty(lzxEntry.Comment))
-        {
-            properties.Add(Core.Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
-        }
-
-        var entryRelativePath = mediaPath.Join(relativePathComponents.ToArray());
-
-        return new Entry
-        {
-            Name = entryRelativePath,
-            FormattedName = entryRelativePath,
-            RawPath = lzxEntry.Name,
-            FullPathComponents = fullPathComponents.ToArray(),
-            RelativePathComponents = relativePathComponents.ToArray(),
-            Date = lzxEntry.Date,
-            Size = lzxEntry.UnpackedSize,
-            Type = Models.FileSystems.EntryType.File,
-            Attributes = EntryFormatter.FormatProtectionBits(protectionBits),
-            Properties = properties
-        };
     }
 
     private static ProtectionBits GetProtectionBits(AttributesEnum attributes)

@@ -40,10 +40,15 @@ namespace Hst.Imager.Core.Commands
                 ? diskMedia.Disk.Content
                 : media.Stream;
 
-            var fileSystems = await GetFileSystemsFromMedia(media, mediaPath, mediaStream,
+            var fileSystemsResult = await GetFileSystemsFromMedia(media, mediaPath, mediaStream,
                 fileSystemName);
+            if (fileSystemsResult.IsFaulted)
+            {
+                return new Result<Tuple<string, byte[]>>(fileSystemsResult.Error);
+            }
 
-            var fileSystemWithHighestVersion = fileSystems.OrderDescending(new FileSystemVersionComparer())
+            var fileSystemWithHighestVersion = fileSystemsResult.Value
+                .OrderDescending(new FileSystemVersionComparer())
                 .FirstOrDefault();
 
             if (fileSystemWithHighestVersion == null)
@@ -54,12 +59,12 @@ namespace Hst.Imager.Core.Commands
             return new Result<Tuple<string, byte[]>>(fileSystemWithHighestVersion);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> GetFileSystemsFromMedia(Media media,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> GetFileSystemsFromMedia(Media media,
             string mediaPath, Stream mediaStream, string fileSystemName)
         {
-            // read first 100kb from media
-            var firstBytes = await mediaStream.ReadBytes((int)(mediaStream.Length > 100.KB()
-                ? 100.KB()
+            // read first 10mb from media
+            var firstBytes = await mediaStream.ReadBytes((int)(mediaStream.Length > 10.MB()
+                ? 10.MB()
                 : mediaStream.Length));
 
             mediaStream.Position = 0;
@@ -102,26 +107,31 @@ namespace Hst.Imager.Core.Commands
                 return await FindFileSystemsInMbrPiStormRdb(mediaStream, fileSystemName);
             }
 
-            return new List<Tuple<string, byte[]>>();
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>());
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> GetMediaAsFileSystem(Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> GetMediaAsFileSystem(Stream stream,
             string fileSystemName)
         {
             using var fileSystemStream = new MemoryStream();
             await stream.CopyToAsync(fileSystemStream);
 
-            return new List<Tuple<string, byte[]>>([
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>([
                 new Tuple<string, byte[]>(fileSystemName, fileSystemStream.ToArray())
-            ]);
+            ]));
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInIso(Media media, Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInIso(Media media, Stream stream,
             string fileSystemName)
         {
             var cdReader = new CDReader(stream, true);
             var iso9660Iterator = new Iso9660EntryIterator(stream, string.Empty, cdReader, true);
-
+            var initializeResult = await iso9660Iterator.Initialize();
+            if (initializeResult.IsFaulted)
+            {
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
+            }
+            
             var fileSystems = new List<Tuple<string, byte[]>>();
 
             while (await iso9660Iterator.Next())
@@ -136,24 +146,34 @@ namespace Hst.Imager.Core.Commands
 
                 var adfStream = await iso9660Iterator.OpenEntry(entry);
 
-                fileSystems.AddRange(await FindFileSystemsInAdf(media, adfStream, fileSystemName));
+                var fileSystemsResult = await FindFileSystemsInAdf(media, adfStream, fileSystemName);
+                if (fileSystemsResult.IsFaulted)
+                {
+                    return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystemsResult.Error);
+                }
+                
+                fileSystems.AddRange(fileSystemsResult.Value);
             }
 
-            return fileSystems;
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystems);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInLha(Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInLha(Stream stream,
             string fileSystemName)
         {
             var lhaArchive = new LhaArchive(stream);
             var lhaEntryIterator = new LhaArchiveEntryIterator(stream, string.Empty, lhaArchive, true);
 
-            await lhaEntryIterator.Initialize();
+            var initializeResult = await lhaEntryIterator.Initialize();
+            if (initializeResult.IsFaulted)
+            {
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
+            }
             
             return await FindFileSystemsInEntryIterator(lhaEntryIterator, fileSystemName);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInAdf(Media media, Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInAdf(Media media, Stream stream,
             string fileSystemName)
         {
             var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
@@ -161,12 +181,16 @@ namespace Hst.Imager.Core.Commands
             var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.None, 0,
                 fastFileSystemVolume, [], true);
 
-            await amigaVolumeEntryIterator.Initialize();
+            var initializeResult = await amigaVolumeEntryIterator.Initialize();
+            if (initializeResult.IsFaulted)
+            {
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
+            }
             
             return await FindFileSystemsInEntryIterator(amigaVolumeEntryIterator, fileSystemName);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInEntryIterator(
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInEntryIterator(
             IEntryIterator entryIterator, string fileSystemName)
         {
             var fileSystems = new List<Tuple<string, byte[]>>();
@@ -191,24 +215,26 @@ namespace Hst.Imager.Core.Commands
                 fileSystems.Add(new Tuple<string, byte[]>(fileName, fileSystemStream.ToArray()));
             }
 
-            return fileSystems;
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystems);
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInRdb(Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInRdb(Stream stream,
             string fileSystemName)
         {
             var rigidDiskBlock = await Amiga.RigidDiskBlocks.RigidDiskBlockReader.Read(stream);
 
             if (rigidDiskBlock == null)
             {
-                return new List<Tuple<string, byte[]>>();
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>());
             }
             
-            return rigidDiskBlock.FileSystemHeaderBlocks
+            var fileSystems = rigidDiskBlock.FileSystemHeaderBlocks
                 .Where(x => IsDosTypeValidForFileSystem(x.DosType, fileSystemName))
                 .Select(x => new Tuple<string, byte[]>(fileSystemName, 
                     x.LoadSegBlocks.SelectMany(loadSegBlock => loadSegBlock.Data).ToArray()))
                 .ToList();
+
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystems);
         }
 
         private static bool IsDosTypeValidForFileSystem(byte[] dosType, string fileSystemName)
@@ -236,7 +262,7 @@ namespace Hst.Imager.Core.Commands
             return false;
         }
 
-        private static async Task<IEnumerable<Tuple<string, byte[]>>> FindFileSystemsInMbrPiStormRdb(Stream stream,
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInMbrPiStormRdb(Stream stream,
             string fileSystemName)
         {
             BiosPartitionTable biosPartitionTable;
@@ -249,7 +275,7 @@ namespace Hst.Imager.Core.Commands
             }
             catch (Exception)
             {
-                return [];
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>());
             }
 
             if (!biosPartitionTable.DiskGeometry.HasValue)
@@ -266,11 +292,16 @@ namespace Hst.Imager.Core.Commands
                 var partitionSize = (partitionInfo.LastSector - partitionInfo.FirstSector + 1) * biosPartitionTable.DiskGeometry.Value.BytesPerSector;
                 
                 var partitionStream = new SubStream(stream, partitionStartOffset, partitionSize);
+                var fileSystemsResult = await FindFileSystemsInRdb(partitionStream, fileSystemName);
+                if (fileSystemsResult.IsFaulted)
+                {
+                    return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystemsResult.Error);
+                }
                 
-                fileSystems.AddRange(await FindFileSystemsInRdb(partitionStream, fileSystemName));
+                fileSystems.AddRange(fileSystemsResult.Value);
             }
 
-            return fileSystems;
+            return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystems);
         }
     }
 }

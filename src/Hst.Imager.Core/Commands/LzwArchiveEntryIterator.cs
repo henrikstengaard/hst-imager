@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Hst.Core;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -35,9 +36,9 @@ public class LzwArchiveEntryIterator : IEntryIterator
     {
     }
 
-    public Task Initialize()
+    public Task<Result> Initialize()
     {
-        return Task.CompletedTask;
+        return Task.FromResult(new Result());
     }
 
     public string[] PathComponents { get; }
