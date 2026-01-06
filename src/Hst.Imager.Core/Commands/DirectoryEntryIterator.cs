@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Helpers;
+﻿using Hst.Core;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -9,10 +10,10 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Caching;
 using System.Threading.Tasks;
-using Hst.Amiga.DataTypes.UaeFsDbs;
-using Hst.Amiga.DataTypes.UaeMetafiles;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using Amiga.DataTypes.UaeFsDbs;
+using Amiga.DataTypes.UaeMetafiles;
+using PathComponents;
+using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class DirectoryEntryIterator : IEntryIterator
@@ -42,13 +43,13 @@ public class DirectoryEntryIterator : IEntryIterator
         dirPath = Directory.Exists(rootPath) ? rootPath : Path.GetDirectoryName(rootPath);
     }
 
-    public Task Initialize()
+    public Task<Result> Initialize()
     {
         IsSingleFileEntryNext = File.Exists(this.rootPath);
         
         if (!Directory.Exists(dirPath))
         {
-            throw new DirectoryNotFoundException(dirPath);
+            return Task.FromResult(new Result(new PathNotFoundError("Path not found '{dirPath}'", dirPath)));
         }
         
         var pathComponents = GetPathComponents(rootPath);
@@ -62,7 +63,7 @@ public class DirectoryEntryIterator : IEntryIterator
         pathComponentMatcher = new PathComponentMatcher(usePattern ? pathComponents : [], 
             isFile: IsSingleFileEntryNext, recursive: recursive);
         
-        return Task.CompletedTask;
+        return Task.FromResult(new Result());
     }
 
     public string[] PathComponents => rootPathComponents;

@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -9,8 +10,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Compression.Lha;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using PathComponents;
+using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
 
 public class LhaArchiveEntryIterator : IEntryIterator
@@ -18,7 +19,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
     private readonly Stream stream;
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
-    private string[] rootPathComponents;
+    private readonly string[] rootPathComponents;
     private PathComponentMatcher pathComponentMatcher;
     private readonly LhaArchive lhaArchive;
     private readonly bool recursive;
@@ -26,6 +27,9 @@ public class LhaArchiveEntryIterator : IEntryIterator
     private bool isFirst;
     private Entry currentEntry;
     private readonly IDictionary<string, LzHeader> lhaEntryIndex;
+    private IList<LzHeader> lhaEntries = new List<LzHeader>();
+    private bool initialized;
+    private readonly HashSet<string> dirHasEntries = [];
 
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
@@ -33,32 +37,91 @@ public class LhaArchiveEntryIterator : IEntryIterator
     public LhaArchiveEntryIterator(Stream stream, string rootPath, LhaArchive lhaArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = MediaPath.LhaArchivePath;
+        mediaPath = MediaPath.LhaArchivePath;
         this.rootPath = rootPath;
         this.lhaArchive = lhaArchive;
         this.recursive = recursive;
-        this.nextEntries = new Stack<Entry>();
-        this.currentEntry = null;
-        this.isFirst = true;
-        this.lhaEntryIndex = new Dictionary<string, LzHeader>(StringComparer.OrdinalIgnoreCase);
-
-        var pathComponents = GetPathComponents(rootPath);
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
-        this.rootPathComponents = this.pathComponentMatcher.PathComponents;
+        nextEntries = new Stack<Entry>();
+        currentEntry = null;
+        isFirst = true;
+        lhaEntryIndex = new Dictionary<string, LzHeader>(StringComparer.OrdinalIgnoreCase);
+        rootPathComponents = GetPathComponents(rootPath);
     }
 
     public void Dispose()
     {
+        lhaArchive.Dispose();
+        stream.Dispose();
     }
 
-    public Task Initialize()
+    public async Task<Result> Initialize()
     {
-        return Task.CompletedTask;
+        lhaEntries = (await lhaArchive.Entries()).ToList();
+
+        if (rootPathComponents.Length == 0)
+        {
+            DirPathComponents = [];
+            pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
+            initialized = true;
+            return new Result();
+        }
+        
+        var hasWildcard = PathComponentHelper.HasWildcard(rootPathComponents[^1]);
+        var validDirComponents = Array.Empty<string>();
+        var entriesExist = false;
+        foreach (var lhaEntry in lhaEntries)
+        {
+            var entryPath = GetEntryName(lhaEntry.Name);
+            
+            var entryPathComponents = mediaPath.Split(entryPath);
+
+            var pathComponentMatch = PathComponentHelper.MatchPathComponents(rootPathComponents, entryPathComponents);
+
+            if (!pathComponentMatch.Success)
+            {
+                continue;
+            }
+            
+            entriesExist = true;
+                
+            if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
+            {
+                validDirComponents = pathComponentMatch.MatchingPathComponents;
+            }
+        }
+        
+        if (!entriesExist)
+        {
+            return new Result(new PathNotFoundError($"Path not found '{rootPath}'", rootPath));
+        }        
+
+        DirPathComponents = validDirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcher(hasWildcard ? rootPathComponents.ToArray() : [], recursive: recursive);
+        initialized = true;
+
+        return new Result();
     }
 
+    private void ThrowIfNotInitialized()
+    {
+        if (initialized)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("File system entry iterator not initialized");
+    }
+
+    /// <summary>
+    /// Root path components of iterator.
+    /// </summary>
     public string[] PathComponents => rootPathComponents;
 
-    public string[] DirPathComponents => rootPathComponents;
+    /// <summary>
+    /// Dir path components from root path components that exist and is set during initialization.
+    /// </summary>
+    public string[] DirPathComponents { get; private set; } = [];
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -68,23 +131,45 @@ public class LhaArchiveEntryIterator : IEntryIterator
     public bool IsSingleFileEntryNext => 1 == nextEntries.Count && 
                                          nextEntries.All(x => x.Type == Models.FileSystems.EntryType.File);
 
-    public async Task<bool> Next()
+    public Task<bool> Next()
     {
+        ThrowIfNotInitialized();
+        
         if (isFirst)
         {
             isFirst = false;
             currentEntry = null;
-            await EnqueueEntries();
+            EnqueueEntries();
         }
 
-        if (this.nextEntries.Count <= 0)
+        if (nextEntries.Count <= 0)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
-        currentEntry = this.nextEntries.Pop();
+        bool skipEntry;
+        do
+        {
+            currentEntry = nextEntries.Pop();
+            
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
+            {
+                return Task.FromResult(true);
+            }
 
-        return true;
+            if (recursive)
+            {
+                var dirPath = mediaPath.Join(currentEntry.FullPathComponents);
+                skipEntry = pathComponentMatcher.UsesPattern && !dirHasEntries.Contains(dirPath);
+            }
+            else
+            {
+                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
+                    currentEntry.RelativePathComponents, recursive);
+            }
+        } while (nextEntries.Count > 0 && skipEntry);
+
+        return Task.FromResult(true);
     }
 
     public Task<Stream> OpenEntry(Entry entry)
@@ -95,15 +180,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
         }
 
         var output = new MemoryStream();
-        this.lhaArchive.Extract(lhaEntryIndex[entry.RawPath], output);
+        lhaArchive.Extract(lhaEntryIndex[entry.RawPath], output);
         output.Position = 0;
         return Task.FromResult<Stream>(output);
     }
 
-    private async Task EnqueueEntries()
+    private void EnqueueEntries()
     {
-        var lhaEntries = (await lhaArchive.Entries()).ToList();
-
         var uniqueEntries = new Dictionary<string, Entry>();
 
         foreach (var lhaEntry in lhaEntries)
@@ -112,7 +195,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
             lhaEntryIndex.Add(entryPath, lhaEntry);
 
-            var isDir = entryPath.EndsWith("\\");
+            var isDir = entryPath.EndsWith('\\');
 
             var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute);
             var properties = new Dictionary<string, string>
@@ -127,7 +210,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
             var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
 
-            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
             recursive, entryPath, entryPath, isDir, lhaEntry.UnixLastModifiedStamp, lhaEntry.OriginalSize,
             EntryFormatter.FormatProtectionBits(protectionBits), properties, dirAttributes).ToList();
 
@@ -136,6 +219,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 if (entry.Type == Models.FileSystems.EntryType.Dir && rootPath.Equals(entry.RawPath))
                 {
                     continue;
+                }
+                
+                if (entry.Type == Models.FileSystems.EntryType.File)
+                {
+                    var dirPath =
+                        mediaPath.Join(entry.FullPathComponents.Take(entry.FullPathComponents.Length - 1).ToArray());
+                    dirHasEntries.Add(dirPath);
                 }
                 
                 uniqueEntries[entry.Name] = entry;

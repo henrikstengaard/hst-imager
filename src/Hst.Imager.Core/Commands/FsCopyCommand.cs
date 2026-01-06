@@ -182,8 +182,10 @@ public class FsCopyCommand(
         var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
         if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
         {
-            await directoryEntryIterator.Value.Initialize();
-            return new Result<IEntryIterator>(directoryEntryIterator.Value);
+            var initializeResult = await directoryEntryIterator.Value.Initialize();
+            return initializeResult.IsSuccess
+                ? new Result<IEntryIterator>(directoryEntryIterator.Value)
+                : new Result<IEntryIterator>(initializeResult.Error);
         }
 
         // path is not a directory, so must be a file
@@ -205,8 +207,10 @@ public class FsCopyCommand(
             var fileEntryIterator = await GetFileEntryIterator(path, recursive);
             if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
             {
-                await fileEntryIterator.Value.Initialize();
-                return new Result<IEntryIterator>(fileEntryIterator.Value);
+                var initializeResult = await fileEntryIterator.Value.Initialize();
+                return initializeResult.IsSuccess
+                    ? new Result<IEntryIterator>(fileEntryIterator.Value)
+                    : new Result<IEntryIterator>(initializeResult.Error);
             }
         }
         
@@ -222,8 +226,10 @@ public class FsCopyCommand(
         {
             var rootPathComponents = entryIteratorFileSystemPathComponents;
             var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
-            await entryIterator.Initialize();
-            return new Result<IEntryIterator>(entryIterator);
+            var initializeResult = await entryIterator.Initialize();
+            return initializeResult.IsSuccess
+                ? new Result<IEntryIterator>(entryIterator)
+                : new Result<IEntryIterator>(initializeResult.Error);
         }
         
         if (mediaResult.Value.MediaPath == entryWriter.MediaPath &&
@@ -232,16 +238,20 @@ public class FsCopyCommand(
         {
             var rootPathComponents = entryIteratorFileSystemPathComponents.Skip(2).ToArray();
             var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
-            await entryIterator.Initialize();
-            return new Result<IEntryIterator>(entryIterator);
+            var initializeResult = await entryIterator.Initialize();
+            return initializeResult.IsSuccess
+                ? new Result<IEntryIterator>(entryIterator)
+                : new Result<IEntryIterator>(initializeResult.Error);
         }
 
         // floppy or disk entry iterator
         var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
         if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
         {
-            await diskEntryIterator.Value.Initialize();
-            return new Result<IEntryIterator>(diskEntryIterator.Value);
+            var initializeResult = await diskEntryIterator.Value.Initialize();
+            return initializeResult.IsSuccess
+                ? new Result<IEntryIterator>(diskEntryIterator.Value)
+                : new Result<IEntryIterator>(initializeResult.Error);
         }
 
         return new Result<IEntryIterator>(new Error($"Unsupported path '{path}'"));

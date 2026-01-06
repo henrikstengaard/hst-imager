@@ -1,4 +1,5 @@
 ﻿using DiscUtils.Ntfs;
+using Hst.Core;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -84,14 +85,14 @@ public class FileSystemEntryIterator(
 
     public void Dispose() => Dispose(true);
 
-    public Task Initialize()
+    public Task<Result> Initialize()
     {
         if (rootPathComponents.Length == 0)
         {
             DirPathComponents = [];
             pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
             initialized = true;
-            return Task.CompletedTask;
+            return Task.FromResult(new Result());
         }
 
         var dirComponents = new List<string>();
@@ -111,23 +112,25 @@ public class FileSystemEntryIterator(
                 continue;
             }
 
-            // use pattern, if last path componenets is not a directory
+            // use pattern, if last path component is not a directory
             if (validDirComponents.Count == PathComponents.Length - 1)
             {
                 usePattern = true;
                 IsSingleFileEntryNext = fileSystem.FileExists(dirPath) && PathComponents.Length > 0;
-                break;
+                if (IsSingleFileEntryNext || PathComponentHelper.HasWildcard(pathComponent))
+                {
+                    break;
+                }
             }
 
-            // two or more path components doesnt exist, throw io exception
-            throw new IOException($"Path not found '{dirPath}'");
+            return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{dirPath}'", dirPath)));
         }
 
         DirPathComponents = validDirComponents.ToArray();
         pathComponentMatcher = new PathComponentMatcher(usePattern ? dirComponents.ToArray() : [], recursive: recursive);
 
         initialized = true;
-        return Task.CompletedTask;
+        return Task.FromResult(new Result());
     }
     
     private void ThrowIfNotInitialized()

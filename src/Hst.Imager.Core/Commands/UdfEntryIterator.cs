@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Udf;
+using Hst.Core;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
@@ -63,9 +64,9 @@ public class UdfEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
-    public Task Initialize()
+    public Task<Result> Initialize()
     {
-        return Task.CompletedTask;
+        return Task.FromResult(new Result());
     }
 
     public string[] PathComponents => rootPathComponents;

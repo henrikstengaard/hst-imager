@@ -30,7 +30,7 @@ public class PathComponentMatcher
         var lastPathComponent = hasPathComponents ? pathComponents[^1].Trim() : string.Empty;
 
         // uses pattern is only set if the last path component exists, is more than 1 character long and contains a wildcard
-        var hasWildcard = lastPathComponent.Contains("*", StringComparison.OrdinalIgnoreCase);
+        var hasWildcard = PathComponentHelper.HasWildcard(lastPathComponent);
 
         UsesPattern = lastPathComponent.Length > 1 && hasWildcard;
         PathComponents = isFile || hasWildcard

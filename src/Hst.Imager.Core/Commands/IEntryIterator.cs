@@ -1,8 +1,9 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
-using Hst.Imager.Core.UaeMetadatas;
+using UaeMetadatas;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -10,7 +11,7 @@ using Entry = Models.FileSystems.Entry;
 
 public interface IEntryIterator : IDisposable
 {
-    Task Initialize();
+    Task<Result> Initialize();
     string[] PathComponents { get; }
     string[] DirPathComponents { get; }
     

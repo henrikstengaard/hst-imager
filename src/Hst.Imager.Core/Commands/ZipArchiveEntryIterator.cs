@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -9,19 +10,18 @@ using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
-using Hst.Imager.Core.Compressions.Zip;
-using Hst.Imager.Core.Helpers;
-using Hst.Imager.Core.PathComponents;
-using Hst.Imager.Core.UaeMetadatas;
+using Compressions.Zip;
+using Helpers;
+using PathComponents;
+using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
-using EntryType = Models.FileSystems.EntryType;
 
 public class ZipArchiveEntryIterator : IEntryIterator
 {
     private readonly Stream stream;
     private readonly IMediaPath mediaPath;
     private readonly string rootPath;
-    private string[] rootPathComponents;
+    private readonly string[] rootPathComponents;
     private PathComponentMatcher pathComponentMatcher;
     private readonly ZipArchive zipArchive;
     private readonly bool recursive;
@@ -29,6 +29,9 @@ public class ZipArchiveEntryIterator : IEntryIterator
     private bool isFirst;
     private Entry currentEntry;
     private readonly IDictionary<string, ZipArchiveEntry> zipEntryIndex;
+    private IList<ZipArchiveEntry> zipEntries = new List<ZipArchiveEntry>();
+    private bool initialized;
+    private readonly HashSet<string> dirHasEntries = [];
 
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
@@ -36,35 +39,91 @@ public class ZipArchiveEntryIterator : IEntryIterator
     public ZipArchiveEntryIterator(Stream stream, string rootPath, ZipArchive zipArchive, bool recursive)
     {
         this.stream = stream;
-        this.mediaPath = MediaPath.ZipArchivePath;
+        mediaPath = MediaPath.ZipArchivePath;
         this.rootPath = rootPath;
         this.zipArchive = zipArchive;
         this.recursive = recursive;
-        this.nextEntries = new Stack<Entry>();
-        this.currentEntry = null;
-        this.isFirst = true;
-        this.zipEntryIndex = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
-
-        var pathComponents = GetPathComponents(rootPath);
-        var hasPattern = pathComponents.Length > 0 &&
-            pathComponents[^1].IndexOf("*", StringComparison.OrdinalIgnoreCase) >= 0;
-        this.rootPathComponents =
-            hasPattern ? pathComponents.Take(pathComponents.Length - 1).ToArray() : pathComponents;
-        this.pathComponentMatcher = new PathComponentMatcher(pathComponents, recursive: recursive);
+        nextEntries = new Stack<Entry>();
+        currentEntry = null;
+        isFirst = true;
+        zipEntryIndex = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
+        rootPathComponents = GetPathComponents(rootPath);
     }
 
     public void Dispose()
     {
+        zipArchive.Dispose();
+        stream.Dispose();
     }
 
-    public Task Initialize()
+    private void ThrowIfNotInitialized()
     {
-        return Task.CompletedTask;
+        if (initialized)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException("File system entry iterator not initialized");
+    }
+    
+    public Task<Result> Initialize()
+    {
+        zipEntries = zipArchive.Entries.OrderBy(x => x.FullName).ToList();
+
+        if (rootPathComponents.Length == 0)
+        {
+            DirPathComponents = [];
+            pathComponentMatcher = new PathComponentMatcher(rootPathComponents, recursive: recursive);
+            initialized = true;
+            return Task.FromResult(new Result());
+        }
+        
+        var hasWildcard = PathComponentHelper.HasWildcard(rootPathComponents[^1]);
+        var validDirComponents = Array.Empty<string>();
+        var entriesExist = false;
+        foreach (var zipEntry in zipEntries)
+        {
+            var entryPath = GetEntryName(zipEntry.FullName);
+            
+            var entryPathComponents = mediaPath.Split(entryPath);
+
+            var pathComponentMatch = PathComponentHelper.MatchPathComponents(rootPathComponents, entryPathComponents);
+
+            if (!pathComponentMatch.Success)
+            {
+                continue;
+            }
+            
+            entriesExist = true;
+                
+            if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
+            {
+                validDirComponents = pathComponentMatch.MatchingPathComponents;
+            }
+        }
+        
+        if (!entriesExist)
+        {
+            return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{rootPath}'", rootPath)));
+        }        
+
+        DirPathComponents = validDirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcher(hasWildcard ? rootPathComponents.ToArray() : [], recursive: recursive);
+        initialized = true;
+
+        return Task.FromResult(new Result());
     }
 
+    /// <summary>
+    /// Root path components of iterator.
+    /// </summary>
     public string[] PathComponents => rootPathComponents;
 
-    public string[] DirPathComponents => rootPathComponents;
+    /// <summary>
+    /// Dir path components from root path components that exist and is set during initialization.
+    /// </summary>
+    public string[] DirPathComponents { get; private set; } = [];
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -76,6 +135,8 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
     public async Task<bool> Next()
     {
+        ThrowIfNotInitialized();
+        
         if (isFirst)
         {
             isFirst = false;
@@ -83,24 +144,41 @@ public class ZipArchiveEntryIterator : IEntryIterator
             await EnqueueEntries();
         }
 
-        if (this.nextEntries.Count <= 0)
+        if (nextEntries.Count <= 0)
         {
             return false;
         }
 
-        currentEntry = this.nextEntries.Pop();
+        bool skipEntry;
+        do
+        {
+            currentEntry = nextEntries.Pop();
+            
+            if (currentEntry.Type == Models.FileSystems.EntryType.File)
+            {
+                return true;
+            }
+
+            if (recursive)
+            {
+                var dirPath = mediaPath.Join(currentEntry.FullPathComponents);
+                skipEntry = pathComponentMatcher.UsesPattern && !dirHasEntries.Contains(dirPath);
+            }
+            else
+            {
+                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
+                    currentEntry.RelativePathComponents, recursive);
+            }
+        } while (nextEntries.Count > 0 && skipEntry);
 
         return true;
     }
 
     public Task<Stream> OpenEntry(Entry entry)
     {
-        if (!zipEntryIndex.ContainsKey(entry.RawPath))
-        {
-            throw new IOException($"Entry '{entry.RawPath}' not found");
-        }
-
-        return Task.FromResult(zipEntryIndex[entry.RawPath].Open());
+        return !zipEntryIndex.TryGetValue(entry.RawPath, out var zipEntry)
+            ? throw new IOException($"Entry '{entry.RawPath}' not found")
+            : Task.FromResult(zipEntry.Open());
     }
 
     public string[] GetPathComponents(string path) => mediaPath.Split(path);
@@ -110,8 +188,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
         stream.Seek(0, SeekOrigin.Begin);
         var zipArchiveReader = new ZipArchiveReader(stream);
 
-        IZipHeader zipHeader;
-        while ((zipHeader = await zipArchiveReader.Read()) != null)
+        while (await zipArchiveReader.Read() is { } zipHeader)
         {
             if (zipHeader is CentralDirectoryFileHeader centralDirectoryFileHeader)
             {
@@ -128,8 +205,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
             centralDirectoryFileHeaderIndex[centralDirectoryFileHeader.FileName] = centralDirectoryFileHeader;
         }
 
-        var zipEntries = this.zipArchive.Entries.OrderBy(x => x.FullName).ToList();
-
         var uniqueEntries = new Dictionary<string, Entry>();
 
         for (var i = zipEntries.Count - 1; i >= 0; i--)
@@ -140,31 +215,37 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
             zipEntryIndex.Add(entryPath, zipEntry);
 
-            var isDir = zipEntry.FullName.EndsWith("/");
+            var isDir = zipEntry.FullName.EndsWith('/');
 
             if (isDir && UsesPattern)
             {
                 continue;
             }
 
-            var centralDirectoryFileHeader = centralDirectoryFileHeaderIndex.ContainsKey(zipEntry.FullName)
-                ? centralDirectoryFileHeaderIndex[zipEntry.FullName]
-                : null;
+            var centralDirectoryFileHeader = centralDirectoryFileHeaderIndex.GetValueOrDefault(zipEntry.FullName);
 
             var attributes = GetAttributes(centralDirectoryFileHeader);
             var properties = GetProperties(centralDirectoryFileHeader);
 
             var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
 
-            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
+            var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryPath, entryPath, isDir, zipEntry.LastWriteTime.LocalDateTime, zipEntry.Length,
                 attributes, properties, dirAttributes).ToList();
 
             foreach (var entry in entries)
             {
-                if (entry.Type == EntryType.Dir && rootPath.Equals(entry.RawPath))
+                switch (entry.Type)
                 {
-                    continue;
+                    case Models.FileSystems.EntryType.Dir when rootPath.Equals(entry.RawPath):
+                        continue;
+                    case Models.FileSystems.EntryType.File:
+                    {
+                        var dirPath =
+                            mediaPath.Join(entry.FullPathComponents.Take(entry.FullPathComponents.Length - 1).ToArray());
+                        dirHasEntries.Add(dirPath);
+                        break;
+                    }
                 }
 
                 uniqueEntries[entry.Name] = entry;
@@ -197,7 +278,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
         }
     }
 
-    private static IDictionary<string, string> GetProperties(CentralDirectoryFileHeader centralDirectoryFileHeader)
+    private static Dictionary<string, string> GetProperties(CentralDirectoryFileHeader centralDirectoryFileHeader)
     {
         var properties = new Dictionary<string, string>();
 
@@ -208,7 +289,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
         if (!string.IsNullOrEmpty(centralDirectoryFileHeader.FileComment))
         {
-            properties[Core.Constants.EntryPropertyNames.Comment] = centralDirectoryFileHeader.FileComment;
+            properties[Constants.EntryPropertyNames.Comment] = centralDirectoryFileHeader.FileComment;
         }
 
         var hostOs = (HostOsFlags)centralDirectoryFileHeader.HostOs;
@@ -221,9 +302,9 @@ public class ZipArchiveEntryIterator : IEntryIterator
         return properties;
     }
 
-    private string GetEntryName(string name)
+    private static string GetEntryName(string name)
     {
-        return name.EndsWith("/") ? name[..^1] : name;
+        return name.EndsWith('/') ? name[..^1] : name;
     }
     
     public bool UsesPattern => pathComponentMatcher.UsesPattern;

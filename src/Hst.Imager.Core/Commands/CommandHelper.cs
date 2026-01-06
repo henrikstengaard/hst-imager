@@ -1165,7 +1165,7 @@ namespace Hst.Imager.Core.Commands
 
             if (!Directory.Exists(path) && !allowNonExisting)
             {
-                return new Result<MediaResult>(new PathNotFoundError($"Media not '{path}' found", path));
+                return new Result<MediaResult>(new PathNotFoundError($"Path not found '{path}'", path));
             }
             
             return new Result<MediaResult>(new MediaResult

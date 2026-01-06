@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Models;
+﻿using Hst.Core;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -59,7 +60,7 @@ public class AmigaVolumeEntryIterator(
 
     public bool IsSingleFileEntryNext { get; private set; } = false;
 
-    public async Task Initialize()
+    public async Task<Result> Initialize()
     {
         await fileSystemVolume.ChangeDirectory("/");
 
@@ -69,8 +70,12 @@ public class AmigaVolumeEntryIterator(
         {
             var findEntryResult = await fileSystemVolume.FindEntry(pathComponent);
             
+            var exists = !findEntryResult.PartsNotFound.Any();
+            var isDir = findEntryResult.Entry is { Type: EntryType.Dir } or { Type: EntryType.DirLink };
+            var isFile = findEntryResult.Entry is { Type: EntryType.File } or { Type: EntryType.FileLink };
+            
             // change directory if directory exists for path component
-            if (!findEntryResult.PartsNotFound.Any() && findEntryResult.Entry.Type == EntryType.Dir)
+            if (exists && isDir)
             {
                 dirComponents++;
                 await fileSystemVolume.ChangeDirectory(pathComponent);
@@ -78,25 +83,27 @@ public class AmigaVolumeEntryIterator(
             }
             
             // last part component
-            if (dirComponents == rootPathComponents.Length - 1 )
+            if (dirComponents == rootPathComponents.Length - 1)
             {
                 usePattern = true;
-                IsSingleFileEntryNext = findEntryResult.Entry is { Type: EntryType.File } &&
-                                        rootPathComponents.Length > 0;
-
-                break;
+                IsSingleFileEntryNext = exists && isFile && PathComponents.Length > 0;
+                if (IsSingleFileEntryNext || PathComponentHelper.HasWildcard(pathComponent))
+                {
+                    break;
+                }
             }
             
-            if (findEntryResult.PartsNotFound.Any())
-            {
-                throw new IOException(
-                    $"Path not found '{string.Join("/", rootPathComponents.Take(dirComponents).Concat(findEntryResult.PartsNotFound))}'");
-            }
+            var path = string.Join("/",
+                rootPathComponents.Take(dirComponents).Concat(findEntryResult.PartsNotFound));
+            return new Result(new PathNotFoundError(
+                $"Path not found '{path}'", path));
         }
 
         DirPathComponents = rootPathComponents.Take(dirComponents).ToArray();
         pathComponentMatcher = new PathComponentMatcher(usePattern ? rootPathComponents : [], 
             isFile: IsSingleFileEntryNext, recursive: recursive);
+
+        return new Result();
     }
 
     public async Task<bool> Next()
