@@ -77,6 +77,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             {
                 stream?.Close();
                 stream?.Dispose();
+                Task.Delay(100).GetAwaiter().GetResult();
             }
 
             IsDisposed = true;
