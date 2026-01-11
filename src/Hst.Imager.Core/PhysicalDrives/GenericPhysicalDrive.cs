@@ -77,6 +77,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             {
                 stream?.Close();
                 stream?.Dispose();
+                // linux needs a short delay to ensure stream is disposed before continuing
                 Task.Delay(100).GetAwaiter().GetResult();
             }
 

@@ -1103,9 +1103,9 @@ Example of displaying usage for importing a partition to Rigid Disk Block:
 hst.imager rdb part import
 ```
 
-Example of importing partition from dh0.hdf hard file with dos type PDS3 and device name DH0 to Rigid Disk Block in a 4GB vhd image file:
+Example of importing partition from dh0.hdf hard file with device name DH0 and dos type PDS3 to Rigid Disk Block in a 4GB vhd image file:
 ```
-hst.imager rdb part import dh0.hdf 4gb.vhd PDS3 DH0
+hst.imager rdb part import dh0.hdf 4gb.vhd DH0 PDS3
 ```
 
 ### Kill partition in Rigid Disk Block
