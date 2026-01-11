@@ -522,13 +522,18 @@
                 new[] { "--name", "-n" },
                 description: "Name of the partition (e.g. DH0).");
 
+            var dosTypeOption = new Option<string>(
+                new[] { "--dos-type", "-dt" },
+                description: "DOS type for the partition to use (e.g. DOS3, PFS3).");
+            
             var rdbPartDelCommand = new Command("copy", "Copy partition from a physical drive or image file.");
             rdbPartDelCommand.SetHandler(CommandHandler.RdbPartCopy, sourcePathArgument, partitionNumber,
-                destinationPathArgument, nameOption);
+                destinationPathArgument, nameOption, dosTypeOption);
             rdbPartDelCommand.AddArgument(sourcePathArgument);
             rdbPartDelCommand.AddArgument(partitionNumber);
             rdbPartDelCommand.AddArgument(destinationPathArgument);
             rdbPartDelCommand.AddOption(nameOption);
+            rdbPartDelCommand.AddOption(dosTypeOption);
 
             return rdbPartDelCommand;
         }

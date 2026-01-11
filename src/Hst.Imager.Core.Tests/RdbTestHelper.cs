@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Hst.Amiga.Extensions;
 using Hst.Amiga.FileSystems;
 using Hst.Amiga.FileSystems.FastFileSystem;
 using Hst.Amiga.FileSystems.Pfs3;
@@ -154,5 +155,18 @@ public static class RdbTestHelper
         media.Dispose();
 
         return entries;
+    }
+    
+    public static async Task AddFileSystem(TestCommandHelper testCommandHelper, string path, 
+        string dosType, byte[] fileSystemBytes)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+
+        rigidDiskBlock.AddFileSystem(DosTypeHelper.FormatDosType(dosType), fileSystemBytes);
+        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
     }
 }
