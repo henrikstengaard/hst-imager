@@ -26,6 +26,7 @@ namespace Hst.Imager.Core.Tests
         public static readonly byte[] Dos3DosType = { 0x44, 0x4f, 0x53, 0x3 };
         public static readonly byte[] Dos7DosType = { 0x44, 0x4f, 0x53, 0x7 };
         public static readonly byte[] Pfs3DosType = { 0x50, 0x46, 0x53, 0x3 };
+        public static readonly byte[] Pds3DosType = { 0x50, 0x44, 0x53, 0x3 };
         public static readonly string Pfs3AioPath = Path.Combine("TestData", "Pfs3", "pfs3aio");
 
         public static readonly byte[] FastFileSystemDos3Bytes = new byte[]{ 0x0, 0x0, 0x03, 0xf3 }.Concat(Encoding.ASCII.GetBytes(

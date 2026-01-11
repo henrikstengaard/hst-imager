@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Amiga;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -20,12 +22,13 @@
         private readonly int partitionNumber;
         private readonly string destinationPath;
         private readonly string name;
+        private readonly string dosType;
         private long statusBytesProcessed;
         private TimeSpan statusTimeElapsed;
 
         public RdbPartCopyCommand(ILogger<RdbPartCopyCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string sourcePath, int partitionNumber, string destinationPath,
-            string name)
+            string name, string dosType)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -34,8 +37,9 @@
             this.partitionNumber = partitionNumber;
             this.destinationPath = destinationPath;
             this.name = name;
-            this.statusBytesProcessed = 0;
-            this.statusTimeElapsed = TimeSpan.Zero;
+            this.dosType = dosType;
+            statusBytesProcessed = 0;
+            statusTimeElapsed = TimeSpan.Zero;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -69,11 +73,11 @@
             // get partition block to copy
             var partitionBlock = sourcePartitionBlocks[partitionNumber - 1];
 
-            OnInformationMessage($"Source partition number '{partitionNumber}':");
-            OnInformationMessage($"Name '{partitionBlock.DriveName}'");
-            OnInformationMessage($"LowCyl '{partitionBlock.LowCyl}'");
-            OnInformationMessage($"HighCyl '{partitionBlock.HighCyl}'");
-            OnInformationMessage($"Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"- Size '{partitionBlock.PartitionSize.FormatBytes()}' ({partitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
+            OnInformationMessage($"- LowCyl '{partitionBlock.LowCyl}'");
+            OnInformationMessage($"- HighCyl '{partitionBlock.HighCyl}'");
+            OnInformationMessage($"- DOS type '{partitionBlock.DosType}'");
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
@@ -100,15 +104,32 @@
             {
                 return new Result(new Error($"Source Rigid Disk Block sectors '{sourceRigidDiskBlock.Sectors}' is not equal to destination Rigid Disk Block sectors '{destinationRigidDiskBlock.Sectors}'"));
             }
+
+            var destinationDosTypeBytes = partitionBlock.DosType;
+            if (!string.IsNullOrWhiteSpace(dosType))
+            {
+                destinationDosTypeBytes = DosTypeHelper.FormatDosType(dosType.ToUpper());
+            }
             
             var destinationPartitionBlocks = destinationRigidDiskBlock.PartitionBlocks.ToList();
             
-            var driveName = (!string.IsNullOrWhiteSpace(name) ? name : partitionBlock.DriveName).ToUpper();
+            var fileSystemHeaderBlock =
+                destinationRigidDiskBlock.FileSystemHeaderBlocks.FirstOrDefault(x =>
+                    x.DosType.SequenceEqual(destinationDosTypeBytes));
+
+            // return error, if file system with dos type not found in destination rigid disk block
+            if (fileSystemHeaderBlock == null)
+            {
+                return new Result(new Error($"File system with DOS type '{FormatDosType(destinationDosTypeBytes)}' not found in destination Rigid Disk Block"));
+            }
+
+            var destName = (!string.IsNullOrWhiteSpace(name) ? name : partitionBlock.DriveName).ToUpper();
             
             // return error, if partition with name already exists
-            if (destinationPartitionBlocks.Any(x => x.DriveName.ToUpper() == driveName))
+            var destinationNameBytes = AmigaTextHelper.GetBytes(destName.ToUpper());
+            if (destinationPartitionBlocks.Any(x => AmigaTextHelper.GetBytes(x.DriveName).SequenceEqual(destinationNameBytes)))
             {
-                return new Result(new Error($"Partition name '{driveName}' already exists in destination Rigid Disk Block"));
+                return new Result(new Error($"Partition name '{name}' already exists in destination Rigid Disk Block"));
             }
 
             // calculate source cylinder size, offset and size
@@ -118,8 +139,8 @@
             var sourceSize = ((long)partitionBlock.HighCyl - partitionBlock.LowCyl + 1) * sourceCylinderSize;
             
             // update partition block
-            var destinationPartitionBlock = PartitionBlock.Create(destinationRigidDiskBlock, partitionBlock.DosType,
-                driveName, sourceSize);
+            var destinationPartitionBlock = PartitionBlock.Create(destinationRigidDiskBlock, destinationDosTypeBytes,
+                destName, sourceSize);
             destinationPartitionBlock.Flags = partitionBlock.Flags;
             destinationPartitionBlock.NumBuffer = partitionBlock.NumBuffer;
             destinationPartitionBlock.Reserved = partitionBlock.Reserved;
@@ -132,11 +153,12 @@
             destinationPartitionBlocks.Add(destinationPartitionBlock);
             destinationRigidDiskBlock.PartitionBlocks = destinationPartitionBlocks;
 
-            OnDebugMessage($"Destination partition number '{destinationPartitionBlocks.IndexOf(destinationPartitionBlock) + 1}':");
-            OnDebugMessage($"Name '{destinationPartitionBlock.DriveName}'");
-            OnDebugMessage($"LowCyl '{destinationPartitionBlock.LowCyl}'");
-            OnDebugMessage($"HighCyl '{destinationPartitionBlock.HighCyl}'");
-            OnDebugMessage($"Size '{destinationPartitionBlock.PartitionSize.FormatBytes()}' ({destinationPartitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"Destination partition number '{destinationPartitionBlocks.IndexOf(destinationPartitionBlock) + 1}':");
+            OnInformationMessage($"- Size '{destinationPartitionBlock.PartitionSize.FormatBytes()}' ({destinationPartitionBlock.PartitionSize} bytes)");
+            OnInformationMessage($"- Name '{destinationPartitionBlock.DriveName}'");
+            OnInformationMessage($"- LowCyl '{destinationPartitionBlock.LowCyl}'");
+            OnInformationMessage($"- HighCyl '{destinationPartitionBlock.HighCyl}'");
+            OnInformationMessage($"- DOS type '{destinationPartitionBlock.DosType}'");
             
             OnDebugMessage("Writing destination Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
@@ -162,6 +184,22 @@
             OnInformationMessage($"Copied '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
             
             return new Result();
+        }
+
+        private static string FormatDosType(byte[] dosTypeBytes)
+        {
+            if (dosTypeBytes.Length != 4)
+            {
+                throw new ArgumentException("Dos type must be 4 bytes in length", nameof(dosType));
+            }
+
+            if (dosTypeBytes[3] + 48 > 255)
+            {
+                throw new ArgumentException($"Dos type contains invalid version {dosTypeBytes[3]}", nameof(dosType));
+            }
+            
+            return string.Concat(AmigaTextHelper.Iso88591.GetString(dosTypeBytes.AsSpan(0, 3)),
+                AmigaTextHelper.Iso88591.GetString(new byte[] { (byte)(dosTypeBytes[3] + 48) }));
         }
     }
 }

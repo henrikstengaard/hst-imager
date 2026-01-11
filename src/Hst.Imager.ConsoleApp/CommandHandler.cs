@@ -590,11 +590,11 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task RdbPartCopy(string sourcePath, int partitionNumber, string destinationPath,
-            string name)
+            string name, string dosType)
         {
             using var commandHelper = GetCommandHelper();
             var command = new RdbPartCopyCommand(GetLogger<RdbPartCopyCommand>(), commandHelper,
-                await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath, name);
+                await GetPhysicalDrives(), sourcePath, partitionNumber, destinationPath, name, dosType);
             await Execute(command);
         }
 
