@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Caching;
 using Hst.Core;
+using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -460,7 +461,8 @@ public class DirectoryEntryWriter : IEntryWriter
 
     public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
     {
-        return new DirectoryEntryIterator(string.Join(Path.PathSeparator, rootPathComponents), recursive);
+        return new DirectoryEntryIterator(string.Join(Path.PathSeparator, rootPathComponents), recursive,
+            new MemoryAppCache());
     }
 
     public bool ArePathComponentsSelfCopy(IEntryIterator entryIterator)

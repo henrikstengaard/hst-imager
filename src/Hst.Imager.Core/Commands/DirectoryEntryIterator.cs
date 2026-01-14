@@ -1,4 +1,5 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -8,7 +9,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Caching;
 using System.Threading.Tasks;
 using Amiga.DataTypes.UaeFsDbs;
 using Amiga.DataTypes.UaeMetafiles;
@@ -29,17 +29,15 @@ public class DirectoryEntryIterator : IEntryIterator
     private readonly bool recursive;
     private Entry currentEntry;
     private bool isFirst;
-    private readonly MemoryCache cache;
-    private readonly DateTimeOffset cacheExpiration;
+    private readonly IAppCache appCache;
 
-    public DirectoryEntryIterator(string path, bool recursive)
+    public DirectoryEntryIterator(string path, bool recursive, IAppCache appCache)
     {
         this.nextEntries = new Stack<Entry>();
         rootPath = PathHelper.GetFullPath(path);
         this.recursive = recursive;
         this.isFirst = true;
-        this.cache = new MemoryCache($"{nameof(DirectoryEntryIterator)}_CACHE");
-        this.cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
+        this.appCache = appCache;
         dirPath = Directory.Exists(rootPath) ? rootPath : Path.GetDirectoryName(rootPath);
     }
 
@@ -133,6 +131,12 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public bool SupportsUaeMetadata => true;
 
+    private static string GetUaeMetadataNodesCacheKey(string path) => 
+        string.Concat("UAE-METADATA-NODES:", path);
+
+    private static string GetUaeMetadataEntryCacheKey(IEnumerable<string> pathComponents) => 
+        string.Concat("ENTRY:", string.Join("|", pathComponents));
+
     private async Task<UaeMetadataEntry> GetUaeMetadataEntry(string path, string[] pathComponents)
     {
         if (pathComponents.Length == 0)
@@ -140,9 +144,9 @@ public class DirectoryEntryIterator : IEntryIterator
             return null;
         }
 
-        var cacheKey = string.Join("|", pathComponents);
+        var cacheKey = GetUaeMetadataEntryCacheKey(pathComponents);
 
-        var cacheEntry = cache.Get(cacheKey) as UaeMetadataEntry;
+        var cacheEntry = appCache.Get(cacheKey) as UaeMetadataEntry;
 
         if (cacheEntry != null)
         {
@@ -154,9 +158,9 @@ public class DirectoryEntryIterator : IEntryIterator
 
         foreach (var pathComponent in pathComponents)
         {
-            cacheKey = string.Join("|", currentPathComponents.Concat(new[] { pathComponent }));
+            cacheKey = GetUaeMetadataEntryCacheKey(currentPathComponents.Concat([pathComponent]));
 
-            cacheEntry = cache.Get(cacheKey) as UaeMetadataEntry;
+            cacheEntry = appCache.Get(cacheKey) as UaeMetadataEntry;
 
             // if path is cached, reuse and continue
             if (cacheEntry != null)
@@ -173,7 +177,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
             var uaeMetadataNodes = await ReadUaeMetadataNodes(currentPath);
 
-            var uaeMetadataNode = uaeMetadataNodes.FirstOrDefault(x => x.NormalName.Equals(pathComponent, StringComparison.OrdinalIgnoreCase));
+            var uaeMetadataNode = uaeMetadataNodes.GetValueOrDefault(pathComponent);
 
             uaePathComponents.Add(uaeMetadataNode != null ? uaeMetadataNode.AmigaName : pathComponent);
 
@@ -188,7 +192,7 @@ public class DirectoryEntryIterator : IEntryIterator
                 Comment = uaeMetadataNode?.Comment
             };
 
-            cache.Add(cacheKey, cacheEntry, cacheExpiration);
+            appCache.Add(cacheKey, cacheEntry);
         }
 
         return cacheEntry;
@@ -305,6 +309,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public void Dispose()
     {
+        appCache.Dispose();
     }
 
     public UaeMetadata UaeMetadata { get; set; }
@@ -324,21 +329,40 @@ public class DirectoryEntryIterator : IEntryIterator
             !file.Name.Equals(Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName, StringComparison.OrdinalIgnoreCase) &&
             !file.Extension.Equals(Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension, StringComparison.OrdinalIgnoreCase));
 
-    private async Task<IEnumerable<UaeMetadataNode>> ReadUaeMetadataNodes(string path)
+    private async Task<Dictionary<string, UaeMetadataNode>> ReadUaeMetadataNodes(string path)
     {
+        var cacheKey = GetUaeMetadataNodesCacheKey(path);
+
+        Dictionary<string, UaeMetadataNode> uaeMetadataNodes;
+        if (appCache.Contains(cacheKey))
+        {
+            uaeMetadataNodes = appCache.Get(cacheKey) as Dictionary<string, UaeMetadataNode>;
+            if (uaeMetadataNodes != null)
+            {
+                return uaeMetadataNodes;
+            }
+        }
+        
         switch (UaeMetadata)
         {
             case UaeMetadata.UaeFsDb:
-                return await ReadUaeFsDbFile(path);
+                uaeMetadataNodes = await ReadUaeFsDbFile(path);
+                break;
             case UaeMetadata.UaeMetafile:
-                return ReadUaeMetafiles(path);
+                uaeMetadataNodes = ReadUaeMetafiles(path);
+                break;
             case UaeMetadata.None:
             default:
-                return new List<UaeMetadataNode>();
+                uaeMetadataNodes = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
+                break;
         }
+        
+        appCache.Add(cacheKey, uaeMetadataNodes);
+
+        return uaeMetadataNodes;
     }
 
-    private static async Task<IEnumerable<UaeMetadataNode>> ReadUaeFsDbFile(string path)
+    private async Task<Dictionary<string, UaeMetadataNode>> ReadUaeFsDbFile(string path)
     {
         var uaeFsDbFilePath = Path.Combine(path, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
 
@@ -350,18 +374,18 @@ public class DirectoryEntryIterator : IEntryIterator
         return await ReadUaeFsDbFileVersion2(path);
     }
     
-    private static async Task<IEnumerable<UaeMetadataNode>> ReadUaeFsDbFileVersion1(string path)
+    private static async Task<Dictionary<string, UaeMetadataNode>> ReadUaeFsDbFileVersion1(string path)
     {
         var uaeFsDbFilePath = Path.Combine(path, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
 
         if (!File.Exists(uaeFsDbFilePath))
         {
-            return new List<UaeMetadataNode>();
+            return new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
         }
 
         var uaeFsDbNodes = await UaeFsDbReader.ReadFromFile(uaeFsDbFilePath);
 
-        var uaeMetadataNodes = new List<UaeMetadataNode>();
+        var uaeMetadataNodes = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var uaeFsDbNode in uaeFsDbNodes)
         {
@@ -373,15 +397,15 @@ public class DirectoryEntryIterator : IEntryIterator
                 ? new FileInfo(filePath).LastWriteTime
                 : DateTime.Now;
 
-            uaeMetadataNodes.Add(uaeMetadataNode);
+            uaeMetadataNodes[uaeMetadataNode.NormalName] = uaeMetadataNode;
         }
 
         return uaeMetadataNodes;
     }
 
-    private static async Task<IEnumerable<UaeMetadataNode>> ReadUaeFsDbFileVersion2(string path)
+    private async Task<Dictionary<string, UaeMetadataNode>> ReadUaeFsDbFileVersion2(string path)
     {
-        var uaeMetadataNodes = new List<UaeMetadataNode>();
+        var uaeMetadataNodes = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
 
         var dirInfo = new DirectoryInfo(path);
 
@@ -398,17 +422,21 @@ public class DirectoryEntryIterator : IEntryIterator
 
             var uaeFsDbNodes = await UaeFsDbReader.ReadFromFile(uaeFsDbAlternativeStreamPath);
 
-            uaeMetadataNodes.AddRange(uaeFsDbNodes.Select(x => UaeMetadataNode.FromUaeFsDbNode(x)));
+            foreach (var uaeFsDbNode in uaeFsDbNodes)
+            {
+                var uaeMetadataNode = UaeMetadataNode.FromUaeFsDbNode(uaeFsDbNode);
+                uaeMetadataNodes[uaeMetadataNode.NormalName] = uaeMetadataNode;
+            }
         }
 
         return uaeMetadataNodes;
     }
 
-    private static IEnumerable<UaeMetadataNode> ReadUaeMetafiles(string path)
+    private static Dictionary<string, UaeMetadataNode> ReadUaeMetafiles(string path)
     {
         var dirInfo = new DirectoryInfo(path);
 
-        var uaeMetadataNodes = new List<UaeMetadataNode>();
+        var uaeMetadataNodes = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var file in dirInfo.GetFiles($"*{Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension}", SearchOption.TopDirectoryOnly))
         {
@@ -419,7 +447,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
             var uaeMetadataNode = UaeMetadataNode.FromUaeMetafile(uaeMetafile, amigaName, name);
 
-            uaeMetadataNodes.Add(uaeMetadataNode);
+            uaeMetadataNodes[name] = uaeMetadataNode;
         }
 
         return uaeMetadataNodes;

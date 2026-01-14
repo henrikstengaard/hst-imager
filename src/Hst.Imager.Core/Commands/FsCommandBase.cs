@@ -1,5 +1,6 @@
 ﻿using DiscUtils.ExFat;
 using DiscUtils.Ntfs;
+using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Extensions;
 
 namespace Hst.Imager.Core.Commands;
@@ -222,15 +223,15 @@ public abstract partial class FsCommandBase : CommandBase
         var dirPath = Path.GetDirectoryName(path) ?? string.Empty;
 
         return Task.FromResult(Directory.Exists(path) || Directory.Exists(dirPath)
-            ? new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive))
+            ? new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive, new MemoryAppCache()))
             : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{path}'", path)));
     }
 
     protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)
     {
         path = PathHelper.GetFullPath(path);
-        return Task.FromResult(new Result<IEntryIterator>(
-            new DirectoryEntryIterator(path, recursive)));
+        return Task.FromResult(new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive,
+            new MemoryAppCache())));
     }
 
     protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
