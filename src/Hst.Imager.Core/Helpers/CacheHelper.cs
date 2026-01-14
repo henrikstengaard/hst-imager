@@ -7,7 +7,7 @@ namespace Hst.Imager.Core.Helpers;
 public static class CacheHelper
 {
     public static Stream AddLayeredCache(string path, Stream baseStream, bool writable, int blockSize = 1024 * 1024,
-        CacheType cacheType = CacheType.Memory)
+        CacheType cacheType = CacheType.Disk)
     {
         var layerPath = PathHelper.GetLayerPath(path);
 
@@ -21,10 +21,10 @@ public static class CacheHelper
         {
             File.Delete(layerPath);
         }
-            
-        Stream layerStream = cacheType == CacheType.Memory
-            ? new MemoryStream()
-            : File.Open(layerPath, FileMode.OpenOrCreate, FileAccess.ReadWrite);
+
+        Stream layerStream = cacheType == CacheType.Disk
+            ? File.Open(layerPath, FileMode.OpenOrCreate, FileAccess.ReadWrite)
+            : new MemoryStream();
             
         return new LayeredStream(baseStream, layerStream, new LayeredStreamOptions
         {

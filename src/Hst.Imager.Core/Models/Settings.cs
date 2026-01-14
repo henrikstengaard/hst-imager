@@ -55,7 +55,7 @@ namespace Hst.Imager.Core.Models
             Retries = 5;
             SkipUnusedSectors = false;
             UseCache = true;
-            CacheType = CacheType.Memory;
+            CacheType = CacheType.Disk;
         }
     }
 }

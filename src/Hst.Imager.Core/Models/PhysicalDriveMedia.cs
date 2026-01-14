@@ -11,7 +11,7 @@
 
         public PhysicalDriveMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive,
             IPhysicalDrive physicalDrive, bool byteswap, Stream stream = null, bool useCache = false,
-            CacheType cacheType = CacheType.Memory, int blockSize = 1024 * 1024)
+            CacheType cacheType = CacheType.Disk, int blockSize = 1024 * 1024)
             : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
         {
             this.physicalDrive = physicalDrive;

@@ -67,7 +67,7 @@ namespace Hst.Imager.Core.Commands
         private readonly IList<Media> activeMedias;
 
         public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false,
-            CacheType cacheType = CacheType.Memory)
+            CacheType cacheType = CacheType.Disk)
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
