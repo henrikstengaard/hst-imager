@@ -14,13 +14,16 @@ namespace Hst.Imager.Core.Tests;
 
 public class GivenWriteCommandWithGpt : CommandTestBase
 {
-    [Fact]
-    public async Task When_WriteSrcToDestGptPartition1_Then_DataIsIdentical()
+    [Theory]
+    [InlineData("gpt")]
+    [InlineData("gpT")]
+    [InlineData("GPT")]
+    public async Task When_WriteSrcToDestGptPartition1_Then_DataIsIdentical(string partitionTablePart)
     {
         // arrange - create src and dest paths
         var srcPath = $"src-{Guid.NewGuid()}.vhd";
         var destPath = $"dest-{Guid.NewGuid()}.vhd";
-        var writePath = Path.Combine(destPath, "gpt", "1");
+        var writePath = Path.Combine(destPath, partitionTablePart, "1");
 
         // arrange - create src data
         var srcData = new byte[20.MB().ToSectorSize()];
