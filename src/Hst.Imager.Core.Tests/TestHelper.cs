@@ -4,6 +4,7 @@ using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Tests
 {
@@ -12,14 +13,13 @@ namespace Hst.Imager.Core.Tests
     using System.Threading.Tasks;
     using Amiga.RigidDiskBlocks;
     using Hst.Core.Extensions;
-    using Models;
     using Hst.Amiga.Extensions;
     using Hst.Amiga.FileSystems.Pfs3;
     using System.Collections.Generic;
     using Hst.Amiga.FileSystems.FastFileSystem;
-    using Hst.Amiga;
+    using Amiga;
     using System.Text;
-    using Hst.Imager.Core.PathComponents;
+    using PathComponents;
 
     public static class TestHelper
     {
@@ -41,7 +41,7 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
 
@@ -54,7 +54,7 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             // read rigid disk block
             var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
@@ -94,7 +94,7 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
 
@@ -127,7 +127,7 @@ namespace Hst.Imager.Core.Tests
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             await using var pfs3Volume = await MountPfs3Volume(stream);
 
@@ -198,11 +198,8 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
 
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             GuidPartitionTable.Initialize(disk);
         }
 
@@ -218,11 +215,8 @@ namespace Hst.Imager.Core.Tests
                 
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
                 
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var guidPartitionTable = new GuidPartitionTable(disk);
 
             var size = partitionSize > 0 ? partitionSize : dataSize; 
@@ -258,11 +252,8 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
 
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             BiosPartitionTable.Initialize(disk);
         }
 
@@ -278,11 +269,8 @@ namespace Hst.Imager.Core.Tests
                 
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
                 
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var biosPartitionTable = new BiosPartitionTable(disk);
 
             var size = partitionSize > 0 ? partitionSize : dataSize; 
@@ -412,9 +400,7 @@ namespace Hst.Imager.Core.Tests
             
             using var media = mediaResult.Value;
             
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             var stream = disk.Content;
             stream.Position = offset;
@@ -446,9 +432,7 @@ namespace Hst.Imager.Core.Tests
             
             using var media = mediaResult.Value;
             
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             var stream = disk.Content;
             
@@ -476,7 +460,7 @@ namespace Hst.Imager.Core.Tests
             using var media = mediaResult.Value;
             var stream = media.Stream;
 
-            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var guidPartitionTable = GuidPartitionTable.Initialize(disk);
             var partitionIndex = guidPartitionTable.Create(guidPartitionTable.FirstUsableSector,
                 guidPartitionTable.LastUsableSector, GuidPartitionTypes.WindowsBasicData, 0, "Empty");
@@ -488,9 +472,8 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
             using var media = mediaResult.Value;
-            var stream = media.Stream;
 
-            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var biosPartitionTable = BiosPartitionTable.Initialize(disk);
             var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
                 BiosPartitionTypes.Fat32Lba, true);
@@ -507,7 +490,7 @@ namespace Hst.Imager.Core.Tests
             }
 
             var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             await using var pfs3Volume = await MountPfs3Volume(stream);
 
@@ -534,9 +517,7 @@ namespace Hst.Imager.Core.Tests
             }
 
             using var media = mediaResult.Value;
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             var biosPartitionTable = new BiosPartitionTable(disk);
             using var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
@@ -560,7 +541,7 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await commandHelper.GetReadableFileMedia(path);
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
             stream.Position = 0;
             var readSize = size ?? media.Size;
             var bytes = new byte[readSize];

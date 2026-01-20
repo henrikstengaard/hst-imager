@@ -30,7 +30,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             await using var pfs3Volume = await MountPfs3Volume(stream);
 

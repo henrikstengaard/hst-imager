@@ -16,10 +16,8 @@ using Amiga.FileSystems.Pfs3;
 using Amiga.RigidDiskBlocks;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
-using Hst.Imager.Core.Helpers;
-using Models;
+using Helpers;
 using Directory = System.IO.Directory;
 using File = System.IO.File;
 
@@ -43,9 +41,7 @@ public class FsCommandTestBase : CommandTestBase
             stream.SetLength(diskSize);
         }
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         BiosPartitionTable.Initialize(disk);
     }
@@ -61,9 +57,7 @@ public class FsCommandTestBase : CommandTestBase
             stream.SetLength(diskSize);
         }
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
 
@@ -75,11 +69,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var biosPartitionTable = new BiosPartitionTable(disk);
 
@@ -97,9 +88,7 @@ public class FsCommandTestBase : CommandTestBase
             stream.SetLength(diskSize);
         }
             
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         GuidPartitionTable.Initialize(disk.Content, Geometry.FromCapacity(disk.Capacity));
     }
@@ -109,7 +98,7 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
         
         if (!path.ToLower().EndsWith(".vhd"))
         {
@@ -131,9 +120,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Fat32Lba, true);
@@ -145,9 +133,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Ntfs, true);
@@ -161,9 +148,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var guidPartitionTable = GuidPartitionTable.Initialize(disk);
         var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
         FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
@@ -174,9 +160,8 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var guidPartitionTable = GuidPartitionTable.Initialize(disk);
         var partitionIndex = guidPartitionTable.Create(WellKnownPartitionType.WindowsFat, true);
         var partition = guidPartitionTable.Partitions[partitionIndex];
@@ -225,7 +210,7 @@ public class FsCommandTestBase : CommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         if (!path.ToLower().EndsWith(".vhd"))
         {
@@ -347,7 +332,7 @@ public class FsCommandTestBase : CommandTestBase
     {
         await using var stream = File.Open(path, FileMode.Create, FileAccess.ReadWrite);
 
-        using var zipArchive = new System.IO.Compression.ZipArchive(stream, ZipArchiveMode.Create);
+        using var zipArchive = new ZipArchive(stream, ZipArchiveMode.Create);
 
         zipArchive.CreateEntry("file1.txt");
         zipArchive.CreateEntry("file2.txt");

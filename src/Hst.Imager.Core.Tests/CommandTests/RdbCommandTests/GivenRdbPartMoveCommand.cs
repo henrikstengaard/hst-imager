@@ -2,7 +2,6 @@
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands.RdbCommands;
 using Hst.Imager.Core.Helpers;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.IO;
@@ -268,7 +267,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             await using var pfs3Volume = await MountPfs3Volume(stream);
             await pfs3Volume.CreateDirectory("dir1");

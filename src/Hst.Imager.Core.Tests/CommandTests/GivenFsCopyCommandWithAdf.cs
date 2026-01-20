@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Commands;
 using Microsoft.Extensions.Logging.Abstractions;
-using Models;
 using Xunit;
 
 public class GivenFsCopyCommandWithAdf : FsCommandTestBase
@@ -188,7 +187,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var ffsVolume = await MountFastFileSystemVolume(stream);
         await ffsVolume.CreateDirectory("dir1");
@@ -207,7 +206,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var ffsVolume = await MountFastFileSystemVolume(stream);
 

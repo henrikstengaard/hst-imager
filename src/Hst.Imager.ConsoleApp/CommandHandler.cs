@@ -714,6 +714,12 @@ namespace Hst.Imager.ConsoleApp
 
         private static Task WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
+            if (args.PercentComplete >= 100)
+            {
+                Console.Write(string.Concat(new string(' ', ConsoleHelper.ConsoleWindowWidth), "\r"));
+                return Task.CompletedTask;
+            }
+            
             var parts = new List<string>();
 
             if (!args.Indeterminate)

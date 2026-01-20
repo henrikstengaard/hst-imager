@@ -19,7 +19,7 @@ public static class RdbTestHelper
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 
@@ -162,7 +162,7 @@ public static class RdbTestHelper
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
 

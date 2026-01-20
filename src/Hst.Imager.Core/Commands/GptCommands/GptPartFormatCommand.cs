@@ -6,10 +6,9 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
-using DiscUtils.Raw;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Imager.Core.FileSystems.Fat32;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -52,10 +51,8 @@ public class GptPartFormatCommand : CommandBase
         }
         using var media = mediaResult.Value;
             
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new Disk(media.Stream, Ownership.None);
-            
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
+
         OnDebugMessage("Reading Guid Partition Table");
             
         GuidPartitionTable guidPartitionTable;

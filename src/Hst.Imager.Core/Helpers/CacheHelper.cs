@@ -6,7 +6,7 @@ namespace Hst.Imager.Core.Helpers;
 
 public static class CacheHelper
 {
-    public static Stream AddLayeredCache(string path, Stream baseStream, bool writable, int blockSize = 1024 * 1024,
+    public static Stream AddLayeredCache(string path, Stream baseStream, bool writeable, int blockSize = 1024 * 1024,
         CacheType cacheType = CacheType.Disk)
     {
         var layerPath = PathHelper.GetLayerPath(path);
@@ -28,7 +28,7 @@ public static class CacheHelper
             
         return new LayeredStream(baseStream, layerStream, new LayeredStreamOptions
         {
-            FlushLayerOnDispose = writable,
+            FlushLayerOnDispose = writeable,
             BlockSize = blockSize
         });
     }

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Hst.Amiga.RigidDiskBlocks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -102,7 +101,7 @@ public class GivenRdbFsAddCommand : FsCommandTestBase
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
         
         var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToSectorSize());
         await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);

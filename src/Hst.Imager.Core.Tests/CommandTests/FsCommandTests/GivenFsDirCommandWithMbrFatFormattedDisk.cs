@@ -1,9 +1,7 @@
 ﻿using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using System;
 using System.Collections.Generic;
@@ -11,6 +9,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Hst.Imager.Core.Helpers;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
@@ -693,9 +692,8 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests
             }
 
             using var media = mediaResult.Value;
-            var stream = media.Stream;
 
-            var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var biosPartitionTable = new BiosPartitionTable(disk);
             var partition = biosPartitionTable.Partitions.FirstOrDefault();
 

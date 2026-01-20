@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 
@@ -34,6 +34,8 @@ public static class GptTestHelper
         fileSystem.CreateDirectory("dir1\\dir3");
         
         await using var file = fileSystem.OpenFile("dir1\\file1.txt", FileMode.Create, FileAccess.Write);
+        
+        media.Dispose();
     }
 
     public static async Task<(Media, IFileSystem)> MountFileSystem(TestCommandHelper testCommandHelper, string mediaPath,
@@ -49,9 +51,7 @@ public static class GptTestHelper
             
         var media = mediaResult.Value;
         
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var guidPartitionTable = new GuidPartitionTable(disk);
             
         var partitions = guidPartitionTable.Partitions;

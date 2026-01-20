@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 using DiscUtils;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 
@@ -20,9 +20,8 @@ public static class MbrTestHelper
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
             BiosPartitionTypes.Fat32Lba, true);
@@ -34,11 +33,8 @@ public static class MbrTestHelper
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         BiosPartitionTable.Initialize(disk);
     }
@@ -49,9 +45,7 @@ public static class MbrTestHelper
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
         using var media = mediaResult.Value;
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var biosPartitionTable = new BiosPartitionTable(disk);
 
@@ -64,9 +58,7 @@ public static class MbrTestHelper
         var mediaResult = await testCommandHelper.GetWritableFileMedia(mediaPath);
         using var media = mediaResult.Value;
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var biosPartitionTable = new BiosPartitionTable(disk);
 
@@ -124,17 +116,13 @@ public static class MbrTestHelper
 
         // copy rdb media to mbr partition 2 creating pistorm rdb hard disk
         using var mbrMedia = mbrMediaResult.Value;
-        var mbrStream = mbrMedia is DiskMedia diskMedia
-            ? diskMedia.Disk.Content
-            : mbrMedia.Stream;
+        var mbrStream = mbrMedia.Stream;
 
         mbrStream.Seek(512 * mbrPartition2StartSector, SeekOrigin.Begin);
 
         using var rdbMedia = rdbMediaResult.Value;
 
-        var rdbStream = rdbMedia is DiskMedia rdbDiskMedia
-            ? rdbDiskMedia.Disk.Content
-            : rdbMedia.Stream;
+        var rdbStream = rdbMedia.Stream;
 
         rdbStream.Position = 0;
         var buffer = new byte[4096];
@@ -160,18 +148,20 @@ public static class MbrTestHelper
     /// <exception cref="IOException"></exception>
     public static async Task CreateDirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
     {
-        var (_, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
+        var (media, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
         
         fileSystem.CreateDirectory("dir1");
         fileSystem.CreateDirectory("dir2");
         fileSystem.CreateDirectory("dir1\\dir3");
         
         await using var file = fileSystem.OpenFile("dir1\\file1.txt", FileMode.Create, FileAccess.Write);
+
+        media.Dispose();
     }
 
     public static async Task CreateFile(TestCommandHelper testCommandHelper, string path, string[] pathComponents)
     {
-        var (_, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
+        var (media, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
 
         if (pathComponents.Length > 1)
         {
@@ -179,6 +169,8 @@ public static class MbrTestHelper
         }
         
         await using var file = fileSystem.OpenFile(string.Join("\\",  pathComponents), FileMode.Create, FileAccess.Write);
+
+        media.Dispose();
     }
     
     public static async Task<(Media, IFileSystem)> MountFileSystem(TestCommandHelper testCommandHelper, string mediaPath,
@@ -194,9 +186,7 @@ public static class MbrTestHelper
             
         var media = mediaResult.Value;
         
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = new BiosPartitionTable(disk);
             
         var partitions = biosPartitionTable.Partitions;
@@ -209,7 +199,7 @@ public static class MbrTestHelper
             
         var partition = partitions[partitionNumber];
 
-        return (media, new FatFileSystem(partition.Open()));
+        return (new DiskMedia(media, disk, null), new FatFileSystem(partition.Open()));
     }
     
     public static async Task CreateDirectory(

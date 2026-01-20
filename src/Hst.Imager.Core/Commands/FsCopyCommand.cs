@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -145,6 +147,7 @@ public class FsCopyCommand(
                 }
 
                 await srcEntryIterator.Flush();
+                await destEntryWriter.Flush();
             }
 
             foreach (var log in destEntryWriter.GetDebugLogs())
@@ -214,15 +217,37 @@ public class FsCopyCommand(
             }
         }
         
-        // create entry iterator from entry writer, if media is the same (copy from and to same media)
+        // get readable media for entry iterator
+        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
+        if (readableMediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(readableMediaResult.Error);
+        }
+        
+        var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
+
+        // get pistorm rdb media result from media
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        // get file system path and media path
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
+        var mediaPath = media.Path;
+        
+        // get entry iterator file system path components
         var entryIteratorFileSystemPathComponents =
-            mediaResult.Value.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
                 .ToArray();
+        
+        // get entry writer file system path components
         var entryWriterFileSystemPathComponents =
             entryWriter.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2)
                 .ToArray();
 
-        if (mediaResult.Value.MediaPath.EndsWith(".adf") && mediaResult.Value.MediaPath == entryWriter.MediaPath)
+        // return entry iterator from entry writer, if media is adf and media path is the same
+        if (mediaPath.EndsWith(".adf") && mediaPath == entryWriter.MediaPath)
         {
             var rootPathComponents = entryIteratorFileSystemPathComponents;
             var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
@@ -232,7 +257,10 @@ public class FsCopyCommand(
                 : new Result<IEntryIterator>(initializeResult.Error);
         }
         
-        if (mediaResult.Value.MediaPath == entryWriter.MediaPath &&
+        // return entry iterator from entry writer, if media path is the same and
+        // entry iterator and writer file system path components starts with the
+        // same 2 path components, e.g. "rdb\1"
+        if (mediaPath == entryWriter.MediaPath &&
             entryIteratorFileSystemPathComponents.Take(2).SequenceEqual(
                 entryWriterFileSystemPathComponents)) // and only if first two parts of file system path is equal
         {

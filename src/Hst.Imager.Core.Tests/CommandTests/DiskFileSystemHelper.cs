@@ -67,11 +67,6 @@ public static class DiskFileSystemHelper
             media.Byteswap, media.Stream);
     }
 
-    public static VirtualDisk ToDisk(Media media)
-    {
-        return media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.Dispose);
-    }
-
     public static void CreateLocalDirectoriesAndFiles(string path)
     {
         if (!Directory.Exists(path))

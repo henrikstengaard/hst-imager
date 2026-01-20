@@ -88,7 +88,7 @@ namespace Hst.Imager.Core.Tests
             var mediaResult = await GetWritableFileMedia(path, size: size, create: true);
             using var media = mediaResult.Value;
 
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
             stream.Position = 0;
 
             if (data == null && !createTestData)
@@ -188,9 +188,12 @@ namespace Hst.Imager.Core.Tests
 
             stream.Position = 0;
             var vhdDisk = new DiscUtils.Vhd.Disk(stream, Ownership.None);
-            var sectorStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true);
-            return new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, Media.MediaType.Vhd, 
-                false, vhdDisk, byteSwap, sectorStream));        
+            Stream baseStream = byteSwap
+                ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
+                : vhdDisk.Content;
+            var disk = new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, Media.MediaType.Vhd,
+                false, vhdDisk, byteSwap, baseStream);
+            return new Result<Media>(disk);
         }
 
         public override Task<Result<Media>> GetWritableFileMedia(string path, ModifierEnum? modifiers = null, long? size = null, bool create = false)
@@ -208,7 +211,12 @@ namespace Hst.Imager.Core.Tests
 
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
+                if (create && size.HasValue)
+                {
+                    testMedia.Stream.SetLength(size.Value);
+                }
+                
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, 0,
                     Media.MediaType.Raw, false, testMedia.Stream, false)));
             }
 
@@ -237,9 +245,12 @@ namespace Hst.Imager.Core.Tests
                 ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
                 : new DiscUtils.Vhd.Disk(stream, Ownership.None);
 
-            var sectorStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: true);
-            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, 
-                Media.MediaType.Vhd, false, vhdDisk, false, sectorStream)));
+            Stream baseStream = byteSwap
+                ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
+                : vhdDisk.Content;
+            var disk = new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity,
+                Media.MediaType.Vhd, false, vhdDisk, false, baseStream);
+            return Task.FromResult(new Result<Media>(disk));
         }
 
         public override Stream CreateWriteableStream(string path, bool create)

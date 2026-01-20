@@ -22,7 +22,6 @@ using DiscUtils.Ext;
 using DiscUtils.Fat;
 using DiscUtils.Iso9660;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Core.Extensions;
 using Helpers;
@@ -412,25 +411,6 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No device name in path"));
         }
         
-        // if (blockSize < 1024 * 512)
-        // {
-        //     blockSize = 1024 * 512;
-        // }
-
-        // var blocksLimit = cacheSize / blockSize;
-        //
-        // if (blocksLimit < 10)
-        // {
-        //     blocksLimit = 10;
-        // }
-        
-        // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
-        //var stream = media.Stream;
-        //var stream = new CachedBlockStream(media.Value.Stream);
-        var disk = media is DiskMedia diskMedia 
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-
         var fileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
         {
@@ -463,8 +443,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        // open stream as disk
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[1]);
         if (mbrFileSystemResult.IsFaulted)
@@ -486,8 +465,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        // open stream as disk
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
         if (gptFileSystemResult.IsFaulted)
@@ -671,8 +649,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryWriter>(new Error($"No partition table in path"));
         }
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         switch (parts[0].ToLowerInvariant())
         {

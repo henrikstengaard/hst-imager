@@ -1022,7 +1022,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             using (var pfs3Volume = await MountPfs3Volume(stream))
             {
@@ -1098,7 +1098,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             using (var pfs3Volume = await MountPfs3Volume(stream))
             {
@@ -1172,7 +1172,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             using (var pfs3Volume = await MountPfs3Volume(stream))
             {
@@ -1232,7 +1232,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var pfs3Volume = await MountPfs3Volume(stream);
         await pfs3Volume.CreateDirectory("dir1");
@@ -1264,7 +1264,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var pfs3Volume = await MountPfs3Volume(stream);
         await pfs3Volume.CreateDirectory("dir1");
@@ -1283,7 +1283,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var pfs3Volume = await MountPfs3Volume(stream);
 

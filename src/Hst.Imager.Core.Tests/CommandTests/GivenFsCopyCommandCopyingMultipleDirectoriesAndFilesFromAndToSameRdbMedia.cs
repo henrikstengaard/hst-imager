@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -446,15 +445,11 @@ public class GivenFsCopyCommandCopyingMultipleDirectoriesAndFilesFromAndToSamePi
 
         // copy rdb media to mbr partition 2 creating pistorm rdb hard disk
         using var mbrMedia = mbrMediaResult.Value;
-        var mbrStream = mbrMedia is DiskMedia diskMedia
-            ? diskMedia.Disk.Content
-            : mbrMedia.Stream;
+        var mbrStream = mbrMedia.Stream;
 
         using var rdbMedia = rdbMediaResult.Value;
         
-        var rdbStream = rdbMedia is DiskMedia rdbDiskMedia
-            ? rdbDiskMedia.Disk.Content
-            : rdbMedia.Stream;
+        var rdbStream = rdbMedia.Stream;
 
         await CopyStreamData(rdbStream, 0, mbrStream, 512 * mbrPartition1StartSector);
         await CopyStreamData(rdbStream, 0, mbrStream, 512 * mbrPartition2StartSector);

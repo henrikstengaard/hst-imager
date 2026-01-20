@@ -144,6 +144,7 @@ public class FsExtractCommand(
                 }
                 
                 await srcEntryIterator.Flush();
+                await destEntryWriter.Flush();
             }
 
             foreach (var log in destEntryWriter.GetDebugLogs())

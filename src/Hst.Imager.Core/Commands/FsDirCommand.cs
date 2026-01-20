@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Amiga.RigidDiskBlocks;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Extensions;
 using Hst.Core;
 using Helpers;
@@ -310,9 +309,7 @@ public class FsDirCommand(
     {
         OnDebugMessage("Reading Master Boot Record");
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         BiosPartitionTable biosPartitionTable;
         try
@@ -354,9 +351,7 @@ public class FsDirCommand(
     
     private async Task<Result> ListMbrPartitionEntries(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[0]);
         if (mbrFileSystemResult.IsFaulted)
@@ -380,7 +375,7 @@ public class FsDirCommand(
     
     private async Task<Result> ListGptPartitionEntries(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         var gptFileSystemResult = await MountGptFileSystem(disk, parts[0]);
         if (gptFileSystemResult.IsFaulted)
@@ -406,7 +401,7 @@ public class FsDirCommand(
     {
         OnDebugMessage("Reading Guid Partition Table");
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         GuidPartitionTable guidPartitionTable;
         try

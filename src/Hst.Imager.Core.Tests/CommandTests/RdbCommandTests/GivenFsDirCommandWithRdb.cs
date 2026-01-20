@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Xunit;
 using Hst.Imager.Core.Commands;
 using System.Threading;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Collections.Generic;
 using System.Linq;
@@ -85,7 +84,7 @@ namespace Hst.Imager.Core.Tests.CommandTests.RdbCommandTests
             }
 
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
 
             await using var pfs3Volume = await MountPfs3Volume(stream);
             await pfs3Volume.CreateFile("file1.txt");

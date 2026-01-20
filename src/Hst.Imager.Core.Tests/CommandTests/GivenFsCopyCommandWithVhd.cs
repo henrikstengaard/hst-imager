@@ -8,9 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amiga.FileSystems;
 using Commands;
-using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Models;
 using Xunit;
 
 public class GivenFsCopyCommandWithVhd : FsCommandTestBase
@@ -223,7 +221,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var pfs3Volume = await MountPfs3Volume(stream);
         await pfs3Volume.CreateDirectory("dir1");
