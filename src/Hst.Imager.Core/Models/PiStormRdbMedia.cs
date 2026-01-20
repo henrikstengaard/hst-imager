@@ -10,13 +10,12 @@
         string path,
         int partitionNumber,
         string name,
-        long size,
         Media.MediaType type,
         bool isPhysicalDrive,
         Stream stream,
         bool byteswap,
         Media baseMedia)
-        : Media(path, name, size, type, isPhysicalDrive, stream, byteswap), IEquatable<PiStormRdbMedia>
+        : Media(path, name, type, isPhysicalDrive, stream, byteswap), IEquatable<PiStormRdbMedia>
     {
         private readonly Media baseMedia = baseMedia;
         private readonly int partitionNumber = partitionNumber;

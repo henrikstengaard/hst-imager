@@ -9,16 +9,16 @@ namespace Hst.Imager.Core.Models
     {
         private readonly VirtualDisk disk;
 
-        public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive,
+        public DiskMedia(string path, string name, MediaType type, bool isPhysicalDrive,
             VirtualDisk disk, bool byteswap, Stream stream = null) 
-            : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
+            : base(path, name, type, isPhysicalDrive, stream, byteswap)
         {
             ArgumentNullException.ThrowIfNull(disk);
             this.disk = disk;
         }
 
         public DiskMedia(Media media, VirtualDisk disk, Stream stream) 
-            : base(media.Path, media.Model, disk.Capacity, media.Type, media.IsPhysicalDrive, stream, media.Byteswap)
+            : base(media.Path, media.Model, media.Type, media.IsPhysicalDrive, stream, media.Byteswap)
         {
             ArgumentNullException.ThrowIfNull(disk);
             this.disk = disk;

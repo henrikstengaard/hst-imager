@@ -148,12 +148,12 @@ namespace Hst.Imager.Core.Tests
             var stream = testMedia.Stream;
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name,
                     Media.MediaType.Raw, false, stream, false)));
             }
             
             var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
-            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, disk.Capacity, Media.MediaType.Vhd, 
+            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, Media.MediaType.Vhd, 
                 false, disk, false, stream)));
         }
 
@@ -182,7 +182,7 @@ namespace Hst.Imager.Core.Tests
             var stream = testMedia.Stream;
             if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
             {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name, testMedia.Size,
+                return new Result<Media>(new Media(testMedia.Path, testMedia.Name,
                     Media.MediaType.Raw, false, stream, byteSwap));
             }
 
@@ -191,7 +191,7 @@ namespace Hst.Imager.Core.Tests
             Stream baseStream = byteSwap
                 ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
                 : vhdDisk.Content;
-            var disk = new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity, Media.MediaType.Vhd,
+            var disk = new DiskMedia(testMedia.Path, testMedia.Name, Media.MediaType.Vhd,
                 false, vhdDisk, byteSwap, baseStream);
             return new Result<Media>(disk);
         }
@@ -216,7 +216,7 @@ namespace Hst.Imager.Core.Tests
                     testMedia.Stream.SetLength(size.Value);
                 }
                 
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name, 0,
+                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name,
                     Media.MediaType.Raw, false, testMedia.Stream, false)));
             }
 
@@ -248,7 +248,7 @@ namespace Hst.Imager.Core.Tests
             Stream baseStream = byteSwap
                 ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
                 : vhdDisk.Content;
-            var disk = new DiskMedia(testMedia.Path, testMedia.Name, vhdDisk.Capacity,
+            var disk = new DiskMedia(testMedia.Path, testMedia.Name,
                 Media.MediaType.Vhd, false, vhdDisk, false, baseStream);
             return Task.FromResult(new Result<Media>(disk));
         }

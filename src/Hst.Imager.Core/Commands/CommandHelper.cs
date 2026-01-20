@@ -225,7 +225,7 @@ namespace Hst.Imager.Core.Commands
 
             physicalDrive.SetWritable(writeable);
             physicalDrive.SetByteSwap(byteSwap);
-            var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
+            var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name,
                 Media.MediaType.Raw, true, physicalDrive, byteSwap, useCache: useCache, cacheType: cacheType);
 
             // add physical drive to active drives if not already present
@@ -357,7 +357,7 @@ namespace Hst.Imager.Core.Commands
                 ? CacheHelper.AddLayeredCache(path, baseStream, writeable, blockSize, cacheType)
                 : baseStream;
             
-            return new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
+            return new DiskMedia(path, name, Media.MediaType.Vhd, false, vhdDisk,
                 byteSwap, stream);
         }
 
@@ -370,7 +370,7 @@ namespace Hst.Imager.Core.Commands
             // floppy image
             if (stream.Length == 1474560)
             {
-                return new Media(path, name, stream.Length, Media.MediaType.Floppy, false,
+                return new Media(path, name, Media.MediaType.Floppy, false,
                     stream, false);
             }
             
@@ -420,7 +420,7 @@ namespace Hst.Imager.Core.Commands
             // sector stream is only used for byte swapping disk media
             stream.Position = 0;
             var baseStream = byteSwap ? new SectorStream(stream, byteSwap: true, leaveOpen: false) : stream;
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, baseStream, byteSwap);
+            return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
         private async Task<Media> ResolveRarMedia(string path, string name, Stream stream, bool byteSwap)
@@ -448,7 +448,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             rarEntryStream = rarEntry.OpenEntryStream();
-            return new Media(path, Path.GetFileName(rarEntry.Key), rarEntry.Size,
+            return new Media(path, Path.GetFileName(rarEntry.Key),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
@@ -482,7 +482,7 @@ namespace Hst.Imager.Core.Commands
             }
 
             zipEntryStream = zipEntry.Open();
-            return new Media(path, Path.GetFileName(zipEntry.Name), zipEntry.Length,
+            return new Media(path, Path.GetFileName(zipEntry.Name),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
@@ -498,7 +498,7 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var zxStream = new SharpCompress.Compressors.Xz.XZStream(stream);
-            return new Media(path, name, sizeAndHeader.Item1,
+            return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
@@ -515,7 +515,7 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var gZipStream = new System.IO.Compression.GZipStream(stream, CompressionMode.Decompress);
-            return new Media(path, name, sizeAndHeader.Item1,
+            return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false,
@@ -619,7 +619,7 @@ namespace Hst.Imager.Core.Commands
             if (!IsVhd(path))
             {
                 var fileStream = CreateWriteableStream(path, false);
-                var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
+                var fileMedia = new Media(path, name, Media.MediaType.Raw, false,
                     byteSwap ? new SectorStream(fileStream, leaveOpen: true, byteSwap: true) : fileStream, byteSwap);
                 this.activeMedias.Add(fileMedia);
                 return Task.FromResult(new Result<Media>(fileMedia));
@@ -656,7 +656,7 @@ namespace Hst.Imager.Core.Commands
                 // create interceptor stream disabling seek, set length and overriding close to dispose zip archive
                 var interceptorStream = new InterceptorStream(zipEntryStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { }, closeHandler: () => zipArchive.Dispose());
-                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                return new Media(path, name, Media.MediaType.CompressedRaw, false,
                     interceptorStream, false);
             }
 
@@ -667,13 +667,13 @@ namespace Hst.Imager.Core.Commands
                 // create interceptor stream disabling seek and set length
                 var interceptorStream = new InterceptorStream(gZipStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { });
-                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                return new Media(path, name, Media.MediaType.CompressedRaw, false,
                     interceptorStream, false);
             }
 
             // sector stream has leave open set to false, so stream is disposed when media is closed
             var baseStream = byteSwap ? new SectorStream(stream, leaveOpen: false, byteSwap: true) : stream;
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, baseStream, byteSwap);
+            return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
         public virtual async Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,

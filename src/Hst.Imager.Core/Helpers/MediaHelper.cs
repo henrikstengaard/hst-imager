@@ -142,7 +142,7 @@ namespace Hst.Imager.Core.Helpers
             var partitionStream = new VirtualStream(media.Stream, partitionOffset, partitionSize, partitionSize);
 
             var piStormRdbMediaPath = string.Join(directorySeparatorChar, parts.Take(2));
-            var piStormRdbMedia = CreatePiStormRdbMedia(media, piStormRdbMediaPath, partitionNumber, partitionSize, partitionStream);
+            var piStormRdbMedia = CreatePiStormRdbMedia(media, piStormRdbMediaPath, partitionNumber, partitionStream);
 
             return new PiStormRdbMediaResult
             {
@@ -153,7 +153,7 @@ namespace Hst.Imager.Core.Helpers
         }
 
         private static Media CreatePiStormRdbMedia(Media media, string piStormRdbMediaPath, int mbrPartitionNumber,
-            long size, Stream stream)
+            Stream stream)
         {
             var type = media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd
                 ? Media.MediaType.CompressedRaw
@@ -163,7 +163,6 @@ namespace Hst.Imager.Core.Helpers
                 Path.Combine(media.Path, piStormRdbMediaPath), 
                 mbrPartitionNumber,
                 string.Concat("Partition #", mbrPartitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
-                size,
                 type,
                 false,
                 stream, 

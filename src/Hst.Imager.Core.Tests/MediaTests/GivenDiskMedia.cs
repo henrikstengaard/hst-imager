@@ -13,9 +13,9 @@ public class GivenDiskMedia
     {
         // arrange - two disk medias with same path
         var disk = new DiscUtils.Raw.Disk(new MemoryStream(), Ownership.None);
-        var media1 = new DiskMedia("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media1 = new DiskMedia("disk.img", "Disk", Media.MediaType.Raw, 
             false, disk, false);
-        var media2 = new DiskMedia("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media2 = new DiskMedia("disk.img", "Disk", Media.MediaType.Raw, 
             false, disk, false);
         
         // act - equals
@@ -31,9 +31,9 @@ public class GivenDiskMedia
         // arrange - two disk medias with different paths
         var disk1 = new DiscUtils.Raw.Disk(new MemoryStream(), Ownership.None);
         var disk2 = new DiscUtils.Raw.Disk(new MemoryStream(), Ownership.None);
-        var media1 = new DiskMedia("disk1.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media1 = new DiskMedia("disk1.img", "Disk", Media.MediaType.Raw, 
             false, disk1, false);
-        var media2 = new DiskMedia("disk2.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media2 = new DiskMedia("disk2.img", "Disk", Media.MediaType.Raw, 
             false, disk2, false);
         
         // act - equals
