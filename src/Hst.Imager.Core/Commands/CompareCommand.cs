@@ -69,36 +69,39 @@ namespace Hst.Imager.Core.Commands
 
             var physicalDrivesList = physicalDrives.ToList();
             
-            var sourceMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, 
+            var srcMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, 
                 srcResolvedMediaResult.Value.MediaPath, srcResolvedMediaResult.Value.Modifiers);
-            if (sourceMediaResult.IsFaulted)
+            if (srcMediaResult.IsFaulted)
             {
-                return new Result(sourceMediaResult.Error);
+                return new Result(srcMediaResult.Error);
             }
             
-            // get src media and stream
-            using var srcMedia = sourceMediaResult.Value;
-            var srcStream = MediaHelper.GetStreamFromMedia(srcMedia);
+            // get pistorm rdb media from src media
+            var srcPiStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                srcMediaResult.Value, srcResolvedMediaResult.Value.FileSystemPath,
+                srcResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            OnDebugMessage($"Source media is '{srcMedia.GetType().Name}', path '{srcMedia.Path}', media type '{srcMedia.Type}' and size {srcMedia.Size} bytes");
-            OnInformationMessage($"Source size '{srcMedia.Size.FormatBytes()}' ({srcMedia.Size} bytes)");
+            using var srcMedia = srcPiStormRdbMediaResult.Media;
+            var srcStream = srcMedia.Stream;
+            var srcFileSystemPath = srcPiStormRdbMediaResult.FileSystemPath;
 
-            // get start offset and source size
-            var srcStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, srcMedia, 
-                srcResolvedMediaResult.Value.FileSystemPath);
-            if (srcStartOffsetAndSizeResult.IsFaulted)
+            // get start offset and source size from src media
+            var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, srcMedia,
+                srcFileSystemPath);
+            if (startOffsetAndSizeResult.IsFaulted)
             {
-                return new Result(srcStartOffsetAndSizeResult.Error);
+                return new Result(startOffsetAndSizeResult.Error);
             }
             
-            var (srcPartStartOffset, srcPartSize) = srcStartOffsetAndSizeResult.Value;
+            var (srcStartOffset, srcSize) = startOffsetAndSizeResult.Value;
 
-            OnInformationMessage($"Source part start offset '{srcPartStartOffset}' and size '{srcPartSize.FormatBytes()}' ({srcPartSize} bytes)");
+            OnInformationMessage($"Source start offset '{srcStartOffset}'");
+            OnInformationMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
+            // add src start offset, if defined
             if (sourceStartOffset > 0)
             {
-                OnDebugMessage($"Source start offset within part '{sourceStartOffset}'");
-                srcPartStartOffset += sourceStartOffset;
+                srcStartOffset += sourceStartOffset;
             }
             
             // resolve destination media path
@@ -113,45 +116,53 @@ namespace Hst.Imager.Core.Commands
 
             OnDebugMessage($"Opening destination '{destinationPath}' as readable");
 
-            var destinationMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, 
+            var destMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, 
                 destResolvedMediaResult.Value.MediaPath, destResolvedMediaResult.Value.Modifiers);
-            if (destinationMediaResult.IsFaulted)
+            if (destMediaResult.IsFaulted)
             {
-                return new Result(destinationMediaResult.Error);
+                return new Result(destMediaResult.Error);
             }
 
-            // get dest media and stream
-            using var destMedia = destinationMediaResult.Value;
-            var destStream = MediaHelper.GetStreamFromMedia(destMedia);
+            // get pistorm rdb media from dest media
+            var destPiStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                destMediaResult.Value, destResolvedMediaResult.Value.FileSystemPath,
+                destResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            OnDebugMessage($"Destination media is '{destMedia.GetType().Name}', path '{destMedia.Path}', media type '{destMedia.Type}' and size {destMedia.Size} bytes");
-            OnInformationMessage($"Destination size '{destMedia.Size.FormatBytes()}' ({destMedia.Size} bytes)");
+            using var destMedia = destPiStormRdbMediaResult.Media;
+            var destStream = destMedia.Stream;
+            var destFileSystemPath = destPiStormRdbMediaResult.FileSystemPath;
 
-            // get dest start offset and source size
-            var destStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia, 
-                destResolvedMediaResult.Value.FileSystemPath);
+            // get start offset and source size from dest media
+            var destStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia,
+                destFileSystemPath);
             if (destStartOffsetAndSizeResult.IsFaulted)
             {
                 return new Result(destStartOffsetAndSizeResult.Error);
             }
             
-            var (destPartStartOffset, destPartSize) = destStartOffsetAndSizeResult.Value;
+            var (destStartOffset, destSize) = destStartOffsetAndSizeResult.Value;
 
-            OnInformationMessage($"Destination part start offset '{destPartStartOffset}' and size '{destPartSize.FormatBytes()}' ({destPartSize} bytes)");
+            OnInformationMessage($"Destination start offset '{destStartOffset}'");
+            OnInformationMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
 
+            // add destination start offset, if defined
             if (destinationStartOffset > 0)
             {
-                OnDebugMessage($"Destination start offset within part '{destinationStartOffset}'");
-                destPartStartOffset += destinationStartOffset;
+                destStartOffset += destinationStartOffset;
             }
             
-            if (srcPartSize > destPartSize)
+            if (size.Value != 0)
             {
-                return new Result(new CompareSizeTooLargeError(srcPartSize, destPartSize,
-                    $"Source part size '{srcPartSize.FormatBytes()}' ({srcPartSize} bytes) is larger than destination part size '{destPartSize.FormatBytes()}' ({destPartSize} bytes)"));
+                srcSize = srcSize.ResolveSize(size);
             }
 
-            var compareSize = GetCompareSize(srcPartSize, destPartSize);
+            if (srcSize > destSize)
+            {
+                return new Result(new CompareSizeTooLargeError(srcSize, destSize,
+                    $"Source part size '{srcSize.FormatBytes()}' ({srcSize} bytes) is larger than destination part size '{destSize.FormatBytes()}' ({destSize} bytes)"));
+            }
+            
+            var compareSize = Math.Min(srcSize, destSize);
 
             OnInformationMessage($"Compare size '{compareSize.FormatBytes()}' ({compareSize} bytes)");
             
@@ -161,10 +172,10 @@ namespace Hst.Imager.Core.Commands
                 return new Result(new Error($"Invalid compare size '{compareSize}' for source or destination"));
             }
 
-            if (compareSize > destPartSize)
+            if (compareSize > destSize)
             {
-                return new Result(new InvalidCompareSizeError(compareSize, destPartSize,
-                    $"Compare size {compareSize} is larger than size {destPartSize}"));
+                return new Result(new InvalidCompareSizeError(compareSize, destSize,
+                    $"Compare size {compareSize} is larger than size {destSize}"));
             }
 
             using var imageVerifier = new ImageVerifier(retries: retries, force: force);
@@ -178,8 +189,8 @@ namespace Hst.Imager.Core.Commands
             imageVerifier.SrcError += (_, args) => OnSrcError(args);
             imageVerifier.DestError += (_, args) => OnDestError(args);
 
-            var result = await imageVerifier.Verify(token, srcStream, srcPartStartOffset,
-                destStream, destPartStartOffset, compareSize, skipZeroFilled);
+            var result = await imageVerifier.Verify(token, srcStream, srcStartOffset,
+                destStream, destStartOffset, compareSize, skipZeroFilled);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
@@ -195,17 +206,6 @@ namespace Hst.Imager.Core.Commands
                 $"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}, source and destination are identical");
 
             return new Result();
-        }
-
-        private long GetCompareSize(long sourceSize, long destinationSize)
-        {
-            // return largest comparable size, if size is zero
-            if (size.Value == 0)
-            {
-                return Math.Min(sourceSize, destinationSize);
-            }
-            
-            return size.Value != 0 ? sourceSize.ResolveSize(size) : sourceSize;
         }
 
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);

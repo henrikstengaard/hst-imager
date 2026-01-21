@@ -60,31 +60,36 @@ namespace Hst.Imager.Core.Commands
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
             // resolve media for destination path
-            var destResolveMediaResult = commandHelper.ResolveMedia(destinationPath);
-            if (destResolveMediaResult.IsFaulted)
+            var destResolvedMediaResult = commandHelper.ResolveMedia(destinationPath);
+            if (destResolvedMediaResult.IsFaulted)
             {
-                return new Result(destResolveMediaResult.Error);
+                return new Result(destResolvedMediaResult.Error);
             }
 
-            OnDebugMessage($"Media Path: '{destResolveMediaResult.Value.MediaPath}'");
-            OnDebugMessage($"Virtual Path: '{destResolveMediaResult.Value.FileSystemPath}'");             
+            OnDebugMessage($"Media Path: '{destResolvedMediaResult.Value.MediaPath}'");
+            OnDebugMessage($"Virtual Path: '{destResolvedMediaResult.Value.FileSystemPath}'");             
 
             var physicalDrivesList = physicalDrives.ToList();
 
             var destMediaResult =
-                await commandHelper.GetWritableMedia(physicalDrivesList, destResolveMediaResult.Value.MediaPath, destResolveMediaResult.Value.Modifiers);
+                await commandHelper.GetWritableMedia(physicalDrivesList, destResolvedMediaResult.Value.MediaPath, destResolvedMediaResult.Value.Modifiers);
             if (destMediaResult.IsFaulted)
             {
                 return new Result(destMediaResult.Error);
             }
 
-            // get dest media and stream
-            using var destMedia = destMediaResult.Value;
-            var destStream = MediaHelper.GetStreamFromMedia(destMedia);
+            // get pistorm rdb media from dest media
+            var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                destMediaResult.Value, destResolvedMediaResult.Value.FileSystemPath,
+                destResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            // get start offset and source size
+            using var destMedia = piStormRdbMediaResult.Media;
+            var destStream = destMedia.Stream;
+            var destFileSystemPath = piStormRdbMediaResult.FileSystemPath;
+            
+            // get start offset and source size from dest media
             var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia,
-                destResolveMediaResult.Value.FileSystemPath);
+                destFileSystemPath);
             if (startOffsetAndSizeResult.IsFaulted)
             {
                 return new Result(startOffsetAndSizeResult.Error);
@@ -92,8 +97,8 @@ namespace Hst.Imager.Core.Commands
             
             var (destStartOffset, destSize) = startOffsetAndSizeResult.Value;
 
-            OnDebugMessage($"Destination start offset '{destStartOffset}'");
-            OnDebugMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
+            OnInformationMessage($"Destination start offset '{destStartOffset}'");
+            OnInformationMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
 
             // add destination start offset, if defined
             if (start.HasValue)

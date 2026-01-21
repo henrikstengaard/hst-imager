@@ -30,67 +30,74 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"Transferring from source image file '{sourcePath}' to destination image file '{destinationPath}'");
             
             // resolve media path
-            var srcMediaResult = commandHelper.ResolveMedia(sourcePath);
+            var srcResolvedMediaResult = commandHelper.ResolveMedia(sourcePath);
+            if (srcResolvedMediaResult.IsFaulted)
+            {
+                return new Result(srcResolvedMediaResult.Error);
+            }
+
+            OnDebugMessage($"Media Path: '{srcResolvedMediaResult.Value.MediaPath}'");
+            OnDebugMessage($"Virtual Path: '{srcResolvedMediaResult.Value.FileSystemPath}'");            
+
+            OnDebugMessage($"Opening source path '{sourcePath}' as readable");
+
+            var srcMediaResult = await commandHelper.GetReadableFileMedia(srcResolvedMediaResult.Value.MediaPath, srcResolvedMediaResult.Value.Modifiers);
             if (srcMediaResult.IsFaulted)
             {
                 return new Result(srcMediaResult.Error);
             }
 
-            OnDebugMessage($"Media Path: '{srcMediaResult.Value.MediaPath}'");
-            OnDebugMessage($"Virtual Path: '{srcMediaResult.Value.FileSystemPath}'");            
+            // get pistorm rdb media from src media
+            var srcPiStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                srcMediaResult.Value, srcResolvedMediaResult.Value.FileSystemPath,
+                srcResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            OnDebugMessage($"Opening source path '{sourcePath}' as readable");
-
-            var sourceMediaResult = await commandHelper.GetReadableFileMedia(srcMediaResult.Value.MediaPath, srcMediaResult.Value.Modifiers);
-            if (sourceMediaResult.IsFaulted)
-            {
-                return new Result(sourceMediaResult.Error);
-            }
-
-            // get src media and stream
-            using var srcMedia = sourceMediaResult.Value;
+            using var srcMedia = srcPiStormRdbMediaResult.Media;
             var srcStream = srcMedia.Stream;
+            var srcFileSystemPath = srcPiStormRdbMediaResult.FileSystemPath;
 
-            // get src offset and source size
-            var srcStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, srcMedia,
-                srcMediaResult.Value.FileSystemPath);
-            if (srcStartOffsetAndSizeResult.IsFaulted)
+            // get start offset and source size from src media
+            var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, srcMedia,
+                srcFileSystemPath);
+            if (startOffsetAndSizeResult.IsFaulted)
             {
-                return new Result(srcStartOffsetAndSizeResult.Error);
+                return new Result(startOffsetAndSizeResult.Error);
             }
             
-            var (srcStartOffset, srcSize) = srcStartOffsetAndSizeResult.Value;
-            
+            var (srcStartOffset, srcSize) = startOffsetAndSizeResult.Value;
+
+            OnInformationMessage($"Source start offset '{srcStartOffset}'");
+            OnInformationMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
+
             // add start offset
             if (srcStart.HasValue)
             {
                 srcStartOffset += srcStart.Value;
             }
 
-            OnDebugMessage($"Source start offset '{srcStartOffset}'");
-            OnDebugMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
-            
             var transferSize = srcSize.ResolveSize(size);
             OnInformationMessage($"Size '{transferSize.FormatBytes()}' ({transferSize} bytes)");
             
             // resolve media path
-            var destMediaResult = commandHelper.ResolveMedia(destinationPath);
-            if (destMediaResult.IsFaulted && destMediaResult.Error is not PathNotFoundError)
+            var destResolvedMediaResult = commandHelper.ResolveMedia(destinationPath);
+            if (destResolvedMediaResult.IsFaulted && destResolvedMediaResult.Error is not PathNotFoundError)
             {
-                return new Result(destMediaResult.Error);
+                return new Result(destResolvedMediaResult.Error);
             }
 
-            if (destMediaResult.IsSuccess)
+            if (destResolvedMediaResult.IsSuccess)
             {
-                OnDebugMessage($"Media Path: '{destMediaResult.Value.MediaPath}'");
-                OnDebugMessage($"Virtual Path: '{destMediaResult.Value.FileSystemPath}'");            
+                OnDebugMessage($"Media Path: '{destResolvedMediaResult.Value.MediaPath}'");
+                OnDebugMessage($"Virtual Path: '{destResolvedMediaResult.Value.FileSystemPath}'");            
             }
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
-            var destMediaPath = destMediaResult.Value?.MediaPath ?? destinationPath;
-            var destVirtualPath = destMediaResult.Value?.FileSystemPath ?? string.Empty;
-            var createDestMedia = destMediaResult.IsFaulted && destMediaResult.Error is PathNotFoundError;
+            var destMediaPath = destResolvedMediaResult.Value?.MediaPath ?? destinationPath;
+            var destVirtualPath = destResolvedMediaResult.Value?.FileSystemPath ?? string.Empty;
+            var createDestMedia = destResolvedMediaResult.IsFaulted && destResolvedMediaResult.Error is PathNotFoundError;
+            var directorySeparatorChar = destResolvedMediaResult.Value?.DirectorySeparatorChar ??
+                                         srcResolvedMediaResult.Value.DirectorySeparatorChar;
 
             var destinationMediaResult = createDestMedia
                 ? await commandHelper.GetWritableFileMedia(destMediaPath, size: transferSize, create: true)
@@ -100,16 +107,22 @@ namespace Hst.Imager.Core.Commands
                 return new Result(destinationMediaResult.Error);
             }
 
-            using var destinationMedia = destinationMediaResult.Value;
-            var destinationStream = destinationMedia.Stream;
+            // get pistorm rdb media from dest media
+            var destPiStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                destinationMediaResult.Value, destVirtualPath,
+                directorySeparatorChar);
 
+            using var destMedia = destPiStormRdbMediaResult.Media;
+            var destStream = destMedia.Stream;
+            var destFileSystemPath = destPiStormRdbMediaResult.FileSystemPath;
+            
             var destStartOffset = destStart ?? 0;
             
             if (!createDestMedia)
             {
                 // get dest offset and size
                 var destStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper,
-                    destinationMedia, destVirtualPath);
+                    destMedia, destFileSystemPath);
                 if (destStartOffsetAndSizeResult.IsFaulted)
                 {
                     return new Result(destStartOffsetAndSizeResult.Error);
@@ -130,7 +143,7 @@ namespace Hst.Imager.Core.Commands
             streamCopier.DestError += (_, args) => OnDestError(args);
             
             var skipZeroFilled = commandHelper.IsVhd(destinationPath);
-            var result = await streamCopier.Copy(token, srcStream, destinationStream, transferSize, srcStartOffset, destStartOffset, skipZeroFilled);
+            var result = await streamCopier.Copy(token, srcStream, destStream, transferSize, srcStartOffset, destStartOffset, skipZeroFilled);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
