@@ -347,12 +347,7 @@ namespace Hst.Imager.Core.Commands
             }
             
             vhdDisk.Content.Position = 0;
-
-            // use sector stream for byte swapping
-            Stream baseStream = byteSwap
-                ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
-                : vhdDisk.Content;
-            
+            var baseStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: false);
             var stream = useCache
                 ? CacheHelper.AddLayeredCache(path, baseStream, writeable, blockSize, cacheType)
                 : baseStream;
@@ -417,9 +412,10 @@ namespace Hst.Imager.Core.Commands
             }
 
             // raw stream
-            // sector stream is only used for byte swapping disk media
             stream.Position = 0;
-            var baseStream = byteSwap ? new SectorStream(stream, byteSwap: true, leaveOpen: false) : stream;
+            var baseStream = byteSwap
+                ? new SectorStream(stream, byteSwap: true, leaveOpen: false)
+                : stream;
             return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
@@ -448,12 +444,14 @@ namespace Hst.Imager.Core.Commands
             }
 
             rarEntryStream = rarEntry.OpenEntryStream();
+            var baseStream = byteSwap
+                ? new SectorStream(rarEntryStream, leaveOpen: false, byteSwap: true)
+                : rarEntryStream;
             return new Media(path, Path.GetFileName(rarEntry.Key),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
-                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(rarEntryStream, leaveOpen: true, byteSwap: byteSwap), length: rarEntry.Size,
-                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(baseStream,
+                    length: rarEntry.Size, closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         rarEntryStream.Fill(buffer, offset, count)), byteSwap);
         }
         
@@ -482,12 +480,15 @@ namespace Hst.Imager.Core.Commands
             }
 
             zipEntryStream = zipEntry.Open();
+            var baseStream = byteSwap
+                ? new SectorStream(zipEntryStream, leaveOpen: false, byteSwap: true)
+                : zipEntryStream;
             return new Media(path, Path.GetFileName(zipEntry.Name),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(zipEntryStream, leaveOpen: true, byteSwap: byteSwap), length: zipEntry.Length,
-                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                    baseStream, length: zipEntry.Length, closeHandler: stream.Dispose,
+                    readHandler: (buffer, offset, count) =>
                         zipEntryStream.Fill(buffer, offset, count)), byteSwap);
         }
 
@@ -498,11 +499,14 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var zxStream = new SharpCompress.Compressors.Xz.XZStream(stream);
+            Stream baseStream = byteSwap
+                ? new SectorStream(zxStream, leaveOpen: false, byteSwap: true)
+                : zxStream;
             return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(zxStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    baseStream, length: sizeAndHeader.Item1, 
                     closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         zxStream.Fill(buffer, offset, count)), byteSwap);
         }
@@ -515,15 +519,17 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var gZipStream = new System.IO.Compression.GZipStream(stream, CompressionMode.Decompress);
+            Stream baseStream = byteSwap
+                ? new SectorStream(gZipStream, leaveOpen: false, byteSwap: true)
+                : gZipStream;
             return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false,
                 new InterceptorStream(
-                    new SectorStream(gZipStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    baseStream, length: sizeAndHeader.Item1, 
                     closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         gZipStream.Fill(buffer, offset, count)), byteSwap);
-            // , seekHandler: (l, origin) => l)
         }
 
         private async Task<Tuple<long, byte[]>> GetStreamLength(Stream stream)
@@ -619,8 +625,10 @@ namespace Hst.Imager.Core.Commands
             if (!IsVhd(path))
             {
                 var fileStream = CreateWriteableStream(path, false);
-                var fileMedia = new Media(path, name, Media.MediaType.Raw, false,
-                    byteSwap ? new SectorStream(fileStream, leaveOpen: true, byteSwap: true) : fileStream, byteSwap);
+                var baseStream = byteSwap
+                    ? new SectorStream(fileStream, leaveOpen: false, byteSwap: true)
+                    : fileStream;
+                var fileMedia = new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
                 this.activeMedias.Add(fileMedia);
                 return Task.FromResult(new Result<Media>(fileMedia));
             }
@@ -671,8 +679,9 @@ namespace Hst.Imager.Core.Commands
                     interceptorStream, false);
             }
 
-            // sector stream has leave open set to false, so stream is disposed when media is closed
-            var baseStream = byteSwap ? new SectorStream(stream, leaveOpen: false, byteSwap: true) : stream;
+            var baseStream = byteSwap
+                ? new SectorStream(stream, leaveOpen: false, byteSwap: true)
+                : stream;
             return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
