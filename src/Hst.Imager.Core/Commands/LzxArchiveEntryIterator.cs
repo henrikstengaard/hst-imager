@@ -68,8 +68,8 @@ public class LzxArchiveEntryIterator : IEntryIterator
 
     public async Task<Result> Initialize()
     {
-        var hasWildcard = rootPathComponents.Length > 0 && PathComponentHelper.HasWildcard(rootPathComponents[^1]);
         var validDirComponents = Array.Empty<string>();
+        var usePattern = false;
         var entriesExist = false;
 
         while (await lzxArchive.Next() is { } lzxEntry)
@@ -85,20 +85,43 @@ public class LzxArchiveEntryIterator : IEntryIterator
                 lzxEntryIndex.Add(entryPath, memoryStream.ToArray());
             }
             
+            var isDir = entryPath.EndsWith(mediaPath.PathSeparator);
+            
             var entryPathComponents = mediaPath.Split(entryPath);
 
             var pathComponentMatch = PathComponentHelper.MatchPathComponents(rootPathComponents, entryPathComponents);
 
+            // path components do not match, continue
             if (!pathComponentMatch.Success)
             {
                 continue;
             }
             
+            // update valid dir components, if entry is a directory
+            if (isDir)
+            {
+                if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
+                {
+                    validDirComponents = pathComponentMatch.MatchingPathComponents;
+                }
+                continue;
+            }
+            
+            // file entries exist
             entriesExist = true;
                 
+            // update valid dir components from file entry match
             if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
             {
-                validDirComponents = pathComponentMatch.MatchingPathComponents;
+                validDirComponents = entryPathComponents.Length == pathComponentMatch.MatchingPathComponents.Length 
+                    ? pathComponentMatch.MatchingPathComponents.Take(pathComponentMatch.MatchingPathComponents.Length - 1).ToArray()
+                    : pathComponentMatch.MatchingPathComponents;
+            }
+            
+            // use pattern, if entry path components length equals root path components length
+            if (entryPathComponents.Length == PathComponents.Length)
+            {
+                usePattern = true;
             }
         }
         
@@ -107,9 +130,8 @@ public class LzxArchiveEntryIterator : IEntryIterator
             return new Result(new PathNotFoundError($"Path not found '{rootPath}'", rootPath));
         }        
 
-        DirPathComponents = rootPathComponents.Length > 0 ? validDirComponents.ToArray() : [];
-        pathComponentMatcher = new PathComponentMatcher(hasWildcard && rootPathComponents.Length > 0
-            ? rootPathComponents.ToArray() : [], recursive: recursive);
+        DirPathComponents = validDirComponents.ToArray();
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? rootPathComponents.ToArray() : [], recursive: recursive);
         initialized = true;
 
         return new Result();
@@ -177,8 +199,8 @@ public class LzxArchiveEntryIterator : IEntryIterator
             }
             else
             {
-                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
-                    currentEntry.RelativePathComponents, recursive);
+                skipEntry = currentEntry.FullPathComponents.Length < pathComponentMatcher.PathComponents.Length ||
+                            !pathComponentMatcher.IsMatch(currentEntry.FullPathComponents);
             }
         } while (nextEntries.Count > 0 && skipEntry);
 
@@ -200,7 +222,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
         {
             var entryPath = lzxEntry.Name;
             
-            var isDir = entryPath.EndsWith("//");
+            var isDir = entryPath.EndsWith(mediaPath.PathSeparator);
 
             var protectionBits = GetProtectionBits(lzxEntry.Attributes);
             var properties = new Dictionary<string, string>

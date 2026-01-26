@@ -718,5 +718,64 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 DeletePaths(adfPath);
             }
         }
+
+        [Fact]
+        public async Task When_ListingEntriesInSubDirectory_Then_EntriesAreListed()
+        {
+            var adfPath = $"{Guid.NewGuid()}.adf";
+            var dirPath = Path.Combine(adfPath, "dir1");
+            const bool recursive = false;
+
+            try
+            {
+                // arrange - create dos3 formatted adf with files
+                await CreateDos3FormattedAdf(adfPath);
+                await CreateDos3AdfFiles(adfPath);
+
+                // arrange - test command helper
+                using var testCommandHelper = new TestCommandHelper();
+                
+                // arrange - create fs dir command
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
+                    new List<IPhysicalDrive>(), dirPath, recursive);
+                EntriesInfo entriesInfo = null;
+                fsDirCommand.EntriesRead += (_, e) =>
+                {
+                    entriesInfo = e.EntriesInfo;
+                };
+
+                // act - execute fs dir command
+                var result = await fsDirCommand.Execute(CancellationToken.None);
+
+                // assert - success and entries info is not null
+                Assert.True(result.IsSuccess);
+                Assert.NotNull(entriesInfo);
+                
+                // assert - 3 entries are listed
+                var entries = entriesInfo.Entries.ToList();
+                Assert.Equal(3, entries.Count);
+
+                // assert - 1 directory is listed
+                var expectedDirNames = new[]
+                {
+                    "dir2"
+                };
+                var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir).Select(x => x.Name).ToList();
+                Assert.Equal(expectedDirNames, dirNames);
+                
+                // assert - 1 file is listed
+                var expectedFileNames = new[]
+                {
+                    "file3.txt",
+                    "test.txt"
+                };
+                var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File).Select(x => x.Name).ToList();
+                Assert.Equal(expectedFileNames, fileNames);
+            }
+            finally
+            {
+                DeletePaths(adfPath);
+            }
+        }
     }
 }

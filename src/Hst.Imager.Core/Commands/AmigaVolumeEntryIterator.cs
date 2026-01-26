@@ -138,8 +138,8 @@ public class AmigaVolumeEntryIterator(
             }
             else
             {
-                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
-                    currentEntry.RelativePathComponents, recursive);
+                skipEntry = currentEntry.FullPathComponents.Length < pathComponentMatcher.PathComponents.Length ||
+                            !pathComponentMatcher.IsMatch(currentEntry.FullPathComponents);
             }
         } while (nextEntries.Count > 0 && skipEntry);
 

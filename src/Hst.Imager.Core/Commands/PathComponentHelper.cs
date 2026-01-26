@@ -69,13 +69,19 @@ public static class PathComponentHelper
     /// </summary>
     /// <param name="rootPathComponents">Root path components.</param>
     /// <param name="entryPathComponents">Entry path components.</param>
+    /// <param name="caseSensitive">Indicates if match is case-sensitive.</param>
     /// <returns>Path component match indicating if root path components matches entry path components together with matching path components.</returns>
-    public static PathComponentMatch MatchPathComponents(string[] rootPathComponents, string[] entryPathComponents)
+    public static PathComponentMatch MatchPathComponents(string[] rootPathComponents, string[] entryPathComponents,
+        bool caseSensitive = false)
     {
+        var stringComparison = caseSensitive
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
+        
         // return all entry path components as match, if root path components is empty or
         // root path components equal entry path components
         if (rootPathComponents.Length == 0 ||
-            rootPathComponents.SequenceEqual(entryPathComponents))
+            AreArraysEqual(rootPathComponents, entryPathComponents, stringComparison))
         {
             return new PathComponentMatch(true, rootPathComponents);
         }
@@ -84,17 +90,40 @@ public static class PathComponentHelper
         var rootPathComponentsWithoutWildcard = rootPathHasWildcard
             ? rootPathComponents.Take(rootPathComponents.Length - 1).ToArray()
             : rootPathComponents;
-        if (rootPathHasWildcard && rootPathComponentsWithoutWildcard.SequenceEqual(
-                entryPathComponents.Take(rootPathComponentsWithoutWildcard.Length)))
+        if (rootPathHasWildcard && AreArraysEqual(rootPathComponentsWithoutWildcard,
+                entryPathComponents.Take(rootPathComponentsWithoutWildcard.Length).ToArray(), stringComparison))
         {
             return new PathComponentMatch(true, rootPathComponentsWithoutWildcard);
         }
 
         // return root path components as match, if they are equal the beginning of entry path components
         // otherwise return no match
-        return rootPathComponents.SequenceEqual(entryPathComponents.Take(rootPathComponents.Length))
+        return AreArraysEqual(rootPathComponents, entryPathComponents.Take(rootPathComponents.Length).ToArray(),
+            stringComparison)
             ? new PathComponentMatch(true, rootPathComponents)
             : new PathComponentMatch(false, []);
+    }
+    
+    public static bool AreArraysEqual(string[] array1, string[] array2, StringComparison stringComparison)
+    {
+        // return false if either array is null or lengths differ
+        if (array1 == null ||
+            array2 == null ||
+            array1.Length != array2.Length)
+        {
+            return false;
+        }
+
+        // compare each element in the arrays
+        for (var i = 0; i < array1.Length; i++)
+        {
+            if (!string.Equals(array1[i], array2[i], stringComparison))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 

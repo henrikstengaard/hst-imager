@@ -6,14 +6,19 @@ namespace Hst.Imager.Core.PathComponents;
 
 public static class EntryIteratorFunctions
 {
-    public static bool IsFullPathComponentsValid(string[] rootPathComponents, string[] fullPathComponents)
+    public static bool IsFullPathComponentsValid(string[] rootPathComponents, string[] fullPathComponents,
+        bool caseSensitive = false)
     {
         if (fullPathComponents.Length < rootPathComponents.Length)
         {
             return false;
         }
 
-        if (rootPathComponents.Length > 0 && !fullPathComponents[0].Equals(rootPathComponents[0]))
+        var stringComparison = caseSensitive
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
+
+        if (rootPathComponents.Length > 0 && !fullPathComponents[0].Equals(rootPathComponents[0], stringComparison))
         {
             return false;
         }
@@ -21,6 +26,14 @@ public static class EntryIteratorFunctions
         return true;
     }
 
+    /// <summary>
+    /// Is relative path components valid.
+    /// Was used to iterators to determine if a dir entry should be skipped when not recursive
+    /// </summary>
+    /// <param name="pathComponentMatcher">Path component matcher.</param>
+    /// <param name="relativePathComponents">Relative path components.</param>
+    /// <param name="recursive">Recursive.</param>
+    /// <returns>True, if relative path components are valid, otherwise false (false = skip dir entry).</returns>
     public static bool IsRelativePathComponentsValid(PathComponentMatcher pathComponentMatcher,
         string[] relativePathComponents, bool recursive)
     {
@@ -42,7 +55,8 @@ public static class EntryIteratorFunctions
         return relativePathComponents.Length > 0;
     }
 
-    public static IEnumerable<string> GetRelativePathComponents(string[] rootPathComponents, string[] fullPathComponents)
+    public static IEnumerable<string> GetRelativePathComponents(string[] rootPathComponents, string[] fullPathComponents,
+        bool caseSensitive = false)
     {
         // skip, if full path componenets are less than root path components
         // for example full path is "dir1" and root path components "dir1/dir2"
@@ -50,6 +64,10 @@ public static class EntryIteratorFunctions
         {
             yield break;
         }
+        
+        var stringComparison = caseSensitive
+            ? StringComparison.Ordinal
+            : StringComparison.OrdinalIgnoreCase;
 
         var equalPathComponentCount = 0;
         for (var pathComponentIndex = 0; pathComponentIndex < fullPathComponents.Length; pathComponentIndex++)
@@ -57,7 +75,7 @@ public static class EntryIteratorFunctions
             if (pathComponentIndex < rootPathComponents.Length)
             {
                 var pathComponentsEqual = rootPathComponents[pathComponentIndex].Length == fullPathComponents[pathComponentIndex].Length &&
-                    rootPathComponents[pathComponentIndex].Equals(fullPathComponents[pathComponentIndex], StringComparison.OrdinalIgnoreCase);
+                    rootPathComponents[pathComponentIndex].Equals(fullPathComponents[pathComponentIndex], stringComparison);
 
                 if (!pathComponentsEqual)
                 {

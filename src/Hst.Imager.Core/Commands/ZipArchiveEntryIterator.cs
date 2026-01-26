@@ -78,27 +78,50 @@ public class ZipArchiveEntryIterator : IEntryIterator
             return Task.FromResult(new Result());
         }
         
-        var hasWildcard = PathComponentHelper.HasWildcard(rootPathComponents[^1]);
         var validDirComponents = Array.Empty<string>();
+        var usePattern = false;
         var entriesExist = false;
         foreach (var zipEntry in zipEntries)
         {
             var entryPath = GetEntryName(zipEntry.FullName);
             
+            var isDir = entryPath.EndsWith(mediaPath.PathSeparator);
+
             var entryPathComponents = mediaPath.Split(entryPath);
 
             var pathComponentMatch = PathComponentHelper.MatchPathComponents(rootPathComponents, entryPathComponents);
 
+            // path components do not match, continue
             if (!pathComponentMatch.Success)
             {
                 continue;
             }
             
+            // update valid dir components, if entry is a directory
+            if (isDir)
+            {
+                if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
+                {
+                    validDirComponents = pathComponentMatch.MatchingPathComponents;
+                }
+                continue;
+            }
+            
+            // file entries exist
             entriesExist = true;
                 
+            // update valid dir components from file entry match
             if (pathComponentMatch.MatchingPathComponents.Length > validDirComponents.Length)
             {
-                validDirComponents = pathComponentMatch.MatchingPathComponents;
+                validDirComponents = entryPathComponents.Length == pathComponentMatch.MatchingPathComponents.Length 
+                    ? pathComponentMatch.MatchingPathComponents.Take(pathComponentMatch.MatchingPathComponents.Length - 1).ToArray()
+                    : pathComponentMatch.MatchingPathComponents;
+            }
+            
+            // use pattern, if entry path components length equals root path components length
+            if (entryPathComponents.Length == PathComponents.Length)
+            {
+                usePattern = true;
             }
         }
         
@@ -108,7 +131,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
         }        
 
         DirPathComponents = validDirComponents.ToArray();
-        pathComponentMatcher = new PathComponentMatcher(hasWildcard ? rootPathComponents.ToArray() : [], recursive: recursive);
+        pathComponentMatcher = new PathComponentMatcher(usePattern ? rootPathComponents.ToArray() : [], recursive: recursive);
         initialized = true;
 
         return Task.FromResult(new Result());
@@ -166,8 +189,8 @@ public class ZipArchiveEntryIterator : IEntryIterator
             }
             else
             {
-                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
-                    currentEntry.RelativePathComponents, recursive);
+                skipEntry = currentEntry.FullPathComponents.Length < pathComponentMatcher.PathComponents.Length ||
+                            !pathComponentMatcher.IsMatch(currentEntry.FullPathComponents);
             }
         } while (nextEntries.Count > 0 && skipEntry);
 

@@ -390,4 +390,50 @@ public class GivenFsExtractCommandWithIso9660 : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
+    
+    [Fact]
+    public async Task When_ExtractingAFileFromIsoToLocalDirectoryUsingCapitalLetters_ThenFileIsExtracted()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.iso";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "DIR1", "FILE3.TXT");
+
+        try
+        {
+            // arrange - create iso9660 image with directories and files
+            CreateIso9660WithDirectoriesAndFiles(srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+        
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            // assert - single file is extracted
+            Assert.Single(actualFiles);
+            string[] expectedFiles =
+            [
+                Path.Combine(destPath, "file3.txt")
+            ];
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 }

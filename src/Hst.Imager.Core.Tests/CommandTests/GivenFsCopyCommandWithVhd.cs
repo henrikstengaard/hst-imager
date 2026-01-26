@@ -151,12 +151,16 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             // assert - get copied entries
             entries = (await pfs3Volume.ListEntries()).ToList();
 
-            // assert - copied directory contains 1 entry
-            Assert.Single(entries);
+            // assert - copied directory contains 2 entries
+            Assert.Equal(2, entries.Count);
             
             // assert - copied directory contains dir3 directory
             Assert.Equal("dir3",
                 entries.FirstOrDefault(x => x.Type == EntryType.Dir && x.Name.Equals("dir3", StringComparison.OrdinalIgnoreCase))?.Name);
+            
+            // assert - copied directory contains file1.txt directory
+            Assert.Equal("file1.txt",
+                entries.FirstOrDefault(x => x.Type == EntryType.File && x.Name.Equals("file1.txt", StringComparison.OrdinalIgnoreCase))?.Name);
         }
         finally
         {
@@ -204,7 +208,53 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
             DeletePaths(imagePath);
         }
     }
-    
+
+    [Fact]
+    public async Task When_ExtractingAFileFromVhdToLocalDirectoryUsingCapitalLetters_ThenFileIsExtracted()
+    {
+        var srcPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "RDB", "1", "DIR1", "FILE1.TXT");
+
+        try
+        {
+            // arrange - create test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create src disk image file with directories and a file
+            await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
+            await CreatePfs3Directories(testCommandHelper, srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            // arrange - create fs copy command
+            var fsCopyCommand = new FsCopyCommand(new NullLogger<FsCopyCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+        
+            // act - copy
+            var result = await fsCopyCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            // assert - single file is extracted
+            Assert.Single(actualFiles);
+            string[] expectedFiles =
+            [
+                Path.Combine(destPath, "file1.txt")
+            ];
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
+
     private void CreateDirectories(string path)
     {
         Directory.CreateDirectory(Path.Combine(path, "dir1"));
@@ -227,6 +277,7 @@ public class GivenFsCopyCommandWithVhd : FsCommandTestBase
         await pfs3Volume.CreateDirectory("dir1");
         await pfs3Volume.CreateDirectory("dir2");
         await pfs3Volume.ChangeDirectory("dir1");
+        await pfs3Volume.CreateFile("file1.txt");
         await pfs3Volume.CreateDirectory("dir3");
     }
 }
