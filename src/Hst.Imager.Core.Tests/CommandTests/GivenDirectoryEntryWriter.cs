@@ -31,11 +31,14 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
-            // arrange - create destination directory
+            // arrange - create directory
             Directory.CreateDirectory(path);
             
+            // arrange - create app cache
+            using var appCache = new TestAppCache();
+            
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path, false, false, false);
+            var writer = new DirectoryEntryWriter(path, false, false, false, appCache);
 
             // arrange - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -71,8 +74,12 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
+            // arrange - create app cache
+            using var appCache = new TestAppCache();
+            
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, false, false);
+            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
+                false, false, appCache);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -96,9 +103,12 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
+            // arrange - create app cache
+            using var appCache = new TestAppCache();
+            
             // arrange - create directory entry writer
             var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
-                false, false);
+                false, false, appCache);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();

@@ -652,11 +652,11 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, blockSize, start));
         }
         
-        public static async Task FsDir(string path, bool recursive, FormatEnum format)
+        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, FormatEnum format)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, recursive);
+                await GetPhysicalDrives(), path, recursive, uaeMetadata: uaeMetadata);
             command.EntriesRead += (_, args) =>
             {
                 Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, format));

@@ -14,21 +14,23 @@ namespace Hst.Imager.Core.Helpers
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.Substring(2))
             : path;
 
+        public static bool IsRootPath(string path) =>
+            IsMacOrLinuxRootPath(path) || IsWindowsRootPath(path);
+        
+        public static bool IsMacOrLinuxRootPath(string path) =>
+            path.Length > 0 &&
+            path.StartsWith("/");
+        
+        public static bool IsWindowsRootPath(string path) =>
+            path.Length > 1 &&
+            (path.StartsWith(@"\") || Regexs.WindowsDriveRegex.IsMatch(path));
+
         public static string GetFullPath(string path)
         {
             path = ResolveUserProfilePath(path);
             
-            var isMacOsOrLinux = OperatingSystem.IsMacOS() || OperatingSystem.IsLinux(); 
-            
-            // return path, if not macos or linux and path is full path
-            if (!isMacOsOrLinux && path.Length > 0 && path.StartsWith("/"))
-            {
-                return path;
-            }
-
-            // return path, if not windows and path is full path
-            if (!OperatingSystem.IsWindows() && path.Length > 1 &&
-                (path.StartsWith(@"\") || Regexs.WindowsDriveRegex.IsMatch(path)))
+            // return path, if root path
+            if (IsRootPath(path))
             {
                 return path;
             }

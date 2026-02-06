@@ -1,4 +1,6 @@
 ﻿using DiscUtils;
+using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -25,7 +27,8 @@ public class FsDirCommand(
     ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives,
     string path,
-    bool recursive)
+    bool recursive,
+    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
     : FsCommandBase(commandHelper, physicalDrives)
 {
     private readonly ILogger<FsDirCommand> logger = logger;
@@ -36,6 +39,43 @@ public class FsDirCommand(
     {
         OnDebugMessage($"Opening '{path}' as readable");
 
+        var listMediaEntriesResult = await ListMediaEntries();
+        if (listMediaEntriesResult.IsSuccess)
+        {
+            return listMediaEntriesResult;
+        }
+
+        if (listMediaEntriesResult.IsFaulted && listMediaEntriesResult.Error is not PathNotFoundError)
+        {
+            return new Result(listMediaEntriesResult.Error);
+        }
+        
+        // get directory entry iterator and list entries if successful
+        var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+            new MemoryAppCache());
+        if (directoryEntryIteratorResult.IsFaulted)
+        {
+            return new Result(directoryEntryIteratorResult.Error);
+        }
+        
+        var initializeResult = await directoryEntryIteratorResult.Value.Initialize();
+        if (initializeResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(initializeResult.Error);
+        }
+
+        directoryEntryIteratorResult.Value.UaeMetadata = directoryEntryIteratorResult.Value.SupportsUaeMetadata &&
+                                                         uaeMetadata != UaeMetadata.None
+            ? uaeMetadata
+            : UaeMetadata.None;
+
+        await ListEntries(directoryEntryIteratorResult.Value);
+        
+        return new Result();
+    }
+    
+    private async Task<Result> ListMediaEntries()
+    {
         var pathResult = commandHelper.ResolveMedia(path);
         if (pathResult.IsFaulted)
         {

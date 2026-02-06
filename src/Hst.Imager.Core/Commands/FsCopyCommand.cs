@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.Helpers;
+﻿using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -55,7 +56,7 @@ public class FsCopyCommand(
         }
 
         // get source copy entry iterator
-        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath);
+        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath, uaeMetadata);
         if (srcEntryIteratorResult.IsFaulted)
         {
             return new Result(srcEntryIteratorResult.Error);
@@ -179,18 +180,31 @@ public class FsCopyCommand(
         return new Result();
     }
 
-    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path)
+    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path,
+        UaeMetadata uaeMetadata)
     {
-        // get directory entry iterator and return if successful
-        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
-        if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
+        var entryIteratorResult = await GetEntryIteratorFromMedia(entryWriter, path);
+        if (entryIteratorResult.IsSuccess)
         {
-            var initializeResult = await directoryEntryIterator.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(directoryEntryIterator.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
+            return entryIteratorResult;
         }
-
+        
+        // get directory entry iterator and return if successful
+        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+            new MemoryAppCache());
+        if (directoryEntryIterator.IsFaulted)
+        {
+            return new Result<IEntryIterator>(directoryEntryIterator.Error);
+        }
+        
+        var initializeResult = await directoryEntryIterator.Value.Initialize();
+        return initializeResult.IsSuccess
+            ? new Result<IEntryIterator>(directoryEntryIterator.Value)
+            : new Result<IEntryIterator>(initializeResult.Error);
+    }
+    
+    private async Task<Result<IEntryIterator>> GetEntryIteratorFromMedia(IEntryWriter entryWriter, string path)
+    {
         // path is not a directory, so must be a file
         
         OnDebugMessage($"Resolving path '{path}'");
@@ -207,7 +221,7 @@ public class FsCopyCommand(
         // file entry iterator
         if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
-            var fileEntryIterator = await GetFileEntryIterator(path, recursive);
+            var fileEntryIterator = await GetFileEntryIterator(path, recursive, uaeMetadata);
             if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
             {
                 var initializeResult = await fileEntryIterator.Value.Initialize();

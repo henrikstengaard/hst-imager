@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Hst.Imager.Core.Caching;
 
-namespace Hst.Imager.Core.Tests.CommandTests.EntryIteratorTests;
+namespace Hst.Imager.Core.Tests;
 
 /// <summary>
 /// Test implementation of IAppCache for unit testing.

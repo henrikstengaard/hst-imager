@@ -2,6 +2,7 @@
 using DiscUtils.Ntfs;
 using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -217,20 +218,31 @@ public abstract partial class FsCommandBase : CommandBase
         return false;
     }
 
-    protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive,
+        UaeMetadata uaeMetadata, IAppCache appCache)
     {
-        var dirPath = Path.GetDirectoryName(path) ?? string.Empty;
+        var fullPath = PathHelper.GetFullPath(path);
+        
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
 
-        return Task.FromResult(Directory.Exists(path) || Directory.Exists(dirPath)
-            ? new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive, new MemoryAppCache()))
-            : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{path}'", path)));
+        var pathComponents = fullPath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
+            uaeMetadata, pathComponents);
+        var pathExistsInUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+
+        var dirPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
+        
+        return pathExistsInUaeMetadata || Directory.Exists(fullPath) || Directory.Exists(dirPath)
+            ? new Result<IEntryIterator>(new DirectoryEntryIterator(fullPath, recursive, uaeMetadata, appCache))
+            : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{fullPath}'", fullPath));
     }
 
-    protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)
+    protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata)
     {
         path = PathHelper.GetFullPath(path);
         return Task.FromResult(new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive,
-            new MemoryAppCache())));
+            uaeMetadata, new MemoryAppCache())));
     }
 
     protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -494,8 +506,9 @@ public abstract partial class FsCommandBase : CommandBase
         {
             return new Result<IEntryWriter>(new PathNotFoundError($"Path not found '{path}'", path));
         }
-        
-        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite);
+
+        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite,
+            new MemoryAppCache());
 
         var initializeResult = await directoryEntryWriter.Initialize();
         return initializeResult.IsFaulted

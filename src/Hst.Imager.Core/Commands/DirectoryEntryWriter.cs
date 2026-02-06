@@ -1,6 +1,6 @@
-﻿using System.Runtime.Caching;
-using Hst.Core;
+﻿using Hst.Core;
 using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -17,15 +17,13 @@ public class DirectoryEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
-    private readonly MemoryCache cache = new($"{nameof(DirectoryEntryWriter)}_CACHE");
-    private readonly DateTimeOffset cacheExpiration = DateTimeOffset.Now.AddMinutes(10);
 
     private readonly string rootPath;
     private readonly bool recursive;
     private readonly bool createDirectory;
     private readonly bool forceOverwrite;
 
-    private string[] rootPathComponents = [];
+    private readonly string[] rootPathComponents;
     /// <summary>
     /// dir path components after initialized
     /// is only used when creating single file
@@ -35,6 +33,8 @@ public class DirectoryEntryWriter : IEntryWriter
     private bool lastPathComponentExist = true;
     private EntryType lastPathComponentEntryType = EntryType.Dir;
     private bool isInitialized;
+    private readonly IAppCache appCache;
+    private readonly UaeMetadataHelper uaeMetadataHelper;
 
     /// <summary>
     /// Directory entry writer.
@@ -43,158 +43,69 @@ public class DirectoryEntryWriter : IEntryWriter
     /// <param name="recursive">Recursive creating directories and files.</param>
     /// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
     /// <param name="forceOverwrite">Force overwriting any existing files.</param>
-    public DirectoryEntryWriter(string rootPath, bool recursive, bool createDirectory, bool forceOverwrite)
+    /// <param name="appCache">Application cache.</param>
+    public DirectoryEntryWriter(string rootPath, bool recursive, bool createDirectory, bool forceOverwrite,
+        IAppCache appCache)
     {
         this.rootPath = rootPath;
         this.recursive = recursive;
         this.createDirectory = createDirectory;
         this.forceOverwrite = forceOverwrite;
+        this.appCache = appCache;
+        uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        rootPathComponents = GetPathComponents(rootPath);
     }
 
     public Media Media => null;
     public string MediaPath => rootPath;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
-    public Task FlushCache(int t = 0)
-    {
-        return Task.CompletedTask;
-    }
 
     public void Dispose()
     {
+        appCache.Dispose();
     }
 
-    private async Task<string> GetEntryPath(Entry entry, string[] entryPathComponents) =>
-        UaeMetadata == UaeMetadata.None
-            ? CreateNormalEntryPath(entry, entryPathComponents)
-            : await CreateUaeEntryPath(entry, entryPathComponents);
-
-    private string CreateNormalEntryPath(Entry entry, string[] entryPathComponents)
+    public async Task<Result> Initialize()
     {
-        var hasRootPathComponent = entryPathComponents.Length > 1 && IsRootPathComponent(entryPathComponents[0]);
-
-        var entryPathComponentsNormalised = hasRootPathComponent
-            ? new[]{ entryPathComponents[0] }.Concat(entryPathComponents.Skip(1).Select(UaeMetadataHelper.CreateNormalFilename))
-            : entryPathComponents.Select(UaeMetadataHelper.CreateNormalFilename);
-
-        return Path.Combine(entryPathComponentsNormalised.ToArray());
-    }
-    
-    private static bool IsRootPathComponent(string pathComponent)
-    {
-        return OperatingSystem.IsWindows()
-            ? Regexs.WindowsDriveRegex.IsMatch(pathComponent)
-            : pathComponent.Equals("/");
-    }
-    
-    private async Task<string> CreateUaeEntryPath(Entry entry, string[] entryPathComponents)
-    {
-        if (entryPathComponents.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        var cacheKey = string.Join("|", entryPathComponents);
-        
-        var uaeCacheEntry = cache.Get(cacheKey) as UaeCacheEntry;
-
-        if (uaeCacheEntry != null)
-        {
-            return uaeCacheEntry.UaeEntryPath;
-        }
-
-        var uaeEntryPath = Path.IsPathRooted(rootPath) && !OperatingSystem.IsWindows() ? "/" : string.Empty;
-
-        var uaeEntryPathComponents = new List<string>();
-        
-        for (var i = 0; i < entryPathComponents.Length; i++)
-        {
-            var entryPathComponent = entryPathComponents[i];
-
-            var isRootPathComponent = i == 0 && IsRootPathComponent(entryPathComponent);
-
-            cacheKey = string.Join("|", uaeEntryPathComponents.Concat([entryPathComponent]));
-        
-            uaeCacheEntry = cache.Get(cacheKey) as UaeCacheEntry;
-            
-            // reuse, if already created
-            if (uaeCacheEntry != null)
-            {
-                uaeEntryPathComponents.Add(entryPathComponent);
-
-                uaeEntryPath = uaeCacheEntry.UaeEntryPath;
-                
-                continue;
-            }
-
-            // if not use uae metadata, then add to cache and continue
-            if (isRootPathComponent || !UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, entryPathComponent))
-            {
-                uaeEntryPathComponents.Add(entryPathComponent);
-                
-                cacheKey = string.Join("|", uaeEntryPathComponents);
-
-                uaeEntryPath = string.IsNullOrWhiteSpace(uaeEntryPath)
-                    ? entryPathComponent
-                    : Path.Combine(uaeEntryPath, entryPathComponent);
-
-                uaeCacheEntry = new UaeCacheEntry
-                {
-                    EntryPathComponent = entryPathComponent,
-                    UaeEntryPath = uaeEntryPath
-                };
-
-                cache.Add(cacheKey, uaeCacheEntry, cacheExpiration);
-                
-                continue;
-            }
-            
-            // create new entry
-            var writeUaeMetadata = UaeMetadata != UaeMetadata.None;
-            var fileName = await GetFileName(uaeEntryPath, entryPathComponent, 
-                writeUaeMetadata);
-
-            uaeEntryPathComponents.Add(entryPathComponent);
-                
-            cacheKey = string.Join("|", uaeEntryPathComponents);
-            
-            uaeEntryPath = string.IsNullOrWhiteSpace(uaeEntryPath)
-                ? fileName
-                : Path.Combine(uaeEntryPath, fileName);
-
-            uaeCacheEntry = new UaeCacheEntry
-            {
-                EntryPathComponent = entryPathComponent,
-                UaeEntryPath = uaeEntryPath
-            };
-            
-            cache.Add(cacheKey, uaeCacheEntry, cacheExpiration);
-        }
-        
-        return uaeEntryPath;
-    }
-
-    public Task<Result> Initialize()
-    {
-        rootPathComponents = GetPathComponents(rootPath);
-        
         var exisingPathComponents = new List<string>(10);
 
         lastPathComponentExist = true;
 
+        var currentPath = string.Empty;
+        var firstPathComponent = rootPathComponents.Length > 0 ? rootPathComponents[0] : string.Empty;
+        
+        if (PathHelper.IsRootPath(firstPathComponent))
+        {
+            var isWindowsRoot = PathHelper.IsWindowsRootPath(firstPathComponent);
+            currentPath = isWindowsRoot ? firstPathComponent : "/";
+            
+        }
+
         for (var i = 0; i < rootPathComponents.Length; i++)
         {
-            var dirPath = string.Concat(
-                Path.IsPathRooted(rootPath) && !OperatingSystem.IsWindows() ? "/" : string.Empty,
-                Path.Combine(rootPathComponents.Take(i + 1).ToArray()));
+            var pathComponent = rootPathComponents[i];
+            var entryPath = Path.Combine(currentPath, pathComponent);
+
+            var dirExists = Directory.Exists(entryPath);
+            var fileExists = File.Exists(entryPath);
+
+            var entryPathComponents = exisingPathComponents.Concat([pathComponent]).ToArray();
+            var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(UaeMetadata, entryPathComponents);
             
-            var dirExists = Directory.Exists(dirPath);
-            var fileExists = File.Exists(dirPath);
+            if (uaeMetadataEntry is { UaeMetadataExists: true })
+            {
+                pathComponent = uaeMetadataEntry.NormalPathComponents[^1];
+                entryPath = Path.Combine(currentPath, pathComponent);
+                dirExists = Directory.Exists(entryPath);
+                fileExists = File.Exists(entryPath);
+            }
+
             var exists = dirExists || fileExists;
             
             if (fileExists && i < rootPathComponents.Length - 1)
             {
-                return Task.FromResult(new Result(new PathNotFoundError($"Path '{dirPath}' is a file and not a directory", dirPath)));
+                return new Result(new PathNotFoundError($"Path '{entryPath}' is a file and not a directory", entryPath));
             }
 
             if (!exists)
@@ -203,35 +114,45 @@ public class DirectoryEntryWriter : IEntryWriter
                 {
                     if (i != rootPathComponents.Length - 1)
                     {
-                        return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{dirPath}'", dirPath)));
+                        return new Result(new PathNotFoundError($"Path not found '{entryPath}'", entryPath));
                     }
                 
                     lastPathComponentExist = false;
                 
                     break;
                 }
+            
+                var requiresUaeMetadata = UaeMetadata != UaeMetadata.None &&
+                                          UaeMetadataHelper.RequiresUaeMetadataFileName(UaeMetadata, pathComponent);
 
-                Directory.CreateDirectory(dirPath);
+                if (requiresUaeMetadata)
+                {
+                    entryPath = await uaeMetadataHelper.CreateUaeMetadataEntry(UaeMetadata, entryPathComponents);
+                    pathComponent = Path.GetFileName(entryPath);
+                }
+                
+                Directory.CreateDirectory(entryPath);
             }
             else
             {
                 if (i == rootPathComponents.Length - 1)
                 {
                     lastPathComponentEntryType = dirExists ? EntryType.Dir : EntryType.File;
-
+            
                     if (!dirExists)
                     {
                         break;
                     }
                 }
             }
-
-            exisingPathComponents.Add(rootPathComponents[i]);
+            
+            exisingPathComponents.Add(pathComponent);
+            currentPath = Path.Combine(currentPath, pathComponent);
         }
 
         if (recursive && !lastPathComponentExist)
         {
-            return Task.FromResult(new Result(new PathNotFoundError($"Path '{rootPath}' not found. Directory must exist when using recursive!", rootPath)));
+            return new Result(new PathNotFoundError($"Path '{rootPath}' not found. Directory must exist when using recursive!", rootPath));
         }
 
         dirPathComponents = exisingPathComponents.ToArray();
@@ -239,41 +160,7 @@ public class DirectoryEntryWriter : IEntryWriter
 
         isInitialized = true;
 
-        return Task.FromResult(new Result());
-    }
-
-    /// <summary>
-    /// Get name for directory or file. If name already has uae metadata applied,
-    /// then that is read or created, if it doesn't exist.
-    /// </summary>
-    /// <param name="dirPath">Path to directory to get filename in.</param>
-    /// <param name="amigaName"></param>
-    /// <param name="useUaeMetadata"></param>
-    /// <returns></returns>
-    private async Task<string> GetFileName(string dirPath, string amigaName, bool useUaeMetadata)
-    {
-        if (!useUaeMetadata)
-        {
-            return UaeMetadataHelper.CreateNormalFilename(amigaName);
-        }
-
-        var uaeMetadataDir = string.IsNullOrEmpty(dirPath) ? Directory.GetCurrentDirectory() : dirPath;
-
-        var uaeMetadataNode = (await UaeMetadataHelper.ReadUaeMetadataNodes(UaeMetadata, uaeMetadataDir, amigaName))
-            .FirstOrDefault(x => x.AmigaName.Equals(amigaName, StringComparison.OrdinalIgnoreCase));
-
-        var normalName = uaeMetadataNode == null
-            ? UaeMetadataHelper.CreateUaeMetadataFileName(UaeMetadata, uaeMetadataDir, amigaName)
-            : uaeMetadataNode.NormalName;
-
-        var requiresUaeMetadata = !amigaName.Equals(normalName);
-
-        if (requiresUaeMetadata && uaeMetadataNode == null)
-        {
-            await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, uaeMetadataDir, amigaName, normalName);
-        }
-
-        return normalName;
+        return new Result();
     }
 
     public async Task<Result> CreateDirectory(Entry entry, string[] entryPathComponents, bool skipAttributes,
@@ -287,7 +174,7 @@ public class DirectoryEntryWriter : IEntryWriter
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
             lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
-        var fullPath = await GetEntryPath(entry, fullPathComponents);
+        var fullPath = await uaeMetadataHelper.CreateUaeMetadataEntry(UaeMetadata, fullPathComponents);
 
         if (!lastPathComponentExist)
         {
@@ -312,7 +199,7 @@ public class DirectoryEntryWriter : IEntryWriter
 
         var dirPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
 
-        var name = await GetFileName(dirPath, entryName, writeUaeMetadata);
+        var name = await uaeMetadataHelper.GetFileName(UaeMetadata, dirPath, entryName);
 
         if (writeUaeMetadata)
         {
@@ -332,21 +219,6 @@ public class DirectoryEntryWriter : IEntryWriter
             Directory.CreateDirectory(fullPath);
         }
 
-        if (UaeMetadata == UaeMetadata.None)
-        {
-            return new Result();
-        }
-
-        var uaeCacheEntry = new UaeCacheEntry
-        {
-            EntryPathComponent = entryName,
-            UaeEntryPath = fullPath
-        };
-
-        var cacheKey = string.Join("|", fullPathComponents);
-
-        cache.Add(cacheKey, uaeCacheEntry, cacheExpiration);
-
         return new Result();
     }
 
@@ -361,7 +233,7 @@ public class DirectoryEntryWriter : IEntryWriter
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
             lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
         
-        var fullPath = await GetEntryPath(entry, fullPathComponents);
+        var fullPath = await uaeMetadataHelper.CreateUaeMetadataEntry(UaeMetadata, fullPathComponents);
 
         if (!int.TryParse(GetProperty(entry.Properties, Constants.EntryPropertyNames.ProtectionBits), out var protectionBits))
         {
@@ -387,7 +259,7 @@ public class DirectoryEntryWriter : IEntryWriter
             Directory.CreateDirectory(dirPath);
         }
         
-        var fileName = await GetFileName(dirPath, entryName, writeUaeMetadata);
+        var fileName = await uaeMetadataHelper.GetFileName(UaeMetadata, dirPath, entryName);
 
         var filePath = string.IsNullOrEmpty(dirPath)
             ? fileName
@@ -462,7 +334,7 @@ public class DirectoryEntryWriter : IEntryWriter
     public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
     {
         return new DirectoryEntryIterator(string.Join(Path.PathSeparator, rootPathComponents), recursive,
-            new MemoryAppCache());
+            UaeMetadata, new MemoryAppCache());
     }
 
     public bool ArePathComponentsSelfCopy(IEntryIterator entryIterator)

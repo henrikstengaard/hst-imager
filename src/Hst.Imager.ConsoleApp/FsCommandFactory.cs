@@ -28,11 +28,17 @@ public static class FsCommandFactory
             description: "Recursively list sub-directories.",
             getDefaultValue: () => false);
         
+        var uaeMetadataOption = new Option<UaeMetadata>(
+            new[] { "--uaemetadata", "-uae" },
+            description: "Type of UAE metadata to read.",
+            getDefaultValue: () => UaeMetadata.UaeFsDb);
+        
         var command = new Command("dir", "List files and subdirectories in a directory.");
         command.AddAlias("d");
-        command.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption, CommandFactory.FormatOption);
+        command.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption, uaeMetadataOption, CommandFactory.FormatOption);
         command.AddArgument(pathArgument);
         command.AddOption(recursiveOption);
+        command.AddOption(uaeMetadataOption);
         command.AddOption(CommandFactory.FormatOption);
 
         return command;

@@ -115,7 +115,7 @@ public static class EntryWriterTestHelper
         }
         
         return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), false,
-            createDestDirectory, false);
+            createDestDirectory, false, new TestAppCache());
     }
 
     public static async Task CreateDirectory(EntryWriterType entryWriterType, TestCommandHelper testCommandHelper,

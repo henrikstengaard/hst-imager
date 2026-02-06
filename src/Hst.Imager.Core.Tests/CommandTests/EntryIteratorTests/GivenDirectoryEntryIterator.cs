@@ -21,7 +21,7 @@ public class GivenDirectoryEntryIterator
         
         try
         {
-            // arrange - create test files
+            // arrange - create directory and files
             Directory.CreateDirectory(mediaPath);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test1.txt"), []);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test2.txt"), []);
@@ -32,8 +32,8 @@ public class GivenDirectoryEntryIterator
             await File.WriteAllBytesAsync(uaeFsDbPath, []);
             
             // arrange - directory entry iterator
-            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, appCache);
-            directoryEntryIterator.UaeMetadata = UaeMetadata.UaeFsDb;
+            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, UaeMetadata.UaeFsDb,
+                appCache);
 
             // arrange - initialize directory entry iterator
             await directoryEntryIterator.Initialize();
@@ -43,14 +43,30 @@ public class GivenDirectoryEntryIterator
             {
             }
             
-            // assert - cache add count is 4
-            Assert.Equal(4, appCache.AddHistory.Count);
+            // assert - cache add count is equal or greater than 4
+            Assert.True(appCache.AddHistory.Count >= 4);
             
             // assert - cache contains uae-metadata entry and nodes and each file entry
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("UAE-METADATA-NODES:")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test1.txt")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test2.txt")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test3.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NODES-LIST:") &&
+                                                           x.EndsWith(mediaPath)));
+
+            // assert - cache contains add for test1.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test1.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test1.txt")));
+
+            // assert - cache contains add for test2.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test2.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test2.txt")));
+            
+            // assert - cache contains add for test3.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test3.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test3.txt")));
             
             // assert - cache get count is greater than add count
             Assert.True(appCache.GetHistory.Count > appCache.AddHistory.Count);
@@ -62,7 +78,6 @@ public class GivenDirectoryEntryIterator
                 Directory.Delete(mediaPath, true);
             }
         }
-        
     }
 
     [Fact]
@@ -76,15 +91,15 @@ public class GivenDirectoryEntryIterator
         
         try
         {
-            // arrange - create test files
+            // arrange - create directory and files
             Directory.CreateDirectory(mediaPath);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test1.txt"), []);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test2.txt"), []);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test3.txt"), []);
             
             // arrange - directory entry iterator
-            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, appCache);
-            directoryEntryIterator.UaeMetadata = UaeMetadata.UaeFsDb;
+            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, UaeMetadata.UaeFsDb,
+                appCache);
 
             // arrange - initialize directory entry iterator
             await directoryEntryIterator.Initialize();
@@ -94,14 +109,30 @@ public class GivenDirectoryEntryIterator
             {
             }
             
-            // assert - cache add count is 4
-            Assert.Equal(4, appCache.AddHistory.Count);
+            // assert - cache add count is equal or greater than 4
+            Assert.True(appCache.AddHistory.Count >= 4);
             
             // assert - cache contains uae-metadata entry and nodes and each file entry
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("UAE-METADATA-NODES:")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test1.txt")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test2.txt")));
-            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("ENTRY:test3.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NODES-LIST:") &&
+                                                           x.EndsWith(mediaPath)));
+
+            // assert - cache contains add for test1.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test1.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test1.txt")));
+
+            // assert - cache contains add for test2.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test2.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test2.txt")));
+            
+            // assert - cache contains add for test3.txt entry
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("AMIGA-NAME-ENTRY:") &&
+                                                           x.EndsWith("test3.txt")));
+            Assert.Equal(1, appCache.AddHistory.Count(x => x.StartsWith("NORMAL-NAME-ENTRY:") &&
+                                                           x.EndsWith("test3.txt")));
             
             // assert - cache get count is greater than add count
             Assert.True(appCache.GetHistory.Count > appCache.AddHistory.Count);
