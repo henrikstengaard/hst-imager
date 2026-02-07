@@ -225,7 +225,7 @@ public abstract partial class FsCommandBase : CommandBase
         
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
 
-        var pathComponents = fullPath.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+        var pathComponents = PathHelper.Split(fullPath);
         
         var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
             uaeMetadata, pathComponents);
@@ -395,7 +395,7 @@ public abstract partial class FsCommandBase : CommandBase
         var media = piStormRdbMediaResult.Media;
         fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
-        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
         if (media.Type == Media.MediaType.Floppy)
         {
@@ -645,7 +645,7 @@ public abstract partial class FsCommandBase : CommandBase
 
             var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, PartitionTableType.RigidDiskBlock,
                 0, string.Empty,
-                fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), recursive,
+                fileSystemPath.Split(directorySeparatorChar), recursive,
                 fileSystemVolumeResult.Value, createDestDirectory, forceOverwrite);
 
             var adfInitializeResult = await adfAmigaVolumeEntryWriter.Initialize();
@@ -655,7 +655,7 @@ public abstract partial class FsCommandBase : CommandBase
         }
 
         // disk
-        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = PathHelper.Split(fileSystemPath);
 
         if (parts.Length == 0)
         {

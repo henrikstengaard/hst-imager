@@ -1,10 +1,10 @@
 ﻿using System.Linq;
 using Hst.Core;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
@@ -28,7 +28,7 @@ public class LzwArchiveEntryIterator : IEntryIterator
         nextEntries = new Stack<Entry>();
         filePath = Path.GetFullPath(path);
         RootPath = Path.GetDirectoryName(this.filePath);
-        PathComponents = DirPathComponents =GetPathComponents(RootPath);
+        PathComponents = DirPathComponents = GetPathComponents(RootPath);
         isFirst = true;
     }
 
@@ -98,10 +98,7 @@ public class LzwArchiveEntryIterator : IEntryIterator
         });        
     }
     
-    public string[] GetPathComponents(string path)
-    {
-        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
-    }
+    public string[] GetPathComponents(string path) => PathHelper.Split(path);
 
     /// <summary>
     /// Lzw archive is a single file archive does not use patterns, it will always returns false.

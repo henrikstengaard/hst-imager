@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Hst.Imager.Core.Commands;
@@ -9,6 +10,14 @@ namespace Hst.Imager.Core.Helpers
 
     public static class PathHelper
     {
+        public static string[] Split(string path) =>
+            (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
+
+        public static string[] Split(string directorySeparatorChar, string path) =>
+            (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)).ToArray();
+        
         private static string ResolveUserProfilePath(string path) => 
             (path.Length >= 2 && path.StartsWith("~/"))
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.Substring(2))

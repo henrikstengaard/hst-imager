@@ -259,10 +259,7 @@ public class Iso9660EntryIterator : IEntryIterator
         return Iso9660ExtensionRegex.Replace(path, "");
     }
     
-    public string[] GetPathComponents(string path)
-    {
-        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
-    }
+    public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;
 

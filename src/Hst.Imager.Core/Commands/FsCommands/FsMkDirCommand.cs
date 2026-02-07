@@ -132,7 +132,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         using var media = piStormRdbMediaResult.Media;
         fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
-        var parts = fileSystemPath.Split(new []{ directorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length < 1 || !(parts[0].Equals("mbr", StringComparison.OrdinalIgnoreCase) || 
                                       parts[0].Equals("gpt", StringComparison.OrdinalIgnoreCase) || 

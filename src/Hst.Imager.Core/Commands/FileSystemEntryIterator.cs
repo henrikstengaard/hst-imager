@@ -1,5 +1,6 @@
 ﻿using DiscUtils.Ntfs;
 using Hst.Core;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -400,10 +401,7 @@ public class FileSystemEntryIterator(
             : Task.FromResult(fileSystem.OpenFile(entry.RawPath, FileMode.Open) as Stream);
     }
 
-    public string[] GetPathComponents(string path)
-    {
-        return path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries);
-    }
+    public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;
 

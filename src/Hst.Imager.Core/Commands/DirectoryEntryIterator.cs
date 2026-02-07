@@ -43,7 +43,7 @@ public class DirectoryEntryIterator : IEntryIterator
         this.UaeMetadata = uaeMetadata;
         this.appCache = appCache;
         uaeMetadataHelper = new UaeMetadataHelper(appCache);
-        rootPathComponents = GetPathComponents(rootPath);
+        rootPathComponents = PathHelper.Split(rootPath);
     }
 
     public async Task<Result> Initialize()
@@ -220,11 +220,7 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
     }
 
-    public string[] GetPathComponents(string path)
-    {
-        return (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
-            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
-    }
+    public string[] GetPathComponents(string path) => PathHelper.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;
 

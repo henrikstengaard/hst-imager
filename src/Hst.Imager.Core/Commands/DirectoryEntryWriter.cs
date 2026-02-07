@@ -29,7 +29,6 @@ public class DirectoryEntryWriter : IEntryWriter
     /// is only used when creating single file
     /// </summary>
     private string[] dirPathComponents = [];
-    private string initializedDirPath = string.Empty;
     private bool lastPathComponentExist = true;
     private EntryType lastPathComponentEntryType = EntryType.Dir;
     private bool isInitialized;
@@ -53,7 +52,7 @@ public class DirectoryEntryWriter : IEntryWriter
         this.forceOverwrite = forceOverwrite;
         this.appCache = appCache;
         uaeMetadataHelper = new UaeMetadataHelper(appCache);
-        rootPathComponents = GetPathComponents(rootPath);
+        rootPathComponents = PathHelper.Split(rootPath);
     }
 
     public Media Media => null;
@@ -156,7 +155,6 @@ public class DirectoryEntryWriter : IEntryWriter
         }
 
         dirPathComponents = exisingPathComponents.ToArray();
-        initializedDirPath = Path.Combine(dirPathComponents);
 
         isInitialized = true;
 
@@ -386,10 +384,4 @@ public class DirectoryEntryWriter : IEntryWriter
     }
 
     public bool SupportsUaeMetadata => true;
-
-    private static string[] GetPathComponents(string path)
-    {
-        return (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
-            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
-    }
 }

@@ -252,12 +252,12 @@ public class FsCopyCommand(
         
         // get entry iterator file system path components
         var entryIteratorFileSystemPathComponents =
-            fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
                 .ToArray();
         
         // get entry writer file system path components
         var entryWriterFileSystemPathComponents =
-            entryWriter.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2)
+            entryWriter.FileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Take(2)
                 .ToArray();
 
         // return entry iterator from entry writer, if media is adf and media path is the same
