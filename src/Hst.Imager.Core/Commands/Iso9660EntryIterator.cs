@@ -182,13 +182,15 @@ public class Iso9660EntryIterator : IEntryIterator
 
         foreach (var dirName in cdReader.GetDirectories(path, "*", SearchOption.AllDirectories).OrderByDescending(x => x).ToList())
         {
+            var entryName = FormatPath(dirName);
+            
             var attributes = FileAttributesFormatter.FormatMsDosAttributes((int)cdReader.GetAttributes(dirName));
             var properties = new Dictionary<string, string>();
 
             var dirAttributes = FileAttributesFormatter.FormatMsDosAttributes((int)FileAttributes.Archive);
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
-                recursive, dirName, dirName, true, cdReader.GetLastWriteTime(dirName), 0,
+                recursive, entryName, entryName, true, cdReader.GetLastWriteTime(dirName), 0,
                 attributes, properties, dirAttributes).ToList();
 
             foreach (var entry in entries)

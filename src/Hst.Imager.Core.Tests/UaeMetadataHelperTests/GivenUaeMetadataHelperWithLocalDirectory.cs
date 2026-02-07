@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.UaeMetadatas;
 using Xunit;
 
@@ -37,7 +38,7 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - get path components for local path
-            var localPathComponents = localPath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+            var localPathComponents = PathHelper.Split(localPath);
 
             // act - get uae metadata entry from path components
             var uaeMetadataEntry =
@@ -101,7 +102,7 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - get path components for local path
-            var file1PathComponents = file1Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+            var file1PathComponents = PathHelper.Split(file1Path);
 
             // act - get uae metadata entry from path components
             var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(uaeMetadata,
@@ -111,7 +112,7 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             Assert.NotNull(uaeMetadataEntry);
             
             // assert - uae metadata entry path components are equal to local path components
-            var expectedLocalPathComponents = localPath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+            var expectedLocalPathComponents = PathHelper.Split(localPath)
                 .Concat([file1NormalName]).ToArray();
             Assert.Equal(expectedLocalPathComponents, uaeMetadataEntry.NormalPathComponents);
             
@@ -191,7 +192,7 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - get path components for local path
-            var file1PathComponents = file1Path.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries);
+            var file1PathComponents = PathHelper.Split(file1Path);
 
             // act - get uae metadata entry from path components
             var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(uaeMetadata,
@@ -201,7 +202,7 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             Assert.NotNull(uaeMetadataEntry);
             
             // assert - uae metadata entry path components are equal to local path components
-            var expectedLocalPathComponents = localPath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+            var expectedLocalPathComponents = PathHelper.Split(localPath)
                 .Concat([dir1NormalName, file1NormalName]).ToArray();
             Assert.Equal(expectedLocalPathComponents, uaeMetadataEntry.NormalPathComponents);
             

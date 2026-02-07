@@ -76,7 +76,7 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
     private async Task CreateDirectory(IEntryWriter entryWriter, string entryPath)
     {
         var name = Path.GetFileName(entryPath);
-        var entryPathComponents = entryPath.Split(new[] { "\\", "/" }, StringSplitOptions.RemoveEmptyEntries);
+        var entryPathComponents = PathHelper.Split(entryPath);
         await entryWriter.CreateDirectory(new Entry
         {
             Name = name,
@@ -94,7 +94,7 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
     private async Task WriteEntry(IEntryWriter entryWriter, string entryPath, Stream stream)
     {
         var name = Path.GetFileName(entryPath);
-        var entryPathComponents = entryPath.Split(new []{"\\", "/"}, StringSplitOptions.RemoveEmptyEntries);
+        var entryPathComponents = PathHelper.Split(entryPath);
         await entryWriter.CreateFile(new Entry
         {
             Name = name,
