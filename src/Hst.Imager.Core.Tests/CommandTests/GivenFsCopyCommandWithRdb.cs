@@ -9,7 +9,6 @@ using Hst.Amiga.DataTypes.UaeMetafiles;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
 using Hst.Imager.Core.UaeMetadatas;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -128,7 +127,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
 
             // assert - uaefsdb in dir 1 contains dir 2
             var uaeFsDbPath = Path.Combine(destPath, "_UAEFSDB.___");
-            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            var uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
             var normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
             Assert.Equal(new []{"dir1"}, amigaNames);
@@ -141,7 +140,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             
             // assert - uaefsdb in dir 1 contains dir 2
             uaeFsDbPath = Path.Combine(dir1Path, "_UAEFSDB.___");
-            uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
             normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
             Assert.Equal(new []{"dir2*"}, amigaNames);
@@ -150,7 +149,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             // assert - uaefsdb in dir 2 contains file 1-7 and aux
             uaeFsDbPath = Path.Combine(dir2Path, "_UAEFSDB.___");
             Assert.True(File.Exists(uaeFsDbPath));
-            uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).OrderBy(x => x).ToArray();
             normalNames = uaeFsDbNodes.Select(x => x.NormalName).OrderBy(x => x).ToArray();
             Array.Sort(amigaNames);
@@ -400,7 +399,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Assert.Equal(expectedFiles, actualFiles);
             
             // assert - uaefsdb in dir 1 contains dir 2
-            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            var uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).OrderBy(x => x).ToArray();
             var normalNames = uaeFsDbNodes.Select(x => x.NormalName).OrderBy(x => x).ToArray();
             Array.Sort(amigaNames);
@@ -1057,7 +1056,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
 
             // assert - uaefsdb in dir 1 contains files
             var uaeFsDbPath = Path.Combine(destPath, "dir1", "_UAEFSDB.___");
-            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            var uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
             var normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
             Assert.Equal(new[] { "   ", "      " }, amigaNames);
@@ -1130,7 +1129,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
 
             // assert - uaefsdb in dir 1 contains files
             var uaeFsDbPath = Path.Combine(destPath, "_UAEFSDB.___");
-            var uaeFsDbNodes = (await ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
+            var uaeFsDbNodes = (await UaeMetadataTestHelper.ReadUaeFsDbNodes(uaeFsDbPath)).ToList();
             Assert.Equal(2, uaeFsDbNodes.Count);
             var amigaNames = uaeFsDbNodes.Select(x => x.AmigaName).ToArray();
             var normalNames = uaeFsDbNodes.Select(x => x.NormalName).ToArray();
@@ -1207,20 +1206,6 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
         {
             DeletePaths(destPath);
         }
-    }
-
-    private static async Task<IEnumerable<UaeFsDbNode>> ReadUaeFsDbNodes(string uaeFsDbPath)
-    {
-        var uaeFsDbBytes = await File.ReadAllBytesAsync(uaeFsDbPath);
-        var uaeFsDbNodes = new List<UaeFsDbNode>();
-        var offset = 0;
-        while (offset + Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size <= uaeFsDbBytes.Length)
-        {
-            uaeFsDbNodes.Add(UaeFsDbReader.ReadFromBytes(uaeFsDbBytes, offset));
-            offset += Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size;
-        }
-
-        return uaeFsDbNodes;
     }
     
     private async Task CreatePfs3DirectoriesAndFiles(TestCommandHelper testCommandHelper, string path)
