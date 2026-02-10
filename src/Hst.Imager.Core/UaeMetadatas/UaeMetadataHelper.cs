@@ -333,8 +333,11 @@ public class UaeMetadataHelper(IAppCache appCache)
         
         var nodes = await ReadUaeMetadataNodes(uaeMetadata, path);
 
-        nodesIndexedByAmigaName = nodes.ToDictionary(node => node.AmigaName,
-            StringComparer.OrdinalIgnoreCase);
+        nodesIndexedByAmigaName = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in nodes)
+        {
+            nodesIndexedByAmigaName[node.AmigaName] = node;
+        }
 
         appCache.Add(cacheKey, nodesIndexedByAmigaName);
         
@@ -364,9 +367,12 @@ public class UaeMetadataHelper(IAppCache appCache)
         
         var nodes = await ReadUaeMetadataNodes(uaeMetadata, path);
 
-        nodesIndexedByNormalName = nodes.ToDictionary(node => node.NormalName,
-            StringComparer.OrdinalIgnoreCase);
-
+        nodesIndexedByNormalName = new Dictionary<string, UaeMetadataNode>(StringComparer.OrdinalIgnoreCase);
+        foreach (var node in nodes)
+        {
+            nodesIndexedByNormalName[node.NormalName] = node;
+        }
+        
         appCache.Add(cacheKey, nodesIndexedByNormalName);
         
         return nodesIndexedByNormalName;

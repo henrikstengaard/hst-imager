@@ -214,4 +214,114 @@ public class GivenUaeMetadataHelperWithLocalDirectory
             TestHelper.DeletePaths(localPath);
         }
     }
+
+    [Fact]
+    public async Task When_GetUaeMetadataNodesIndexedByAmigaNameWithDuplicates_Then_NodeIsOverwritten()
+    {
+        // arrange - paths
+        var localPath = $"local_{Guid.NewGuid()}";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - create local directory
+            Directory.CreateDirectory(localPath);
+            
+            // arrange - create uaefsdb version 1 nodes in local directory with duplicate amiga names
+            var uaeFsDbPath = Path.Combine(localPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+            using (var uaeFsDbStream = File.OpenWrite(uaeFsDbPath))
+            {
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file1",
+                    NormalName = "file1 duplicate1",
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                    Comment = "file1"
+                }));
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file1",
+                    NormalName = "file1 duplicate2",
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                    Comment = "file1"
+                }));
+            }
+
+            // arrange - create app cache
+            using var appCache = new TestAppCache();
+            
+            // arrange - create uae metadata helper
+            var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
+            // act - get uae metadata nodes indexed by amiga name
+            var nodesIndexedByAmigaName = await uaeMetadataHelper.GetUaeMetadataNodesIndexedByAmigaName(uaeMetadata, localPath);
+            
+            // assert - nodes indexed by amiga name contains file 1 duplicate 2
+            Assert.Single(nodesIndexedByAmigaName);
+            Assert.Equal("file1 duplicate2", nodesIndexedByAmigaName["file1"].NormalName);
+        }
+        finally
+        {
+            TestHelper.DeletePaths(localPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_GetUaeMetadataNodesIndexedByNormalNameWithDuplicates_Then_NodeIsOverwritten()
+    {
+        // arrange - paths
+        var localPath = $"local_{Guid.NewGuid()}";
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - create local directory
+            Directory.CreateDirectory(localPath);
+            
+            // arrange - create uaefsdb version 1 nodes in local directory with duplicate normal names
+            var uaeFsDbPath = Path.Combine(localPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+            using (var uaeFsDbStream = File.OpenWrite(uaeFsDbPath))
+            {
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file1 duplicate1",
+                    NormalName = "file1",
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                    Comment = "file1"
+                }));
+                await uaeFsDbStream.WriteBytes(UaeFsDbWriter.Build(new UaeFsDbNode
+                {
+                    Version = UaeFsDbNode.NodeVersion.Version1,
+                    Valid = 1,
+                    AmigaName = "file1 duplicate2",
+                    NormalName = "file1",
+                    Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
+                    Comment = "file1"
+                }));
+            }
+
+            // arrange - create app cache
+            using var appCache = new TestAppCache();
+            
+            // arrange - create uae metadata helper
+            var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
+            // act - get uae metadata nodes indexed by normal name
+            var nodesIndexedByNormalName = await uaeMetadataHelper.GetUaeMetadataNodesIndexedByNormalName(uaeMetadata, localPath);
+            
+            // assert - nodes indexed by amiga name contains file 1 duplicate 2
+            Assert.Single(nodesIndexedByNormalName);
+            Assert.Equal("file1 duplicate2", nodesIndexedByNormalName["file1"].AmigaName);
+        }
+        finally
+        {
+            TestHelper.DeletePaths(localPath);
+        }
+    }
 }
