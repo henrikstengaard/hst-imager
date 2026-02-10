@@ -14,6 +14,21 @@ namespace Hst.Imager.Core.Tests;
 
 public static class RdbTestHelper
 {
+    public static async Task AddPfs3RdbPartition(TestCommandHelper testCommandHelper, string path, 
+        string driveName, long partitionSize)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+        
+        var stream = media.Stream;
+
+        var rigidDiskBlock = await RigidDiskBlockReader.Read(stream);
+
+        rigidDiskBlock.AddPartition(driveName, partitionSize);
+        
+        await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
+    }
+    
     public static async Task Pfs3FormatRdbPartition(TestCommandHelper testCommandHelper, string path, int partitionNumber,
         string volumeName = "Workbench")
     {

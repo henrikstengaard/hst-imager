@@ -215,7 +215,6 @@
             var testCommandHelper = new TestCommandHelper();
             var cancellationTokenSource = new CancellationTokenSource();
             var testDataBytes = testCommandHelper.CreateTestData(ImageSize);
-            var destinationSize = testDataBytes.Length;
 
             // create source
             await testCommandHelper.AddTestMedia(sourcePath, data: testDataBytes.Concat(testDataBytes).ToArray());
@@ -233,7 +232,7 @@
                     0,
                     destinationPath,
                     0,
-                    new Size(destinationSize, Unit.Bytes),
+                    new Size(),
                     0,
                     false,
                     false);

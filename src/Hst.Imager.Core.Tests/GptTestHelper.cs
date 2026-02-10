@@ -14,6 +14,39 @@ namespace Hst.Imager.Core.Tests;
 
 public static class GptTestHelper
 {
+    public static async Task AddGptPartition(TestCommandHelper testCommandHelper, string path,
+        long startSector, long endSector, Guid? partitionType = null)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path);
+        using var media = mediaResult.Value;
+
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
+
+        var guidPartitionTable = new GuidPartitionTable(disk);
+
+        guidPartitionTable.Create(startSector, endSector, partitionType ?? GuidPartitionTypes.WindowsBasicData,
+            0, "");
+    }
+    
+    public static async Task FatFormatGptPartition(TestCommandHelper testCommandHelper, string mediaPath,
+        int partitionNumber)
+    {
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(mediaPath);
+        using var media = mediaResult.Value;
+
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
+
+        var guidPartitionTable = new GuidPartitionTable(disk);
+
+        if (partitionNumber < 0 || partitionNumber >= guidPartitionTable.Partitions.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(partitionNumber), 
+                $"Partition number {partitionNumber} is out of range. Available partitions: {guidPartitionTable.Partitions.Count}");
+        }
+        
+        FatFileSystem.FormatPartition(disk, partitionNumber, "EMPTY");
+    }
+    
     /// <summary>
     /// Create
     /// - dir1

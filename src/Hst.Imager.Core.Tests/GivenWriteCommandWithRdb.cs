@@ -14,13 +14,16 @@ namespace Hst.Imager.Core.Tests;
 
 public class GivenWriteCommandWithRdb : CommandTestBase
 {
-    [Fact]
-    public async Task When_WriteSrcToDestRdbPartition1_Then_DataIsIdentical()
+    [Theory]
+    [InlineData("rdb")]
+    [InlineData("rdB")]
+    [InlineData("RDB")]
+    public async Task When_WriteSrcToDestRdbPartition1_Then_DataIsIdentical(string partitionTablePart)
     {
         // arrange - create src and dest paths
         var srcPath = $"src-{Guid.NewGuid()}.vhd";
         var destPath = $"dest-{Guid.NewGuid()}.vhd";
-        var writePath = Path.Combine(destPath, "rdb", "1");
+        var writePath = Path.Combine(destPath, partitionTablePart, "1");
 
         // arrange - create partition sizes
         var cylinderSize = 16 * 63 * 512;

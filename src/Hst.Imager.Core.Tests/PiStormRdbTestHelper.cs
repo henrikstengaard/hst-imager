@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -73,6 +74,57 @@ public static class PiStormRdbTestHelper
             bytesRead = await rdbStream.ReadAsync(buffer, 0, buffer.Length);
             await mbrStream.WriteAsync(buffer, 0, bytesRead);
         } while (bytesRead != 0);
+    }
+    
+    public static async Task WriteDataToPiStormRdbPartition(
+        TestCommandHelper testCommandHelper, string mediaPath, int mbrPartitionNumber, int rdbPartitionNumber, byte[] data)
+    {
+        var mediaResult = await testCommandHelper.GetReadableMedia([], mediaPath);
+        if (mediaResult.IsFaulted)
+        {
+            throw new IOException(mediaResult.Error.Message);
+        }
+        
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        
+        // read disk info from media
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        if (diskInfo?.MbrPartitionTablePart == null)
+        {
+            throw new IOException($"Media '{mediaPath}' is not a valid MBR disk.");
+        }
+        
+        // get mbr partition part from disk info
+        var mbrPartitionPart = diskInfo.MbrPartitionTablePart.Parts.FirstOrDefault(x =>
+            x.PartType == PartType.Partition && x.PartitionNumber == mbrPartitionNumber);
+        if (mbrPartitionPart == null)
+        {
+            throw new IOException($"MBR partition {mbrPartitionNumber} not found.");
+        }
+        
+        // read pistorm rdb disk info from mbr partition part
+        var piStormRdbStream = new VirtualStream(stream, mbrPartitionPart.StartOffset, mbrPartitionPart.Size,
+            mbrPartitionPart.Size);
+        var piStormRdbMedia = new Media(media.Path, media.Model, Media.MediaType.Raw, false, piStormRdbStream,
+            false);
+        var piStormRdbDiskInfo = await testCommandHelper.ReadDiskInfo(piStormRdbMedia);
+        if (piStormRdbDiskInfo?.RdbPartitionTablePart == null)
+        {
+            throw new IOException($"PiStorm RDB Media '{piStormRdbMedia.Path}' is not a valid RDB disk.");
+        }
+
+        // get rdb partition part from pistorm rdb disk info
+        var rdbPartitionPart = piStormRdbDiskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(x =>
+            x.PartType == PartType.Partition && x.PartitionNumber == rdbPartitionNumber);
+        if (rdbPartitionPart == null)
+        {
+            throw new IOException($"RDB partition {rdbPartitionNumber} not found.");
+        }
+
+        // write data to rdb partition part
+        piStormRdbStream.Position = rdbPartitionPart.StartOffset;
+        await piStormRdbStream.WriteBytes(data);
     }
 
     public static async Task<(Media, IFileSystemVolume)> MountFileSystemVolume(TestCommandHelper testCommandHelper,

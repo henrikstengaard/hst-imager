@@ -224,8 +224,10 @@ namespace Hst.Imager.Core.Helpers
             {
                 return new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.Size));
             }
+
+            var partitionTablePathComponent = pathComponents[0].ToLower();
             
-            switch (pathComponents[0])
+            switch (partitionTablePathComponent)
             {
                 case "gpt":
                     if (diskInfo.GptPartitionTablePart == null)
