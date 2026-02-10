@@ -37,49 +37,55 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"Reading from '{sourcePath}' to '{destinationPath}'");
             
             // resolve media path
-            var mediaResult = commandHelper.ResolveMedia(sourcePath);
-            if (mediaResult.IsFaulted)
+            var srcResolvedMediaResult = commandHelper.ResolveMedia(sourcePath);
+            if (srcResolvedMediaResult.IsFaulted)
             {
-                return new Result(mediaResult.Error);
+                return new Result(srcResolvedMediaResult.Error);
             }
 
-            OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
-            OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");            
+            OnDebugMessage($"Media Path: '{srcResolvedMediaResult.Value.MediaPath}'");
+            OnDebugMessage($"Virtual Path: '{srcResolvedMediaResult.Value.FileSystemPath}'");            
 
             OnDebugMessage($"Opening '{sourcePath}' as readable");
             
             var physicalDrivesList = physicalDrives.ToList();
             
-            var srcMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
+            var srcMediaResult = await commandHelper.GetReadableMedia(physicalDrivesList,
+                srcResolvedMediaResult.Value.MediaPath, srcResolvedMediaResult.Value.Modifiers);
             if (srcMediaResult.IsFaulted)
             {
                 return new Result(srcMediaResult.Error);
             }
             
-            // get src media and stream
-            using var srcMedia = srcMediaResult.Value;
-            var srcStream = MediaHelper.GetStreamFromMedia(srcMedia);
+            // get pistorm rdb media from src media
+            var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                srcMediaResult.Value, srcResolvedMediaResult.Value.FileSystemPath,
+                srcResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            // get start offset and source size
+            using var srcMedia = piStormRdbMediaResult.Media;
+            var srcStream = srcMedia.Stream;
+            var srcFileSystemPath = piStormRdbMediaResult.FileSystemPath;
+            
+            // get start offset and source size from src media
             var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, srcMedia,
-                mediaResult.Value.FileSystemPath);
+                srcFileSystemPath);
             if (startOffsetAndSizeResult.IsFaulted)
             {
                 return new Result(startOffsetAndSizeResult.Error);
             }
             
-            var (startOffset, sourceSize) = startOffsetAndSizeResult.Value;
+            var (srcStartOffset, srcSize) = startOffsetAndSizeResult.Value;
 
-            OnDebugMessage($"Start offset '{startOffset}'");
-            OnDebugMessage($"Source size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
+            OnInformationMessage($"Source start offset '{srcStartOffset}'");
+            OnInformationMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
-            // add start offset
+            // add src start offset, if defined
             if (start.HasValue)
             {
-                startOffset += start.Value;
+                srcStartOffset += start.Value;
             }
             
-            var readSize = sourceSize.ResolveSize(size);
+            var readSize = srcSize.ResolveSize(size);
             OnInformationMessage($"Size '{readSize.FormatBytes()}' ({readSize} bytes)");
             
             OnDebugMessage($"Opening '{destinationPath}' as writable");
@@ -113,7 +119,7 @@ namespace Hst.Imager.Core.Commands
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
 
-            var result = await streamCopier.Copy(token, srcStream, destStream, readSize, startOffset, 0, isVhd);
+            var result = await streamCopier.Copy(token, srcStream, destStream, readSize, srcStartOffset, 0, isVhd);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);

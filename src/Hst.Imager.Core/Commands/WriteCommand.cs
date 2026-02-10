@@ -60,33 +60,36 @@ namespace Hst.Imager.Core.Commands
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
             // resolve media for destination path
-            var destResolveMediaResult = commandHelper.ResolveMedia(destinationPath);
-            if (destResolveMediaResult.IsFaulted)
+            var destResolvedMediaResult = commandHelper.ResolveMedia(destinationPath);
+            if (destResolvedMediaResult.IsFaulted)
             {
-                return new Result(destResolveMediaResult.Error);
+                return new Result(destResolvedMediaResult.Error);
             }
 
-            OnDebugMessage($"Media Path: '{destResolveMediaResult.Value.MediaPath}'");
-            OnDebugMessage($"Virtual Path: '{destResolveMediaResult.Value.FileSystemPath}'");             
+            OnDebugMessage($"Media Path: '{destResolvedMediaResult.Value.MediaPath}'");
+            OnDebugMessage($"Virtual Path: '{destResolvedMediaResult.Value.FileSystemPath}'");             
 
             var physicalDrivesList = physicalDrives.ToList();
 
             var destMediaResult =
-                await commandHelper.GetWritableMedia(physicalDrivesList, destResolveMediaResult.Value.MediaPath, destResolveMediaResult.Value.Modifiers);
+                await commandHelper.GetWritableMedia(physicalDrivesList, destResolvedMediaResult.Value.MediaPath, destResolvedMediaResult.Value.Modifiers);
             if (destMediaResult.IsFaulted)
             {
                 return new Result(destMediaResult.Error);
             }
 
-            // get dest media and stream
-            using var destMedia = destMediaResult.Value;
-            var destStream = MediaHelper.GetStreamFromMedia(destMedia);
+            // get pistorm rdb media from dest media
+            var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+                destMediaResult.Value, destResolvedMediaResult.Value.FileSystemPath,
+                destResolvedMediaResult.Value.DirectorySeparatorChar);
 
-            // read disk info
-            var diskInfo = await commandHelper.ReadDiskInfo(destMedia);
-
-            // get start offset and source size
-            var startOffsetAndSizeResult = GetStartOffsetAndSize(destResolveMediaResult.Value.FileSystemPath, diskInfo);
+            using var destMedia = piStormRdbMediaResult.Media;
+            var destStream = destMedia.Stream;
+            var destFileSystemPath = piStormRdbMediaResult.FileSystemPath;
+            
+            // get start offset and source size from dest media
+            var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia,
+                destFileSystemPath);
             if (startOffsetAndSizeResult.IsFaulted)
             {
                 return new Result(startOffsetAndSizeResult.Error);
@@ -94,8 +97,8 @@ namespace Hst.Imager.Core.Commands
             
             var (destStartOffset, destSize) = startOffsetAndSizeResult.Value;
 
-            OnDebugMessage($"Destination start offset '{destStartOffset}'");
-            OnDebugMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
+            OnInformationMessage($"Destination start offset '{destStartOffset}'");
+            OnInformationMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
 
             // add destination start offset, if defined
             if (start.HasValue)
@@ -148,71 +151,5 @@ namespace Hst.Imager.Core.Commands
         private void OnSrcError(IoErrorEventArgs args) => SrcError?.Invoke(this, args);
 
         private void OnDestError(IoErrorEventArgs args) => DestError?.Invoke(this, args);
-        
-                private static Result<Tuple<long, long>> GetStartOffsetAndSize(string path, DiskInfo diskInfo)
-        {
-            var pathComponents = string.IsNullOrEmpty(path)
-                ? []
-                : path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries).ToArray();
-
-            if (pathComponents.Length == 0)
-            {
-                return new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.Size));
-            }
-            
-            switch (pathComponents[0])
-            {
-                case "gpt":
-                    if (diskInfo.GptPartitionTablePart == null)
-                    {
-                        return new Result<Tuple<long, long>>(new Error("Guid Partition Table not found"));
-                    }
-
-                    return pathComponents.Length == 1
-                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.GptPartitionTablePart.Size))
-                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.GptPartitionTablePart);
-                case "mbr":
-                    if (diskInfo.MbrPartitionTablePart == null)
-                    {
-                        return new Result<Tuple<long, long>>(new Error("Master Boot Record not found"));
-                    }
-
-                    return pathComponents.Length == 1
-                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.MbrPartitionTablePart.Size))
-                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.MbrPartitionTablePart);
-                case "rdb":
-                    if (diskInfo.RdbPartitionTablePart == null)
-                    {
-                        return new Result<Tuple<long, long>>(new Error("Rigid Disk Block not found"));
-                    }
-
-                    return pathComponents.Length == 1
-                        ? new Result<Tuple<long, long>>(new Tuple<long, long>(0, diskInfo.RdbPartitionTablePart.Size))
-                        : GetPartitionStartOffsetAndSize(path, pathComponents.Skip(1).ToArray(), diskInfo.RdbPartitionTablePart);
-                default:
-                    return new Result<Tuple<long, long>>(new Error($"Unsupported path '{path}'"));
-            }
-        }
-
-        private static Result<Tuple<long, long>> GetPartitionStartOffsetAndSize(string path, string[] pathComponents,
-            PartitionTablePart partitionTablePart)
-        {
-            if (pathComponents.Length == 0)
-            {
-                return new Result<Tuple<long, long>>(new Error($"Partition number not found in path '{path}'"));
-            }
-            
-            if (pathComponents.Length > 1 ||
-                !int.TryParse(pathComponents[0], out var partitionNumber))
-            {
-                return new Result<Tuple<long, long>>(new Error($"Invalid partition number in path '{path}'"));
-            }
-
-            var partition = partitionTablePart.Parts.FirstOrDefault(x => x.PartitionNumber == partitionNumber);
-            
-            return partition == null 
-                ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
-                : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
-        }
     }
 }

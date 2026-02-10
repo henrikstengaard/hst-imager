@@ -14,13 +14,16 @@ namespace Hst.Imager.Core.Tests;
 
 public class GivenWriteCommandWithMbr : CommandTestBase
 {
-    [Fact]
-    public async Task When_WriteSrcToDestMbrPartition1_Then_DataIsIdentical()
+    [Theory]
+    [InlineData("mbr")]
+    [InlineData("mbR")]
+    [InlineData("MBR")]
+    public async Task When_WriteSrcToDestMbrPartition1_Then_DataIsIdentical(string partitionTablePart)
     {
         // arrange - create src and dest paths
         var srcPath = $"src-{Guid.NewGuid()}.vhd";
         var destPath = $"dest-{Guid.NewGuid()}.vhd";
-        var writePath = Path.Combine(destPath, "mbr", "1");
+        var writePath = Path.Combine(destPath, partitionTablePart, "1");
 
         // arrange - create src data
         var srcData = new byte[20.MB().ToSectorSize()];
