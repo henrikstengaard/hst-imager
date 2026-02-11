@@ -4,11 +4,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils.Partitions;
-using DiscUtils.Raw;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Imager.Core.Extensions;
-using Hst.Imager.Core.Models;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.Core.Commands.GptCommands;
@@ -45,9 +43,7 @@ public class GptPartDelCommand : CommandBase
         }
         using var media = mediaResult.Value;
             
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         OnDebugMessage("Reading Guid Partition Table");
             

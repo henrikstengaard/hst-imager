@@ -4,11 +4,10 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils.Partitions;
-using DiscUtils.Raw;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -72,9 +71,7 @@ public class GptPartAddCommand : CommandBase
             
         OnDebugMessage("Reading Guid Partition Table");
             
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         GuidPartitionTable guidPartitionTable;
         try
@@ -165,7 +162,7 @@ public class GptPartAddCommand : CommandBase
         }
             
         OnInformationMessage($"- Partition number '{guidPartitionTable.Partitions.Count + 1}'");
-        OnInformationMessage($"- Type '{type.ToString().ToUpper()}'");
+        OnInformationMessage($"- Type '{type.ToUpper()}'");
         OnInformationMessage($"- Guid Partition Type '{gptPartitionTypeResult.Value}'");
         OnInformationMessage($"- Size '{partitionSize.FormatBytes()}' ({partitionSize} bytes)");
         OnInformationMessage($"- Start sector '{start}'");

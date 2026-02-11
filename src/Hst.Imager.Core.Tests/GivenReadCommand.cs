@@ -342,17 +342,16 @@ namespace Hst.Imager.Core.Tests
                 await testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
 
                 // arrange - read command
-                var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(0, Unit.Bytes), 0, false,
                     false, 0);
 
                 // act - read source physical drive to zip compressed img
-                var result = await readCommand.Execute(cancellationTokenSource.Token);
+                var result = await readCommand.Execute(CancellationToken.None);
                 Assert.True(result.IsSuccess);
 
                 // assert - data written is identical to uncompressed source bytes
-                var destinationBytes = await testCommandHelper.ReadMediaData(destinationPath);
+                var destinationBytes = await File.ReadAllBytesAsync(destinationPath);
                 Assert.True(HasZipMagicNumber(destinationBytes));
                 Assert.True(data.Length > destinationBytes.Length);
 
@@ -384,17 +383,16 @@ namespace Hst.Imager.Core.Tests
                 await testCommandHelper.AddTestMedia(sourcePath, sourcePath, data);
 
                 // arrange - read command
-                var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(0, Unit.Bytes), 0, false,
                     false, 0);
 
                 // act - read source physical drive to gzip compressed img
-                var result = await readCommand.Execute(cancellationTokenSource.Token);
+                var result = await readCommand.Execute(CancellationToken.None);
                 Assert.True(result.IsSuccess);
 
                 // assert - data written is identical to uncompressed source bytes
-                var destinationBytes = await testCommandHelper.ReadMediaData(destinationPath);
+                var destinationBytes = await File.ReadAllBytesAsync(destinationPath);
                 Assert.True(HasGZipMagicNumber(destinationBytes));
                 Assert.True(data.Length > destinationBytes.Length);
 

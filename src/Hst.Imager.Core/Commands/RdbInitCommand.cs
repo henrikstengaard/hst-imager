@@ -82,7 +82,7 @@
 
             var defaultName = media.IsPhysicalDrive ? media.Model : Path.GetFileNameWithoutExtension(media.Model);
 
-            var diskSize = media is DiskMedia diskMedia ? diskMedia.Size : media.Stream.Length;
+            var diskSize = media.Size;
             var rigidDiskBlockSize = diskSize.ResolveSize(size).ToSectorSize();
 
             OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");

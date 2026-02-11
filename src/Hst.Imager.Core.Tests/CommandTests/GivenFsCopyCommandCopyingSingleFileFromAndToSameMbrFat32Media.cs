@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models.FileSystems;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,6 +13,71 @@ namespace Hst.Imager.Core.Tests.CommandTests;
 
 public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsCommandTestBase
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_CreatingDirectoriesAndFilesToCopy_Then_DirectoriesAndFilesExist(bool useTestMedia)
+    {
+        // arrange - paths
+        var mediaPath = $"{Guid.NewGuid()}.img";
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            if (useTestMedia)
+            {
+                testCommandHelper.AddTestMedia(mediaPath, 0);
+            }
+            
+            // arrange - create fat formatted disk
+            await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath);
+        
+            // act - create directories and files
+            await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
+            // assert - root directory contains 2 dir entries
+            var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, [])).ToList();
+            Assert.Equal(2, entries.Count);
+            var expectedDirs = new List<string> { "dir1", "dir2" };
+            var actualDirs = entries.Where(entry => entry.Type == EntryType.Dir).Select(entry => entry.Name)
+                .ToList();
+            Assert.Equal(expectedDirs, actualDirs);
+            
+            // assert - dir1 directory contains 2 entries: 1 dir and 1 file
+            entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, ["dir1"])).ToList();
+            Assert.Equal(2, entries.Count);
+            expectedDirs = new List<string> { "dir3" };
+            actualDirs = entries.Where(entry => entry.Type == EntryType.Dir).Select(entry => entry.Name)
+                .ToList();
+            Assert.Equal(expectedDirs, actualDirs);
+            var expectedFiles = new List<string> { "file1.txt" };
+            var actualFiles = entries.Where(entry => entry.Type == EntryType.File).Select(entry => entry.Name)
+                .ToList();
+            Assert.Equal(expectedFiles, actualFiles);
+            
+            // assert - dir2 directory is empty
+            entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, ["dir2"])).ToList();
+            Assert.Empty(entries);
+
+            // assert - dir1, dir3 directory is empty
+            entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 
+                0, ["dir1", "dir3"])).ToList();
+            Assert.Empty(entries);
+        }
+        finally
+        {
+            if (File.Exists(mediaPath))
+            {
+                File.Delete(mediaPath);
+            }
+        }
+    }
+
     [Fact]
     public async Task When_CopyingFromAndToSameRootDirMbrFat32Media_Then_FileIsCopied()
     {
@@ -45,9 +109,6 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameMbrFat32Media : FsC
             // act - copy
             var result = await fsCopyCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
-
-            // arrange - clear active medias to avoid source and destination being reused between commands
-            testCommandHelper.ClearActiveMedias();
 
             // assert - root directory contains 4 entries
             var entries = (await MbrTestHelper.GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 

@@ -1,16 +1,16 @@
-﻿namespace Hst.Imager.Core.Commands.MbrCommands
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands.MbrCommands
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
-    using DiscUtils.Partitions;
-    using DiscUtils.Streams;
     using Extensions;
     using Hst.Core;
-    using Hst.Imager.Core;
-    using Hst.Imager.Core.Commands;
+    using Core;
+    using Commands;
     using Microsoft.Extensions.Logging;
     using Models;
 
@@ -55,9 +55,7 @@
             }
 
             using var sourceMedia = sourceMediaResult.Value;
-            var sourceDisk = sourceMedia is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(sourceMedia.Stream, Ownership.None);
+            var sourceDisk = await MediaHelper.ResolveVirtualDisk(sourceMedia);
 
             var sourceDiskInfo = await commandHelper.ReadDiskInfo(sourceMedia, PartitionTableType.MasterBootRecord);
 

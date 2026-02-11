@@ -132,7 +132,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         using var media = piStormRdbMediaResult.Media;
         fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
-        var parts = fileSystemPath.Split(new []{ directorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
         if (parts.Length < 1 || !(parts[0].Equals("mbr", StringComparison.OrdinalIgnoreCase) || 
                                       parts[0].Equals("gpt", StringComparison.OrdinalIgnoreCase) || 
@@ -161,9 +161,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
 
     private async Task<Result> CreateGptDirectory(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         var partitionPart = parts[0];
         var gptFileSystemResult = await MountGptFileSystem(disk, partitionPart);
@@ -189,9 +187,7 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
 
     private async Task<Result> CreateMbrDirectory(Media media, string[] parts)
     {
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
             
         var partitionPart = parts[0];
         var mbrFileSystemResult = await MountMbrFileSystem(disk, partitionPart);

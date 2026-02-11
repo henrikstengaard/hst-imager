@@ -36,11 +36,7 @@ namespace Hst.Imager.Core.Commands
 
             using var media = mediaResult.Value;
 
-            var mediaStream = media is DiskMedia diskMedia
-                ? diskMedia.Disk.Content
-                : media.Stream;
-
-            var fileSystemsResult = await GetFileSystemsFromMedia(media, mediaPath, mediaStream,
+            var fileSystemsResult = await GetFileSystemsFromMedia(media, mediaPath, media.Stream,
                 fileSystemName);
             if (fileSystemsResult.IsFaulted)
             {

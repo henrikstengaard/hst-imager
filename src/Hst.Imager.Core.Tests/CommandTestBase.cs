@@ -4,7 +4,6 @@ namespace Hst.Imager.Core.Tests
 {
     using System.Threading.Tasks;
     using Commands;
-    using Models;
 
     public abstract class CommandTestBase
     {
@@ -14,7 +13,7 @@ namespace Hst.Imager.Core.Tests
         {
             var mediaResult = await commandHelper.GetReadableFileMedia(path);
             using var media = mediaResult.Value;
-            var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+            var stream = media.Stream;
             stream.Position = 0;
             var readSize = size ?? media.Size;
             var bytes = new byte[readSize];

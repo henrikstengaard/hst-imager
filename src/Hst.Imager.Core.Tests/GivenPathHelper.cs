@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Helpers;
 using Xunit;
 
@@ -25,6 +24,8 @@ public class GivenPathHelper
     }
     
     [Theory]
+    [InlineData(@"C:\")]
+    [InlineData("/")]
     [InlineData(@"C:\Users\hst\Documents\Storage3.2.adf\DOSDrivers\AUX")]
     [InlineData(@"C:\AUX")]
     [InlineData(@"\\192.168.0.1\data\Storage3.2.adf\DOSDrivers\AUX")]

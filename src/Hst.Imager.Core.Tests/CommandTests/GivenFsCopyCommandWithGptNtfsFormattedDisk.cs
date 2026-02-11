@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -30,7 +32,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             await CreateGptNtfsFormattedDisk(testCommandHelper, srcPath, 10.MB());
             using (var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, srcPath))
             {
-                DiskFileSystemHelper.CreateGptNtfsDirectoriesAndFiles(DiskFileSystemHelper.ToDisk(media));
+                DiskFileSystemHelper.CreateGptNtfsDirectoriesAndFiles(await MediaHelper.ResolveVirtualDisk(media));
             }
 
             // arrange - create destination directory
@@ -107,7 +109,7 @@ public class GivenFsCopyCommandWithGptNtfsFormattedDisk : FsCommandTestBase
             using var media = await DiskFileSystemHelper.GetDiskMedia(testCommandHelper, destPath);
 
             // arrange - get ntfs file system
-            var fileSystem = DiskFileSystemHelper.GetGptNtfsFileSystem(DiskFileSystemHelper.ToDisk(media));
+            var fileSystem = DiskFileSystemHelper.GetGptNtfsFileSystem(await MediaHelper.ResolveVirtualDisk(media));
 
             // arrange - get files in root directory
             var files = fileSystem.GetFiles("").ToList();

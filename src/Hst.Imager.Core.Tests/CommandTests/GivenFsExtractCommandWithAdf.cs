@@ -457,4 +457,50 @@ public class GivenFsExtractCommandWithAdf : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
+
+    [Fact]
+    public async Task When_ExtractingAFileFromAdfToLocalDirectoryUsingCapitalLetters_ThenFileIsExtracted()
+    {
+        var srcPath = $"{Guid.NewGuid()}.adf";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "DIR1", "FILE3.TXT");
+
+        try
+        {
+            // arrange - create dos3 formatted adf with files
+            await CreateDos3FormattedAdf(srcPath);
+            await CreateDos3AdfFiles(srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            // arrange - create test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+        
+            // act - extract
+            var result = await fsExtractCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            // assert - single file is extracted
+            Assert.Single(actualFiles);
+            string[] expectedFiles =
+            [
+                Path.Combine(destPath, "file3.txt")
+            ];
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 }

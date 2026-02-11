@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -10,10 +12,8 @@ using System.Threading.Tasks;
 using Commands;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Models;
 using Xunit;
 
 public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
@@ -89,9 +89,8 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media.Stream;
 
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = new BiosPartitionTable(disk);
         var partition = biosPartitionTable.Partitions.FirstOrDefault();
 
@@ -167,10 +166,7 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
                 Enumerable.Empty<IPhysicalDrive>(), destPath);
             using var media = mediaResult.Value;
             media.Stream.Position = 0;
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream,
-                    Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var biosPartitionTable = new BiosPartitionTable(disk);
             var partitionStream = biosPartitionTable.Partitions[0].Open();
             var fatFileSystem = new FatFileSystem(partitionStream);
@@ -271,10 +267,7 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
                 Enumerable.Empty<IPhysicalDrive>(), destPath);
             using var media = mediaResult.Value;
             media.Stream.Position = 0;
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream,
-                    Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             var biosPartitionTable = new BiosPartitionTable(disk);
             var partitionStream = biosPartitionTable.Partitions[0].Open();
             var fatFileSystem = new FatFileSystem(partitionStream);

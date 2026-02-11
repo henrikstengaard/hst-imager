@@ -1,5 +1,5 @@
 ﻿using System;
-using Hst.Imager.Core.Models;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -8,8 +8,6 @@ namespace Hst.Imager.Core.Commands
     using System.Threading;
     using System.Threading.Tasks;
     using DiscUtils.Partitions;
-    using DiscUtils.Raw;
-    using DiscUtils.Streams;
     using Hst.Core;
     using Microsoft.Extensions.Logging;
 
@@ -43,15 +41,12 @@ namespace Hst.Imager.Core.Commands
             }
             using var media = mediaResult.Value;
             
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             var deleteSectorCount = 0L;
 
             try
             {
-                var biosPartitionTable = new BiosPartitionTable(disk);
                 deleteSectorCount = 1;
             }
             catch (Exception)

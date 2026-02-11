@@ -262,7 +262,7 @@ public class GivenCommandHelperAndPathsToResolve
         
         try
         {
-            var commandHelper = new CommandHelper(new NullLogger<ICommandHelper>(), false);
+            using var commandHelper = new CommandHelper(new NullLogger<ICommandHelper>(), false);
             
             // act - create media with disk size and write data
             var mediaResult = await commandHelper.GetWritableFileMedia(imgPath, create: true, size: diskSize);

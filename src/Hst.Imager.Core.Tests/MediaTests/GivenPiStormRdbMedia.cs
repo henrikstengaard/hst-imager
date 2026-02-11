@@ -13,11 +13,11 @@ namespace Hst.Imager.Core.Tests.MediaTests
         public void When_PiStormRdbMediasHasSamePathAndPartitionNumber_Then_EqualsReturnTrue()
         {
             // arrange - two pistorm rdb medias with same path
-            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+            var media = new Media("disk.img", "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false);
-            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
-            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
         
             // act - equals
@@ -31,11 +31,11 @@ namespace Hst.Imager.Core.Tests.MediaTests
         public void When_PiStormRdbMediasHasSamePathAndDifferentPartitionNumber_Then_EqualsReturnFalse()
         {
             // arrange - two pistorm rdb medias with same path and different partition number
-            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+            var media = new Media("disk.img", "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false);
-            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
-            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 2, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk.img", 2, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
         
             // act - equals
@@ -49,11 +49,11 @@ namespace Hst.Imager.Core.Tests.MediaTests
         public void When_PiStormRdbMediasHasDifferentPathAndSamePartitionNumber_Then_EqualsReturnFalse()
         {
             // arrange - two pistorm rdb medias with different path and same partition number
-            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+            var media = new Media("disk.img", "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false);
-            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
-            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
         
             // act - equals
@@ -67,11 +67,11 @@ namespace Hst.Imager.Core.Tests.MediaTests
         public void When_PiStormRdbMediasHasDifferentPathAndPartitionNumber_Then_EqualsReturnFalse()
         {
             // arrange - two pistorm rdb medias with different path and partition number
-            var media = new Media("disk.img", "Disk", 100.MB(), Media.MediaType.Raw, 
+            var media = new Media("disk.img", "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false);
-            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia1 = new PiStormRdbMedia("disk1.img", 1, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
-            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 2, "Disk", 100.MB(), Media.MediaType.Raw, 
+            var piStormRdbMedia2 = new PiStormRdbMedia("disk2.img", 2, "Disk", Media.MediaType.Raw, 
                 false, new MemoryStream(), false, media);
         
             // act - equals
@@ -90,14 +90,14 @@ namespace Hst.Imager.Core.Tests.MediaTests
             var sectorStream = new SectorStream(monitorStream);
 
             // arrange - media with sector stream
-            var media = new Media("\\disk1", "\\disk1", 10.MB(), Media.MediaType.Raw, true, sectorStream, false);
+            var media = new Media("\\disk1", "\\disk1", Media.MediaType.Raw, true, sectorStream, false);
 
             // arrange - create virtual stream at offset 1024 with 1mb max size
             var virtualStream = new VirtualStream(media.Stream, 1024, 1.MB());
 
             // act - create pistorm rdb media and write data to stream
             using (var piStormRdbMedia = new PiStormRdbMedia("\\disk1", 0, 
-                       Constants.FileSystemNames.PiStormRdb, 1.MB(), Media.MediaType.Raw, false,
+                       Constants.FileSystemNames.PiStormRdb, Media.MediaType.Raw, false,
                        virtualStream, false, media))
             {
                 var data = new byte[512];

@@ -3,13 +3,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils.Partitions;
-using DiscUtils.Raw;
-using DiscUtils.Streams;
 using Hst.Core;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 using System;
 using DiscUtils;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands.GptCommands;
 
@@ -43,10 +41,7 @@ public class GptInitCommand : CommandBase
         }
         using var media = mediaResult.Value;
             
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new Disk(media.Stream, Ownership.None);
-            
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         
         var deleteFirstSectors = false;
         var sectorBytes = new byte[disk.SectorSize];

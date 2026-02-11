@@ -88,14 +88,14 @@ namespace Hst.Imager.Core.Commands
             var destFileSystemPath = piStormRdbMediaResult.FileSystemPath;
             
             // get start offset and source size from dest media
-            var startOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia,
+            var destStartOffsetAndSizeResult = await MediaHelper.GetStartOffsetAndSize(commandHelper, destMedia,
                 destFileSystemPath);
-            if (startOffsetAndSizeResult.IsFaulted)
+            if (destStartOffsetAndSizeResult.IsFaulted)
             {
-                return new Result(startOffsetAndSizeResult.Error);
+                return new Result(destResolvedMediaResult.Error);
             }
             
-            var (destStartOffset, destSize) = startOffsetAndSizeResult.Value;
+            var (destStartOffset, destSize) = destStartOffsetAndSizeResult.Value;
 
             OnInformationMessage($"Destination start offset '{destStartOffset}'");
             OnInformationMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");

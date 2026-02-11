@@ -652,11 +652,11 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, blockSize, start));
         }
         
-        public static async Task FsDir(string path, bool recursive, FormatEnum format)
+        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, FormatEnum format)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, recursive);
+                await GetPhysicalDrives(), path, recursive, uaeMetadata: uaeMetadata);
             command.EntriesRead += (_, args) =>
             {
                 Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, format));
@@ -714,6 +714,12 @@ namespace Hst.Imager.ConsoleApp
 
         private static Task WriteProcessMessage(object sender, DataProcessedEventArgs args)
         {
+            if (args.PercentComplete >= 100)
+            {
+                Console.Write(string.Concat(new string(' ', ConsoleHelper.ConsoleWindowWidth), "\r"));
+                return Task.CompletedTask;
+            }
+            
             var parts = new List<string>();
 
             if (!args.Indeterminate)

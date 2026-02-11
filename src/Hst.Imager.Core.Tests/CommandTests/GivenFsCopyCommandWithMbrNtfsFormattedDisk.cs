@@ -7,10 +7,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
+using Hst.Imager.Core.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -85,11 +84,8 @@ public class GivenFsCopyCommandWithMbrNtfsFormattedDisk : FsCommandTestBase
         }
 
         using var media = mediaResult.Value;
-        var stream = media.Stream;
         
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = new BiosPartitionTable(disk);
         var partition = biosPartitionTable.Partitions.FirstOrDefault();
 

@@ -1,12 +1,10 @@
-﻿using DiscUtils.Streams;
-using Hst.Core;
+﻿using Hst.Core;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
-using DiscUtils.Raw;
 using Hst.Core.Extensions;
 using System.IO;
 using Hst.Imager.Core.Commands.GptCommands;
@@ -163,10 +161,6 @@ namespace Hst.Imager.Core.Commands
             {
                 isPhysicalDrive = media.IsPhysicalDrive;
                 
-                var disk = media is DiskMedia diskMedia
-                    ? diskMedia.Disk
-                    : new Disk(media.Stream, Ownership.None);
-
                 await using var stream = media.Stream;
 
                 diskSize = media.Size;
@@ -184,7 +178,7 @@ namespace Hst.Imager.Core.Commands
                 var emptyPartitionTableStream = new MemoryStream(emptyPartitionTableData);
 
                 using var streamCopier = new StreamCopier();
-                await streamCopier.Copy(token, emptyPartitionTableStream, disk.Content, 
+                await streamCopier.Copy(token, emptyPartitionTableStream, media.Stream, 
                     emptyPartitionTableData.Length, 0, 0);
             }
 

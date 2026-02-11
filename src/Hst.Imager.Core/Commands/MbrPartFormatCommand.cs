@@ -1,6 +1,7 @@
 ﻿using DiscUtils;
 using DiscUtils.Ntfs;
 using Hst.Imager.Core.FileSystems.Fat32;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
@@ -12,8 +13,6 @@ namespace Hst.Imager.Core.Commands
     using System.Threading.Tasks;
     using DiscUtils.Fat;
     using DiscUtils.Partitions;
-    using DiscUtils.Raw;
-    using DiscUtils.Streams;
     using Hst.Core;
     using Microsoft.Extensions.Logging;
 
@@ -61,9 +60,7 @@ namespace Hst.Imager.Core.Commands
             }
             using var media = mediaResult.Value;
             
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
             
             OnDebugMessage("Reading Master Boot Record");
             

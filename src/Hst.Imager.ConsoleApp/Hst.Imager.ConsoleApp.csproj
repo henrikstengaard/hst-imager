@@ -111,6 +111,12 @@
       <None Update="scripts\create_gpt_chromeos_test_image.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="tests\generate-test-data.ps1">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+      <None Update="tests\test-copy-data-to-image.ps1">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
     </ItemGroup>
 
     <ItemGroup>

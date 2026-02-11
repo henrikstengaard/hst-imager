@@ -26,7 +26,7 @@
 
         public Stream Stream { get; private set; }
 
-        public Media(string path, string name, long size, MediaType type, bool isPhysicalDrive, Stream stream, bool byteswap)
+        public Media(string path, string name, MediaType type, bool isPhysicalDrive, Stream stream, bool byteswap)
         {
             Path = path;
             Model = name;

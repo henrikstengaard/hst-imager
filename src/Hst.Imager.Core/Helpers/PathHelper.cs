@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Hst.Imager.Core.Commands;
@@ -9,26 +10,36 @@ namespace Hst.Imager.Core.Helpers
 
     public static class PathHelper
     {
+        public static string[] Split(string path) =>
+            (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
+
+        public static string[] Split(string directorySeparatorChar, string path) =>
+            (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
+            .Concat(path.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)).ToArray();
+        
         private static string ResolveUserProfilePath(string path) => 
             (path.Length >= 2 && path.StartsWith("~/"))
             ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path.Substring(2))
             : path;
 
+        public static bool IsRootPath(string path) =>
+            IsMacOrLinuxRootPath(path) || IsWindowsRootPath(path);
+        
+        public static bool IsMacOrLinuxRootPath(string path) =>
+            path.Length > 0 &&
+            path.StartsWith("/");
+        
+        public static bool IsWindowsRootPath(string path) =>
+            path.Length > 1 &&
+            (path.StartsWith(@"\") || Regexs.WindowsDriveRegex.IsMatch(path));
+
         public static string GetFullPath(string path)
         {
             path = ResolveUserProfilePath(path);
             
-            var isMacOsOrLinux = OperatingSystem.IsMacOS() || OperatingSystem.IsLinux(); 
-            
-            // return path, if not macos or linux and path is full path
-            if (!isMacOsOrLinux && path.Length > 0 && path.StartsWith("/"))
-            {
-                return path;
-            }
-
-            // return path, if not windows and path is full path
-            if (!OperatingSystem.IsWindows() && path.Length > 1 &&
-                (path.StartsWith(@"\") || Regexs.WindowsDriveRegex.IsMatch(path)))
+            // return path, if root path
+            if (IsRootPath(path))
             {
                 return path;
             }

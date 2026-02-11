@@ -16,6 +16,41 @@ namespace Hst.Imager.Core.Helpers
 {
     public static class MediaHelper
     {
+        public static async Task<VirtualDisk> ResolveVirtualDisk(Media media)
+        {
+            if (media is DiskMedia diskMedia)
+            {
+                return diskMedia.GetVirtualDisk();
+            }
+            
+            if (media.Type == Media.MediaType.Raw)
+            {
+                return media.Size == 0
+                    ? throw new ArgumentException("Unable to resolve virtual disk for media with size 0", nameof(media))
+                    : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            }
+
+            if (media.Type != Media.MediaType.CompressedRaw && media.Type != Media.MediaType.CompressedVhd)
+            {
+                throw new NotSupportedException($"Unable to resolve disk media type '{media.Type}'");
+            }
+
+            // read first chunk from compressed stream
+            var firstChunk = new byte[1024 * 1024];
+            await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
+
+            // return compressed vhd, if vhd magic number is present in first chunk
+            return MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0)
+                ? CompressedVhd(media.Stream, firstChunk)
+                : CompressedImg(media.Stream, firstChunk);
+        }
+
+        private static VirtualDisk CompressedVhd(Stream stream, byte[] firstChunk) => 
+            new DiscUtils.Vhd.Disk(new MemoryStream(firstChunk), Ownership.None);
+
+        private static VirtualDisk CompressedImg(Stream stream, byte[] firstChunk) => 
+            new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
+        
         public static Media GetMediaWithPiStormRdbSupport(ICommandHelper commandHelper, Media media, string path)
         {
             var pathResult = commandHelper.ResolveMedia(path);
@@ -72,9 +107,7 @@ namespace Hst.Imager.Core.Helpers
                 };
             }
 
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+            using var disk = new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
             BiosPartitionTable biosPartitionTable;
             try
@@ -106,9 +139,10 @@ namespace Hst.Imager.Core.Helpers
             var partitionOffset = partitionInfo.FirstSector * disk.SectorSize;
             var partitionSize = partitionInfo.SectorCount * disk.SectorSize;
 
-            var partitionStream = new VirtualStream(disk.Content, partitionOffset, partitionSize, partitionSize);
+            var partitionStream = new VirtualStream(media.Stream, partitionOffset, partitionSize, partitionSize);
 
-            var piStormRdbMedia = CreatePiStormRdbMedia(media, partitionNumber, partitionSize, partitionStream);
+            var piStormRdbMediaPath = string.Join(directorySeparatorChar, parts.Take(2));
+            var piStormRdbMedia = CreatePiStormRdbMedia(media, piStormRdbMediaPath, partitionNumber, partitionStream);
 
             return new PiStormRdbMediaResult
             {
@@ -118,17 +152,17 @@ namespace Hst.Imager.Core.Helpers
             };
         }
 
-        private static Media CreatePiStormRdbMedia(Media media, int mbrPartitionNumber, long size, Stream stream)
+        private static Media CreatePiStormRdbMedia(Media media, string piStormRdbMediaPath, int mbrPartitionNumber,
+            Stream stream)
         {
             var type = media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd
                 ? Media.MediaType.CompressedRaw
                 : Media.MediaType.Raw;
 
             return new PiStormRdbMedia(
-                media.Path, 
+                Path.Combine(media.Path, piStormRdbMediaPath), 
                 mbrPartitionNumber,
                 string.Concat("Partition #", mbrPartitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
-                size,
                 type,
                 false,
                 stream, 
@@ -154,21 +188,6 @@ namespace Hst.Imager.Core.Helpers
             await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
         }
 
-        public static VirtualDisk GetDiskFromMedia(Media media)
-        {
-            if (media is PiStormRdbMedia piStormRdbMedia)
-            {
-                return new DiscUtils.Raw.Disk(piStormRdbMedia.Stream, Ownership.None);
-            }
-
-            if (media is DiskMedia diskMedia)
-            {
-                return diskMedia.Disk;
-            }
-
-            return new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-        }
-
         public static Stream GetStreamFromMedia(Media media)
         {
             if (media is PiStormRdbMedia piStormRdbMedia)
@@ -186,12 +205,14 @@ namespace Hst.Imager.Core.Helpers
         
         public static async Task<Result<Tuple<long, long>>> GetStartOffsetAndSize(ICommandHelper commandHelper, Media media, string path)
         {
-            // return start offset 0 an media size if media is compressed raw or compressed vhd
-            if (media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd)
+            // return start offset 0 and media size if media has size 0, media is compressed raw or compressed vhd
+            if (media.Size == 0 ||
+                media.Type == Media.MediaType.CompressedRaw ||
+                media.Type == Media.MediaType.CompressedVhd)
             {
                 return new Result<Tuple<long, long>>(new Tuple<long, long>(0, media.Size));
             }
-            
+
             // read disk info
             var diskInfo = await commandHelper.ReadDiskInfo(media);            
             

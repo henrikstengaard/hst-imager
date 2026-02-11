@@ -1,9 +1,9 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
 
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -138,8 +138,8 @@ public class AmigaVolumeEntryIterator(
             }
             else
             {
-                skipEntry = !EntryIteratorFunctions.IsRelativePathComponentsValid(pathComponentMatcher,
-                    currentEntry.RelativePathComponents, recursive);
+                skipEntry = currentEntry.FullPathComponents.Length < pathComponentMatcher.PathComponents.Length ||
+                            !pathComponentMatcher.IsMatch(currentEntry.FullPathComponents);
             }
         } while (nextEntries.Count > 0 && skipEntry);
 
@@ -158,10 +158,7 @@ public class AmigaVolumeEntryIterator(
         return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, true);
     }
 
-    public string[] GetPathComponents(string path)
-    {
-        return path.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
-    }
+    public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;
 

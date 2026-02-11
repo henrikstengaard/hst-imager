@@ -69,8 +69,9 @@ public class GivenWriteCommandWithPiStormRdb : CommandTestBase
         Assert.NotNull(mbrPartitionPart);
 
         // arrange - get mbr partition stream and media
-        var mbrPartitionStream = new VirtualStream(destStream, mbrPartitionPart.StartOffset, mbrPartitionPart.Size);
-        var mbrPartitionMedia = new Media("rdb", "rdb", mbrPartitionPart.Size, Media.MediaType.Raw, false, mbrPartitionStream,
+        var mbrPartitionStream = new VirtualStream(destStream, mbrPartitionPart.StartOffset, mbrPartitionPart.Size,
+            mbrPartitionPart.Size);
+        var mbrPartitionMedia = new Media("rdb", "rdb", Media.MediaType.Raw, false, mbrPartitionStream,
             false);
         var mbrDiskInfo = await testCommandHelper.ReadDiskInfo(mbrPartitionMedia);
         Assert.NotNull(mbrDiskInfo.RdbPartitionTablePart);

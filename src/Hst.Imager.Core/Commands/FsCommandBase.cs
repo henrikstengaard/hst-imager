@@ -1,6 +1,8 @@
 ﻿using DiscUtils.ExFat;
 using DiscUtils.Ntfs;
+using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -21,7 +23,6 @@ using DiscUtils.Ext;
 using DiscUtils.Fat;
 using DiscUtils.Iso9660;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Core.Extensions;
 using Helpers;
@@ -217,20 +218,31 @@ public abstract partial class FsCommandBase : CommandBase
         return false;
     }
 
-    protected Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive)
+    protected async Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive,
+        UaeMetadata uaeMetadata, IAppCache appCache)
     {
-        var dirPath = Path.GetDirectoryName(path) ?? string.Empty;
+        var fullPath = PathHelper.GetFullPath(path);
+        
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
 
-        return Task.FromResult(Directory.Exists(path) || Directory.Exists(dirPath)
-            ? new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive))
-            : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{path}'", path)));
+        var pathComponents = PathHelper.Split(fullPath);
+        
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
+            uaeMetadata, pathComponents);
+        var pathExistsInUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+
+        var dirPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
+        
+        return pathExistsInUaeMetadata || Directory.Exists(fullPath) || Directory.Exists(dirPath)
+            ? new Result<IEntryIterator>(new DirectoryEntryIterator(fullPath, recursive, uaeMetadata, appCache))
+            : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{fullPath}'", fullPath));
     }
 
-    protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive)
+    protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata)
     {
         path = PathHelper.GetFullPath(path);
-        return Task.FromResult(new Result<IEntryIterator>(
-            new DirectoryEntryIterator(path, recursive)));
+        return Task.FromResult(new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive,
+            uaeMetadata, new MemoryAppCache())));
     }
 
     protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -383,7 +395,7 @@ public abstract partial class FsCommandBase : CommandBase
         var media = piStormRdbMediaResult.Media;
         fileSystemPath = piStormRdbMediaResult.FileSystemPath;
 
-        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
         if (media.Type == Media.MediaType.Floppy)
         {
@@ -411,25 +423,6 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No device name in path"));
         }
         
-        // if (blockSize < 1024 * 512)
-        // {
-        //     blockSize = 1024 * 512;
-        // }
-
-        // var blocksLimit = cacheSize / blockSize;
-        //
-        // if (blocksLimit < 10)
-        // {
-        //     blocksLimit = 10;
-        // }
-        
-        // var stream = useCache ? new CachedStream(media.Value.Stream, blockSize, blocksLimit) : media.Value.Stream;
-        //var stream = media.Stream;
-        //var stream = new CachedBlockStream(media.Value.Stream);
-        var disk = media is DiskMedia diskMedia 
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-
         var fileSystemVolumeResult = await MountRdbFileSystemVolume(media, parts[1]);
         if (fileSystemVolumeResult.IsFaulted)
         {
@@ -462,8 +455,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        // open stream as disk
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[1]);
         if (mbrFileSystemResult.IsFaulted)
@@ -485,8 +477,7 @@ public abstract partial class FsCommandBase : CommandBase
             return new Result<IEntryIterator>(new Error($"No partition number in path"));
         }
 
-        // open stream as disk
-        var disk = media is DiskMedia diskMedia ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var gptFileSystemResult = await MountGptFileSystem(disk, parts[1]);
         if (gptFileSystemResult.IsFaulted)
@@ -515,8 +506,9 @@ public abstract partial class FsCommandBase : CommandBase
         {
             return new Result<IEntryWriter>(new PathNotFoundError($"Path not found '{path}'", path));
         }
-        
-        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite);
+
+        var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite,
+            new MemoryAppCache());
 
         var initializeResult = await directoryEntryWriter.Initialize();
         return initializeResult.IsFaulted
@@ -653,7 +645,7 @@ public abstract partial class FsCommandBase : CommandBase
 
             var adfAmigaVolumeEntryWriter = new AmigaVolumeEntryWriter(media, PartitionTableType.RigidDiskBlock,
                 0, string.Empty,
-                fileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries), recursive,
+                fileSystemPath.Split(directorySeparatorChar), recursive,
                 fileSystemVolumeResult.Value, createDestDirectory, forceOverwrite);
 
             var adfInitializeResult = await adfAmigaVolumeEntryWriter.Initialize();
@@ -663,15 +655,14 @@ public abstract partial class FsCommandBase : CommandBase
         }
 
         // disk
-        var parts = fileSystemPath.Split(new []{'\\', '/'}, StringSplitOptions.RemoveEmptyEntries);
+        var parts = PathHelper.Split(fileSystemPath);
 
         if (parts.Length == 0)
         {
             return new Result<IEntryWriter>(new Error($"No partition table in path"));
         }
 
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         switch (parts[0].ToLowerInvariant())
         {

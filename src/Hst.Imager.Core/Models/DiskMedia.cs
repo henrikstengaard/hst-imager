@@ -1,34 +1,38 @@
-﻿namespace Hst.Imager.Core.Models
+﻿using System;
+
+namespace Hst.Imager.Core.Models
 {
     using System.IO;
     using DiscUtils;
 
     public class DiskMedia : Media
     {
-        public VirtualDisk Disk { get; private set; }
+        private readonly VirtualDisk disk;
 
-        public DiskMedia(string path, string name, long size, MediaType type, bool isPhysicalDrive,
+        public DiskMedia(string path, string name, MediaType type, bool isPhysicalDrive,
             VirtualDisk disk, bool byteswap, Stream stream = null) 
-            : base(path, name, size, type, isPhysicalDrive, stream, byteswap)
+            : base(path, name, type, isPhysicalDrive, stream, byteswap)
         {
-            this.Disk = disk;
+            ArgumentNullException.ThrowIfNull(disk);
+            this.disk = disk;
         }
 
-        public override long Size => this.Disk?.Capacity ?? Stream?.Length ?? 0;
+        public DiskMedia(Media media, VirtualDisk disk, Stream stream) 
+            : base(media.Path, media.Model, media.Type, media.IsPhysicalDrive, stream, media.Byteswap)
+        {
+            ArgumentNullException.ThrowIfNull(disk);
+            this.disk = disk;
+        }
 
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
             if (disposing)
             {
-                Disk.Dispose();
+                disk.Dispose();
             }
         }
 
-        public void SetDisk(VirtualDisk disk)
-        {
-            this.Disk = disk;
-            SetStream(disk.Content);
-        }
+        public VirtualDisk GetVirtualDisk() => disk;
     }
 }

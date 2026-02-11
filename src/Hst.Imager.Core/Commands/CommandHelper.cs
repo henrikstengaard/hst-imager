@@ -67,7 +67,7 @@ namespace Hst.Imager.Core.Commands
         private readonly IList<Media> activeMedias;
 
         public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false,
-            CacheType cacheType = CacheType.Memory)
+            CacheType cacheType = CacheType.Disk)
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
@@ -107,24 +107,19 @@ namespace Hst.Imager.Core.Commands
         
         private Media GetActiveMedia(string path)
         {
-            var media = this.activeMedias.FirstOrDefault(x => 
+            var media = activeMedias.FirstOrDefault(x => 
                 x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             if (media == null)
             {
                 return null;
             }
 
-            if (media is DiskMedia diskMedia && diskMedia.Type == Media.MediaType.Vhd)
+            // remove active media and return null, if it's disposed.
+            // this will open the media again.
+            if (media.IsDisposed)
             {
-                if (diskMedia.IsDisposed)
-                {
-                    var vhdDisk =
-                        VirtualDisk.OpenDisk(path, media.IsWriteable ? FileAccess.ReadWrite : FileAccess.Read);
-                    vhdDisk.Content.Position = 0;
-                    diskMedia.SetDisk(vhdDisk);
-                }
-
-                return diskMedia;
+                activeMedias.Remove(media);
+                return null;
             }
 
             if (media is PhysicalDriveMedia physicalDriveMedia)
@@ -230,7 +225,7 @@ namespace Hst.Imager.Core.Commands
 
             physicalDrive.SetWritable(writeable);
             physicalDrive.SetByteSwap(byteSwap);
-            var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name, physicalDrive.Size,
+            var physicalDriveMedia = new PhysicalDriveMedia(physicalDrivePath, physicalDrive.Name,
                 Media.MediaType.Raw, true, physicalDrive, byteSwap, useCache: useCache, cacheType: cacheType);
 
             // add physical drive to active drives if not already present
@@ -315,7 +310,7 @@ namespace Hst.Imager.Core.Commands
 
             if (!IsVhd(path))
             {
-                var fileMedia =await GetFileMedia(path, name, false, (ModifierEnum)modifiers);
+                var fileMedia = await GetFileMedia(path, name, false, (ModifierEnum)modifiers);
                 this.activeMedias.Add(fileMedia);
                 return new Result<Media>(fileMedia);
             }
@@ -324,7 +319,7 @@ namespace Hst.Imager.Core.Commands
             
             try
             {
-                vhdMedia = GetVhdMedia(path, name, false, byteSwap);
+                vhdMedia = GetVhdMedia(path, name, false, byteSwap, useCache, cacheType);
             }
             catch (Exception e)
             {
@@ -341,14 +336,24 @@ namespace Hst.Imager.Core.Commands
             return await ResolveFileMedia(path, name, fileStream, modifiers);
         }
 
-        private static Media GetVhdMedia(string path, string name, bool writeable, bool byteSwap)
+        private static Media GetVhdMedia(string path, string name, bool writeable, bool byteSwap, bool useCache,
+            CacheType cacheType = CacheType.Disk, int blockSize = 1024 * 1024)
         {
             var vhdDisk = VirtualDisk.OpenDisk(path, writeable ? FileAccess.ReadWrite : FileAccess.Read);
+            
+            if (vhdDisk == null)
+            {
+                throw new InvalidOperationException($"Failed to open vhd disk '{path}'");
+            }
+            
             vhdDisk.Content.Position = 0;
-
-            // sector stream is only used byteswapping disk media
-            return new DiskMedia(path, name, vhdDisk.Capacity, Media.MediaType.Vhd, false, vhdDisk,
-                byteSwap, byteSwap ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: true) : vhdDisk.Content);
+            var baseStream = new SectorStream(vhdDisk.Content, byteSwap: byteSwap, leaveOpen: false);
+            var stream = useCache
+                ? CacheHelper.AddLayeredCache(path, baseStream, writeable, blockSize, cacheType)
+                : baseStream;
+            
+            return new DiskMedia(path, name, Media.MediaType.Vhd, false, vhdDisk,
+                byteSwap, stream);
         }
 
         private async Task<Media> ResolveFileMedia(string path, string name, Stream stream, ModifierEnum modifiers)
@@ -360,7 +365,7 @@ namespace Hst.Imager.Core.Commands
             // floppy image
             if (stream.Length == 1474560)
             {
-                return new Media(path, name, stream.Length, Media.MediaType.Floppy, false,
+                return new Media(path, name, Media.MediaType.Floppy, false,
                     stream, false);
             }
             
@@ -407,10 +412,11 @@ namespace Hst.Imager.Core.Commands
             }
 
             // raw stream
-            // sector stream is only used for byte swapping disk media
             stream.Position = 0;
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false,
-                byteSwap ? new SectorStream(stream, byteSwap: true, leaveOpen: false) : stream, byteSwap);
+            var baseStream = byteSwap
+                ? new SectorStream(stream, byteSwap: true, leaveOpen: false)
+                : stream;
+            return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
         private async Task<Media> ResolveRarMedia(string path, string name, Stream stream, bool byteSwap)
@@ -438,12 +444,14 @@ namespace Hst.Imager.Core.Commands
             }
 
             rarEntryStream = rarEntry.OpenEntryStream();
-            return new Media(path, Path.GetFileName(rarEntry.Key), rarEntry.Size,
+            var baseStream = byteSwap
+                ? new SectorStream(rarEntryStream, leaveOpen: false, byteSwap: true)
+                : rarEntryStream;
+            return new Media(path, Path.GetFileName(rarEntry.Key),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
-                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(rarEntryStream, leaveOpen: true, byteSwap: byteSwap), length: rarEntry.Size,
-                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                    : Media.MediaType.CompressedRaw, false, new InterceptorStream(baseStream,
+                    length: rarEntry.Size, closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         rarEntryStream.Fill(buffer, offset, count)), byteSwap);
         }
         
@@ -472,12 +480,15 @@ namespace Hst.Imager.Core.Commands
             }
 
             zipEntryStream = zipEntry.Open();
-            return new Media(path, Path.GetFileName(zipEntry.Name), zipEntry.Length,
+            var baseStream = byteSwap
+                ? new SectorStream(zipEntryStream, leaveOpen: false, byteSwap: true)
+                : zipEntryStream;
+            return new Media(path, Path.GetFileName(zipEntry.Name),
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, headerBytes, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(zipEntryStream, leaveOpen: true, byteSwap: byteSwap), length: zipEntry.Length,
-                    closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
+                    baseStream, length: zipEntry.Length, closeHandler: stream.Dispose,
+                    readHandler: (buffer, offset, count) =>
                         zipEntryStream.Fill(buffer, offset, count)), byteSwap);
         }
 
@@ -488,11 +499,14 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var zxStream = new SharpCompress.Compressors.Xz.XZStream(stream);
-            return new Media(path, name, sizeAndHeader.Item1,
+            Stream baseStream = byteSwap
+                ? new SectorStream(zxStream, leaveOpen: false, byteSwap: true)
+                : zxStream;
+            return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false, new InterceptorStream(
-                    new SectorStream(zxStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    baseStream, length: sizeAndHeader.Item1, 
                     closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         zxStream.Fill(buffer, offset, count)), byteSwap);
         }
@@ -505,12 +519,15 @@ namespace Hst.Imager.Core.Commands
 
             stream.Position = 0;
             var gZipStream = new System.IO.Compression.GZipStream(stream, CompressionMode.Decompress);
-            return new Media(path, name, sizeAndHeader.Item1,
+            Stream baseStream = byteSwap
+                ? new SectorStream(gZipStream, leaveOpen: false, byteSwap: true)
+                : gZipStream;
+            return new Media(path, name,
                 MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sizeAndHeader.Item2, 0)
                     ? Media.MediaType.CompressedVhd
                     : Media.MediaType.CompressedRaw, false,
                 new InterceptorStream(
-                    new SectorStream(gZipStream, leaveOpen: true, byteSwap: byteSwap), length: sizeAndHeader.Item1, 
+                    baseStream, length: sizeAndHeader.Item1, 
                     closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
                         gZipStream.Fill(buffer, offset, count)), byteSwap);
         }
@@ -608,8 +625,10 @@ namespace Hst.Imager.Core.Commands
             if (!IsVhd(path))
             {
                 var fileStream = CreateWriteableStream(path, false);
-                var fileMedia = new Media(path, name, fileStream.Length, Media.MediaType.Raw, false,
-                    new SectorStream(fileStream, leaveOpen: false, byteSwap: byteSwap), byteSwap);
+                var baseStream = byteSwap
+                    ? new SectorStream(fileStream, leaveOpen: false, byteSwap: true)
+                    : fileStream;
+                var fileMedia = new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
                 this.activeMedias.Add(fileMedia);
                 return Task.FromResult(new Result<Media>(fileMedia));
             }
@@ -618,7 +637,7 @@ namespace Hst.Imager.Core.Commands
             
             try
             {
-                vhdMedia = GetVhdMedia(path, name, true, byteSwap);
+                vhdMedia = GetVhdMedia(path, name, true, byteSwap, useCache, cacheType);
             }
             catch (Exception e)
             {
@@ -645,7 +664,7 @@ namespace Hst.Imager.Core.Commands
                 // create interceptor stream disabling seek, set length and overriding close to dispose zip archive
                 var interceptorStream = new InterceptorStream(zipEntryStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { }, closeHandler: () => zipArchive.Dispose());
-                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                return new Media(path, name, Media.MediaType.CompressedRaw, false,
                     interceptorStream, false);
             }
 
@@ -656,13 +675,14 @@ namespace Hst.Imager.Core.Commands
                 // create interceptor stream disabling seek and set length
                 var interceptorStream = new InterceptorStream(gZipStream, seekHandler: (l, _) => l, 
                     setLengthHandler: _ => { });
-                return new Media(path, name, stream.Length, Media.MediaType.CompressedRaw, false,
+                return new Media(path, name, Media.MediaType.CompressedRaw, false,
                     interceptorStream, false);
             }
 
-            // sector stream has leave open set to false, so stream is disposed when media is closed
-            return new Media(path, name, stream.Length, Media.MediaType.Raw, false, 
-                byteSwap ? new SectorStream(stream, leaveOpen: false, byteSwap: true) : stream, byteSwap);
+            var baseStream = byteSwap
+                ? new SectorStream(stream, leaveOpen: false, byteSwap: true)
+                : stream;
+            return new Media(path, name, Media.MediaType.Raw, false, baseStream, byteSwap);
         }
 
         public virtual async Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
@@ -713,45 +733,27 @@ namespace Hst.Imager.Core.Commands
             return path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
         }
 
-        private async Task<VirtualDisk> ResolveVirtualDisk(Media media)
-        {
-            if (media.Type == Media.MediaType.Raw)
-            {
-                return new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
-            }
-
-            if (media is DiskMedia diskMedia)
-            {
-                return diskMedia.Disk;
-            }
-
-            if (media.Type != Media.MediaType.CompressedRaw && media.Type != Media.MediaType.CompressedVhd)
-            {
-                throw new NotSupportedException($"Unable to resolve disk media type '{media.Type}'");
-            }
-
-            // read first chunk from compressed stream
-            var firstChunk = new byte[1024 * 1024];
-            await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
-
-            // return compressed vhd, if vhd magic number is present in first chunk
-            return MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0)
-                ? CompressedVhd(media.Stream, firstChunk)
-                : CompressedImg(media.Stream, firstChunk);
-        }
-
-        private VirtualDisk CompressedVhd(Stream stream, byte[] firstChunk) => 
-            new Disk(new MemoryStream(firstChunk), Ownership.None);
-
-        private VirtualDisk CompressedImg(Stream stream, byte[] firstChunk) => 
-            new DiscUtils.Raw.Disk(new MemoryStream(firstChunk), Ownership.None);
-
         public virtual async Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None)
         {
+            if (media.Size == 0)
+            {
+                return new DiskInfo
+                {
+                    Path = media.Path,
+                    Name = media.Model,
+                    Size = 0,
+                    PartitionTables = new List<PartitionTableInfo>(),
+                    StartOffset = 0,
+                    EndOffset = 0,
+                    RigidDiskBlock = null,
+                    DiskParts = new List<PartInfo>()
+                };
+            }
+            
             var partitionTables = new List<PartitionTableInfo>();
 
-            var disk = await ResolveVirtualDisk(media);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             PartitionTableInfo mbrPartitionTableInfo = null;
             

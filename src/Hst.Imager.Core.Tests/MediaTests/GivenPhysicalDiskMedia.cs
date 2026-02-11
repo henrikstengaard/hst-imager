@@ -12,9 +12,9 @@ public class GivenPhysicalDiskMedia
     {
         // arrange - two physical drive medias with same path
         var physicalDrive = new TestPhysicalDrive("\\disk1", "Disk", "Disk", 100.MB());
-        var media1 = new PhysicalDriveMedia("\\disk1", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media1 = new PhysicalDriveMedia("\\disk1", "Disk", Media.MediaType.Raw, 
             false, physicalDrive, false);
-        var media2 = new PhysicalDriveMedia("\\disk1", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media2 = new PhysicalDriveMedia("\\disk1", "Disk", Media.MediaType.Raw, 
             false, physicalDrive, false);
         
         // act - equals
@@ -29,9 +29,9 @@ public class GivenPhysicalDiskMedia
     {
         // arrange - two physical drive medias with different paths
         var physicalDrive = new TestPhysicalDrive("\\disk1", "Disk", "Disk", 100.MB());
-        var media1 = new PhysicalDriveMedia("\\disk1", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media1 = new PhysicalDriveMedia("\\disk1", "Disk", Media.MediaType.Raw, 
             false, physicalDrive, false);
-        var media2 = new PhysicalDriveMedia("\\disk2", "Disk", 100.MB(), Media.MediaType.Raw, 
+        var media2 = new PhysicalDriveMedia("\\disk2", "Disk", Media.MediaType.Raw, 
             false, physicalDrive, false);
         
         // act - equals

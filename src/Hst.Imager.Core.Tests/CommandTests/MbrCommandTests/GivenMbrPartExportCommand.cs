@@ -40,8 +40,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.MbrCommandTests
                 Array.Fill(srcPartitionData, (byte)((i + 1) % 256), i * sectorSize, sectorSize);
             }
 
-            // arrange - create source and partition test medias
+            // arrange - create src test media
             testCommandHelper.AddTestMedia(srcPath, srcImageSize);
+            
+            // arrange - create dest test media
             await testCommandHelper.AddTestMedia(destPath);
 
             // arrange - write source image data

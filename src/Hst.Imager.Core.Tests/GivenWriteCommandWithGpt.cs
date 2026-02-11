@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -66,9 +66,7 @@ public class GivenWriteCommandWithGpt : CommandTestBase
         Assert.NotNull(gptPartition1Part);
         
         // arrange - get dest disk and stream
-        var destDisk = destMedia is DiskMedia destDiskMedia
-            ? destDiskMedia.Disk
-            : new DiscUtils.Raw.Disk(destMedia.Stream, Ownership.None);
+        var destDisk = await MediaHelper.ResolveVirtualDisk(destMedia);
         var destStream = destDisk.Content;
 
         // assert - src data read is identical to gpt partition 1 data
@@ -127,9 +125,7 @@ public class GivenWriteCommandWithGpt : CommandTestBase
         Assert.NotNull(gptPartition2Part);
         
         // arrange - get dest disk and stream
-        var destDisk = destMedia is DiskMedia destDiskMedia
-            ? destDiskMedia.Disk
-            : new DiscUtils.Raw.Disk(destMedia.Stream, Ownership.None);
+        var destDisk = await MediaHelper.ResolveVirtualDisk(destMedia);
         var destStream = destDisk.Content;
 
         // assert - src data read is identical to gpt partition 2 data

@@ -57,17 +57,13 @@ public static class PiStormRdbTestHelper
 
         // copy rdb media to mbr partition 2 creating pistorm rdb hard disk
         using var mbrMedia = mbrMediaResult.Value;
-        var mbrStream = mbrMedia is DiskMedia diskMedia
-            ? diskMedia.Disk.Content
-            : mbrMedia.Stream;
+        var mbrStream = mbrMedia.Stream;
 
         mbrStream.Seek(512 * mbrPartition2StartSector, SeekOrigin.Begin);
 
         using var rdbMedia = rdbMediaResult.Value;
 
-        var rdbStream = rdbMedia is DiskMedia rdbDiskMedia
-            ? rdbDiskMedia.Disk.Content
-            : rdbMedia.Stream;
+        var rdbStream = rdbMedia.Stream;
 
         rdbStream.Position = 0;
         var buffer = new byte[4096];
@@ -108,8 +104,9 @@ public static class PiStormRdbTestHelper
         }
         
         // read pistorm rdb disk info from mbr partition part
-        var piStormRdbStream = new VirtualStream(stream, mbrPartitionPart.StartOffset, mbrPartitionPart.Size);
-        var piStormRdbMedia = new Media(media.Path, media.Model, mbrPartitionPart.Size, Media.MediaType.Raw, false, piStormRdbStream,
+        var piStormRdbStream = new VirtualStream(stream, mbrPartitionPart.StartOffset, mbrPartitionPart.Size,
+            mbrPartitionPart.Size);
+        var piStormRdbMedia = new Media(media.Path, media.Model, Media.MediaType.Raw, false, piStormRdbStream,
             false);
         var piStormRdbDiskInfo = await testCommandHelper.ReadDiskInfo(piStormRdbMedia);
         if (piStormRdbDiskInfo?.RdbPartitionTablePart == null)

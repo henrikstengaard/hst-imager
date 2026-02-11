@@ -252,4 +252,50 @@ public class GivenFsExtractCommandWithLzx : FsCommandTestBase
             DeletePaths(destPath);
         }
     }
+    
+    [Fact]
+    public async Task When_ExtractingAFileFromLzxToLocalDirectoryUsingCapitalLetters_ThenFileIsExtracted()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.lzx";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "DIR1", "FILE1.TXT");
+
+        try
+        {
+            // arrange - copy lzx file to src path
+            File.Copy(Path.Combine("TestData", "Lzx", "dirs-files.lzx"), srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+        
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            // assert - single file is extracted
+            Assert.Single(actualFiles);
+            string[] expectedFiles =
+            [
+                Path.Combine(destPath, "file1.txt")
+            ];
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 }

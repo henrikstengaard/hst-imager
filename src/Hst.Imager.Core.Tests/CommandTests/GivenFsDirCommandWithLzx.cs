@@ -707,5 +707,62 @@ namespace Hst.Imager.Core.Tests.CommandTests
                 DeletePaths(tempLzxPath);
             }
         }
+        
+        [Fact]
+        public async Task When_ListingEntriesInSubDirectory_Then_EntriesAreListed()
+        {
+            var lzxPath = $"{Guid.NewGuid()}.lzx";
+            var dirPath = Path.Combine(lzxPath, "dir1");
+            const bool recursive = false;
+
+            try
+            {
+                // arrange - copy lzx file to src path
+                File.Copy(Path.Combine("TestData", "Lzx", "dirs-files.lzx"), lzxPath);
+
+                // arrange - test command helper
+                using var testCommandHelper = new TestCommandHelper();
+                
+                // arrange - create fs dir command
+                var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
+                    new List<IPhysicalDrive>(), dirPath, recursive);
+                EntriesInfo entriesInfo = null;
+                fsDirCommand.EntriesRead += (_, e) =>
+                {
+                    entriesInfo = e.EntriesInfo;
+                };
+
+                // act - execute fs dir command
+                var result = await fsDirCommand.Execute(CancellationToken.None);
+
+                // assert - success and entries info is not null
+                Assert.True(result.IsSuccess);
+                Assert.NotNull(entriesInfo);
+                
+                // assert - 2 entries are listed
+                var entries = entriesInfo.Entries.ToList();
+                Assert.Equal(2, entries.Count);
+
+                // assert - 1 directory is listed
+                var expectedDirNames = new[]
+                {
+                    "dir3"
+                };
+                var dirNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.Dir).Select(x => x.Name).ToList();
+                Assert.Equal(expectedDirNames, dirNames);
+                
+                // assert - 1 file is listed
+                var expectedFileNames = new[]
+                {
+                    "file1.txt"
+                };
+                var fileNames = entries.Where(x => x.Type == Models.FileSystems.EntryType.File).Select(x => x.Name).ToList();
+                Assert.Equal(expectedFileNames, fileNames);
+            }
+            finally
+            {
+                DeletePaths(lzxPath);
+            }
+        }
     }
 }

@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.EntryWriterTests;
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Tests.EntryWriterTests;
 
 using System;
 using System.IO;
@@ -9,7 +11,6 @@ using CommandTests;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
 using Hst.Core.Extensions;
-using Models;
 using Models.FileSystems;
 using Xunit;
 
@@ -30,11 +31,10 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
         // arrange - get writeable media
         var mediaResult = await testCommandHelper.GetWritableMedia(Enumerable.Empty<IPhysicalDrive>(), path);
         using var media = mediaResult.Value;
-        var diskMedia = media as DiskMedia;
-        Assert.NotNull(diskMedia);
         
         // arrange - mount fat file system
-        var biosPartitionTable = new BiosPartitionTable(diskMedia.Disk);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
+        var biosPartitionTable = new BiosPartitionTable(disk);
         var partitionInfo = biosPartitionTable.Partitions[0];
         var fatFileSystem = new FatFileSystem(partitionInfo.Open());
         
@@ -76,7 +76,7 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
     private async Task CreateDirectory(IEntryWriter entryWriter, string entryPath)
     {
         var name = Path.GetFileName(entryPath);
-        var entryPathComponents = entryPath.Split(new[] { "\\", "/" }, StringSplitOptions.RemoveEmptyEntries);
+        var entryPathComponents = PathHelper.Split(entryPath);
         await entryWriter.CreateDirectory(new Entry
         {
             Name = name,
@@ -94,7 +94,7 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
     private async Task WriteEntry(IEntryWriter entryWriter, string entryPath, Stream stream)
     {
         var name = Path.GetFileName(entryPath);
-        var entryPathComponents = entryPath.Split(new []{"\\", "/"}, StringSplitOptions.RemoveEmptyEntries);
+        var entryPathComponents = PathHelper.Split(entryPath);
         await entryWriter.CreateFile(new Entry
         {
             Name = name,

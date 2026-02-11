@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -7,8 +9,6 @@
     using System.Threading;
     using System.Threading.Tasks;
     using DiscUtils.Partitions;
-    using DiscUtils.Raw;
-    using DiscUtils.Streams;
     using Extensions;
     using Hst.Core;
     using Hst.Core.Extensions;
@@ -76,9 +76,7 @@
             
             OnDebugMessage("Reading Master Boot Record");
             
-            var disk = media is DiskMedia diskMedia
-                ? diskMedia.Disk
-                : new Disk(media.Stream, Ownership.None);
+            var disk = await MediaHelper.ResolveVirtualDisk(media);
 
             BiosPartitionTable biosPartitionTable;
             try

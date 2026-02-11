@@ -1,4 +1,7 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.Helpers;
+
+namespace Hst.Imager.Core.Commands;
 
 using System;
 using System.Collections.Generic;
@@ -53,7 +56,7 @@ public class FsCopyCommand(
         }
 
         // get source copy entry iterator
-        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath);
+        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath, uaeMetadata);
         if (srcEntryIteratorResult.IsFaulted)
         {
             return new Result(srcEntryIteratorResult.Error);
@@ -145,6 +148,7 @@ public class FsCopyCommand(
                 }
 
                 await srcEntryIterator.Flush();
+                await destEntryWriter.Flush();
             }
 
             foreach (var log in destEntryWriter.GetDebugLogs())
@@ -176,18 +180,31 @@ public class FsCopyCommand(
         return new Result();
     }
 
-    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path)
+    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path,
+        UaeMetadata uaeMetadata)
     {
-        // get directory entry iterator and return if successful
-        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive);
-        if (directoryEntryIterator != null && directoryEntryIterator.IsSuccess)
+        var entryIteratorResult = await GetEntryIteratorFromMedia(entryWriter, path);
+        if (entryIteratorResult.IsSuccess)
         {
-            var initializeResult = await directoryEntryIterator.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(directoryEntryIterator.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
+            return entryIteratorResult;
         }
-
+        
+        // get directory entry iterator and return if successful
+        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+            new MemoryAppCache());
+        if (directoryEntryIterator.IsFaulted)
+        {
+            return new Result<IEntryIterator>(directoryEntryIterator.Error);
+        }
+        
+        var initializeResult = await directoryEntryIterator.Value.Initialize();
+        return initializeResult.IsSuccess
+            ? new Result<IEntryIterator>(directoryEntryIterator.Value)
+            : new Result<IEntryIterator>(initializeResult.Error);
+    }
+    
+    private async Task<Result<IEntryIterator>> GetEntryIteratorFromMedia(IEntryWriter entryWriter, string path)
+    {
         // path is not a directory, so must be a file
         
         OnDebugMessage($"Resolving path '{path}'");
@@ -204,7 +221,7 @@ public class FsCopyCommand(
         // file entry iterator
         if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
-            var fileEntryIterator = await GetFileEntryIterator(path, recursive);
+            var fileEntryIterator = await GetFileEntryIterator(path, recursive, uaeMetadata);
             if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
             {
                 var initializeResult = await fileEntryIterator.Value.Initialize();
@@ -214,15 +231,37 @@ public class FsCopyCommand(
             }
         }
         
-        // create entry iterator from entry writer, if media is the same (copy from and to same media)
+        // get readable media for entry iterator
+        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
+        if (readableMediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(readableMediaResult.Error);
+        }
+        
+        var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
+
+        // get pistorm rdb media result from media
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        // get file system path and media path
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
+        var mediaPath = media.Path;
+        
+        // get entry iterator file system path components
         var entryIteratorFileSystemPathComponents =
-            mediaResult.Value.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)
+            fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
                 .ToArray();
+        
+        // get entry writer file system path components
         var entryWriterFileSystemPathComponents =
-            entryWriter.FileSystemPath.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries).Take(2)
+            entryWriter.FileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Take(2)
                 .ToArray();
 
-        if (mediaResult.Value.MediaPath.EndsWith(".adf") && mediaResult.Value.MediaPath == entryWriter.MediaPath)
+        // return entry iterator from entry writer, if media is adf and media path is the same
+        if (mediaPath.EndsWith(".adf") && mediaPath == entryWriter.MediaPath)
         {
             var rootPathComponents = entryIteratorFileSystemPathComponents;
             var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
@@ -232,7 +271,10 @@ public class FsCopyCommand(
                 : new Result<IEntryIterator>(initializeResult.Error);
         }
         
-        if (mediaResult.Value.MediaPath == entryWriter.MediaPath &&
+        // return entry iterator from entry writer, if media path is the same and
+        // entry iterator and writer file system path components starts with the
+        // same 2 path components, e.g. "rdb\1"
+        if (mediaPath == entryWriter.MediaPath &&
             entryIteratorFileSystemPathComponents.Take(2).SequenceEqual(
                 entryWriterFileSystemPathComponents)) // and only if first two parts of file system path is equal
         {

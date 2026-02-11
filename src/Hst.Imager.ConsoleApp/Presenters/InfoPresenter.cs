@@ -9,19 +9,6 @@
 
     public static class InfoPresenter
     {
-        private static int GetConsoleWindowWidth()
-        {
-            try
-            {
-                return Console.WindowWidth;
-            }
-            catch
-            {
-                return 80;
-            }
-        }
-
-        private static readonly int ConsoleWindowWidth = GetConsoleWindowWidth();
 
         public static string PresentInfo(IEnumerable<MediaInfo> mediaInfos)
         {
@@ -123,7 +110,7 @@
                 rows.Add(row);
             }
 
-            var layoutWidth = ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
+            var layoutWidth = ConsoleHelper.ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
 
             if (layoutWidth < 10)
             {
@@ -208,7 +195,7 @@
                 rows.Add(row);
             }
 
-            var layoutWidth = ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
+            var layoutWidth = ConsoleHelper.ConsoleWindowWidth - columnLengths.Sum(x => x) - ((columns.Length - 1) * 3);
 
             if (layoutWidth < 10)
             {

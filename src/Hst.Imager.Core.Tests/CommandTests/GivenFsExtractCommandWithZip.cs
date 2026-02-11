@@ -252,6 +252,52 @@ public class GivenFsExtractCommandWithZip : FsCommandTestBase
             DeletePaths(srcPath, destPath);
         }
     }
+    
+    [Fact]
+    public async Task When_ExtractingAFileFromZipToLocalDirectoryUsingCapitalLetters_ThenFileIsExtracted()
+    {
+        // arrange - paths
+        var srcPath = $"{Guid.NewGuid()}.zip";
+        var destPath = $"{Guid.NewGuid()}-extract";
+        var extractPath = Path.Combine(srcPath, "DIR1", "FILE1.TXT");
+
+        try
+        {
+            // arrange - copy lha file to src path
+            File.Copy(Path.Combine("TestData", "Zip", "dirs-files.zip"), srcPath);
+
+            // arrange - create destination directory
+            Directory.CreateDirectory(destPath);
+            
+            using var testCommandHelper = new TestCommandHelper();
+            var cancellationTokenSource = new CancellationTokenSource();
+
+            // arrange - create fs extract command
+            var fsExtractCommand = new FsExtractCommand(new NullLogger<FsExtractCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(),
+                extractPath, destPath, true, false, true);
+        
+            // act - extract
+            var result = await fsExtractCommand.Execute(cancellationTokenSource.Token);
+            Assert.True(result.IsSuccess);
+
+            // assert - get extracted files
+            Assert.True(Directory.Exists(destPath));
+            var actualFiles = Directory.GetFiles(destPath, "*.*", SearchOption.AllDirectories);
+        
+            // assert - single file is extracted
+            Assert.Single(actualFiles);
+            string[] expectedFiles =
+            [
+                Path.Combine(destPath, "file1.txt")
+            ];
+            Assert.Equal(expectedFiles, actualFiles);
+        }
+        finally
+        {
+            DeletePaths(srcPath, destPath);
+        }
+    }
 
     private void CreateZipFileWithDirectoriesAndFiles(string path)
     {

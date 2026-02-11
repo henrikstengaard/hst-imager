@@ -42,7 +42,7 @@ public class GenericPhysicalDriveTests
                 int bytesRead;
                 
                 // act - create physical drive media opening and reading from physical drive path
-                using(var media = new PhysicalDriveMedia(path, name, size, 
+                using(var media = new PhysicalDriveMedia(path, name,
                           Media.MediaType.Raw, true, genericPhysicalDrive, false))        
                 {
                     // act - read from physical drive media stream
@@ -54,7 +54,7 @@ public class GenericPhysicalDriveTests
                 }
                 
                 // act - open generic physical drive stream
-                var stream = genericPhysicalDrive.Open(false, CacheType.Memory, 1024 * 1024);
+                var stream = genericPhysicalDrive.Open(false, CacheType.Disk, 1024 * 1024);
 
                 // act - read from generic physical drive stream
                 stream.Seek(0, SeekOrigin.Begin);

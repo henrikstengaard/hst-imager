@@ -3,10 +3,9 @@ using System.IO;
 using System.Threading.Tasks;
 using DiscUtils.Fat;
 using DiscUtils.Partitions;
-using DiscUtils.Streams;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Models;
+using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Tests.EntryWriterTests;
 
@@ -80,7 +79,7 @@ public static class EntryWriterTestHelper
         }
 
         var media = mediaResult.Value;
-        var stream = media is DiskMedia diskMedia ? diskMedia.Disk.Content : media.Stream;
+        var stream = media.Stream;
 
         await using var pfs3Volume = await TestHelper.MountPfs3Volume(stream);
 
@@ -98,9 +97,7 @@ public static class EntryWriterTestHelper
         }
 
         var media = mediaResult.Value;
-        var disk = media is DiskMedia diskMedia
-            ? diskMedia.Disk
-            : new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
+        var disk = await MediaHelper.ResolveVirtualDisk(media);
 
         var biosPartitionTable = new BiosPartitionTable(disk);
         var fatFileSystem = new FatFileSystem(biosPartitionTable.Partitions[0].Open());
@@ -118,7 +115,7 @@ public static class EntryWriterTestHelper
         }
         
         return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), false,
-            createDestDirectory, false);
+            createDestDirectory, false, new TestAppCache());
     }
 
     public static async Task CreateDirectory(EntryWriterType entryWriterType, TestCommandHelper testCommandHelper,
