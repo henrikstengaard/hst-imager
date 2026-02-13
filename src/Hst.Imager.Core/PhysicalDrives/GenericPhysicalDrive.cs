@@ -47,8 +47,29 @@ namespace Hst.Imager.Core.PhysicalDrives
             }
 
             IsDisposed = false;
-            stream ??= File.Open(Path, FileMode.Open, FileAccess.ReadWrite);
             
+            var retry = 0;
+            var waitTimeInMilliseconds = 200;
+            do
+            {
+                try
+                {
+                    stream ??= File.Open(Path, FileMode.Open, FileAccess.ReadWrite);
+                    break;
+                }
+                catch(IOException)
+                {
+                    Task.Delay(waitTimeInMilliseconds).GetAwaiter().GetResult();
+                    waitTimeInMilliseconds *= 2;
+                    retry++;
+                }
+            } while(stream == null || retry < 10);
+            
+            if (stream == null)
+            {
+                throw new IOException($"Failed to open physical drive path '{Path}' after {retry} retries and wait time of {waitTimeInMilliseconds} milliseconds");
+            }
+
             var baseStream = new MediaStream(stream, Size);
             
             return useCache
@@ -77,8 +98,7 @@ namespace Hst.Imager.Core.PhysicalDrives
             {
                 stream?.Close();
                 stream?.Dispose();
-                // linux needs a short delay to ensure stream is disposed before continuing
-                Task.Delay(100).GetAwaiter().GetResult();
+                stream = null;
             }
 
             IsDisposed = true;
