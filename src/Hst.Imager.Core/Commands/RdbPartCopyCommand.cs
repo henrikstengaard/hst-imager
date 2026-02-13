@@ -1,4 +1,6 @@
 ﻿using Hst.Amiga;
+using Hst.Amiga.Extensions;
+using Hst.Core.Extensions;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -77,7 +79,7 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"- Name '{partitionBlock.DriveName}'");
             OnInformationMessage($"- LowCyl '{partitionBlock.LowCyl}'");
             OnInformationMessage($"- HighCyl '{partitionBlock.HighCyl}'");
-            OnInformationMessage($"- DOS type '{partitionBlock.DosType}'");
+            OnInformationMessage($"- DOS type '0x{partitionBlock.DosType.FormatHex().ToUpper()}' ({partitionBlock.DosType.FormatDosType()})");
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
@@ -158,7 +160,7 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"- Name '{destinationPartitionBlock.DriveName}'");
             OnInformationMessage($"- LowCyl '{destinationPartitionBlock.LowCyl}'");
             OnInformationMessage($"- HighCyl '{destinationPartitionBlock.HighCyl}'");
-            OnInformationMessage($"- DOS type '{destinationPartitionBlock.DosType}'");
+            OnInformationMessage($"- DOS type '0x{destinationPartitionBlock.DosType.FormatHex().ToUpper()}' ({destinationPartitionBlock.DosType.FormatDosType()})");
             
             OnDebugMessage("Writing destination Rigid Disk Block");
             await RigidDiskBlockWriter.WriteBlock(destinationRigidDiskBlock, destinationStream);
