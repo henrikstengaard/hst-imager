@@ -60,7 +60,6 @@ namespace Hst.Imager.Core.PhysicalDrives
                 catch(IOException)
                 {
                     Task.Delay(waitTimeInMilliseconds).GetAwaiter().GetResult();
-                    waitTimeInMilliseconds *= 2;
                     retry++;
                 }
             } while(stream == null || retry < 10);
