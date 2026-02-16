@@ -62,7 +62,7 @@ namespace Hst.Imager.Core.PhysicalDrives
                     Task.Delay(waitTimeInMilliseconds).GetAwaiter().GetResult();
                     retry++;
                 }
-            } while(stream == null || retry < 10);
+            } while(stream == null || retry < 20);
             
             if (stream == null)
             {
