@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.UaeMetadatas;
 using Xunit;
 
@@ -136,6 +138,75 @@ public class GivenDirectoryEntryIterator
             
             // assert - cache get count is greater than add count
             Assert.True(appCache.GetHistory.Count > appCache.AddHistory.Count);
+        }
+        finally
+        {
+            if (Directory.Exists(mediaPath))
+            {
+                Directory.Delete(mediaPath, true);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(UaeMetadata.None)]
+    [InlineData(UaeMetadata.UaeFsDb)]
+    [InlineData(UaeMetadata.UaeMetafile)]
+    public async Task When_IteratingLocalDirectoryWithLastWriteDate_Then_Entries(UaeMetadata uaeMetadata)
+    {
+        // arrange - paths
+        var mediaPath = Guid.NewGuid().ToString();
+        var file1Path = Path.Combine(mediaPath, "test1.txt");
+        var file2Path = Path.Combine(mediaPath, "test2.txt");
+        var file3Path = Path.Combine(mediaPath, "test3.txt");
+        var file1Date = new DateTime(2024, 4, 1, 12, 0, 0);
+        var file2Date = new DateTime(2024, 4, 2, 13, 0, 0);
+        var file3Date = new DateTime(2024, 4, 3, 14, 0, 0);
+
+        // arrange - test app cache
+        using var appCache = new TestAppCache();
+        
+        try
+        {
+            // arrange - create directory and files with different last write times
+            Directory.CreateDirectory(mediaPath);
+            await File.WriteAllBytesAsync(file1Path, []);
+            await File.WriteAllBytesAsync(file2Path, []);
+            await File.WriteAllBytesAsync(file3Path, []);
+            new FileInfo(file1Path).LastWriteTime = file1Date;
+            new FileInfo(file2Path).LastWriteTime = file2Date;
+            new FileInfo(file3Path).LastWriteTime = file3Date;
+            
+            // arrange - directory entry iterator
+            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, uaeMetadata, appCache);
+
+            // arrange - initialize directory entry iterator
+            await directoryEntryIterator.Initialize();
+
+            // act - iterate entries
+            var entries = new List<Entry>();
+            while(await directoryEntryIterator.Next())
+            {
+                entries.Add(directoryEntryIterator.Current);
+            }
+            
+            // assert - entries count is 3
+            Assert.Equal(3, entries.Count);
+            
+            // assert - file1.txt entry has correct date
+            var file1Entry = entries.FirstOrDefault(x => x.Name == "test1.txt");
+            Assert.NotNull(file1Entry);
+            Assert.Equal(file1Date, file1Entry.Date);
+            
+            // assert - file2.txt entry has correct date
+            var file2Entry = entries.FirstOrDefault(x => x.Name == "test2.txt");
+            Assert.NotNull(file2Entry);
+            Assert.Equal(file2Date, file2Entry.Date);
+            
+            // assert - file3.txt entry has correct date
+            var file3Entry = entries.FirstOrDefault(x => x.Name == "test3.txt");
+            Assert.NotNull(file3Entry);
+            Assert.Equal(file3Date, file3Entry.Date);
         }
         finally
         {
