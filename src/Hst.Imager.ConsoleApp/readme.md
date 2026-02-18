@@ -157,6 +157,19 @@ supports UAE metadata files.
 The type of UAE metadata files to read and write can be changed by specifying the `--uaemetadata` option with values
 `None`, `UaeFsDb` or `UaeMetafile` for file system copy and extract commands.
 
+## Cache
+
+Hst Imager console application uses a cache to speed up filesystem commands when reading and writing of disks.
+
+A new cache is created when running each filesystem command, which is used to store 1MB blocks of data read from the disk or image file.
+When a block is read from the disk or image file, it is stored in the cache and can be used for subsequent reads and writes to speed up the process.
+
+Reading and writing 1MB blocks of data is faster than reading and writing smaller blocks of 512 bytes data, which filesystems usually read and write a lot of.
+Therefore, using a cache can significantly speed up the process when reading and writing large files or disks.
+
+When a filesystem command is complete, the cache is flushed/written to the disk or image file and cleared.
+By default, disk cache is used, which will create a temporary file on disk to store the cache.
+
 ## PiStorm support
 
 Hst Imager supports creating Master Boot Record partition with partition type 0x76 used as hard disk for PiStorm.
@@ -191,6 +204,42 @@ hst.imager rdb init 16gb.img\mbr\2
 Example of adding a bootable PDS3 partition of 500MB with device name DH0 to PiStorm Rigid Disk Block in 16GB img image Master Boot Record partition 2:
 ```
 hst.imager rdb part add 16gb.img\mbr\2 DH0 PDS3 500mb --bootable
+```
+
+## Settings
+
+Hst Imager console application has settings that can be changed with `hst.imager settings` command. Settings are stored in a json file in the user's home directory and are loaded when Hst Imager console application is started.
+
+Following settings are available:
+- `--all-physical-drives`: If true, all physical drives are listed and accessible. If false, only removable or USB attached physical drives are listed and accessible. Default is `false`.
+- `--retries <retries>`: Number of retries when reading and writing. Default is `5`.
+- `--force`: If true, forces reading and writing even if there are errors. This can be useful when reading and writing disks with bad sectors. Default is `false`.
+- `--verify`: If true, verifies the data after writing. This can be useful to ensure that the data is written correctly and will make writing take longer to complete. Default is `false`.
+- `--skip-unused-sectors`: If true, unused sectors are skipped when writing. This can speed up writing of disks with a lot of unused space. Default is `false`.
+- `--use-cache`: If true, a cache is used when reading and writing. This can speed up reading and writing of disks. Default is `true`.
+
+**Note changing settings affects both Hst Imager Gui and Console!**
+
+Example of listing settings:
+```
+hst.imager settings list
+```
+
+Settings can be changed with `hst.imager settings update` command.
+
+Example of changing all physical drives setting to true:
+```
+hst.imager settings update --all-physical-drives true
+```
+
+Example of changing skip unused sectors setting to true:
+```
+hst.imager settings update --skip-unused-sectors true
+```
+
+Example of changing use cache setting to true:
+```
+hst.imager settings update --use-cache true
 ```
 
 ## Source and destination paths 

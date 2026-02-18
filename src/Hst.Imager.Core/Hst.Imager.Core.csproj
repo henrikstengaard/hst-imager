@@ -4,11 +4,11 @@
       <PackageReference Include="Hst.Amiga" Version="0.5.207" />
       <PackageReference Include="hst.compression" Version="0.4.79" />
       <PackageReference Include="Hst.Core" Version="0.4.79" />
-      <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.73-createdir" />
-      <PackageReference Include="LTRData.DiscUtils.ExFat" Version="1.0.73-createdir" />
-      <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.73-createdir" />
-      <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.73-createdir" />
-      <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.73-createdir" />
+      <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.74" />
+      <PackageReference Include="LTRData.DiscUtils.ExFat" Version="1.0.74" />
+      <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.74" />
+      <PackageReference Include="LTRData.DiscUtils.FileSystems" Version="1.0.74" />
+      <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.74" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
       <PackageReference Include="plist-cil" Version="2.2.0" />
       <PackageReference Include="SharpCompress" Version="0.38.0" />

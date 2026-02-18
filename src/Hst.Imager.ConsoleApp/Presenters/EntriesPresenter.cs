@@ -63,6 +63,8 @@ public static class EntriesPresenter
         var orderedEntries = entriesInfo.Recursive
             ? entries.OrderBy(x => x.RawPath)
             : entries.OrderBy(x => x.Type).ThenBy(x => x.Name);
+
+        var entriesSize = 0L;
         
         foreach (var entry in orderedEntries)
         {
@@ -73,6 +75,7 @@ public static class EntriesPresenter
                     break;
                 case EntryType.File:
                     filesCount++;
+                    entriesSize += entry.Size;
                     break;
             }
 
@@ -113,7 +116,7 @@ public static class EntriesPresenter
         outputBuilder.AppendLine();
         outputBuilder.Append(TablePresenter.Present(entriesTable));
         outputBuilder.AppendLine();
-        outputBuilder.AppendLine($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}, {filesCount} {(filesCount == 1 ? "file" : "files")}");
+        outputBuilder.AppendLine($"{dirsCount} {(dirsCount == 1 ? "directory" : "directories")}, {filesCount} {(filesCount == 1 ? "file" : "files")}, {entriesSize.FormatBytes()}");
         outputBuilder.AppendLine();
         return outputBuilder.ToString();
     }
