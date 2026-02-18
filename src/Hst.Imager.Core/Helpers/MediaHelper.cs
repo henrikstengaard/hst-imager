@@ -293,7 +293,7 @@ namespace Hst.Imager.Core.Helpers
 
             var layerStatus = layeredStream.GetLayerStatus();
 
-            if (layerStatus.ChangedBlocks == 0)
+            if (!layeredStream.CanWrite || layerStatus.ChangedBlocks == 0)
             {
                 return;
             }
