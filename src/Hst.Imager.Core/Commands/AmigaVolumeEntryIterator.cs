@@ -1,5 +1,4 @@
 ﻿using Hst.Core;
-using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -77,8 +76,15 @@ public class AmigaVolumeEntryIterator(
             // change directory if directory exists for path component
             if (exists && isDir)
             {
+                // enqueue root entry
+                if (dirComponents == rootPathComponents.Length - 1)
+                {
+                    EnqueueEntry(rootPathComponents.Take(dirComponents).ToArray(), findEntryResult.Entry);
+                }
+                
                 dirComponents++;
                 await fileSystemVolume.ChangeDirectory(pathComponent);
+
                 continue;
             }
             
@@ -103,6 +109,7 @@ public class AmigaVolumeEntryIterator(
         pathComponentMatcher = new PathComponentMatcher(usePattern ? rootPathComponents : [], 
             isFile: IsSingleFileEntryNext, recursive: recursive);
 
+        
         return new Result();
     }
 
@@ -208,12 +215,11 @@ public class AmigaVolumeEntryIterator(
                 recursive, entryPath, entryPath, isDir, entry.Date, entry.Size,
                 attributes, properties, dirAttributes);
 
-            // skip if no entry was created or entry is a file and is not valid
             var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) && 
                           pathComponentMatcher.IsMatch(iteratorEntry.FullPathComponents);
-            if (iteratorEntry == null ||
-                (iteratorEntry.Type == Models.FileSystems.EntryType.File &&
-                 !isValid))
+
+            // skip if no entry was created or entry is a file and is not valid
+            if (iteratorEntry.Type == Models.FileSystems.EntryType.File && !isValid)
             {
                 continue;
             }
@@ -227,6 +233,62 @@ public class AmigaVolumeEntryIterator(
                     files.Add(iteratorEntry);
                     break;
             }
+        }
+
+        for (var i = files.Count - 1; i >= 0; i--)
+        {
+            nextEntries.Push(files[i]);
+        }
+
+        for (var i = directories.Count - 1; i >= 0; i--)
+        {
+            nextEntries.Push(directories[i]);
+        }
+
+        return (directories.Count, files.Count);
+    }
+
+    private (int, int) EnqueueEntry(string[] dirPathComponents, Amiga.FileSystems.Entry entry)
+    {
+        var directories = new List<Entry>(10);
+        var files = new List<Entry>(10);
+
+        var fullPathComponents = dirPathComponents.Concat([entry.Name]).ToArray();
+
+        var entryPath = mediaPath.Join(fullPathComponents);
+
+        var isDir = entry.Type == EntryType.Dir || entry.Type == EntryType.DirLink;
+
+        var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
+
+        var attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits);
+        var properties = new Dictionary<string, string>
+        {
+            { Constants.EntryPropertyNames.Comment, entry.Comment },
+            { Constants.EntryPropertyNames.ProtectionBits, ((int)entry.ProtectionBits ^ 0xf).ToString() }
+        };
+
+        var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, DirPathComponents,
+            recursive, entryPath, entryPath, isDir, entry.Date, entry.Size,
+            attributes, properties, dirAttributes);
+
+        var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) && 
+                      pathComponentMatcher.IsMatch(iteratorEntry.FullPathComponents);
+
+        // skip if no entry was created or entry is a file and is not valid
+        if (iteratorEntry.Type == Models.FileSystems.EntryType.File && !isValid)
+        {
+            return (0, 0);
+        }
+            
+        switch (iteratorEntry.Type)
+        {
+            case Models.FileSystems.EntryType.Dir:
+                directories.Add(iteratorEntry);
+                break;
+            case Models.FileSystems.EntryType.File:
+                files.Add(iteratorEntry);
+                break;
         }
 
         for (var i = files.Count - 1; i >= 0; i--)
