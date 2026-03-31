@@ -41,7 +41,7 @@ public class GivenFsDirCommandWithZip
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
 
             // arrange - create zip file with directories and files
             CreateZipFileWithDirectoriesAndFiles(mediaPath);
@@ -88,7 +88,7 @@ public class GivenFsDirCommandWithZip
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
 
             // arrange - create zip file with directories and files
             CreateZipFileWithDirectoriesAndFiles(mediaPath);
@@ -135,7 +135,7 @@ public class GivenFsDirCommandWithZip
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
 
             // arrange - create zip file with directories and files
             CreateZipFileWithDirectoriesAndFiles(mediaPath);
@@ -184,7 +184,7 @@ public class GivenFsDirCommandWithZip
         try
         {
             // arrange - test command helper
-            var testCommandHelper = new TestCommandHelper();
+            using var testCommandHelper = new TestCommandHelper();
 
             // arrange - create zip file with directories and files
             CreateZipFileWithDirectoriesAndFiles(mediaPath);

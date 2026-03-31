@@ -350,7 +350,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 NormalName = "__uae___dir2_",
                 Comment = "dir2 comment"
             };
-            await File.WriteAllBytesAsync(uaeFsDbPath, UaeFsDbWriter.Build(node));
+            await File.WriteAllBytesAsync(uaeFsDbPath, UaeFsDbWriter.Build(node), cancellationTokenSource.Token);
             
             // arrange - source disk image file with directories
             await CreatePfs3FormattedDisk(testCommandHelper, srcPath);
@@ -516,8 +516,8 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Directory.CreateDirectory(dir2Path);
             var file1Path = Path.Combine(srcPath, "file1");
             var file2Path = Path.Combine(dir2Path, "file2");
-            await File.WriteAllTextAsync(file1Path, string.Empty);
-            await File.WriteAllTextAsync(file2Path, string.Empty);
+            await File.WriteAllTextAsync(file1Path, string.Empty, cancellationTokenSource.Token);
+            await File.WriteAllTextAsync(file2Path, string.Empty, cancellationTokenSource.Token);
 
             // arrange - dest formatted disk
             await CreatePfs3FormattedDisk(testCommandHelper, destPath);
@@ -565,8 +565,8 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Directory.CreateDirectory(dir2Path);
             var file1Path = Path.Combine(srcPath, "file1");
             var file2Path = Path.Combine(dir2Path, "file2");
-            await File.WriteAllTextAsync(file1Path, string.Empty);
-            await File.WriteAllTextAsync(file2Path, string.Empty);
+            await File.WriteAllTextAsync(file1Path, string.Empty, cancellationTokenSource.Token);
+            await File.WriteAllTextAsync(file2Path, string.Empty, cancellationTokenSource.Token);
 
             // arrange - dest formatted disk
             await CreatePfs3FormattedDisk(testCommandHelper, destPath);
@@ -620,15 +620,15 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var dir1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("dir1*");
             var dir1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, dir1SafeName);
             var dir1Path = Path.Combine(srcPath, dir1NormalName);
-            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3:");
+            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3[");
             var file3NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(dir1Path, file3SafeName);
 
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty);
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty, cancellationTokenSource.Token);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty, cancellationTokenSource.Token);
             Directory.CreateDirectory(dir1Path);
-            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty, cancellationTokenSource.Token);
 
-            var files = Directory.GetFiles(srcPath);
+            Directory.GetFiles(srcPath);
             var dirs = Directory.GetDirectories(srcPath);
 
             // arrange - create uaefsdb version 1 nodes for file1, file2 and dir1 in src directory
@@ -674,15 +674,12 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 {
                     Version = UaeFsDbNode.NodeVersion.Version1,
                     Valid = 1,
-                    AmigaName = "file3:",
+                    AmigaName = "file3[",
                     NormalName = file3NormalName,
                     Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Script),
                     Comment = "file3 comment"
                 }));
             }
-
-            files = Directory.GetFiles(srcPath, "*", SearchOption.AllDirectories);
-            dirs = Directory.GetDirectories(srcPath, "*", SearchOption.AllDirectories);
 
             // arrange - create destination disk image file
             await CreatePfs3FormattedDisk(testCommandHelper, destPath);
@@ -723,7 +720,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Assert.Single(actualEntries);
 
             // assert - file3
-            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3[");
             Assert.NotNull(file3Entry);
             Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
             Assert.Equal("file3 comment", file3Entry.Comment);
@@ -772,13 +769,13 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var dir1SafeName = UaeFsDbNodeHelper.MakeSafeFilename("dir1*");
             var dir1NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(srcPath, dir1SafeName);
             var dir1Path = Path.Combine(srcPath, dir1NormalName);
-            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3:");
+            var file3SafeName = UaeFsDbNodeHelper.MakeSafeFilename("file3[");
             var file3NormalName = UaeFsDbNodeHelper.CreateUniqueNormalName(dir1Path, file3SafeName);
 
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty);
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1NormalName), string.Empty, cancellationTokenSource.Token);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2NormalName), string.Empty, cancellationTokenSource.Token);
             Directory.CreateDirectory(dir1Path);
-            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3NormalName), string.Empty, cancellationTokenSource.Token);
 
             // arrange - create file1 alternative stream with uaefsdb version 2
             var file1UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(srcPath, file1NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
@@ -790,7 +787,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 NormalName = file1NormalName,
                 Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Script),
                 Comment = "file1 comment"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create file2 alternative stream with uaefsdb version 2
             var file2UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(srcPath, file2NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
@@ -802,7 +799,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 NormalName = file2NormalName,
                 Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read | ProtectionBits.Write),
                 Comment = "file2 comment"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create dir1 alternative stream with uaefsdb version 2
             var dir1UaeFsDbAlternateStreamPath = string.Concat(dir1Path, $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
@@ -814,7 +811,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 NormalName = dir1NormalName,
                 Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Read),
                 Comment = "dir1 comment"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create file3 alternative stream with uaefsdb version 2
             var file3UaeFsDbAlternateStreamPath = string.Concat(Path.Combine(dir1Path, file3NormalName), $":{Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName}");
@@ -822,11 +819,11 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             {
                 Version = UaeFsDbNode.NodeVersion.Version2,
                 Valid = 1,
-                AmigaName = "file3:",
+                AmigaName = "file3[",
                 NormalName = file3NormalName,
                 Mode = ProtectionBitsConverter.ToProtectionValue(ProtectionBits.Script),
                 Comment = "file3 comment"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create destination disk image file
             await CreatePfs3FormattedDisk(testCommandHelper, destPath);
@@ -867,7 +864,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Assert.Single(actualEntries);
 
             // assert - file3
-            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3[");
             Assert.NotNull(file3Entry);
             Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
             Assert.Equal("file3 comment", file3Entry.Comment);
@@ -898,12 +895,12 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             var file2EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file2*");
             var dir1EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("dir1*");
             var dir1Path = Path.Combine(srcPath, dir1EncodedName);
-            var file3EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file3:");
+            var file3EncodedName = UaeMetafileHelper.EncodeFilenameSpecialChars("file3[");
 
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file1EncodedName), string.Empty);
-            await File.AppendAllTextAsync(Path.Combine(srcPath, file2EncodedName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file1EncodedName), string.Empty, cancellationTokenSource.Token);
+            await File.AppendAllTextAsync(Path.Combine(srcPath, file2EncodedName), string.Empty, cancellationTokenSource.Token);
             Directory.CreateDirectory(dir1Path);
-            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3EncodedName), string.Empty);
+            await File.AppendAllTextAsync(Path.Combine(dir1Path, file3EncodedName), string.Empty, cancellationTokenSource.Token);
 
             // arrange - create file1 uae metafile
             var file1UaeMetafilePath = Path.Combine(srcPath, string.Concat(file1EncodedName,
@@ -913,7 +910,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Date = date,
                 Comment = "file1 comment",
                 ProtectionBits = "-S--R---"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create file2 uae metafile
             var file2UaeMetafilePath = Path.Combine(srcPath, string.Concat(file2EncodedName,
@@ -923,7 +920,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Date = date,
                 Comment = "file2 comment",
                 ProtectionBits = "----RW--"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create dir1 uae metafile
             var dir1UaeMetafilePath = Path.Combine(srcPath, string.Concat(dir1EncodedName,
@@ -933,7 +930,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Date = date,
                 Comment = "dir1 comment",
                 ProtectionBits = "----R---"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create file3 uae metafile
             var file3UaeMetafilePath = Path.Combine(dir1Path, string.Concat(file3EncodedName,
@@ -943,7 +940,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
                 Date = date,
                 Comment = "file3 comment",
                 ProtectionBits = "-S------"
-            }));
+            }), cancellationTokenSource.Token);
 
             // arrange - create destination disk image file
             await CreatePfs3FormattedDisk(testCommandHelper, destPath);
@@ -984,7 +981,7 @@ public class GivenFsCopyCommandWithRdb : FsCommandTestBase
             Assert.Single(actualEntries);
 
             // assert - file3
-            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3:");
+            var file3Entry = actualEntries.FirstOrDefault(x => x.Name == "file3[");
             Assert.NotNull(file3Entry);
             Assert.Equal(ProtectionBits.Script, file3Entry.ProtectionBits);
             Assert.Equal("file3 comment", file3Entry.Comment);

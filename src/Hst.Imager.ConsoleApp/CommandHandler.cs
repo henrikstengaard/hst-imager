@@ -52,6 +52,11 @@ namespace Hst.Imager.ConsoleApp
             commandHelper.InformationMessage += (_, message) => { Log.Logger.Information(message); };
             commandHelper.DataProcessed += async (sender, args) => await WriteProcessMessage(sender, args);
             
+            CommandLogger.Instance.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
+            CommandLogger.Instance.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
+            CommandLogger.Instance.InformationMessage += (_, message) => { Log.Logger.Information(message); };
+            CommandLogger.Instance.DataProcessed += async (sender, args) => await WriteProcessMessage(sender, args);
+            
             return commandHelper;
         }
 
