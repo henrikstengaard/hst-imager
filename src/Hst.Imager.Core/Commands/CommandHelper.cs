@@ -177,6 +177,11 @@ namespace Hst.Imager.Core.Commands
                 File.Delete(path);
             }
 
+            if (create && OperatingSystem.IsWindows())
+            {
+                SparseFile.Create(path);
+            }
+
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
         }
 
