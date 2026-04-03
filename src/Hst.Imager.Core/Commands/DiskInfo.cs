@@ -16,5 +16,7 @@
         public PartitionTablePart MbrPartitionTablePart { get; set; }
         public PartitionTablePart RdbPartitionTablePart { get; set; }
         public PartitionTablePart GptPartitionTablePart { get; set; }
+        public bool IsSparseFile { get; set; }
+        public long SparseFileSize { get; set; }
     }
 }

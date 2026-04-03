@@ -24,29 +24,43 @@ export default function MediaDetails(props) {
         setState({...state})
     }
     
+    let fields = [{
+        label: 'Name',
+        value: media.name
+    }, {
+        label: 'Path',
+        value: media.path
+    }, {
+        label: 'Size',
+        value: humanReadable ? formatBytes(media.diskSize) : media.diskSize
+    }]
+    let columns = [{
+        name: 'Name',
+        align: 'left',
+    },{
+        name: 'Path',
+        align: 'left',
+    },{
+        name: 'Size',
+        align: 'left',
+    }]
+    
+    if (media.diskInfo.isSparseFile) {
+        fields = fields.concat([{
+            label: 'Sparse file size',
+            value: humanReadable ? formatBytes(media.diskInfo.sparseFileSize) : media.diskInfo.sparseFileSize
+        }])
+        columns = columns.concat([{
+            name: 'Sparse file size',
+            align: 'left',
+        }])
+    }
+    
     const diskPart = {
         type: 'list',
         title: `Disk: ${media.name}, ${formatBytes(media.diskSize)}`,
-        fields: [{
-            label: 'Name',
-            value: media.name
-        }, {
-            label: 'Path',
-            value: media.path
-        }, {
-            label: 'Size',
-            value: humanReadable ? formatBytes(media.diskSize) : media.diskSize
-        }],
-        columns: [{
-            name: 'Name',
-            align: 'left',
-        },{
-            name: 'Path',
-            align: 'left',
-        },{
-            name: 'Size',
-            align: 'left',
-        }],
+        fields: fields,
+        columns: columns,
         rows: [{
             values: [
                 media.name,

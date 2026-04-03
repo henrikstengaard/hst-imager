@@ -24,15 +24,16 @@ export default function Settings() {
 
     const settings= get(appState, 'settings') || {};
 
-    const [allPhysicalDrives, setAllPhysicalDrives] = React.useState(get(settings, 'allPhysicalDrives') || false);
+    const [allPhysicalDrives, setAllPhysicalDrives] = React.useState(get(settings, 'allPhysicalDrives'));
     const [macOsElevateMethod, setMacOsElevateMethod] = React.useState(get(settings, 'macOsElevateMethod') || 'OsascriptAdministrator');
     const [retries, setRetries] = React.useState(get(settings, 'retries') || 5);
-    const [force, setForce] = React.useState(get(settings, 'force') || false);
-    const [verify, setVerify] = React.useState(get(settings, 'verify') || false);
-    const [skipUnusedSectors, setSkipUnusedSectors] = React.useState(get(settings, 'skipUnusedSectors') || false);
-    const [debugMode, setDebugMode] = React.useState(get(settings, 'debugMode') || false);
+    const [force, setForce] = React.useState(get(settings, 'force'));
+    const [verify, setVerify] = React.useState(get(settings, 'verify'));
+    const [skipUnusedSectors, setSkipUnusedSectors] = React.useState(get(settings, 'skipUnusedSectors'));
+    const [sparseFiles, setSparseFiles] = React.useState(get(settings, 'sparseFiles'));
+    const [debugMode, setDebugMode] = React.useState(get(settings, 'debugMode'));
 
-    const isMacOs = get(appState, 'isMacOs') || false
+    const isMacOs = get(appState, 'isMacOs')
     const logsPath = get(appState, 'logsPath')
 
     const openUrl = async (event, url) => {
@@ -167,6 +168,17 @@ export default function Settings() {
                         Skip unused sectors will make writing and comparing images much faster as sectors with only zeroes are skipped. It also means skipped sectors may contain old data that would otherwise be erased with zeroes and not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!
                     </Alert>
                 )}
+                <Grid item xs={12}>
+                    <CheckboxField
+                        id="sparse-files"
+                        label="Sparse files"
+                        value={sparseFiles}
+                        onChange={async (checked) => {
+                            setSparseFiles(checked);
+                            await handleChange({ name: 'sparseFiles', value: checked })
+                        }}
+                    />
+                </Grid>
             </Grid>
             <Box sx={{mt: 4}}>
                 <Title

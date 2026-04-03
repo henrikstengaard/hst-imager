@@ -2,6 +2,7 @@
 using Hst.Imager.Core.Apis;
 using Hst.Imager.Core.Extensions;
 using Hst.Imager.Core.PartitionTables;
+using Hst.Imager.Core.SparseFiles;
 using SharpCompress.Archives.Rar;
 using GZipStream = SharpCompress.Compressors.Deflate.GZipStream;
 
@@ -27,6 +28,7 @@ namespace Hst.Imager.Core.Commands
     {
         private readonly ILogger<ICommandHelper> logger;
         private readonly bool isAdministrator;
+        private readonly bool createSparseFiles;
         private readonly bool useCache;
         private readonly CacheType cacheType;
         private readonly IList<IPhysicalDrive> activePhysicalDrives;
@@ -66,17 +68,23 @@ namespace Hst.Imager.Core.Commands
         /// </summary>
         private readonly IList<Media> activeMedias;
 
-        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool useCache = false,
-            CacheType cacheType = CacheType.Disk)
+        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator, bool createSparseFiles,
+            bool useCache, CacheType cacheType)
         {
             this.logger = logger;
             this.isAdministrator = isAdministrator;
+            this.createSparseFiles = createSparseFiles;
             this.useCache = useCache;
             this.cacheType = cacheType;
             this.activePhysicalDrives = new List<IPhysicalDrive>();
             this.activeMedias = new List<Media>();
             DiscUtils.Containers.SetupHelper.SetupContainers();
             DiscUtils.FileSystems.SetupHelper.SetupFileSystems();
+        }
+
+        public CommandHelper(ILogger<ICommandHelper> logger, bool isAdministrator)
+            : this(logger, isAdministrator, false, false, cacheType: CacheType.Disk)
+        {
         }
 
         /// <summary>
@@ -164,7 +172,7 @@ namespace Hst.Imager.Core.Commands
             return await GetReadableFileMedia(path, modifiers);
         }
 
-        public virtual Stream CreateWriteableStream(string path, bool create)
+        public virtual Stream CreateWriteableStream(string path, bool create, long size)
         {
             if (path == null)
             {
@@ -177,9 +185,16 @@ namespace Hst.Imager.Core.Commands
                 File.Delete(path);
             }
 
-            if (create && OperatingSystem.IsWindows())
+            if (create && createSparseFiles && OperatingSystem.IsWindows())
             {
-                SparseFile.Create(path);
+                try
+                {
+                    SparseFile.CreateSparseFile(path, size);
+                }
+                catch (Exception e)
+                {
+                    OnWarningMessage($"Failed to create sparse file '{path}', falling back to regular file");
+                }
             }
 
             return File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
@@ -595,7 +610,7 @@ namespace Hst.Imager.Core.Commands
             {
                 if (!IsVhd(path))
                 {
-                    var fileStream = CreateWriteableStream(path, true);
+                    var fileStream = CreateWriteableStream(path, true, size ?? 0);
                     var fileMedia = ResolveWritableFileMedia(path, name, size ?? 0, fileStream, byteSwap);
                     activeMedias.Add(fileMedia);
                     return Task.FromResult(new Result<Media>(fileMedia));
@@ -606,7 +621,7 @@ namespace Hst.Imager.Core.Commands
                     throw new ArgumentException("Size is required for creating VHD image file", nameof(size));
                 }
 
-                using var vhdStream = CreateWriteableStream(path, true);
+                using var vhdStream = CreateWriteableStream(path, true, 0);
                 using var newVhdDisk = Disk.InitializeDynamic(vhdStream, Ownership.None, GetVhdSize(size.Value));
             }
 
@@ -618,7 +633,7 @@ namespace Hst.Imager.Core.Commands
 
             if (!IsVhd(path))
             {
-                var fileStream = CreateWriteableStream(path, false);
+                var fileStream = CreateWriteableStream(path, false, size ?? 0);
                 var baseStream = byteSwap
                     ? new SectorStream(fileStream, leaveOpen: false, byteSwap: true)
                     : fileStream;
@@ -749,6 +764,21 @@ namespace Hst.Imager.Core.Commands
                     DiskParts = new List<PartInfo>()
                 };
             }
+
+            var isSparseFile = false;
+            var sparseFileSize = 0L;
+            if (!media.IsPhysicalDrive && File.Exists(media.Path))
+            {
+                try
+                {
+                    isSparseFile = SparseFile.IsSparseFile(media.Path);
+                    sparseFileSize = SparseFile.GetSparseFileSize(media.Path);
+                }
+                catch (Exception)
+                {
+                    isSparseFile = false;
+                }
+            }
             
             var partitionTables = new List<PartitionTableInfo>();
 
@@ -795,6 +825,8 @@ namespace Hst.Imager.Core.Commands
                 Path = media.Path,
                 Name = media.Model,
                 Size = GetDiskSize(media, disk),
+                IsSparseFile = isSparseFile,
+                SparseFileSize = sparseFileSize,
                 PartitionTables = partitionTables,
                 StartOffset = 0,
                 EndOffset = media.Size > 0 ? media.Size - 1 : 0,

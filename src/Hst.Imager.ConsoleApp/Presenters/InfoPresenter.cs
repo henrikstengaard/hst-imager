@@ -221,6 +221,13 @@
             outputBuilder.AppendLine($"- Path: '{Formatters.FormatDiskPath(diskInfo.Path)}'");
             outputBuilder.AppendLine(
                 $"- Size: {diskInfo.Size.FormatBytes()} ({diskInfo.Size} bytes)");
+
+            if (diskInfo.IsSparseFile)
+            {
+                outputBuilder.AppendLine(
+                    $"- Sparse file size: {diskInfo.SparseFileSize.FormatBytes()} ({diskInfo.SparseFileSize} bytes)");
+            }
+            
             outputBuilder.AppendLine(
                 $"- Partition tables: {diskInfo.PartitionTables.Count()}");
             outputBuilder.AppendLine();

@@ -44,6 +44,11 @@ namespace Hst.Imager.Core.Models
         /// Type of cache to use.
         /// </summary>
         public CacheType CacheType { get; set; }
+        
+        /// <summary>
+        /// Create sparse files.
+        /// </summary>
+        public bool SparseFiles { get; set; }
 
         public Settings()
         {
@@ -56,6 +61,7 @@ namespace Hst.Imager.Core.Models
             SkipUnusedSectors = false;
             UseCache = true;
             CacheType = CacheType.Disk;
+            SparseFiles = true;
         }
     }
 }

@@ -45,6 +45,7 @@ namespace Hst.Imager.ConsoleApp
         private static ICommandHelper GetCommandHelper(bool useCache = false)
         {
             var commandHelper = new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator,
+                AppState.Instance.Settings.SparseFiles,
                 AppState.Instance.Settings.UseCache && useCache, AppState.Instance.Settings.CacheType);
 
             commandHelper.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
@@ -169,7 +170,7 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task SettingsUpdate(bool? allPhysicalDrives, int? retries, bool? force, bool? verify,
-            bool? skipUnusedSectors, bool? useCache, CacheType? cacheType)
+            bool? skipUnusedSectors, bool? useCache, CacheType? cacheType, bool? sparseFiles)
         {
             var settingsUpdated = false;
             
@@ -212,6 +213,12 @@ namespace Hst.Imager.ConsoleApp
             if (cacheType.HasValue)
             {
                 AppState.Instance.Settings.CacheType = cacheType.Value;
+                settingsUpdated = true;
+            }
+
+            if (sparseFiles.HasValue)
+            {
+                AppState.Instance.Settings.SparseFiles = sparseFiles.Value;
                 settingsUpdated = true;
             }
 

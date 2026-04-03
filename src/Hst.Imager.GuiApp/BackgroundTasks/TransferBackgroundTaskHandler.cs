@@ -37,7 +37,9 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     PercentComplete = 0
                 });
 
-                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var transferCommand =
                     new TransferCommand(commandHelper,
                         string.Concat(transferBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
