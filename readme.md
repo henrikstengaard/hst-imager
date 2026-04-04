@@ -105,6 +105,9 @@ Img file format is a raw dump of hard disks, SSD, CF- and MicroSD-cards and cons
 
 Creating an .img image file from a 64GB CF-card using Hst Imager will require 64GB of free disk space on the specified destination path.
 
+By default Hst Imager creates sparse .img files, so zero filled (unused) sectors are skipped, when creating an .img image resulting in a much smaller image file.
+See section [Sparse files](#sparse-files) for more information about sparse files.
+
 ## Vhd file format
 
 Vhd file format is a virtual hard disk drive with fixed and dynamic sizes.
@@ -114,6 +117,24 @@ Fixed sized vhd file pre-allocates the requested size when created same way as .
 Dynamic sized vhd file only allocates storage to store actual data. Unused or zero filled parts of vhd file are not allocated resulting in smaller image files compared to img image files.
 
 Creating a dynamic sized vhd image file from a 64GB CF-card using Hst Imager will only require free disk space on the specified destination path matching disk space used on source physical drive. Zero filled (unused) sectors are skipped, when creating a vhd image resulting in a much smaller image file.
+
+## Sparse files
+
+Sparse files are files that allow for efficient storage of data by only allocating disk space for the non-empty parts of the file. This can be particularly useful when dealing with large files that contain a lot of empty or zero-filled data.
+
+Hst Imager supports creating sparse files when reading physical disk to an image file, creating blank image file or when transferring from one image file to another.
+
+A sparse file is not a regular file and might not be supported by all file systems, operating systems or applications. When a sparse file is created at a destination that does not support sparse files, the resulting file will be a regular file with the same size, but with all the zero filled (unused) sectors allocated.
+
+When Hst Imager writes to a sparse file, it will only allocate disk space for the non-empty parts of the file, resulting in smaller image files compared to regular .img image files.
+
+**Copying a sparse file will "expand" the file, so the resulting file will be a regular file with the same size as the original sparse file, but with all the zero filled (unused) sectors allocated.**
+
+**The sparse file can only be copied by creating a new blank image file and transfer from one sparse file to another.**
+
+A sparse file can be moved or renamed without affecting the sparse nature of the file.
+
+Sparse files can be enabled or disabled in Hst Imager settings.
 
 ## Amiga support
 
