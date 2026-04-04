@@ -17,12 +17,17 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          "BUILD_VERSION=1.6.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
-          "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
+          $commitCount = (git rev-list --count $env:GITHUB_REF)
+          $commitSha = (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF)
+          $version = (Select-Xml -Path ./src/Directory.Build.props -XPath '/Project/PropertyGroup/Version').Node.InnerXML
+          "VERSION={0}" -f ($version) >> $env:GITHUB_ENV
+          "BUILD_VERSION={0}" -f ($version -replace '^(.*)\.\d+.*$', "`$1.$commitCount") >> $env:GITHUB_ENV
+          "BUILD_VERSION_SHA={0}" -f ($commitSha) >> $env:GITHUB_ENV
 
       - name: Write version and tag
         shell: pwsh
         run: |
+          "VERSION: ${{ env.VERSION }}"
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
           "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
@@ -59,7 +64,7 @@ jobs:
         shell: pwsh
         working-directory: ./src
         run: |
-          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
+          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '${{ env.VERSION }}', '${{ env.BUILD_VERSION }}'))
 
       - name: Build console app
         working-directory: src/Hst.Imager.ConsoleApp
@@ -110,14 +115,19 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          "BUILD_VERSION=1.5.{0}" -f (git rev-list --count $env:GITHUB_REF) >> $env:GITHUB_ENV
-          "BUILD_VERSION_SHA={0}" -f (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF) >> $env:GITHUB_ENV
+          $commitCount = (git rev-list --count $env:GITHUB_REF)
+          $commitSha = (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF)
+          $version = (Select-Xml -Path ./src/Directory.Build.props -XPath '/Project/PropertyGroup/Version').Node.InnerXML
+          "VERSION={0}" -f ($version) >> $env:GITHUB_ENV
+          "BUILD_VERSION={0}" -f ($version -replace '^(.*)\.\d+.*$', "`$1.$commitCount") >> $env:GITHUB_ENV
+          "BUILD_VERSION_SHA={0}" -f ($commitSha) >> $env:GITHUB_ENV
           "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
           "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
       - name: Show version
         shell: pwsh
         run: |
+          "VERSION: ${{ env.VERSION }}"
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
       
@@ -137,7 +147,7 @@ jobs:
         shell: pwsh
         working-directory: ./src
         run: |
-          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
+          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '${{ env.VERSION }}', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/electron.manifest.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/electron.manifest.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/package.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/package.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
           [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
