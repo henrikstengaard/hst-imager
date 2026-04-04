@@ -110,11 +110,12 @@ public static class SparseFile
     
     public static bool IsLinuxSparseFile(string path)
     {
-        // The command find -printf "%S" print out the "sparsiness" of the file
-        // If the first number is less than 1.0 then the file is considered "sparse".
-        var output = "find".RunProcess($"\"{path}\" -printf \"%S\"").Trim();
-        
-        return output.StartsWith("0", StringComparison.OrdinalIgnoreCase);
+        var fileSize = new FileInfo(path).Length;
+        var sparseFileSize = GetLinuxSparseFileSize(path);
+
+        // return true, if the sparse file size is less than file size.
+        // the file is then considered sparse.
+        return sparseFileSize < fileSize;
     }
 
     public static long GetSparseFileSize(string path) =>
