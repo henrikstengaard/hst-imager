@@ -34,7 +34,8 @@ namespace Hst.Imager.Core.Tests
             // act - read source physical drive to destination img
             var cancellationTokenSource = new CancellationTokenSource();
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, false, 0);
+                new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false,
+                false, 0, false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             readCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -71,7 +72,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0, false, false,
-                0);
+                0, false);
             var result = await readCommand.Execute(cancellationTokenSource.Token);
             Assert.True(result.IsSuccess);
 
@@ -102,7 +103,7 @@ namespace Hst.Imager.Core.Tests
             var cancellationTokenSource = new CancellationTokenSource();
             var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(firstReadSize, Unit.Bytes), 0, false,
-                false, 0);
+                false, 0, false);
 
             // act - read source physical drive to destination img 1st time
             var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -116,7 +117,7 @@ namespace Hst.Imager.Core.Tests
 
             readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                 new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(secondReadSize, Unit.Bytes), 0, false,
-                false, 0);
+                false, 0, false);
 
             // act - read source physical drive to destination img 2nd time
             result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -148,7 +149,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(firstReadSize, Unit.Bytes), 0,
-                    false, false, 0);
+                    false, false, 0, false);
 
                 // act - read source physical drive to destination vhd 1st time
                 var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -166,7 +167,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - read command read 16384 bytes
                 readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     new List<IPhysicalDrive>(), sourcePath, destinationPath, new Size(secondReadSize, Unit.Bytes), 0,
-                    false, false, 0);
+                    false, false, 0, false);
 
                 // act - read source physical drive to destination vhd 2nd time
                 result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -203,7 +204,8 @@ namespace Hst.Imager.Core.Tests
                 // arrange - read command
                 var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
-                    Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0, false, false, 0);
+                    Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(), 0,
+                    false, false, 0, false);
 
                 // act - read source physical drive to destination vhd
                 var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -248,7 +250,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(size, Unit.Bytes), 0,
-                    false, false, 0);
+                    false, false, 0, false);
 
                 // act - read source physical drive to destination vhd
                 var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -293,7 +295,7 @@ namespace Hst.Imager.Core.Tests
                 var cancellationTokenSource = new CancellationTokenSource();
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), srcPath, destPath, new Size(size, Unit.Bytes), 0, false, false,
-                    0);
+                    0, false);
 
                 // act - read source physical drive to destination vhd
                 var result = await readCommand.Execute(cancellationTokenSource.Token);
@@ -344,7 +346,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - read command
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(0, Unit.Bytes), 0, false,
-                    false, 0);
+                    false, 0, false);
 
                 // act - read source physical drive to zip compressed img
                 var result = await readCommand.Execute(CancellationToken.None);
@@ -385,7 +387,7 @@ namespace Hst.Imager.Core.Tests
                 // arrange - read command
                 var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
                     Enumerable.Empty<IPhysicalDrive>(), sourcePath, destinationPath, new Size(0, Unit.Bytes), 0, false,
-                    false, 0);
+                    false, 0, false);
 
                 // act - read source physical drive to gzip compressed img
                 var result = await readCommand.Execute(CancellationToken.None);

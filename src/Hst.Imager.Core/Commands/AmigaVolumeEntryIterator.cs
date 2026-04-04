@@ -155,7 +155,7 @@ public class AmigaVolumeEntryIterator(
             await fileSystemVolume.ChangeDirectory(entry.FullPathComponents[i]);
         }
 
-        return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, true);
+        return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, false, true);
     }
 
     public string[] GetPathComponents(string path) => mediaPath.Split(path);

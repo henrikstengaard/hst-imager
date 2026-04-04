@@ -46,7 +46,7 @@ public class GivenTransferCommandWithRdb
             
         // act - transfer src to dest exporting rdb partition 2
         var convertCommand = new TransferCommand(testCommandHelper, srcExportPath,
-            destPath, new Size(0, Unit.Bytes), false, 0, 0);
+            destPath, new Size(0, Unit.Bytes), false, 0, 0, false);
         var result = await convertCommand.Execute(CancellationToken.None);
         Assert.True(result.IsSuccess);
             
@@ -91,7 +91,7 @@ public class GivenTransferCommandWithRdb
             
         // act - transfer src to dest exporting rdb partition 2
         var convertCommand = new TransferCommand(testCommandHelper, srcExportPath,
-            destPath, new Size(0, Unit.Bytes), false, 0, 0);
+            destPath, new Size(0, Unit.Bytes), false, 0, 0, false);
         var result = await convertCommand.Execute(CancellationToken.None);
         Assert.True(result.IsSuccess);
             
@@ -133,7 +133,7 @@ public class GivenTransferCommandWithRdb
 
         // act - transfer import src to dest rdb partition 2
         var convertCommand = new TransferCommand(testCommandHelper, srcPath,
-            destImportPath, new Size(0, Unit.Bytes), false, 0, 0);
+            destImportPath, new Size(0, Unit.Bytes), false, 0, 0, false);
         var result = await convertCommand.Execute(CancellationToken.None);
         Assert.True(result.IsSuccess);
  
@@ -193,7 +193,7 @@ public class GivenTransferCommandWithRdb
 
         // act - transfer import src to dest rdb partition 2
         var convertCommand = new TransferCommand(testCommandHelper, srcPath,
-            destImportPath, new Size(size, Unit.Bytes), false, 0, 0);
+            destImportPath, new Size(size, Unit.Bytes), false, 0, 0, false);
         var result = await convertCommand.Execute(CancellationToken.None);
         Assert.True(result.IsSuccess);
  

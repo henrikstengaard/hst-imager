@@ -9,10 +9,10 @@
         private readonly CacheType cacheType;
         private readonly int blockSize;
 
-        public PhysicalDriveMedia(string path, string name, MediaType type, bool isPhysicalDrive,
+        public PhysicalDriveMedia(string path, string name, MediaType type,
             IPhysicalDrive physicalDrive, bool byteswap, Stream stream = null, bool useCache = false,
             CacheType cacheType = CacheType.Disk, int blockSize = 1024 * 1024)
-            : base(path, name, type, isPhysicalDrive, stream, byteswap)
+            : base(path, name, type, true, stream, byteswap)
         {
             this.physicalDrive = physicalDrive;
             this.useCache = useCache;

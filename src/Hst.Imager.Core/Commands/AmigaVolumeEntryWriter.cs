@@ -324,7 +324,7 @@ public class AmigaVolumeEntryWriter(
         
         await fileSystemVolume.CreateFile(fileName, true, true);
 
-        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true))
+        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true, true))
         {
             int bytesRead;
             do

@@ -51,6 +51,11 @@ export default function MediaOverview(props) {
     const gptPartitionTablePart = get(media, 'diskInfo.gptPartitionTablePart')
     const mbrPartitionTablePart = get(media, 'diskInfo.mbrPartitionTablePart')
     const rdbPartitionTablePart = get(media, 'diskInfo.rdbPartitionTablePart')
+
+    const isSparseFile = get(media, 'diskInfo.isSparseFile')
+    const sparseFileSize = get(media, 'diskInfo.sparseFileSize')
+    
+    const formattedSparseFileSize = isSparseFile ? ` / ${formatBytes(sparseFileSize)} (sparse file)` : ''
     
     return (
         <Fragment>
@@ -70,7 +75,7 @@ export default function MediaOverview(props) {
                                     onClick={() => handleChange({ name: 'diskExpanded', value: !diskExpanded})}
                                 >
                                     <Typography>
-                                        {`Disk: ${media.name}, ${formatBytes(media.diskSize)}`}
+                                        {`Disk: ${media.name}, ${formatBytes(media.diskSize)}${formattedSparseFileSize}`}
                                     </Typography>
                                 </StyledAccordionSummary>
                             </TableCell>

@@ -253,12 +253,12 @@ namespace Hst.Imager.Core.Tests
             return Task.FromResult(new Result<Media>(disk));
         }
 
-        public override Stream CreateWriteableStream(string path, bool create)
+        public override Stream CreateWriteableStream(string path, bool create, long size)
         {
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
             return testMedia != null
                 ? testMedia.Stream
-                : base.CreateWriteableStream(path, create);
+                : base.CreateWriteableStream(path, create, size);
         }
 
         public override async Task<DiskInfo> ReadDiskInfo(Media media,
