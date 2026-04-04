@@ -55,7 +55,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                             readBackgroundTask.SourcePath),
                         readBackgroundTask.DestinationPath,
                         new Size(readBackgroundTask.Size, Unit.Bytes), appState.Settings.Retries,
-                        appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset);
+                        appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset,
+                        appState.Settings.SparseFiles);
                 readCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress

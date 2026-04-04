@@ -309,7 +309,8 @@ namespace Hst.Imager.ConsoleApp
                 retries ?? AppState.Instance.Settings.Retries,
                 verify ?? AppState.Instance.Settings.Verify,
                 force ?? AppState.Instance.Settings.Force,
-                start);
+                start,
+                AppState.Instance.Settings.SparseFiles);
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
             await Execute(command);

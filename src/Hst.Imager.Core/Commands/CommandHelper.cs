@@ -193,7 +193,8 @@ namespace Hst.Imager.Core.Commands
                 }
                 catch (Exception e)
                 {
-                    OnWarningMessage($"Failed to create sparse file '{path}', falling back to regular file");
+                    OnDebugMessage($"Failed to create sparse file '{path}': {e.Message}");
+                    OnWarningMessage($"Failed to create sparse file '{path}', fall back to regular file");
                 }
             }
 

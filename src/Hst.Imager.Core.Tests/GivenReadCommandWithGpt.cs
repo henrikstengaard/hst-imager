@@ -41,7 +41,7 @@ public class GivenReadCommandWithGpt : CommandTestBase
         // arrange - create read command to read gpt partition 1
         var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
             [], readPath, destPath, new Size(0, Unit.Bytes), 0, false,
-            false, 0);
+            false, 0, false);
 
         // act - execute read command
         var result = await readCommand.Execute(CancellationToken.None);
@@ -82,7 +82,7 @@ public class GivenReadCommandWithGpt : CommandTestBase
         // arrange - create read command to read gpt partition 2
         var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
             [], readPath, destPath, new Size(0, Unit.Bytes), 0, false,
-            false, 0);
+            false, 0, false);
 
         // act - execute read command
         var result = await readCommand.Execute(CancellationToken.None);
