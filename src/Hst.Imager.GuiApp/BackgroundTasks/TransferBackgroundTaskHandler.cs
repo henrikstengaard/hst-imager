@@ -45,7 +45,8 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                         string.Concat(transferBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
                             transferBackgroundTask.SourcePath),
                         transferBackgroundTask.DestinationPath, new Size(transferBackgroundTask.Size, Unit.Bytes),
-                        false, transferBackgroundTask.SrcStartOffset, transferBackgroundTask.DestStartOffset);
+                        false, transferBackgroundTask.SrcStartOffset, transferBackgroundTask.DestStartOffset,
+                        appState.Settings.SparseFiles);
                 transferCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress

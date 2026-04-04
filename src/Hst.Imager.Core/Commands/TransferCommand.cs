@@ -1,4 +1,5 @@
 ﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.SparseFiles;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -16,7 +17,8 @@ namespace Hst.Imager.Core.Commands
         Size size,
         bool verify,
         long? srcStart,
-        long? destStart)
+        long? destStart,
+        bool sparseFiles)
         : CommandBase
     {
         private long statusBytesProcessed = 0;
@@ -142,8 +144,23 @@ namespace Hst.Imager.Core.Commands
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
             
-            var skipZeroFilled = commandHelper.IsVhd(destinationPath);
-            var result = await streamCopier.Copy(token, srcStream, destStream, transferSize, srcStartOffset, destStartOffset, skipZeroFilled);
+            var isVhd = commandHelper.IsVhd(destinationPath);
+            
+            var isSparseFile = false;
+            if (sparseFiles)
+            {
+                try
+                {
+                    isSparseFile = SparseFile.IsSparseFile(destinationPath);
+                }
+                catch (Exception e)
+                {
+                    OnDebugMessage($"Failed to detect is sparse file '{destinationPath}': {e.Message}");
+                    OnWarningMessage($"Failed to detect is sparse file '{destinationPath}', fall back to regular file");
+                }
+            }
+            
+            var result = await streamCopier.Copy(token, srcStream, destStream, transferSize, srcStartOffset, destStartOffset, isVhd || isSparseFile);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);

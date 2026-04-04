@@ -280,7 +280,8 @@ namespace Hst.Imager.ConsoleApp
             DestIoErrors.Clear();
             using var commandHelper = GetCommandHelper();
             var command = new TransferCommand(commandHelper, sourcePath,
-                destinationPath, ParseSize(size), verify, srcStart, destStart);
+                destinationPath, ParseSize(size), verify, srcStart, destStart,
+                AppState.Instance.Settings.SparseFiles);
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
             await Execute(command);

@@ -23,7 +23,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(), false, 0, 0);
+                destinationPath, new Size(), false, 0, 0, false);
             DataProcessedEventArgs dataProcessedEventArgs = null;
             convertCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
             var result = await convertCommand.Execute(CancellationToken.None);
@@ -58,7 +58,7 @@
 
             // act - convert source img to destination img
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), false, 0, 0);
+                destinationPath, new Size(size, Unit.Bytes), false, 0, 0, false);
             var result = await convertCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
@@ -86,7 +86,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(), false, 0, 0);
+                destinationPath, new Size(), false, 0, 0, false);
             var result = await convertCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
@@ -113,7 +113,7 @@
 
             // act - read source img to destination vhd
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), false, 0, 0);
+                destinationPath, new Size(size, Unit.Bytes), false, 0, 0, false);
             var result = await convertCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
@@ -143,7 +143,7 @@
 
             // act - transfer src img to dest vhd
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), false, srcStartOffset, 0);
+                destinationPath, new Size(size, Unit.Bytes), false, srcStartOffset, 0, false);
             var result = await convertCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
@@ -173,7 +173,7 @@
 
             // act - transfer src img to dest vhd
             var convertCommand = new TransferCommand(testCommandHelper, sourcePath,
-                destinationPath, new Size(size, Unit.Bytes), false, 0, destStartOffset);
+                destinationPath, new Size(size, Unit.Bytes), false, 0, destStartOffset, false);
             var result = await convertCommand.Execute(CancellationToken.None);
             Assert.True(result.IsSuccess);
 
