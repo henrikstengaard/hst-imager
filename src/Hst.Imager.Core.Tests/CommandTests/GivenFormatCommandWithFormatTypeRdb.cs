@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -150,6 +151,71 @@ public class GivenFormatCommandWithFormatTypeRdb : FsCommandTestBase
         finally
         {
             TestHelper.DeletePaths(outputDir);
+        }
+    }
+    
+    [Fact]
+    public async Task When_Formatting100MbDiskWithRdbDos3AndFileSystemPath_Then_DiskIsPartitionedAndFormattedWith1Partition()
+    {
+        var diskPath = $"{Guid.NewGuid()}.vhd";
+        var diskSize = 100.MB();
+        const FormatType formatType = FormatType.Rdb;
+        const string fileSystem = "dos3";
+        const string fileSystemPath = "FastFileSystem";
+        var outputDir = string.Empty;
+        const bool kickstart31 = false;
+        
+        // arrange - command helper
+        using var commandHelper = new CommandHelper(new NullLogger<ICommandHelper>(), false);
+
+        try
+        {
+            // arrange - create disk media
+            var diskMediaResult = await commandHelper.GetWritableFileMedia(diskPath, size: diskSize, create: true);
+            using (diskMediaResult.Value)
+            {
+            }
+            
+            // arrange - fast file system for dos3
+            await File.WriteAllBytesAsync(fileSystemPath, TestHelper.FastFileSystemDos3Bytes); 
+            
+            // arrange - create format command
+            var formatCommand = new FormatCommand(new NullLogger<FormatCommand>(), new NullLoggerFactory(),
+                commandHelper, new List<IPhysicalDrive>(), diskPath, formatType, fileSystem,
+                fileSystemPath, outputDir, new Size(), new Size(), false, kickstart31);
+
+            // act - execute format command
+            var formatResult = await formatCommand.Execute(CancellationToken.None);
+
+            // assert - format is successful
+            Assert.NotNull(formatResult);
+            Assert.True(formatResult.IsSuccess);
+            
+            // arrange - get disk info from media
+            diskMediaResult = await commandHelper.GetReadableMedia(new List<IPhysicalDrive>(), diskPath);
+            using var diskMedia = diskMediaResult.Value;
+            var diskInfo = await commandHelper.ReadDiskInfo(diskMedia);
+            
+            // assert - disk info is not null and no mbr partition table exists
+            Assert.NotNull(diskInfo);
+            Assert.Null(diskInfo.MbrPartitionTablePart);
+
+            // assert - no gpt partition table exists
+            Assert.Null(diskInfo.GptPartitionTablePart);
+
+            // assert - rdb partition table exists and contains 2 partitions
+            Assert.NotNull(diskInfo.RdbPartitionTablePart);
+            var partitionParts = diskInfo.RdbPartitionTablePart.Parts
+                .Where(x => x.PartType == PartType.Partition)
+                .ToList();
+            Assert.Single(partitionParts);
+            var partitionPart1 = partitionParts[0];
+            Assert.Equal("DOS\\3", partitionPart1.FileSystem);
+            Assert.True(partitionPart1.PercentSize is >= 95 and <= 100);
+        }
+        finally
+        {
+            TestHelper.DeletePaths(diskPath, fileSystemPath, outputDir);
         }
     }
 }

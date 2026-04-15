@@ -274,11 +274,6 @@ namespace Hst.Imager.Core.Commands
 
             var fileSystemPath = Path.Combine(outputPath, fileSystemName);
 
-            if (Path.Exists(fileSystemPath))
-            {
-                File.Delete(fileSystemPath);
-            }
-
             var findFileSystemInMediaResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper,
                 this.fileSystemPath, fileSystemName);
 
