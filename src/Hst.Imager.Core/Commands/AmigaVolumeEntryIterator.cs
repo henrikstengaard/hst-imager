@@ -204,8 +204,14 @@ public class AmigaVolumeEntryIterator(
                 { Constants.EntryPropertyNames.ProtectionBits, ((int)entry.ProtectionBits ^ 0xf).ToString() }
             };
 
+            if ((entry.Type == EntryType.DirLink || entry.Type == EntryType.FileLink) &&
+                !string.IsNullOrEmpty(entry.LinkPath))
+            {
+                properties.Add(Constants.EntryPropertyNames.Link, entry.LinkPath);
+            }
+            
             var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, DirPathComponents,
-                recursive, entryPath, entryPath, isDir, entry.Date, entry.Size,
+                recursive, entryPath, entryPath, entry.Type, entry.Date, entry.Size,
                 attributes, properties, dirAttributes);
 
             // skip if no entry was created or entry is a file and is not valid

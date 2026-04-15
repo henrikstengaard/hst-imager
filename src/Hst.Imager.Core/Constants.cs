@@ -17,6 +17,7 @@ namespace Hst.Imager.Core
         public static class EntryPropertyNames
         {
             public const string Comment = "Comment";
+            public const string Link = "Link";
             public const string ProtectionBits = "$ProtectionBits";
         }
     }
