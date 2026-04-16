@@ -43,15 +43,16 @@ public abstract partial class FsCommandBase : CommandBase
         this.physicalDrives = physicalDrives;
     }
     
-    protected async Task<bool> IsAdfMedia(MediaResult mediaResult)
+    protected async Task<bool> IsAdfMedia(MediaResult resolvedMedia)
     {
-        // return false, if media file doesnt exist
-        if (!File.Exists(mediaResult.MediaPath))
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
         {
             return false;
         }
 
-        await using var stream = File.OpenRead(mediaResult.MediaPath);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
 
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
