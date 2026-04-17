@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <PackageReference Include="Hst.Amiga" Version="0.5.215" />
+      <PackageReference Include="Hst.Amiga" Version="0.6.221" />
       <PackageReference Include="hst.compression" Version="0.4.85" />
       <PackageReference Include="Hst.Core" Version="0.4.85" />
       <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.74" />

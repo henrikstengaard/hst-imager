@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System;
+using Hst.Amiga.FileSystems;
 
 namespace Hst.Imager.Core.PathComponents;
 
@@ -209,7 +210,7 @@ public static class EntryIteratorFunctions
         bool recursive,
         string entryPath,
         string rawPath,
-        bool isDir,
+        EntryType entryType,
         DateTime date,
         long size,
         string attributes,
@@ -232,11 +233,19 @@ public static class EntryIteratorFunctions
             RelativePathComponents = relativePathComponents.ToArray(),
             Date = date,
             Size = size,
-            Type = isDir
-                ? Models.FileSystems.EntryType.Dir
-                : Models.FileSystems.EntryType.File,
+            Type = GetType(entryType),
             Attributes = attributes,
             Properties = properties
         };
     }
+
+    private static Models.FileSystems.EntryType GetType(EntryType entryType) =>
+        entryType switch
+        {
+            EntryType.Dir => Models.FileSystems.EntryType.Dir,
+            EntryType.DirLink => Models.FileSystems.EntryType.LinkDir,
+            EntryType.File => Models.FileSystems.EntryType.File,
+            EntryType.FileLink => Models.FileSystems.EntryType.LinkFile,
+            _ => throw new ArgumentOutOfRangeException(nameof(entryType), entryType, $"Entry type '{entryType}' is out of range")
+        };
 }

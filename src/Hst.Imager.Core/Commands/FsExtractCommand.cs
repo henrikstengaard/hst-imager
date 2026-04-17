@@ -102,6 +102,7 @@ public class FsExtractCommand(
                     switch (entry.Type)
                     {
                         case EntryType.Dir:
+                        case EntryType.LinkDir:
                             dirsCount++;
                             var createDirectoryResult = await destEntryWriter.CreateDirectory(entry, entry.RelativePathComponents, skipAttributes,
                                 isSingleFileOrUsesPattern);
@@ -111,6 +112,7 @@ public class FsExtractCommand(
                             }
                             break;
                         case EntryType.File:
+                        case EntryType.LinkFile:
                         {
                             filesCount++;
                             totalBytes += entry.Size;
