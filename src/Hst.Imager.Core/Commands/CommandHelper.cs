@@ -95,9 +95,22 @@ namespace Hst.Imager.Core.Commands
             foreach (var activeMedia in this.activeMedias)
             {
                 activeMedia.Dispose();
+                
+                DeleteLayerPath(activeMedia.Path);
             }
 
             this.activeMedias.Clear();
+        }
+
+        private static void DeleteLayerPath(string path)
+        {
+            var layerPath = PathHelper.GetLayerPath(path);
+
+            // delete layer path, if file exists 
+            if (File.Exists(layerPath))
+            {
+                File.Delete(layerPath);
+            }
         }
 
         public void ClearActiveMedia(string path)
@@ -110,6 +123,9 @@ namespace Hst.Imager.Core.Commands
             }
 
             activeMedia.Dispose();
+
+            DeleteLayerPath(path);
+            
             activeMedias.Remove(activeMedia);
         }
         
@@ -1289,13 +1305,7 @@ namespace Hst.Imager.Core.Commands
             {
                 activePhysicalDrive.Dispose();
                 
-                var layerPath = PathHelper.GetLayerPath(activePhysicalDrive.Path);
-
-                // delete layer path, if file exists 
-                if (File.Exists(layerPath))
-                {
-                    File.Delete(layerPath);
-                }
+                DeleteLayerPath(activePhysicalDrive.Path);
             }
 
             activePhysicalDrives.Clear();
