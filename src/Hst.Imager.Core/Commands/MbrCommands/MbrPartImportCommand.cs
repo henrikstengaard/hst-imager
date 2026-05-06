@@ -111,7 +111,7 @@
             OnDebugMessage(
                 $"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
-            var isVhd = commandHelper.IsVhd(destinationPath);
+            var isVhd = destinationMedia.Type == Media.MediaType.Vhd;
 
             using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>

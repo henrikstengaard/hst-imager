@@ -102,10 +102,8 @@ namespace Hst.Imager.Core.Commands
             using var destMedia = destMediaResult.Value;
             var destStream = MediaHelper.GetStreamFromMedia(destMedia);
 
-            var isVhd = commandHelper.IsVhd(destinationPath);
-            var isZip = commandHelper.IsZip(destinationPath);
-            var isGZip = commandHelper.IsGZip(destinationPath);
-            if (!isVhd && !isZip && !isGZip)
+            var isVhd = destMedia.Type == Media.MediaType.Vhd;
+            if (destMedia.Type == Media.MediaType.Raw)
             {
                 destStream.SetLength(readSize);
             }

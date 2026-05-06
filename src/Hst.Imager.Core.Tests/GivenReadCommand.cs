@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Tests
 {
@@ -354,7 +355,7 @@ namespace Hst.Imager.Core.Tests
 
                 // assert - data written is identical to uncompressed source bytes
                 var destinationBytes = await File.ReadAllBytesAsync(destinationPath);
-                Assert.True(HasZipMagicNumber(destinationBytes));
+                Assert.True(MagicBytesRegister.Instance.TryResolve(destinationBytes, out var dataType) && dataType == DataType.Zip);
                 Assert.True(data.Length > destinationBytes.Length);
 
                 var uncompressedDestData = await UncompressZipData(destinationBytes);
@@ -395,7 +396,7 @@ namespace Hst.Imager.Core.Tests
 
                 // assert - data written is identical to uncompressed source bytes
                 var destinationBytes = await File.ReadAllBytesAsync(destinationPath);
-                Assert.True(HasGZipMagicNumber(destinationBytes));
+                Assert.True(MagicBytesRegister.Instance.TryResolve(destinationBytes, out var dataType) && dataType == DataType.Gzip);
                 Assert.True(data.Length > destinationBytes.Length);
 
                 var uncompressedDestData = await UncompressGZipData(destinationBytes);
@@ -410,14 +411,6 @@ namespace Hst.Imager.Core.Tests
                 }
             }
         }
-
-        private static bool HasZipMagicNumber(byte[] data) =>
-            MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber1, data, 0) ||
-            MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber2, data, 0) ||
-            MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber3, data, 0);
-
-        private static bool HasGZipMagicNumber(byte[] data) =>
-            MagicBytes.HasMagicNumber(MagicBytes.GzHeader, data, 0);
 
         private static async Task<byte[]> UncompressZipData(byte[] data)
         {

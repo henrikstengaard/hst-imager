@@ -11,6 +11,7 @@ using System.Text;
 using DiscUtils.Partitions;
 using DiscUtils.Streams;
 using Hst.Compression.Lha;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
@@ -64,43 +65,26 @@ namespace Hst.Imager.Core.Commands
                 : mediaStream.Length));
 
             mediaStream.Position = 0;
-            
-            // return file, if media has hunk magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.HunkMagicNumber, firstBytes, 0))
+
+            if (!MagicBytesRegister.Instance.TryResolve(firstBytes, out var dataType))
             {
-                return await GetMediaAsFileSystem(mediaStream, Path.GetFileName(mediaPath));
-            }
-            
-            // read file systems from adf, if media has adf magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, firstBytes, 0))
-            {
-                return await FindFileSystemsInAdf(media, mediaStream, fileSystemName);
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>());
             }
 
-            // read file systems from lha, if media has lha magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.LhaMagicNumber, firstBytes, 2))
+            switch (dataType)
             {
-                return await FindFileSystemsInLha(mediaStream, fileSystemName);
-            }
-
-            // read file systems from iso and adf files in iso, if media has iso magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, firstBytes, 0x8001) ||
-                MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, firstBytes, 0x8801) ||
-                MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, firstBytes, 0x9001))
-            {
-                return await FindFileSystemsInIso(media, mediaStream, fileSystemName);
-            }
-
-            // read file systems from rigid disk block, if media has rdb magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.RdbMagicNumber, firstBytes, 0))
-            {
-                return await FindFileSystemsInRdb(mediaStream, fileSystemName);
-            }
-
-            // read file systems from mbr pistorm rdb partitions, if media has mbr magic number
-            if (MagicBytes.HasMagicNumber(MagicBytes.MbrMagicNumber, firstBytes, 0x1fe))
-            {
-                return await FindFileSystemsInMbrPiStormRdb(mediaStream, fileSystemName);
+                case DataType.Hunk:
+                    return await GetMediaAsFileSystem(mediaStream, Path.GetFileName(mediaPath));
+                case DataType.Adf:
+                    return await FindFileSystemsInAdf(media, mediaStream, fileSystemName);
+                case DataType.Lha:
+                    return await FindFileSystemsInLha(mediaStream, fileSystemName);
+                case DataType.Iso9660:
+                    return await FindFileSystemsInIso(media, mediaStream, fileSystemName);
+                case DataType.Rdb:
+                    return await FindFileSystemsInRdb(mediaStream, fileSystemName);
+                case DataType.Mbr:
+                    return await FindFileSystemsInMbrPiStormRdb(mediaStream, fileSystemName);
             }
 
             return new Result<IEnumerable<Tuple<string, byte[]>>>(new List<Tuple<string, byte[]>>());

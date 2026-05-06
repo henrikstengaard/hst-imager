@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Commands
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
@@ -9,7 +11,7 @@
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
-    using Hst.Imager.Core.Helpers;
+    using Helpers;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartImportCommand : CommandBase
@@ -128,7 +130,7 @@
 
             OnDebugMessage($"Importing partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
 
-            var isVhd = commandHelper.IsVhd(destinationPath);
+            var isVhd = destinationMedia.Type == Media.MediaType.Vhd;
 
             using var streamCopier = new StreamCopier();
             streamCopier.DataProcessed += (_, e) =>

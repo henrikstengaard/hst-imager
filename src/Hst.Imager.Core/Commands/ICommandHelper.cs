@@ -1,4 +1,5 @@
 ﻿using System;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -9,6 +10,7 @@ namespace Hst.Imager.Core.Commands
 
     public interface ICommandHelper : IDisposable
     {
+        Task<DataType> DetectDataType(string path);
         void ClearActiveMedias();
         void ClearActiveMedia(string path);
         void ClearActivePhysicalDrives();
@@ -19,7 +21,6 @@ namespace Hst.Imager.Core.Commands
         Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, ModifierEnum? modifiers = null,
             long? size = null, bool create = false);
         long GetVhdSize(long size);
-        bool IsVhd(string path);
         bool IsZip(string path);
         bool IsGZip(string path);
         Task<DiskInfo> ReadDiskInfo(Media media,

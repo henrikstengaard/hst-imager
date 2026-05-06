@@ -9,8 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Core;
-using Hst.Core.IO;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -39,10 +39,15 @@ namespace Hst.Imager.Core.Helpers
             var firstChunk = new byte[1024 * 1024];
             await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
 
-            // return compressed vhd, if vhd magic number is present in first chunk
-            return MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0)
-                ? CompressedVhd(media.Stream, firstChunk)
-                : CompressedImg(media.Stream, firstChunk);
+            // return compressed vhd, if first chunk is vhd data type
+            if (MagicBytesRegister.Instance.TryResolve(firstChunk, out var dataType) &&
+                dataType == DataType.Vhd)
+            {
+                return CompressedVhd(media.Stream, firstChunk);
+            }
+            
+            // return compressed img
+            return CompressedImg(media.Stream, firstChunk);
         }
 
         private static VirtualDisk CompressedVhd(Stream stream, byte[] firstChunk) => 
@@ -281,6 +286,10 @@ namespace Hst.Imager.Core.Helpers
                 ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
                 : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
         }
+        
+        public static bool IsVhd(string path) => path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
+
+        
     }
 
     public class PiStormRdbMediaResult

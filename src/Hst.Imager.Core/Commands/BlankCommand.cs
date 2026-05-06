@@ -56,7 +56,7 @@
             using var media = mediaResult.Value;
             var stream = media.Stream;
 
-            if (!commandHelper.IsVhd(path))
+            if (media.Type != Media.MediaType.Vhd)
             {
                 stream.SetLength(mediaSize);
             }
