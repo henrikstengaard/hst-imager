@@ -1,5 +1,6 @@
 ﻿using DiscUtils;
 using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
@@ -85,76 +86,40 @@ public class FsDirCommand(
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
         OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
-        // zip
-        var zipEntryIteratorResult = await GetZipEntryIterator(pathResult.Value, recursive);
-        if (zipEntryIteratorResult is { IsSuccess: true })
+        var dataType = await commandHelper.DetectDataType(pathResult.Value.MediaPath);
+
+        Result<IEntryIterator> entryIteratorResult = null;
+        switch (dataType)
         {
-            using var zipEntryIterator = zipEntryIteratorResult.Value;
-            var initializeResult = await zipEntryIterator.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(initializeResult.Error);
-            }
-            await ListEntries(zipEntryIterator);
-            return new Result();
+            case DataType.Zip:
+                entryIteratorResult = await GetZipEntryIterator(pathResult.Value, recursive);
+                break;
+            case DataType.Lha:
+                entryIteratorResult = await GetLhaEntryIterator(pathResult.Value, recursive);
+                break;
+            case DataType.Lzx:
+                entryIteratorResult = await GetLzxEntryIterator(pathResult.Value, recursive);
+                break;
+            case DataType.Adf:
+                entryIteratorResult = await GetAdfEntryIterator(pathResult.Value, recursive);
+                break;
+            case DataType.Iso9660:
+                entryIteratorResult = await GetIso9660EntryIterator(pathResult.Value, recursive);
+                break;
         }
-        
-        // lha
-        var lhaEntryIteratorResult = await GetLhaEntryIterator(pathResult.Value, recursive);
-        if (lhaEntryIteratorResult is { IsSuccess: true })
+
+        if (entryIteratorResult != null && entryIteratorResult.IsSuccess)
         {
-            using var lhaEntryIterator = lhaEntryIteratorResult.Value;
-            var initializeResult = await lhaEntryIterator.Initialize();
+            using var entryIterator = entryIteratorResult.Value;
+            var initializeResult = await entryIterator.Initialize();
             if (initializeResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(initializeResult.Error);
             }
-            await ListEntries(lhaEntryIterator);
+            await ListEntries(entryIterator);
             return new Result();
         }
 
-        // lzx
-        var lzxEntryIteratorResult = await GetLzxEntryIterator(pathResult.Value, recursive);
-        if (lzxEntryIteratorResult is { IsSuccess: true })
-        {
-            using var lzxEntryIterator = lzxEntryIteratorResult.Value;
-            var initializeResult = await lzxEntryIterator.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(initializeResult.Error);
-            }
-            await ListEntries(lzxEntryIterator);
-            return new Result();
-        }
-
-        // adf
-        var adfEntryIteratorResult = await GetAdfEntryIterator(pathResult.Value, recursive);
-        if (adfEntryIteratorResult is { IsSuccess: true })
-        {
-            using var adfEntryIterator = adfEntryIteratorResult.Value;
-            var initializeResult = await adfEntryIteratorResult.Value.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(initializeResult.Error);
-            }
-            await ListEntries(adfEntryIterator);
-            return new Result();
-        }
-        
-        // iso
-        var iso9660EntryIteratorResult = await GetIso9660EntryIterator(pathResult.Value, recursive);
-        if (iso9660EntryIteratorResult is { IsSuccess: true })
-        {
-            using var iso9660EntryIterator = iso9660EntryIteratorResult.Value;
-            var initializeResult = await iso9660EntryIteratorResult.Value.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(initializeResult.Error);
-            }
-            await ListEntries(iso9660EntryIterator);
-            return new Result();
-        }
-        
         // floppy or disk
         var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath);
         if (readableMediaResult.IsFaulted)

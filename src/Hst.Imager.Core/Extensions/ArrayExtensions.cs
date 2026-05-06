@@ -15,9 +15,4 @@ public static class ArrayExtensions
         var uintBytes = BitConverter.GetBytes(value);
         Array.Copy(uintBytes, 0, data, offset, uintBytes.Length);
     }
-
-    public static bool HasMagicNumber(this byte[] data, byte[] magicNumberBytes, int offset = 0)
-    {
-        return MagicBytes.HasMagicNumber(magicNumberBytes, data, offset);
-    }
 }

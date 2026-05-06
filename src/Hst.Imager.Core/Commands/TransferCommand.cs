@@ -1,4 +1,5 @@
 ﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.SparseFiles;
 
 namespace Hst.Imager.Core.Commands
@@ -144,7 +145,7 @@ namespace Hst.Imager.Core.Commands
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
             
-            var isVhd = commandHelper.IsVhd(destinationPath);
+            var isVhd = destMedia.Type == Media.MediaType.Vhd;
             
             var isSparseFile = false;
             if (sparseFiles)

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Hst.Amiga.FileSystems;
 using Hst.Core;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 using Microsoft.Extensions.Logging;
 
@@ -30,7 +31,7 @@ public class FsMkLinkCommand(ILogger<FsMkLinkCommand> logger, ICommandHelper com
         OnDebugMessage($"Media Path: '{fromPathResult.Value.MediaPath}'");
         OnDebugMessage($"File System Path: '{fromPathResult.Value.FileSystemPath}'");
 
-        if (await IsAdfMedia(fromPathResult.Value))
+        if (await commandHelper.DetectDataType(fromPathResult.Value.MediaPath) == DataType.Adf)
         {
             return await CreateAdfMediaLink(fromPathResult.Value);
         }

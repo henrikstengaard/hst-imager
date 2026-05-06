@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DiscUtils.Streams;
 using Hst.Core;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.PathComponents;
@@ -37,8 +37,8 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
         {
             return CreateLocalDirectory(path);
         }
-        
-        if (await IsAdfMedia(pathResult.Value))
+
+        if (await commandHelper.DetectDataType(pathResult.Value.MediaPath) == DataType.Adf)
         {
             return await CreateAdfMediaDirectory(pathResult.Value, false);
         }

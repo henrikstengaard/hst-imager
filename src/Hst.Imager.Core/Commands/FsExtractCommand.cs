@@ -1,9 +1,9 @@
-﻿namespace Hst.Imager.Core.Commands;
+﻿using Hst.Imager.Core.MagicBytes;
+
+namespace Hst.Imager.Core.Commands;
 
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Extensions;
@@ -208,95 +208,39 @@ public class FsExtractCommand(
             recursive = true;
         }
         
-        // zip
-        var zipEntryIteratorResult = await GetZipEntryIterator(mediaResult.Value, recursive);
-        if (zipEntryIteratorResult != null && zipEntryIteratorResult.IsSuccess)
-        {
-            var initializeResult = await zipEntryIteratorResult.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(zipEntryIteratorResult.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
+        var dataType = await commandHelper.DetectDataType(mediaResult.Value.MediaPath);
 
-        // lha
-        var lhaEntryIteratorResult = await GetLhaEntryIterator(mediaResult.Value, recursive);
-        if (lhaEntryIteratorResult != null && lhaEntryIteratorResult.IsSuccess)
+        Result<IEntryIterator> entryIteratorResult = null;
+        switch (dataType)
         {
-            var initializeResult = await lhaEntryIteratorResult.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(lhaEntryIteratorResult.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-
-        // lzx
-        var lzxEntryIteratorResult = await GetLzxEntryIterator(mediaResult.Value, recursive);
-        if (lzxEntryIteratorResult != null && lzxEntryIteratorResult.IsSuccess)
-        {
-            var initializeResult = await lzxEntryIteratorResult.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(lzxEntryIteratorResult.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
+            case DataType.Zip:
+                entryIteratorResult = await GetZipEntryIterator(mediaResult.Value, recursive);
+                break;
+            case DataType.Lha:
+                entryIteratorResult = await GetLhaEntryIterator(mediaResult.Value, recursive);
+                break;
+            case DataType.Lzx:
+                entryIteratorResult = await GetLzxEntryIterator(mediaResult.Value, recursive);
+                break;
+            case DataType.Lzw:
+                entryIteratorResult = await GetLzwEntryIterator(mediaResult.Value);
+                break;
+            case DataType.Adf:
+                entryIteratorResult = await GetAdfEntryIterator(mediaResult.Value, recursive);
+                break;
+            case DataType.Iso9660:
+                entryIteratorResult = await GetIso9660EntryIterator(mediaResult.Value, recursive);
+                break;
         }
         
-        // lzw
-        var lzwEntryIteratorResult = await GetLzwEntryIterator(mediaResult.Value);
-        if (lzwEntryIteratorResult != null && lzwEntryIteratorResult.IsSuccess)
+        if (entryIteratorResult != null && entryIteratorResult.IsSuccess)
         {
-            var initializeResult = await lzwEntryIteratorResult.Value.Initialize();
+            var initializeResult = await entryIteratorResult.Value.Initialize();
             return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(lzwEntryIteratorResult.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-
-        // adf
-        var adfEntryIteratorResult = await GetAdfEntryIterator(mediaResult.Value, recursive);
-        if (adfEntryIteratorResult != null && adfEntryIteratorResult.IsSuccess)
-        {
-            var initializeResult = await adfEntryIteratorResult.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(adfEntryIteratorResult.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-
-        // iso
-        var iso9660EntryIteratorResult = await GetIso9660EntryIterator(mediaResult.Value, recursive);
-        if (iso9660EntryIteratorResult != null && iso9660EntryIteratorResult.IsSuccess)
-        {
-            var initializeResult = await iso9660EntryIteratorResult.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(iso9660EntryIteratorResult.Value)
+                ? new Result<IEntryIterator>(entryIteratorResult.Value)
                 : new Result<IEntryIterator>(initializeResult.Error);
         }
 
         return new Result<IEntryIterator>(new Error($"File system at path '{path}' not supported"));
-    }
-
-    private static string TrimRootPath(string rootPath, string entryPath)
-    {
-        var trimmedEntryPath = rootPath.Length > 0 ? entryPath.Substring(rootPath.Length) : entryPath;
-
-        return trimmedEntryPath.StartsWith("\\") || trimmedEntryPath.StartsWith("/")
-            ? trimmedEntryPath.Substring(1)
-            : trimmedEntryPath;
-    }
-
-    private static string RemoveDiacritics(string text)
-    {
-        var normalizedString = text.Normalize(NormalizationForm.FormD);
-        var stringBuilder = new StringBuilder(capacity: normalizedString.Length);
-
-        for (int i = 0; i < normalizedString.Length; i++)
-        {
-            char c = normalizedString[i];
-            var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c);
-            if (unicodeCategory != UnicodeCategory.NonSpacingMark)
-            {
-                stringBuilder.Append(c);
-            }
-        }
-
-        return stringBuilder
-            .ToString()
-            .Normalize(NormalizationForm.FormC);
     }
 }

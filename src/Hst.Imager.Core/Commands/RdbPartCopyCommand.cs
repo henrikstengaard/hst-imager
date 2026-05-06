@@ -1,6 +1,7 @@
 ﻿using Hst.Amiga;
 using Hst.Amiga.Extensions;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -12,7 +13,7 @@ namespace Hst.Imager.Core.Commands
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
-    using Hst.Imager.Core.Helpers;
+    using Helpers;
     using Microsoft.Extensions.Logging;
 
     public class RdbPartCopyCommand : CommandBase
@@ -169,7 +170,7 @@ namespace Hst.Imager.Core.Commands
                                           destinationRigidDiskBlock.BlockSize;
             var destinationOffset = (long)destinationPartitionBlock.LowCyl * destinationCylinderSize;
             
-            var isVhd = commandHelper.IsVhd(destinationPath);
+            var isVhd = destinationMedia.Type == Media.MediaType.Vhd;
 
             OnDebugMessage($"Copying partition from source offset '{sourceOffset}' to destination offset '{destinationOffset}'");
             

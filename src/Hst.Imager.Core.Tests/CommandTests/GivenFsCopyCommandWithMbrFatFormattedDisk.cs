@@ -251,17 +251,6 @@ public class GivenFsCopyCommandWithMbrFatFormattedDisk : FsCommandTestBase
             Assert.Equal(string.Empty, result.Error?.ToString() ?? string.Empty);
             Assert.True(result.IsSuccess);
 
-
-            var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
-                new List<IPhysicalDrive>(), Path.Combine(destPath, "mbr", "1", "dir1", "dir2"), true);
-            var entries = new List<Models.FileSystems.Entry>();
-            fsDirCommand.EntriesRead += (sender, args) =>
-            {
-                entries = args.EntriesInfo.Entries.ToList();
-            };
-            var r2 = await fsDirCommand.Execute(cancellationTokenSource.Token);
-            Assert.True(r2.IsSuccess);
-
             // arrange - get fat file system
             var mediaResult = await testCommandHelper.GetReadableMedia(
                 Enumerable.Empty<IPhysicalDrive>(), destPath);

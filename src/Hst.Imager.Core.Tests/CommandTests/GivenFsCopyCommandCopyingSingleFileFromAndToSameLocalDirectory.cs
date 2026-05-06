@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.MagicBytes;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -176,8 +177,8 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
 
             // arrange - create existing file2 copy as adf
             var adfBytes = new byte[Amiga.FloppyDiskConstants.DoubleDensity.Size];
-            Array.Copy(MagicBytes.AdfDosMagicNumber, 0, adfBytes, 0,
-                MagicBytes.AdfDosMagicNumber.Length);
+            Array.Copy(KnownMagicBytes.AdfDosMagicBytes, 0, adfBytes, 0,
+                KnownMagicBytes.AdfDosMagicBytes.Length);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), adfBytes);
             
             // arrange - create fs copy command
@@ -220,8 +221,8 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
 
             // arrange - create existing file2 copy as adf
             var adfBytes = new byte[Amiga.FloppyDiskConstants.DoubleDensity.Size];
-            Array.Copy(MagicBytes.AdfDosMagicNumber, 0, adfBytes, 0,
-                MagicBytes.AdfDosMagicNumber.Length);
+            Array.Copy(KnownMagicBytes.AdfDosMagicBytes, 0, adfBytes, 0,
+                KnownMagicBytes.AdfDosMagicBytes.Length);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), adfBytes);
             
             // arrange - create fs copy command
@@ -279,8 +280,8 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
 
             // arrange - create existing file2 copy as mbr img
             var mbrBytes = new byte[512];
-            Array.Copy(MagicBytes.MbrMagicNumber, 0, mbrBytes, 0x1fe,
-                MagicBytes.MbrMagicNumber.Length);
+            Array.Copy(KnownMagicBytes.MbrMagicNumbers, 0, mbrBytes, 0x1fe,
+                KnownMagicBytes.MbrMagicNumbers.Length);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), mbrBytes);
             
             // arrange - create fs copy command
@@ -323,8 +324,8 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
 
             // arrange - create existing file2 copy as mbr img
             var mbrBytes = new byte[512];
-            Array.Copy(MagicBytes.MbrMagicNumber, 0, mbrBytes, 0x1fe,
-                MagicBytes.MbrMagicNumber.Length);
+            Array.Copy(KnownMagicBytes.MbrMagicNumbers, 0, mbrBytes, 0x1fe,
+                KnownMagicBytes.MbrMagicNumbers.Length);
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "file2_copy.txt"), mbrBytes);
             
             // arrange - create fs copy command

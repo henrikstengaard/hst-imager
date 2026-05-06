@@ -1,4 +1,6 @@
-﻿using Hst.Imager.Core.Helpers;
+﻿using DiscUtils;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Tests
 {
@@ -28,6 +30,56 @@ namespace Hst.Imager.Core.Tests
         {
             this.RigidDiskBlock = rigidDiskBlock;
             this.TestMedias = new List<TestMedia>();
+        }
+
+        public override async Task<DataType> DetectDataType(string path)
+        {
+            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+
+            if (testMedia == null)
+            {
+                return await base.DetectDataType(path);
+            }
+            
+            testMedia.Stream.Seek(0, SeekOrigin.Begin);
+            var data = new byte[65536];
+            if (await testMedia.Stream.ReadAsync(data) == 0)
+            {
+                return DataType.Unknown;
+            }
+        
+            MagicBytesRegister.Instance.TryResolve(data, out var dataType);
+
+            return dataType;
+        }
+
+        public override bool IsVhdValid(string path)
+        {
+            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+
+            if (testMedia == null)
+            {
+                return base.IsVhdValid(path);
+            }
+
+            if (testMedia.Stream.Length == 0)
+            {
+                return false;
+            }
+            
+            VirtualDisk disk;
+            
+            try
+            {
+                disk = new DiscUtils.Vhd.Disk(testMedia.Stream, Ownership.None);
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+
+            disk.Dispose();
+            return true;
         }
 
         public async Task<byte[]> ReadMediaData(string path)
