@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
 
-public class GivenFsDelCommandWithRdb
+public class GivenFsDelCommandWithRdbPfs3
 {
     [Fact]
     public async Task When_DeletingAFile_Then_FileIsDeleted()
