@@ -13,11 +13,11 @@ namespace Hst.Imager.Core.Tests;
 
 public static class PiStormRdbTestHelper
 {
-    public static async Task CreatePiStormRdbDisk(TestCommandHelper testCommandHelper, string mediaPath)
+    public static async Task CreatePiStormRdbDisk(TestCommandHelper testCommandHelper, string mediaPath, long size = 0)
     {
         // disk sizes
-        var mbrDiskSize = 100.MB();
-        var rdbDiskSize = 20.MB();
+        var mbrDiskSize = size > 0 ? size : 100.MB();
+        var rdbDiskSize = mbrDiskSize - 20.MB();
 
         // add mbr disk media
         testCommandHelper.AddTestMedia(mediaPath, 0);

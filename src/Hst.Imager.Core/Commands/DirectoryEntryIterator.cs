@@ -220,6 +220,20 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        var entryPath = Path.Combine(fullPathComponents);
+
+        if (File.Exists(entryPath))
+        {
+            File.Delete(entryPath);
+            return Task.FromResult(new Result());
+        }
+
+        Directory.Delete(entryPath, true);
+        return Task.FromResult(new Result());
+    }
+
     public string[] GetPathComponents(string path) => PathHelper.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;

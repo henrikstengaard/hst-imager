@@ -213,7 +213,12 @@ public class LzxArchiveEntryIterator : IEntryIterator
             ? throw new IOException($"Entry '{entry.RawPath}' not found")
             : Task.FromResult<Stream>(new MemoryStream(zipEntry));
     }
-    
+
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Lzx archive")));
+    }
+
     private void EnqueueEntries()
     {
         var uniqueEntries = new Dictionary<string, Entry>();

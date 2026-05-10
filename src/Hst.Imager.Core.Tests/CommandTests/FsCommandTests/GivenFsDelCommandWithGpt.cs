@@ -10,25 +10,25 @@ using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
 
-public class GivenFsDelCommandWithRdb
+public class GivenFsDelCommandWithGpt
 {
     [Fact]
     public async Task When_DeletingAFile_Then_FileIsDeleted()
     {
         // arrange - paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var deletePath = Path.Combine(mediaPath, "rdb", "1", "dir1", "file1.txt");
+        var deletePath = Path.Combine(mediaPath, "gpt", "1", "dir1", "file1.txt");
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
-
+        
         // arrange - test command helper
         using var testCommandHelper = new TestCommandHelper();
 
         // arrange - add media
         testCommandHelper.AddTestMedia(mediaPath, 0);
 
-        // arrange - create rdb pfs3 formatted disk with directories and files
-        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
-        await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+        // arrange - create gpt fat formatted disk with directories and files
+        await TestHelper.CreateGptFatFormattedDisk(testCommandHelper, mediaPath);
+        await GptTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
         var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
@@ -44,7 +44,7 @@ public class GivenFsDelCommandWithRdb
         testCommandHelper.ClearActiveMedias();
         
         // assert - file1.txt is deleted and dir3 exists in dir1
-        var entries = (await RdbTestHelper
+        var entries = (await GptTestHelper
                 .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 0, ["dir1"]))
             .OrderBy(x => x.Name)
             .ToList();
@@ -55,13 +55,13 @@ public class GivenFsDelCommandWithRdb
         ];
         Assert.Equal(expectedEntries, entries.Select(x => x.Name).ToArray());
     }
-
+    
     [Fact]
     public async Task When_DeletingASubDirectory_Then_DirectoryIsDeleted()
     {
         // arrange - paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var deletePath = Path.Combine(mediaPath, "rdb", "1", "dir1", "dir3");
+        var deletePath = Path.Combine(mediaPath, "gpt", "1", "dir1", "dir3");
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
 
         // arrange - test command helper
@@ -70,9 +70,9 @@ public class GivenFsDelCommandWithRdb
         // arrange - add media
         testCommandHelper.AddTestMedia(mediaPath, 0);
 
-        // arrange - create rdb pfs3 formatted disk with directories and files
-        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
-        await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+        // arrange - create gpt fat formatted disk with directories and files
+        await TestHelper.CreateGptFatFormattedDisk(testCommandHelper, mediaPath);
+        await GptTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
         var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
@@ -88,7 +88,7 @@ public class GivenFsDelCommandWithRdb
         testCommandHelper.ClearActiveMedias();
         
         // assert - file1.txt is deleted and dir3 exists in dir1
-        var entries = (await RdbTestHelper
+        var entries = (await GptTestHelper
                 .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 0, ["dir1"]))
             .OrderBy(x => x.Name)
             .ToList();
@@ -99,13 +99,13 @@ public class GivenFsDelCommandWithRdb
         ];
         Assert.Equal(expectedEntries, entries.Select(x => x.Name).ToArray());
     }
-
+    
     [Fact]
     public async Task When_DeletingADirectory_Then_DirectoryIsDeleted()
     {
         // arrange - paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
-        var deletePath = Path.Combine(mediaPath, "rdb", "1", "dir1");
+        var deletePath = Path.Combine(mediaPath, "gpt", "1", "dir1");
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
 
         // arrange - test command helper
@@ -114,9 +114,9 @@ public class GivenFsDelCommandWithRdb
         // arrange - add media
         testCommandHelper.AddTestMedia(mediaPath, 0);
 
-        // arrange - create rdb pfs3 formatted disk with directories and files
-        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
-        await RdbTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+        // arrange - create gpt fat formatted disk with directories and files
+        await TestHelper.CreateGptFatFormattedDisk(testCommandHelper, mediaPath);
+        await GptTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
         var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
@@ -132,8 +132,8 @@ public class GivenFsDelCommandWithRdb
         testCommandHelper.ClearActiveMedias();
         
         // assert - dir1 is deleted and dir2 exists in root
-        var entries = (await RdbTestHelper
-            .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 0, []))
+        var entries = (await GptTestHelper
+                .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 0, []))
             .OrderBy(x => x.Name)
             .ToList();
         Assert.Single(entries);

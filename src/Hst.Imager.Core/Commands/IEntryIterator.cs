@@ -35,6 +35,7 @@ public interface IEntryIterator : IDisposable
     bool HasMoreEntries { get; }
     bool IsSingleFileEntryNext { get; }
     Task<Stream> OpenEntry(Entry entry);
+    Task<Result> DeleteEntry(string[] fullPathComponents);
     string[] GetPathComponents(string path);
     bool UsesPattern { get; }
     Task Flush();

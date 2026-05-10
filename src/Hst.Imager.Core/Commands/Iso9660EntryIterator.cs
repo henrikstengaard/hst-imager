@@ -174,6 +174,11 @@ public class Iso9660EntryIterator : IEntryIterator
         return Task.FromResult<Stream>(cdReader.OpenFile(entry.RawPath, FileMode.Open));
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Iso9660")));
+    }
+
     private Task EnqueueDirectory(string[] pathComponents)
     {
         var uniqueEntries = new Dictionary<string, Entry>();

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core;
+using Hst.Core.Extensions;
 using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
@@ -19,33 +20,50 @@ public class FsDelCommand(
     ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives,
     string path,
-    bool recursive,
     UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
     : FsCommandBase(commandHelper, physicalDrives)
 {
     public override async Task<Result> Execute(CancellationToken token)
     {
-        // first get an iterator to get a list of all files and direcgtories to delete.
-        // then iterate over the list and delete each file and directory. this is to avoid iterating while deleting.
-        // update iterator with a delete function?
-
-
         var entryIteratorResult = await GetEntryIterator(path);
         if (entryIteratorResult.IsFaulted)
         {
             return new Result(entryIteratorResult.Error);
         }
         
-        var entryIterator = entryIteratorResult.Value;
+        using var entryIterator = entryIteratorResult.Value;
 
         var entries = new List<Entry>();
 
         while (await entryIterator.Next())
         {
             var entry = entryIterator.Current;
+            
+            // skip directory entries when there are no entry path components or when it is a single file.
+            if (entry.Type == EntryType.Dir &&
+                (entryIterator.IsSingleFileEntryNext || entry.RelativePathComponents.Length == 0))
+            {
+                continue;
+            }
+            
             entries.Add(entry);
         }
 
+        // get writer to delete
+        foreach (var entry in entries)
+        {
+            // delete
+            await entryIterator.DeleteEntry(entry.FullPathComponents);
+        }
+
+        // delete root directory, if not a single file
+        if (!entryIterator.IsSingleFileEntryNext)
+        {
+            await entryIterator.DeleteEntry(entryIterator.PathComponents);
+        }
+
+        await entryIterator.Flush();
+        
         return new Result();
     }
     
@@ -62,15 +80,19 @@ public class FsDelCommand(
                 return new Result<IEntryIterator>(mediaResult.Error);
             }
 
-            return await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+            return await GetDirectoryEntryIterator(path, true, uaeMetadata,
                 new MemoryAppCache());
         }
         
         if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath) &&
             (Directory.Exists(path) || File.Exists(path)))
         {
-            return await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+            var entryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
                 new MemoryAppCache());
+            var initializeResult = await entryIteratorResult.Value.Initialize();
+            return initializeResult.IsFaulted
+                ? new Result<IEntryIterator>(initializeResult.Error)
+                : entryIteratorResult;
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
@@ -98,9 +120,14 @@ public class FsDelCommand(
             return await GetFloppyEntryIterator(media, parts);
         }
         
+        if (await IsAdfMedia(media))
+        {
+            return await GetAdfPartitionEntryIterator(media, parts);
+        }
+        
         if (parts.Length < 3)
         {
-            return new Result<IEntryIterator>(new Error($"Path '{path}' oesn't contain partition table, partition number and entry to delete"));
+            return new Result<IEntryIterator>(new Error($"Path '{path}' doesn't contain partition table, partition number and entry to delete"));
         }
 
         switch (parts[0].ToLowerInvariant())
@@ -115,6 +142,19 @@ public class FsDelCommand(
 
         return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"));
     }
+
+    private static async Task<bool> IsAdfMedia(Media media)
+    {
+        media.Stream.Seek(0, SeekOrigin.Begin);
+        var sectorBytes = await media.Stream.ReadBytes(512);
+
+        if (!MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, sectorBytes, 0))
+        {
+            return false;
+        }
+
+        return sectorBytes[3] <= 7;
+    }
     
     private async Task<Result<IEntryIterator>> GetFloppyEntryIterator(Media media, string[] parts)
     {
@@ -124,7 +164,25 @@ public class FsDelCommand(
             return new Result<IEntryIterator>(mbrFileSystemResult.Error);
         }
 
-        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.None, 0, mbrFileSystemResult.Value, parts, recursive);
+        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.None, 0, mbrFileSystemResult.Value, parts, true);
+        var initializeResult = await entryIterator.Initialize();
+        return initializeResult.IsFaulted
+            ? new Result<IEntryIterator>(initializeResult.Error)
+            : new Result<IEntryIterator>(entryIterator);
+    }
+
+    private async Task<Result<IEntryIterator>> GetAdfPartitionEntryIterator(Media media, string[] parts)
+    {
+        var fileSystemVolumeResult = await MountAdfFileSystemVolume(media.Stream);
+        if (fileSystemVolumeResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
+        }
+
+        await using var fileSystemVolume = fileSystemVolumeResult.Value;
+        using var entryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.RigidDiskBlock,
+            0, fileSystemVolume, parts, true);
+
         var initializeResult = await entryIterator.Initialize();
         return initializeResult.IsFaulted
             ? new Result<IEntryIterator>(initializeResult.Error)
@@ -145,7 +203,7 @@ public class FsDelCommand(
         
         var rootPathComponents = parts.Skip(1).ToArray();
         var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.MasterBootRecord, partitionNumber,
-            fileSystem, rootPathComponents, recursive);
+            fileSystem, rootPathComponents, true);
         var initializeResult = await entryIterator.Initialize();
         return initializeResult.IsFaulted
             ? new Result<IEntryIterator>(initializeResult.Error)
@@ -166,7 +224,7 @@ public class FsDelCommand(
 
         var rootPathComponents = parts.Skip(1).ToArray();
         var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.GuidPartitionTable, partitionNumber,
-            fileSystem, rootPathComponents, recursive);
+            fileSystem, rootPathComponents, true);
         var initializeResult = await entryIterator.Initialize();
         return initializeResult.IsFaulted
             ? new Result<IEntryIterator>(initializeResult.Error)
@@ -185,7 +243,7 @@ public class FsDelCommand(
 
         var rootPathComponents = parts.Skip(1).ToArray();
         var entryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.RigidDiskBlock, partitionNumber,
-            fileSystemVolume, rootPathComponents, recursive);
+            fileSystemVolume, rootPathComponents, true);
         var initializeResult = await entryIterator.Initialize();
         return initializeResult.IsFaulted
             ? new Result<IEntryIterator>(initializeResult.Error)
