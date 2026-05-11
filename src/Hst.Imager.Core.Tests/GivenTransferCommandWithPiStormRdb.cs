@@ -48,7 +48,7 @@ public class GivenTransferCommandWithPiStormRdb : CommandTestBase
 
             // arrange - create transfer command to transfer src mbr partition 2 rdb partition 1 to dest
             var transferCommand = new TransferCommand(testCommandHelper, transferPath, destPath, 
-                new Size(data.Length, Unit.Bytes), false, 0, 0);
+                new Size(data.Length, Unit.Bytes), false, 0, 0, false);
 
             // act - execute transfer command
             var result = await transferCommand.Execute(CancellationToken.None);

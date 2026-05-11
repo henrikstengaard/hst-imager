@@ -45,12 +45,18 @@ namespace Hst.Imager.ConsoleApp
         private static ICommandHelper GetCommandHelper(bool useCache = false)
         {
             var commandHelper = new CommandHelper(GetLogger<CommandHelper>(), User.IsAdministrator,
+                AppState.Instance.Settings.SparseFiles,
                 AppState.Instance.Settings.UseCache && useCache, AppState.Instance.Settings.CacheType);
 
             commandHelper.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
             commandHelper.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
             commandHelper.InformationMessage += (_, message) => { Log.Logger.Information(message); };
             commandHelper.DataProcessed += async (sender, args) => await WriteProcessMessage(sender, args);
+            
+            CommandLogger.Instance.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
+            CommandLogger.Instance.WarningMessage += (_, message) => { Log.Logger.Warning(message); };
+            CommandLogger.Instance.InformationMessage += (_, message) => { Log.Logger.Information(message); };
+            CommandLogger.Instance.DataProcessed += async (sender, args) => await WriteProcessMessage(sender, args);
             
             return commandHelper;
         }
@@ -164,7 +170,7 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task SettingsUpdate(bool? allPhysicalDrives, int? retries, bool? force, bool? verify,
-            bool? skipUnusedSectors, bool? useCache, CacheType? cacheType)
+            bool? skipUnusedSectors, bool? useCache, CacheType? cacheType, bool? sparseFiles)
         {
             var settingsUpdated = false;
             
@@ -207,6 +213,12 @@ namespace Hst.Imager.ConsoleApp
             if (cacheType.HasValue)
             {
                 AppState.Instance.Settings.CacheType = cacheType.Value;
+                settingsUpdated = true;
+            }
+
+            if (sparseFiles.HasValue)
+            {
+                AppState.Instance.Settings.SparseFiles = sparseFiles.Value;
                 settingsUpdated = true;
             }
 
@@ -268,7 +280,8 @@ namespace Hst.Imager.ConsoleApp
             DestIoErrors.Clear();
             using var commandHelper = GetCommandHelper();
             var command = new TransferCommand(commandHelper, sourcePath,
-                destinationPath, ParseSize(size), verify, srcStart, destStart);
+                destinationPath, ParseSize(size), verify, srcStart, destStart,
+                AppState.Instance.Settings.SparseFiles);
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
             await Execute(command);
@@ -297,7 +310,8 @@ namespace Hst.Imager.ConsoleApp
                 retries ?? AppState.Instance.Settings.Retries,
                 verify ?? AppState.Instance.Settings.Verify,
                 force ?? AppState.Instance.Settings.Force,
-                start);
+                start,
+                AppState.Instance.Settings.SparseFiles);
             command.SrcError += (_, args) => SrcIoErrors.Add(args.IoError);
             command.DestError += (_, args) => DestIoErrors.Add(args.IoError);
             await Execute(command);

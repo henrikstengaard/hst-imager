@@ -46,7 +46,8 @@
                 }, context.Token);
 
                 using var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(),
-                    appState.IsAdministrator);
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var blankCommand = new BlankCommand(loggerFactory.CreateLogger<BlankCommand>(), commandHelper, blankBackgroundTask.Path,
                      new Size(blankBackgroundTask.Size, Unit.Bytes), blankBackgroundTask.CompatibleSize);
 

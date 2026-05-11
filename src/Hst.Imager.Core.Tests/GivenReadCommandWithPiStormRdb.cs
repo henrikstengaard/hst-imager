@@ -49,7 +49,7 @@ public class GivenReadCommandWithPiStormRdb : CommandTestBase
         // arrange - create read command to read mbr partition 2 rdb partition 1
         var readCommand = new ReadCommand(new NullLogger<ReadCommand>(), testCommandHelper,
             [], readPath, destPath, new Size(0, Unit.Bytes), 0, false,
-            false, 0);
+            false, 0, false);
 
         // act - execute read command
         var result = await readCommand.Execute(CancellationToken.None);

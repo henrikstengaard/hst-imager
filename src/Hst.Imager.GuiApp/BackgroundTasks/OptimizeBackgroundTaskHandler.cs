@@ -45,7 +45,9 @@
                     PercentComplete = 50
                 }, context.Token);
 
-                using var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(this.loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var optimizeCommand = new OptimizeCommand(
                     loggerFactory.CreateLogger<OptimizeCommand>(),
                     commandHelper, 

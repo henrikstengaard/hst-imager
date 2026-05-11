@@ -2,6 +2,5 @@
 
 public enum CacheType
 {
-    Memory,
     Disk
 }

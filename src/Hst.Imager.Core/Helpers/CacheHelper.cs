@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using Hst.Core.IO;
+using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Helpers;
@@ -26,10 +27,14 @@ public static class CacheHelper
             ? File.Open(layerPath, FileMode.OpenOrCreate, FileAccess.ReadWrite)
             : new MemoryStream();
             
-        return new LayeredStream(baseStream, layerStream, new LayeredStreamOptions
+        var layeredStream = new LayeredStream(baseStream, layerStream, new LayeredStreamOptions
         {
             FlushLayerOnDispose = writeable,
             BlockSize = blockSize
         });
+        
+        CommandLogger.Instance.AddLoggingOf(layeredStream);
+        
+        return layeredStream;
     }
 }

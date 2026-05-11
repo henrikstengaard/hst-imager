@@ -285,7 +285,12 @@ public class DirectoryEntryIterator : IEntryIterator
                 if (uaeMetadataEntry != null)
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents.Skip(DirPathComponents.Length).ToArray();
-                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    
+                    if (uaeMetadataEntry.Date.HasValue)
+                    {
+                        date = uaeMetadataEntry.Date.Value;
+                    }
+                    
                     if (uaeMetadataEntry.Comment != null)
                     {
                         properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
@@ -340,7 +345,11 @@ public class DirectoryEntryIterator : IEntryIterator
                 {
                     relativePathComponents = uaeMetadataEntry.UaePathComponents.Skip(DirPathComponents.Length).ToArray();
 
-                    date = uaeMetadataEntry.Date ?? DateTime.Now;
+                    if (uaeMetadataEntry.Date.HasValue)
+                    {
+                        date = uaeMetadataEntry.Date.Value;
+                    }
+                    
                     if (uaeMetadataEntry.Comment != null)
                     {
                         properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;

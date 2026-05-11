@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Amiga.FileSystems;
+using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.FsCommands;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -186,9 +187,10 @@ public class GivenFsMkDirCommandWithAdf
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
             
-            // assert - error is returned
+            // assert - error is returned and is path exists error
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
+            Assert.IsType<PathExistsError>(result.Error);
         }
         finally
         {

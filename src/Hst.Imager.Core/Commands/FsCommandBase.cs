@@ -1,7 +1,7 @@
 ﻿using DiscUtils.ExFat;
 using DiscUtils.Ntfs;
 using Hst.Imager.Core.Caching;
-using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Commands;
@@ -43,25 +43,22 @@ public abstract partial class FsCommandBase : CommandBase
         this.physicalDrives = physicalDrives;
     }
     
-    protected async Task<bool> IsAdfMedia(MediaResult mediaResult)
+    protected async Task<bool> IsAdfMedia(MediaResult resolvedMedia)
     {
-        // return false, if media file doesnt exist
-        if (!File.Exists(mediaResult.MediaPath))
+        var mediaResult = await commandHelper.GetReadableFileMedia(resolvedMedia.MediaPath);
+        if (mediaResult.IsFaulted)
         {
             return false;
         }
 
-        await using var stream = File.OpenRead(mediaResult.MediaPath);
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
 
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        if (!MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, sectorBytes, 0))
-        {
-            return false;
-        }
-
-        return sectorBytes[3] <= 7;
+        return MagicBytesRegister.Instance.TryResolve(sectorBytes, out var dataType) &&
+               dataType == DataType.Adf;
     }
 
     private async Task<bool> IsZipMedia(MediaResult mediaResult)
@@ -77,8 +74,8 @@ public abstract partial class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber1, sectorBytes, 0) || MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber2, sectorBytes, 0) ||
-               MagicBytes.HasMagicNumber(MagicBytes.ZipMagicNumber3, sectorBytes, 0);
+        return MagicBytesRegister.Instance.TryResolve(sectorBytes, out var dataType) &&
+               dataType == DataType.Zip;
     }
     
     private async Task<bool> IsLhaMedia(MediaResult mediaResult)
@@ -94,7 +91,8 @@ public abstract partial class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return MagicBytes.HasMagicNumber(MagicBytes.LhaMagicNumber, sectorBytes, 2);
+        return MagicBytesRegister.Instance.TryResolve(sectorBytes, out var dataType) &&
+               dataType == DataType.Lha;
     }
 
     private async Task<bool> IsLzxMedia(MediaResult mediaResult)
@@ -110,7 +108,8 @@ public abstract partial class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return MagicBytes.HasMagicNumber(MagicBytes.LzxMagicNumber, sectorBytes, 0);
+        return MagicBytesRegister.Instance.TryResolve(sectorBytes, out var dataType) &&
+               dataType == DataType.Lzx;
     }
     
     private async Task<bool> IsLzwMedia(MediaResult mediaResult)
@@ -126,7 +125,8 @@ public abstract partial class FsCommandBase : CommandBase
         stream.Seek(0, SeekOrigin.Begin);
         var sectorBytes = await stream.ReadBytes(512);
 
-        return MagicBytes.HasMagicNumber(MagicBytes.LzwMagicNumber, sectorBytes, 0);
+        return MagicBytesRegister.Instance.TryResolve(sectorBytes, out var dataType) &&
+               dataType == DataType.Lzw;
     }
 
     private async Task<bool> IsIso9660Media(MediaResult mediaResult)
@@ -139,83 +139,11 @@ public abstract partial class FsCommandBase : CommandBase
 
         await using var stream = File.OpenRead(mediaResult.MediaPath);
 
-        // offset: 0x8000 / sector 64
-        stream.Seek(0x8000, SeekOrigin.Begin);
-        var sectorBytes = await stream.ReadBytes(512);
-
-        // return true, if offset 0x8001 has iso magic number
-        if (MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1))
-        {
-            return true;
-        }
-
-        // offset: 0x8800 / sector 68
-        stream.Seek(0x8800, SeekOrigin.Begin);
-        sectorBytes = await stream.ReadBytes(512);
-
-        // return true, if offset 0x8801 has iso magic number
-        if (MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1))
-        {
-            return true;
-        }
-
-        // offset: 0x9000 / sector 72
-        stream.Seek(0x9000, SeekOrigin.Begin);
-        sectorBytes = await stream.ReadBytes(512);
-
-        // return true, if offset 0x9001 has iso magic number
-        return MagicBytes.HasMagicNumber(MagicBytes.Iso9660MagicNumber, sectorBytes, 1);
-    }
-
-    protected async Task<bool> IsDiskMedia(MediaResult mediaResult)
-    {
-        // physical drive
-        if (Regexs.PhysicalDrivePathRegex.IsMatch(mediaResult.MediaPath) ||
-            Regexs.DevicePathRegex.IsMatch(mediaResult.MediaPath))
-        {
-            return true;
-        }
-
-        // return false, if media file doesnt exist
-        if (!File.Exists(mediaResult.MediaPath))
-        {
-            return false;
-        }
-
-        await using var stream = File.OpenRead(mediaResult.MediaPath);
-        return await HasDiskMediaMagicNumber(stream);
-    }
-
-    private async Task<bool> HasDiskMediaMagicNumber(Stream stream)
-    {
-        stream.Seek(0, SeekOrigin.Begin);
-        var sectorBytes = await stream.ReadBytes(MagicBytes.VhdMagicNumber.Length);
-
-        // virtual disk
-        if (MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, sectorBytes, 0))
-        {
-            return true;
-        }
-
-        // rigid disk block
-        for (var i = 1; i <= 16; i++)
-        {
-            if (MagicBytes.HasMagicNumber(MagicBytes.RdbMagicNumber, sectorBytes, 0))
-            {
-                return true;
-            }
-
-            // rigid disk block can only exist in sector 0-15
-            if (i == 16)
-            {
-                break;
-            }
-
-            stream.Seek(i * 512, SeekOrigin.Begin);
-            sectorBytes = await stream.ReadBytes(MagicBytes.VhdMagicNumber.Length);
-        }
-
-        return false;
+        var data = new byte[65536];
+        var bytesRead = await stream.ReadAsync(data, 0, data.Length);
+        return bytesRead > 0 &&
+               MagicBytesRegister.Instance.TryResolve(data, out var dataType) &&
+               dataType == DataType.Iso9660;
     }
 
     protected async Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive,
@@ -516,74 +444,6 @@ public abstract partial class FsCommandBase : CommandBase
             : new Result<IEntryWriter>(directoryEntryWriter);
     }
 
-    private async Task<Result<bool>> IsFileDiskMedia(string path, ModifierEnum modifiers)
-    {
-        var readableMediaResult = await commandHelper.GetReadableFileMedia(path, modifiers);
-        if (readableMediaResult.IsFaulted)
-        {
-            return new Result<bool>(readableMediaResult.Error);
-        }
-
-        using var media = readableMediaResult.Value;
-        var stream = media.Stream;
-
-        // read sector 0
-        var sectorBytes = new byte[512];
-        var bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
-        if (bytesRead != sectorBytes.Length)
-        {
-            return new Result<bool>(false);
-        }
-
-        // return true, if media has adf size and has dos magic number
-        if (media.Size == Amiga.FloppyDiskConstants.DoubleDensity.Size &&
-            sectorBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber))
-        {
-            return new Result<bool>(true);
-        }
-        
-        // return true, if sector 0 has mbr, rdb or vhd magic number
-        if (sectorBytes.HasMagicNumber(MagicBytes.MbrMagicNumber, 0x1fe) ||
-            sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber) ||
-            sectorBytes.HasMagicNumber(MagicBytes.VhdMagicNumber))
-        {
-            return new Result<bool>(true);
-        }
-
-        // read sector 1
-        bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
-        if (bytesRead != sectorBytes.Length)
-        {
-            return new Result<bool>(false);
-        }
-
-        // return true, if sector 1 has gpr or rdb magic number
-        if (sectorBytes.HasMagicNumber(MagicBytes.GptMagicNumber) ||
-            sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber))
-        {
-            return new Result<bool>(true);
-        }
-
-        // read sector 2-15
-        for (var i = 2; i <= 15; i++)
-        {
-            // read sector
-            bytesRead = await stream.ReadAsync(sectorBytes, 0, sectorBytes.Length);
-            if (bytesRead != sectorBytes.Length)
-            {
-                return new Result<bool>(false);
-            }
-            
-            // return true, if sector 1 has rdb magic number
-            if (sectorBytes.HasMagicNumber(MagicBytes.RdbMagicNumber))
-            {
-                return new Result<bool>(true);
-            }
-        }
-        
-        return new Result<bool>(false);
-    }
-    
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool recursive, bool createDestDirectory,
         bool forceOverwrite)
     {

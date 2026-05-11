@@ -257,8 +257,12 @@ public class AmigaVolumeEntryWriter(
         
         IEnumerable<Hst.Amiga.FileSystems.Entry> entries = (await fileSystemVolume.ListEntries()).ToList();
 
-        var dirEntry = entries.FirstOrDefault(x =>
-            x.Name.Equals(name, StringComparison.OrdinalIgnoreCase) && x.Type == EntryType.Dir);
+        var dirEntry = entries.FirstOrDefault(x => x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+
+        if (dirEntry != null && dirEntry.Type != EntryType.Dir)
+        {
+            return new Result(new PathExistsError($"Path already exists with same name '{string.Join("/", fullPathComponents)}'"));
+        }
         
         if (dirEntry == null)
         {
@@ -324,7 +328,7 @@ public class AmigaVolumeEntryWriter(
         
         await fileSystemVolume.CreateFile(fileName, true, true);
 
-        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true))
+        await using (var entryStream = await fileSystemVolume.OpenFile(fileName, FileMode.Append, true, true))
         {
             int bytesRead;
             do

@@ -52,6 +52,10 @@ public static class SettingsCommandFactory
         var cacheTypeOption = new Option<CacheType?>(
             ["--cache-type"],
             description: "Type of cache to use.");
+
+        var sparseFilesOption = new Option<bool?>(
+            ["--sparse-files"],
+            description: "Create sparse files.");
         
         var command = new Command("update", "Update settings.");
         command.AddOption(allOption);
@@ -61,6 +65,7 @@ public static class SettingsCommandFactory
         command.AddOption(skipUnusedSectorsOption);
         command.AddOption(useCacheOption);
         command.AddOption(cacheTypeOption);
+        command.AddOption(sparseFilesOption);
         command.AddValidator(validate =>
         {
             if (validate.FindResultFor(allOption) is null &&
@@ -69,13 +74,15 @@ public static class SettingsCommandFactory
                 validate.FindResultFor(verifyOption) is null &&
                 validate.FindResultFor(skipUnusedSectorsOption) is null &&
                 validate.FindResultFor(useCacheOption) is null &&
-                validate.FindResultFor(cacheTypeOption) is null)
+                validate.FindResultFor(cacheTypeOption) is null &&
+                validate.FindResultFor(sparseFilesOption) is null)
             {
                 validate.ErrorMessage = "At least one option must be specified";
             }
         });
         command.SetHandler(CommandHandler.SettingsUpdate, allOption, retriesOption, forceOption,
-            verifyOption, skipUnusedSectorsOption, useCacheOption, cacheTypeOption);
+            verifyOption, skipUnusedSectorsOption, useCacheOption, cacheTypeOption,
+            sparseFilesOption);
 
         return command;
     }

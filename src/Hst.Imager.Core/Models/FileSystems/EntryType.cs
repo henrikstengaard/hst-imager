@@ -3,5 +3,7 @@
 public enum EntryType
 {
     Dir,
-    File
+    File,
+    LinkDir,
+    LinkFile
 }

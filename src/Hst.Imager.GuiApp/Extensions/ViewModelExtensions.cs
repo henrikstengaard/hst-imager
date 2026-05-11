@@ -83,6 +83,8 @@
             {
                 Name = diskInfo.Name,
                 Size = diskInfo.Size,
+                IsSparseFile = diskInfo.IsSparseFile,
+                SparseFileSize = diskInfo.SparseFileSize,
                 PartitionTables = diskInfo.PartitionTables,
                 StartOffset = diskInfo.StartOffset,
                 EndOffset = diskInfo.EndOffset,

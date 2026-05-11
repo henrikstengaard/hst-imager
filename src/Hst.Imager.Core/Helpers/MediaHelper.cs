@@ -9,8 +9,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Core;
-using Hst.Core.IO;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -39,10 +39,15 @@ namespace Hst.Imager.Core.Helpers
             var firstChunk = new byte[1024 * 1024];
             await media.Stream.FillAsync(firstChunk, 0, firstChunk.Length);
 
-            // return compressed vhd, if vhd magic number is present in first chunk
-            return MagicBytes.HasMagicNumber(MagicBytes.VhdMagicNumber, firstChunk, 0)
-                ? CompressedVhd(media.Stream, firstChunk)
-                : CompressedImg(media.Stream, firstChunk);
+            // return compressed vhd, if first chunk is vhd data type
+            if (MagicBytesRegister.Instance.TryResolve(firstChunk, out var dataType) &&
+                dataType == DataType.Vhd)
+            {
+                return CompressedVhd(media.Stream, firstChunk);
+            }
+            
+            // return compressed img
+            return CompressedImg(media.Stream, firstChunk);
         }
 
         private static VirtualDisk CompressedVhd(Stream stream, byte[] firstChunk) => 
@@ -281,46 +286,10 @@ namespace Hst.Imager.Core.Helpers
                 ? new Result<Tuple<long, long>>(new Error($"Partition number {partitionNumber} not found"))
                 : new Result<Tuple<long, long>>(new Tuple<long, long>(partition.StartOffset, partition.Size));
         }
+        
+        public static bool IsVhd(string path) => path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
 
-        public static async Task FlushCache(INotification notification, Media media)
-        {
-            if (media.Stream is not LayeredStream layeredStream)
-            {
-                return;
-            }
-            
-            layeredStream.Flush();
-
-            var layerStatus = layeredStream.GetLayerStatus();
-
-            if (layerStatus.ChangedBlocks == 0)
-            {
-                return;
-            }
-
-            notification.OnInformationMessage($"Flushing cache to destination path '{media.Path}'");
-
-            var statusBytesProcessed = 0L;
-            var statusTimeElapsed = TimeSpan.Zero;
-
-            layeredStream.DataFlushed += Handler;
-
-            await layeredStream.FlushLayer();
-                
-            layeredStream.DataFlushed -= Handler;
-            
-            notification.OnInformationMessage(
-                $"Flushed '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) in {statusTimeElapsed.FormatElapsed()}");
-            return;
-
-            void Handler(object sender, LayeredStream.DataFlushedEventArgs args)
-            {
-                statusBytesProcessed = args.BytesProcessed;
-                statusTimeElapsed = args.TimeElapsed;
-                notification.OnDataProcessed(false, args.PercentComplete, args.BytesProcessed, args.BytesRemaining,
-                    args.BytesTotal, args.TimeElapsed, args.TimeRemaining, args.TimeTotal, args.BytesPerSecond);
-            }
-        }
+        
     }
 
     public class PiStormRdbMediaResult

@@ -45,7 +45,9 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
                     .ToList();
 
-                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var formatCommand = new FormatCommand(loggerFactory.CreateLogger<FormatCommand>(), loggerFactory,
                     commandHelper, physicalDrives,
                     string.Concat(formatBackgroundTask.Byteswap ? "+bs:" : string.Empty, formatBackgroundTask.Path),

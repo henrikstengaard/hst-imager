@@ -37,13 +37,16 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                     PercentComplete = 0
                 });
 
-                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var transferCommand =
                     new TransferCommand(commandHelper,
                         string.Concat(transferBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
                             transferBackgroundTask.SourcePath),
                         transferBackgroundTask.DestinationPath, new Size(transferBackgroundTask.Size, Unit.Bytes),
-                        false, transferBackgroundTask.SrcStartOffset, transferBackgroundTask.DestStartOffset);
+                        false, transferBackgroundTask.SrcStartOffset, transferBackgroundTask.DestStartOffset,
+                        appState.Settings.SparseFiles);
                 transferCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress

@@ -46,7 +46,9 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
                     .ToList();
 
-                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var verifyCommand =
                     new CompareCommand(
                         loggerFactory.CreateLogger<CompareCommand>(),

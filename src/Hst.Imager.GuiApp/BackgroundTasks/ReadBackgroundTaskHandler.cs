@@ -46,14 +46,17 @@ namespace Hst.Imager.GuiApp.BackgroundTasks
                 var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(settings.AllPhysicalDrives))
                     .ToList();
 
-                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(), appState.IsAdministrator);
+                using var commandHelper = new CommandHelper(loggerFactory.CreateLogger<ICommandHelper>(),
+                    appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
+                    appState.Settings.CacheType);
                 var readCommand =
                     new ReadCommand(loggerFactory.CreateLogger<ReadCommand>(), commandHelper, physicalDrives,
                         string.Concat(readBackgroundTask.Byteswap ? "+bs:" : string.Empty, 
                             readBackgroundTask.SourcePath),
                         readBackgroundTask.DestinationPath,
                         new Size(readBackgroundTask.Size, Unit.Bytes), appState.Settings.Retries,
-                        appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset);
+                        appState.Settings.Verify, appState.Settings.Force, readBackgroundTask.StartOffset,
+                        appState.Settings.SparseFiles);
                 readCommand.DataProcessed += (_, args) =>
                 {
                     OnProgressUpdated(new Progress

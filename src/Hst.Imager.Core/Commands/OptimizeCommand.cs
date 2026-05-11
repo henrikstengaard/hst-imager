@@ -20,11 +20,6 @@
         {
             OnInformationMessage($"Optimizing image file at '{path}'");
 
-            if (commandHelper.IsVhd(path))
-            {
-                return new Result(new UnsupportedImageError(path));
-            }
-
             OnDebugMessage($"Opening '{path}' as writable");
             
             var mediaResult = await commandHelper.GetWritableFileMedia(path);
@@ -35,6 +30,11 @@
 
             using var media = mediaResult.Value;
 
+            if (media.Type != Media.MediaType.Raw)
+            {
+                return new Result(new UnsupportedImageError(path));
+            }
+            
             OnDebugMessage($"Media size '{media.Size}'");
         
             var diskInfo = await commandHelper.ReadDiskInfo(media);

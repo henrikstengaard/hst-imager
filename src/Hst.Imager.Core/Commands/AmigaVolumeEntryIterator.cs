@@ -168,7 +168,7 @@ public class AmigaVolumeEntryIterator(
             await fileSystemVolume.ChangeDirectory(entry.FullPathComponents[i]);
         }
 
-        return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, true);
+        return await fileSystemVolume.OpenFile(entry.FullPathComponents[^1], FileMode.Read, false, true);
     }
 
     public async Task<Result> DeleteEntry(string[] fullPathComponents)
@@ -310,8 +310,14 @@ public class AmigaVolumeEntryIterator(
                 { Constants.EntryPropertyNames.ProtectionBits, ((int)entry.ProtectionBits ^ 0xf).ToString() }
             };
 
+            if ((entry.Type == EntryType.DirLink || entry.Type == EntryType.FileLink) &&
+                !string.IsNullOrEmpty(entry.LinkPath))
+            {
+                properties.Add(Constants.EntryPropertyNames.Link, entry.LinkPath);
+            }
+            
             var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, DirPathComponents,
-                recursive, entryPath, entryPath, isDir, entry.Date, entry.Size,
+                recursive, entryPath, entryPath, entry.Type, entry.Date, entry.Size,
                 attributes, properties, dirAttributes);
 
             var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) && 

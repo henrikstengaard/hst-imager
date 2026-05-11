@@ -16,6 +16,8 @@ public class DiskInfoViewModel
     public PartitionTablePartViewModel GptPartitionTablePart { get; set; }
     public PartitionTablePartViewModel MbrPartitionTablePart { get; set; }
     public PartitionTablePartViewModel RdbPartitionTablePart { get; set; }
+    public bool IsSparseFile { get; set; }
+    public long SparseFileSize { get; set; }
 
     public DiskInfoViewModel()
     {
