@@ -77,6 +77,11 @@ public class LzwArchiveEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(new LzwInputStream(File.OpenRead(this.filePath)));
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Lzw archive")));
+    }
+
     private static readonly Regex LzwExtensionRegex =
         new Regex("\\.Z$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     

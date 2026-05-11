@@ -208,6 +208,11 @@ public class LhaArchiveEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(output);
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Lha archive")));
+    }
+
     private void EnqueueEntries()
     {
         var uniqueEntries = new Dictionary<string, Entry>();

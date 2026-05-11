@@ -204,6 +204,11 @@ public class ZipArchiveEntryIterator : IEntryIterator
             : Task.FromResult(zipEntry.Open());
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Zip archive")));
+    }
+
     public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     private async IAsyncEnumerable<CentralDirectoryFileHeader> ReadCentralDirectoryFileHeaders()

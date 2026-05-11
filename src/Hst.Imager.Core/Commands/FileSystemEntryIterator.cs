@@ -401,6 +401,20 @@ public class FileSystemEntryIterator(
             : Task.FromResult(fileSystem.OpenFile(entry.RawPath, FileMode.Open) as Stream);
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        var entryPath = mediaPath.Join(fullPathComponents);
+
+        if (fileSystem.FileExists(entryPath))
+        {
+            fileSystem.DeleteFile(entryPath);
+            return Task.FromResult(new Result());
+        }
+
+        fileSystem.DeleteDirectory(entryPath);
+        return Task.FromResult(new Result());
+    }
+
     public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;

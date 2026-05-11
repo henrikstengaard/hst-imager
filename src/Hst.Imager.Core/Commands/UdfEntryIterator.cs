@@ -118,6 +118,11 @@ public class UdfEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(udfReader.OpenFile(entry.RawPath, FileMode.Open));
     }
 
+    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Delete is not supported for Udf")));
+    }
+
     private int EnqueueDirectory(string[] pathComponents)
     {
         var uniqueEntries = new Dictionary<string, Entry>();
