@@ -125,24 +125,6 @@ namespace Hst.Imager.Core.Tests
             await Pfs3Formatter.FormatPartition(stream, partitionBlock, "Workbench");
         }
         
-        public static async Task CreateDos3FormattedDisk(TestCommandHelper testCommandHelper, string path, 
-            long diskSize = 10 * 1024 * 1024)
-        {
-            var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
-            using var media = mediaResult.Value;
-            var stream = media.Stream;
-
-            var rigidDiskBlock = RigidDiskBlock.Create(diskSize.ToUniversalSize());
-
-            rigidDiskBlock.AddFileSystem(Dos3DosType, FastFileSystemDos3Bytes)
-                .AddPartition("DH0", bootable: true);
-            await RigidDiskBlockWriter.WriteBlock(rigidDiskBlock, stream);
-
-            var partitionBlock = rigidDiskBlock.PartitionBlocks.First();
-
-            await FastFileSystemFormatter.FormatPartition(stream, partitionBlock, "Workbench");
-        }
-
         public static async Task<Pfs3Volume> MountPfs3Volume(Stream stream)
         {
             stream.Position = 0;

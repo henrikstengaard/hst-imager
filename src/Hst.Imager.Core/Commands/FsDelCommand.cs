@@ -5,9 +5,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core;
-using Hst.Core.Extensions;
 using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.UaeMetadatas;
@@ -83,6 +83,8 @@ public class FsDelCommand(
             return await GetDirectoryEntryIterator(path, true, uaeMetadata,
                 new MemoryAppCache());
         }
+
+        var dataType = await commandHelper.DetectDataType(mediaResult.Value.MediaPath);
         
         if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath) &&
             (Directory.Exists(path) || File.Exists(path)))
@@ -120,7 +122,7 @@ public class FsDelCommand(
             return await GetFloppyEntryIterator(media, parts);
         }
         
-        if (await IsAdfMedia(media))
+        if (dataType == DataType.Adf)
         {
             return await GetAdfPartitionEntryIterator(media, parts);
         }
@@ -143,19 +145,6 @@ public class FsDelCommand(
         return new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"));
     }
 
-    private static async Task<bool> IsAdfMedia(Media media)
-    {
-        media.Stream.Seek(0, SeekOrigin.Begin);
-        var sectorBytes = await media.Stream.ReadBytes(512);
-
-        if (!MagicBytes.HasMagicNumber(MagicBytes.AdfDosMagicNumber, sectorBytes, 0))
-        {
-            return false;
-        }
-
-        return sectorBytes[3] <= 7;
-    }
-    
     private async Task<Result<IEntryIterator>> GetFloppyEntryIterator(Media media, string[] parts)
     {
         var mbrFileSystemResult = await MountFileSystem(media.Stream);
