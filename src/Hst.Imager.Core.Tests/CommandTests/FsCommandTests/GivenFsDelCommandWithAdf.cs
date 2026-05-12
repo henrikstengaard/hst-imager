@@ -134,4 +134,40 @@ public class GivenFsDelCommandWithAdf
         ];
         Assert.Equal(expectedEntries, entries.Select(x => x.Name).ToArray());
     }
+
+    [Fact]
+    public async Task When_DeletingRootWithWildcard_Then_AllDirectoriesAndFilesAreDeleted()
+    {
+        // arrange - paths
+        var mediaPath = $"{Guid.NewGuid()}.adf";
+        var deletePath = Path.Combine(mediaPath, "*");
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        // arrange - test command helper
+        using var testCommandHelper = new TestCommandHelper();
+
+        // arrange - create adf formatted disk with directories and files
+        await AdfTestHelper.CreateFormattedAdfDisk(testCommandHelper, mediaPath);
+        await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
+        // arrange - create fs del command
+        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
+            deletePath, uaeMetadata);
+        
+        // act - execute fs del command
+        var result = await fsDelCommand.Execute(CancellationToken.None);
+        
+        // assert - result is success
+        Assert.True(result.IsSuccess);
+        
+        // arrange - clear active medias to ensure changes to media is flushed
+        testCommandHelper.ClearActiveMedias();
+        
+        // assert - root directory is empty
+        var entries = (await AdfTestHelper
+                .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, []))
+            .OrderBy(x => x.Name)
+            .ToList();
+        Assert.Empty(entries);
+    }
 }

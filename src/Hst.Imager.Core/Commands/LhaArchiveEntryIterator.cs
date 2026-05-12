@@ -37,7 +37,7 @@ public class LhaArchiveEntryIterator : IEntryIterator
     public LhaArchiveEntryIterator(Stream stream, string rootPath, LhaArchive lhaArchive, bool recursive)
     {
         this.stream = stream;
-        mediaPath = MediaPath.LhaArchivePath;
+        mediaPath = Core.PathComponents.MediaPath.LhaArchivePath;
         this.rootPath = rootPath;
         this.lhaArchive = lhaArchive;
         this.recursive = recursive;
@@ -53,6 +53,8 @@ public class LhaArchiveEntryIterator : IEntryIterator
         lhaArchive.Dispose();
         stream.Dispose();
     }
+
+    public IMediaPath MediaPath => mediaPath;
 
     public async Task<Result> Initialize()
     {

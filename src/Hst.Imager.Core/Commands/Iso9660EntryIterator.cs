@@ -36,7 +36,7 @@ public class Iso9660EntryIterator : IEntryIterator
     public Iso9660EntryIterator(Stream stream, string rootPath, CDReader cdReader, bool recursive)
     {
         this.stream = stream;
-        mediaPath = MediaPath.GenericMediaPath;
+        mediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
         this.rootPath = string.IsNullOrEmpty(rootPath) ? string.Empty : rootPath;
         this.cdReader = cdReader;
         this.recursive = recursive;
@@ -51,6 +51,8 @@ public class Iso9660EntryIterator : IEntryIterator
         cdReader.Dispose();
         stream.Dispose();
     }
+
+    public IMediaPath MediaPath => mediaPath;
 
     public Task<Result> Initialize()
     {

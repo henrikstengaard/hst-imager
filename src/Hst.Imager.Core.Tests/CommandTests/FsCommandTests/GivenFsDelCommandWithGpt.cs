@@ -143,4 +143,43 @@ public class GivenFsDelCommandWithGpt
         ];
         Assert.Equal(expectedEntries, entries.Select(x => x.Name).ToArray());
     }
+    
+    [Fact]
+    public async Task When_DeletingRootWithWildcard_Then_AllDirectoriesAndFilesAreDeleted()
+    {
+        // arrange - paths
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var deletePath = Path.Combine(mediaPath, "gpt", "1", "*");
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        // arrange - test command helper
+        using var testCommandHelper = new TestCommandHelper();
+
+        // arrange - add media
+        testCommandHelper.AddTestMedia(mediaPath, 0);
+
+        // arrange - create gpt fat formatted disk with directories and files
+        await TestHelper.CreateGptFatFormattedDisk(testCommandHelper, mediaPath);
+        await GptTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
+
+        // arrange - create fs del command
+        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
+            deletePath, uaeMetadata);
+        
+        // act - execute fs del command
+        var result = await fsDelCommand.Execute(CancellationToken.None);
+        
+        // assert - result is success
+        Assert.True(result.IsSuccess);
+        
+        // arrange - clear active medias to ensure changes to media is flushed
+        testCommandHelper.ClearActiveMedias();
+        
+        // assert - root directory is empty
+        var entries = (await GptTestHelper
+                .GetEntriesFromFileSystemVolume(testCommandHelper, mediaPath, 0, []))
+            .OrderBy(x => x.Name)
+            .ToList();
+        Assert.Empty(entries);
+    }
 }

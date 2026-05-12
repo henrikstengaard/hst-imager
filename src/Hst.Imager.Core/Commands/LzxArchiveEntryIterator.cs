@@ -38,7 +38,7 @@ public class LzxArchiveEntryIterator : IEntryIterator
     public LzxArchiveEntryIterator(Stream stream, string rootPath, LzxArchive lzxArchive, bool recursive)
     {
         this.stream = stream;
-        mediaPath = MediaPath.LzxArchivePath;
+        mediaPath = Core.PathComponents.MediaPath.LzxArchivePath;
         this.rootPath = rootPath;
         this.lzxArchive = lzxArchive;
         this.recursive = recursive;
@@ -65,6 +65,8 @@ public class LzxArchiveEntryIterator : IEntryIterator
     }
 
     public void Dispose() => Dispose(true);
+
+    public IMediaPath MediaPath => mediaPath;
 
     public async Task<Result> Initialize()
     {

@@ -2,6 +2,7 @@
 using Hst.Core;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
+using Hst.Imager.Core.PathComponents;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -35,6 +36,8 @@ public class LzwArchiveEntryIterator : IEntryIterator
     public void Dispose()
     {
     }
+
+    public IMediaPath MediaPath => Core.PathComponents.MediaPath.GenericMediaPath;
 
     public Task<Result> Initialize()
     {

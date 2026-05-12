@@ -13,6 +13,7 @@ public static class FsCommandFactory
         command.AddCommand(CreateFsCopy());
         command.AddCommand(CreateFsExtract());
         command.AddCommand(CreateFsMkDir());
+        command.AddCommand(CreateFsDelete());
 
         return command;
     }
@@ -34,7 +35,6 @@ public static class FsCommandFactory
             getDefaultValue: () => UaeMetadata.UaeFsDb);
         
         var command = new Command("dir", "List files and subdirectories in a directory.");
-        command.AddAlias("d");
         command.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption, uaeMetadataOption, CommandFactory.FormatOption);
         command.AddArgument(pathArgument);
         command.AddOption(recursiveOption);
@@ -165,6 +165,20 @@ public static class FsCommandFactory
 
         var command = new Command("mkdir", "Create a directory.");
         command.SetHandler(CommandHandler.FsMkDir, pathArgument);
+        command.AddArgument(pathArgument);
+
+        return command;
+    }
+    
+    private static Command CreateFsDelete()
+    {
+        var pathArgument = new Argument<string>(
+            name: "Path",
+            description: "Path to directory or file to delete locally, in physical drive or image file.");
+
+        var command = new Command("delete", "Create a directory.");
+        command.AddAlias("del");
+        command.SetHandler(CommandHandler.FsDelete, pathArgument);
         command.AddArgument(pathArgument);
 
         return command;

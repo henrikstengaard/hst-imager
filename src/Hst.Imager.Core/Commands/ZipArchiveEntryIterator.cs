@@ -39,7 +39,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
     public ZipArchiveEntryIterator(Stream stream, string rootPath, ZipArchive zipArchive, bool recursive)
     {
         this.stream = stream;
-        mediaPath = MediaPath.ZipArchivePath;
+        mediaPath = Core.PathComponents.MediaPath.ZipArchivePath;
         this.rootPath = rootPath;
         this.zipArchive = zipArchive;
         this.recursive = recursive;
@@ -65,7 +65,9 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
         throw new InvalidOperationException("File system entry iterator not initialized");
     }
-    
+
+    public IMediaPath MediaPath => mediaPath;
+
     public Task<Result> Initialize()
     {
         zipEntries = zipArchive.Entries.OrderBy(x => x.FullName).ToList();
