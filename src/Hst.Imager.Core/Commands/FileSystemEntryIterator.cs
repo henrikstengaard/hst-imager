@@ -34,7 +34,7 @@ public class FileSystemEntryIterator(
     string[] rootPathComponents,
     bool recursive) : IEntryIterator
 {
-    private readonly IMediaPath mediaPath = MediaPath.GenericMediaPath;
+    private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
     private PathComponentMatcher pathComponentMatcher;
     private readonly Stack<Entry> nextEntries = new();
     private bool isFirst = true;
@@ -85,6 +85,8 @@ public class FileSystemEntryIterator(
     }
 
     public void Dispose() => Dispose(true);
+
+    public IMediaPath MediaPath => mediaPath;
 
     public Task<Result> Initialize()
     {

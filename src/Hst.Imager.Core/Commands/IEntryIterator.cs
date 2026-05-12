@@ -1,5 +1,6 @@
 ﻿using Hst.Core;
 using Hst.Imager.Core.Models;
+using Hst.Imager.Core.PathComponents;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -11,6 +12,7 @@ using Entry = Models.FileSystems.Entry;
 
 public interface IEntryIterator : IDisposable
 {
+    IMediaPath MediaPath { get; }
     Task<Result> Initialize();
     string[] PathComponents { get; }
     string[] DirPathComponents { get; }

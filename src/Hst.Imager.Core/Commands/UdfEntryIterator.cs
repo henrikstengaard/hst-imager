@@ -63,6 +63,8 @@ public class UdfEntryIterator : IEntryIterator
 
     public void Dispose() => Dispose(true);
 
+    public IMediaPath MediaPath => mediaPath;
+
     public Task<Result> Initialize()
     {
         return Task.FromResult(new Result());

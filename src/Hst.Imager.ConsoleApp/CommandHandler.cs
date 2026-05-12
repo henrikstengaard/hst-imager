@@ -685,6 +685,14 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path);
             await Execute(command);
         }
+
+        public static async Task FsDelete(string path)
+        {
+            using var commandHelper = GetCommandHelper(useCache: true);
+            var command = new FsDelCommand(GetLogger<FsDelCommand>(), commandHelper,
+                await GetPhysicalDrives(), path);
+            await Execute(command);
+        }
         
         public static async Task FsCopy(string srcPath, string destPath, bool recursive, bool skipAttributes, bool quiet,
             UaeMetadata uaeMetadata, bool makeDirectory, bool forceOverwrite)

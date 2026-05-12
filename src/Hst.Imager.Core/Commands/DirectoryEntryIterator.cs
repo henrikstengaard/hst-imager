@@ -46,6 +46,8 @@ public class DirectoryEntryIterator : IEntryIterator
         rootPathComponents = PathHelper.Split(rootPath);
     }
 
+    public IMediaPath MediaPath => Core.PathComponents.MediaPath.GenericMediaPath;
+
     public async Task<Result> Initialize()
     {
         if (rootPathComponents.Length == 0)

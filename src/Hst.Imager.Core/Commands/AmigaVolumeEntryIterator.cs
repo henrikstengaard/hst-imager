@@ -32,7 +32,7 @@ public class AmigaVolumeEntryIterator(
     bool recursive)
     : IEntryIterator
 {
-    private readonly IMediaPath mediaPath = MediaPath.AmigaOsPath;
+    private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.AmigaOsPath;
     private PathComponentMatcher pathComponentMatcher;
     private readonly Stack<Entry> nextEntries = new();
     private bool isFirst = true;
@@ -41,6 +41,8 @@ public class AmigaVolumeEntryIterator(
     private List<string> currentPathComponents = new(10);
     private uint currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
 
+    public IMediaPath MediaPath => mediaPath;
+    
     public PartitionTableType PartitionTableType => partitionTableType;
     public int PartitionNumber => partitionNumber;
 

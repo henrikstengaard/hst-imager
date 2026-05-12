@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core;
 using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.Extensions;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
@@ -33,13 +35,19 @@ public class FsDelCommand(
         
         using var entryIterator = entryIteratorResult.Value;
 
+        var stopwatch = new Stopwatch();
+
+        stopwatch.Start();
+
+        OnInformationMessage($"Deleting path '{path}'");
+
         var entries = new List<Entry>();
 
         while (await entryIterator.Next())
         {
             var entry = entryIterator.Current;
             
-            // skip directory entries when there are no entry path components or when it is a single file.
+            // skip directory entries when there are no entry path components or when it's a single file.
             if (entry.Type == EntryType.Dir &&
                 (entryIterator.IsSingleFileEntryNext || entry.RelativePathComponents.Length == 0))
             {
@@ -49,21 +57,67 @@ public class FsDelCommand(
             entries.Add(entry);
         }
 
-        // get writer to delete
-        foreach (var entry in entries)
+        var filesCount = 0;
+        var dirsCount = 0;
+        var totalBytes = 0L;
+
+        var dirPathComponents = entryIterator.DirPathComponents.Length > 0
+            ? new[] { entryIterator.DirPathComponents[^1] }
+            : [];
+        
+        // delete entries starting with the longest path to ensure files are deleted before their parent directories
+        foreach (var entry in entries.OrderByDescending(e => e.RelativePathComponents.Length))
         {
-            // delete
+            switch (entry.Type)
+            {
+                case EntryType.Dir:
+                case EntryType.LinkDir:
+                    dirsCount++;
+                    break;
+                case EntryType.File:
+                    filesCount++;
+                    totalBytes += entry.Size;
+                    break;
+                case EntryType.LinkFile:
+                    filesCount++;
+                    break;
+            }
+            
+            var pathComponents = entryIterator.IsSingleFileEntryNext
+                ? entry.RelativePathComponents
+                : dirPathComponents.Concat(entry.RelativePathComponents).ToArray();
+            
+            OnInformationMessage($"{entryIterator.MediaPath.Join(pathComponents)}");
+
             await entryIterator.DeleteEntry(entry.FullPathComponents);
         }
 
-        // delete root directory, if not a single file
-        if (!entryIterator.IsSingleFileEntryNext)
+        // delete root directory, if present and is not a single file
+        if (!entryIterator.IsSingleFileEntryNext &&
+            entryIterator.PathComponents.Length == entryIterator.DirPathComponents.Length)
         {
-            await entryIterator.DeleteEntry(entryIterator.PathComponents);
+            OnInformationMessage($"{entryIterator.DirPathComponents[^1]}");
+            
+            await entryIterator.DeleteEntry(entryIterator.DirPathComponents);
         }
 
         await entryIterator.Flush();
-        
+
+        stopwatch.Stop();
+
+        var stats = new List<string>();
+        if (dirsCount > 0 || filesCount == 0)
+        {
+            stats.Add($"{dirsCount} {(dirsCount > 1 ? "directories" : "directory")}");
+        }
+        if (filesCount > 0 || dirsCount == 0)
+        {
+            stats.Add($"{filesCount} {(filesCount == 1 ? "file" : "files")}");
+        }
+        stats.Add($"{totalBytes.FormatBytes()} deleted in {stopwatch.Elapsed.FormatElapsed()}");
+
+        OnInformationMessage(string.Join(", ", stats));
+
         return new Result();
     }
     
@@ -80,8 +134,16 @@ public class FsDelCommand(
                 return new Result<IEntryIterator>(mediaResult.Error);
             }
 
-            return await GetDirectoryEntryIterator(path, true, uaeMetadata,
+            var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
                 new MemoryAppCache());
+            if (directoryEntryIteratorResult.IsFaulted)
+            {
+                return new Result<IEntryIterator>(directoryEntryIteratorResult.Error);
+            }
+            var initializeResult = await directoryEntryIteratorResult.Value.Initialize();
+            return initializeResult.IsFaulted
+                ? new Result<IEntryIterator>(initializeResult.Error)
+                : directoryEntryIteratorResult;
         }
 
         var dataType = await commandHelper.DetectDataType(mediaResult.Value.MediaPath);
@@ -91,6 +153,10 @@ public class FsDelCommand(
         {
             var entryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
                 new MemoryAppCache());
+            if (entryIteratorResult.IsFaulted)
+            {
+                return new Result<IEntryIterator>(entryIteratorResult.Error);
+            }
             var initializeResult = await entryIteratorResult.Value.Initialize();
             return initializeResult.IsFaulted
                 ? new Result<IEntryIterator>(initializeResult.Error)

@@ -108,7 +108,7 @@ public class GivenFsDelCommandWithLocalDirectory
     public async Task When_DeletingADirectory_Then_DirectoryIsDeleted()
     {
         // arrange - paths
-        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var mediaPath = Guid.NewGuid().ToString();
         var deletePath = Path.Combine(mediaPath, "dir1");
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
 
@@ -143,6 +143,47 @@ public class GivenFsDelCommandWithLocalDirectory
                 Path.Combine(mediaPath, "dir2")
             ];
             Assert.Equal(expectedEntries, entries);
+        }
+        finally
+        {
+            TestHelper.DeletePaths(mediaPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_DeletingRootWithWildcard_Then_AllDirectoriesAndFilesAreDeleted()
+    {
+        // arrange - paths
+        var mediaPath = Guid.NewGuid().ToString();
+        var deletePath = Path.Combine(mediaPath, "*");
+        const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create local directory with directories and files
+            await LocalTestHelper.CreateDirectoriesAndFiles(mediaPath);
+
+            // arrange - create fs del command
+            var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
+                deletePath, uaeMetadata);
+            
+            // act - execute fs del command
+            var result = await fsDelCommand.Execute(CancellationToken.None);
+            
+            // assert - result is success
+            Assert.True(result.IsSuccess);
+            
+            // arrange - clear active medias to ensure changes to media is flushed
+            testCommandHelper.ClearActiveMedias();
+            
+            // assert - root directory is empty
+            var entries = Directory.GetFileSystemEntries(mediaPath, "*.*", SearchOption.TopDirectoryOnly)
+                .OrderBy(x => x)
+                .ToList();
+            Assert.Empty(entries);
         }
         finally
         {
