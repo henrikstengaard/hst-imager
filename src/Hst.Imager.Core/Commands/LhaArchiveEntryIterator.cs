@@ -221,6 +221,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
         foreach (var lhaEntry in lhaEntries)
         {
+            // skip lha entry, if name is empty.
+            // shareware version of picasso96.lha from aminet has 2 files in root directory without filename.
+            if (string.IsNullOrWhiteSpace(lhaEntry.Name))
+            {
+                continue;
+            }
+            
             var entryPath = GetEntryName(lhaEntry.Name);
 
             lhaEntryIndex.Add(entryPath, lhaEntry);
