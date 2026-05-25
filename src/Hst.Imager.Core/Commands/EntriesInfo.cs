@@ -1,3 +1,5 @@
+using Hst.Imager.Core.Models;
+
 namespace Hst.Imager.Core.Commands;
 
 using System.Collections.Generic;
@@ -8,4 +10,5 @@ public class EntriesInfo
     public string Path { get; set; }
     public IEnumerable<Entry> Entries { get; set; }
     public bool Recursive { get; set; }
+    public AttributesMode AttributesMode { get; set; } = AttributesMode.Auto;
 }

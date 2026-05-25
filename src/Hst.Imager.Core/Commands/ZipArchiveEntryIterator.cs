@@ -9,9 +9,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
-using Amiga.FileSystems;
 using Compressions.Zip;
-using Helpers;
 using PathComponents;
 using UaeMetadatas;
 using Entry = Models.FileSystems.Entry;
@@ -32,6 +30,7 @@ public class ZipArchiveEntryIterator : IEntryIterator
     private IList<ZipArchiveEntry> zipEntries = new List<ZipArchiveEntry>();
     private bool initialized;
     private readonly HashSet<string> dirHasEntries = [];
+    private AttributesMode attributesMode = AttributesMode.Auto;
 
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
@@ -149,6 +148,8 @@ public class ZipArchiveEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
 
+    public AttributesMode AttributesMode => attributesMode;
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -232,6 +233,20 @@ public class ZipArchiveEntryIterator : IEntryIterator
         var centralDirectoryFileHeaderIndex = new Dictionary<string, CentralDirectoryFileHeader>();
         await foreach (var centralDirectoryFileHeader in ReadCentralDirectoryFileHeaders())
         {
+            var hostOs = (HostOsFlags)centralDirectoryFileHeader.HostOs;
+            switch (hostOs)
+            {
+                case HostOsFlags.MsDos:
+                    attributesMode = AttributesMode.Windows;
+                    break;
+                case HostOsFlags.Amiga:
+                    attributesMode = AttributesMode.Amiga;
+                    break;
+                default:
+                    attributesMode = AttributesMode.Auto;
+                    break;
+            }
+            
             centralDirectoryFileHeaderIndex[centralDirectoryFileHeader.FileName] = centralDirectoryFileHeader;
         }
 
@@ -254,14 +269,12 @@ public class ZipArchiveEntryIterator : IEntryIterator
 
             var centralDirectoryFileHeader = centralDirectoryFileHeaderIndex.GetValueOrDefault(zipEntry.FullName);
 
-            var attributes = GetAttributes(centralDirectoryFileHeader);
+            var attributes = string.Empty;
             var properties = GetProperties(centralDirectoryFileHeader);
-
-            var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryPath, entryPath, isDir, zipEntry.LastWriteTime.LocalDateTime, zipEntry.Length,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {
@@ -288,26 +301,6 @@ public class ZipArchiveEntryIterator : IEntryIterator
         }
     }
 
-    private static string GetAttributes(CentralDirectoryFileHeader centralDirectoryFileHeader)
-    {
-        if (centralDirectoryFileHeader == null)
-        {
-            return string.Empty;
-        }
-
-        var hostOs = (HostOsFlags)centralDirectoryFileHeader.HostOs;
-        switch(hostOs)
-        {
-            case HostOsFlags.MsDos:
-                return FileAttributesFormatter.FormatMsDosAttributes((int)centralDirectoryFileHeader.ExternalFileAttributes);
-            case HostOsFlags.Amiga:
-                var protectionBitsValue = (int)((centralDirectoryFileHeader.ExternalFileAttributes >> 16) & 0xff);
-                return EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(protectionBitsValue ^ 0xf));
-            default:
-                return string.Empty;
-        }
-    }
-
     private static Dictionary<string, string> GetProperties(CentralDirectoryFileHeader centralDirectoryFileHeader)
     {
         var properties = new Dictionary<string, string>();
@@ -323,10 +316,16 @@ public class ZipArchiveEntryIterator : IEntryIterator
         }
 
         var hostOs = (HostOsFlags)centralDirectoryFileHeader.HostOs;
-        if (hostOs == HostOsFlags.Amiga)
+        switch (hostOs)
         {
-            var protectionBitsValue = (int)((centralDirectoryFileHeader.ExternalFileAttributes >> 16) & 0xff);
-            properties[Constants.EntryPropertyNames.ProtectionBits] = (protectionBitsValue ^ 0xf).ToString();
+            case HostOsFlags.MsDos:
+                var fileAttributes = (int)centralDirectoryFileHeader.ExternalFileAttributes;
+                properties[Constants.EntryPropertyNames.WindowsAttributes] = fileAttributes.ToString();
+                break;
+            case HostOsFlags.Amiga:
+                var protectionBitsValue = (int)((centralDirectoryFileHeader.ExternalFileAttributes >> 16) & 0xff);
+                properties[Constants.EntryPropertyNames.ProtectionBits] = (protectionBitsValue ^ 0xf).ToString();
+                break;
         }
 
         return properties;

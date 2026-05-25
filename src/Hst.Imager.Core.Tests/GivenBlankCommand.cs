@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests
+﻿using DiscUtils;
+
+namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;
@@ -12,6 +14,28 @@
 
     public class GivenBlankCommand : CommandTestBase
     {
+        [Fact]
+        public void Test()
+        {
+            var orderedPermissions = new[]
+            {
+                UnixFilePermissions.OwnerRead,
+                UnixFilePermissions.OwnerWrite,
+                UnixFilePermissions.OwnerExecute,
+                UnixFilePermissions.GroupRead,
+                UnixFilePermissions.GroupWrite,
+                UnixFilePermissions.GroupExecute,
+                UnixFilePermissions.OthersRead,
+                UnixFilePermissions.OthersWrite,
+                UnixFilePermissions.OthersExecute
+            };
+
+            var permission = (UnixFilePermissions)33188;
+
+            var t = 1;
+        }
+        
+        
         [Fact]
         public async Task WhenCreateBlankImgThenDataIzZeroFilled()
         {

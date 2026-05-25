@@ -147,6 +147,8 @@ public class LhaArchiveEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
 
+    public AttributesMode AttributesMode => AttributesMode.Amiga;
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -245,11 +247,10 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 properties.Add(Core.Constants.EntryPropertyNames.Comment, comment);
             }
 
-            var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
-
+            var attributes = string.Empty;
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
             recursive, entryPath, entryPath, isDir, lhaEntry.UnixLastModifiedStamp, lhaEntry.OriginalSize,
-            EntryFormatter.FormatProtectionBits(protectionBits), properties, dirAttributes).ToList();
+            attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {

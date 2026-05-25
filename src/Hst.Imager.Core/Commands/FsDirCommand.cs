@@ -557,7 +557,8 @@ public class FsDirCommand(
         {
             Path = path,
             Recursive = recursive,
-            Entries = entries
+            Entries = entries,
+            AttributesMode = entryIterator.AttributesMode
         });
     }
 

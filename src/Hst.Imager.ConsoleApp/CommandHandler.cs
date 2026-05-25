@@ -666,14 +666,15 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, blockSize, start));
         }
         
-        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, FormatEnum format)
+        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, AttributesMode attributesMode,
+            FormatEnum format)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, recursive, uaeMetadata: uaeMetadata);
             command.EntriesRead += (_, args) =>
             {
-                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, format));
+                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, attributesMode, format));
             };
             await Execute(command);
         }
@@ -701,18 +702,6 @@ namespace Hst.Imager.ConsoleApp
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
                 makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
-            await Execute(command);
-        }
-
-        public static async Task ArcList(string path, bool recursive)
-        {
-            using var commandHelper = GetCommandHelper();
-            var command = new ArcListCommand(GetLogger<ArcListCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, recursive);
-            command.EntriesRead += (_, args) =>
-            {
-                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, FormatEnum.Table));
-            };
             await Execute(command);
         }
 

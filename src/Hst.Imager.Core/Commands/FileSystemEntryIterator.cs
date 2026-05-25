@@ -20,19 +20,7 @@ using Entry = Models.FileSystems.Entry;
 /// <summary>
 /// File system entry iterator.
 /// </summary>
-/// <param name="media">Media used by iterator.</param>
-/// <param name="partitionTableType">Partition table type used by iterator.</param>
-/// <param name="partitionNumber">Partition number used by iterator.</param>
-/// <param name="fileSystem">File system to iterate through.</param>
-/// <param name="rootPathComponents">Root path components to root of iterator.</param>
-/// <param name="recursive">Iterate recursively.</param>
-public class FileSystemEntryIterator(
-    Media media,
-    PartitionTableType partitionTableType,
-    int partitionNumber,
-    IFileSystem fileSystem,
-    string[] rootPathComponents,
-    bool recursive) : IEntryIterator
+public class FileSystemEntryIterator : IEntryIterator
 {
     private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
     private PathComponentMatcher pathComponentMatcher;
@@ -42,6 +30,47 @@ public class FileSystemEntryIterator(
     private bool initialized;
     private bool disposed;
     private readonly HashSet<string> dirPathsIteratedIndex = [];
+    private readonly Media media;
+    private readonly PartitionTableType partitionTableType;
+    private readonly int partitionNumber;
+    private readonly IFileSystem fileSystem;
+    private readonly string[] rootPathComponents;
+    private readonly bool recursive;
+
+    /// <summary>
+    /// File system entry iterator.
+    /// </summary>
+    /// <param name="media">Media used by iterator.</param>
+    /// <param name="partitionTableType">Partition table type used by iterator.</param>
+    /// <param name="partitionNumber">Partition number used by iterator.</param>
+    /// <param name="fileSystem">File system to iterate through.</param>
+    /// <param name="rootPathComponents">Root path components to root of iterator.</param>
+    /// <param name="recursive">Iterate recursively.</param>
+    public FileSystemEntryIterator(Media media,
+        PartitionTableType partitionTableType,
+        int partitionNumber,
+        IFileSystem fileSystem,
+        string[] rootPathComponents,
+        bool recursive)
+    {
+        this.media = media;
+        this.partitionTableType = partitionTableType;
+        this.partitionNumber = partitionNumber;
+        this.fileSystem = fileSystem;
+        this.rootPathComponents = rootPathComponents;
+        this.recursive = recursive;
+        AttributesMode = GetAttributesMode(fileSystem);
+    }
+
+    private static AttributesMode GetAttributesMode(IFileSystem fileSystem)
+    {
+        return fileSystem switch
+        {
+            ExtFileSystem => AttributesMode.Unix,
+            FatFileSystem or NtfsFileSystem => AttributesMode.Windows,
+            _ => AttributesMode.Auto
+        };
+    }
 
     public PartitionTableType PartitionTableType => partitionTableType;
     public int PartitionNumber => partitionNumber;
@@ -55,6 +84,8 @@ public class FileSystemEntryIterator(
     /// Dir path components from root path components that exist and is set during initialization.
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
+
+    public AttributesMode AttributesMode { get; }
 
     public Media Media => media;
 
@@ -209,25 +240,23 @@ public class FileSystemEntryIterator(
         foreach (var dirPath in fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
             .OrderByDescending(x => x).ToList())
         {
-            var attributes = string.Empty;
             DateTime? lastWriteTime = null;
             try
             {
                 lastWriteTime = fileSystem.GetLastWriteTime(dirPath);
-                attributes = Format(dirPath);
             }
             catch (Exception)
             {
                 // ignored
             }
 
-            var properties = new Dictionary<string, string>();
-
-            var dirAttributes = string.Empty;
+            var properties = new Dictionary<string, string>(GetAttributeProperties(dirPath));
+            
+            var attributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, dirPath, dirPath, true, lastWriteTime ?? DateTime.Now, 0,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {
@@ -269,15 +298,14 @@ public class FileSystemEntryIterator(
 
             var lastWriteTime = fileInfo.LastWriteTime;
             var size = fileInfo.Length;
-            var attributes = Format(fileInfo.Attributes);
 
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>(GetAttributeProperties(filePath));
 
-            var dirAttributes = string.Empty;
+            var attributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, filePath, filePath, false, lastWriteTime, size,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {
@@ -302,98 +330,37 @@ public class FileSystemEntryIterator(
         return uniqueEntries.Values.Count;
     }
 
-    private string Format(string path)
+    private IEnumerable<KeyValuePair<string, string>> GetAttributeProperties(string path)
     {
-        switch (fileSystem)
+        var attributeProperties = new List<KeyValuePair<string, string>>();
+        
+        try
         {
-            case ExtFileSystem extFileSystem:
-                var unixFileInfo = extFileSystem.GetUnixFileInfo(path);
-                return Format(unixFileInfo);
-            case FatFileSystem fatFileSystem:
-                var fileAttributes = fatFileSystem.GetAttributes(path);
-                return Format(fileAttributes);
-            case NtfsFileSystem ntfsFileSystem:
-                var ntfsFileAttributes = ntfsFileSystem.GetAttributes(path);
-                return Format(ntfsFileAttributes);
-            default:
-                return string.Empty;
-        }
-    }
-
-    private static string Format(UnixFileSystemInfo unixFileSystemInfo)
-    {
-        var unixAttributes = "rwxrwxrwx";
-
-        if (unixFileSystemInfo?.Permissions == null)
-        {
-            return new string('-', unixAttributes.Length + 1);
-        }
-
-        var orderedPermissions = new[]
-        {
-            UnixFilePermissions.OwnerRead,
-            UnixFilePermissions.OwnerWrite,
-            UnixFilePermissions.OwnerExecute,
-            UnixFilePermissions.GroupRead,
-            UnixFilePermissions.GroupWrite,
-            UnixFilePermissions.GroupExecute,
-            UnixFilePermissions.OthersRead,
-            UnixFilePermissions.OthersWrite,
-            UnixFilePermissions.OthersExecute
-        };
-
-        return string.Concat(GetTypeAttribute(unixFileSystemInfo), FormatAttributes(unixAttributes,
-            orderedPermissions.Select(x => unixFileSystemInfo.Permissions.HasFlag(x)).ToArray()));
-    }
-
-    private static char GetTypeAttribute(UnixFileSystemInfo unixFileSystemInfo)
-    {
-        switch (unixFileSystemInfo.FileType)
-        {
-            case UnixFileType.Link:
-                return 'l';
-            case UnixFileType.Directory:
-                return 'd';
-            default:
-                return '-';
-        }
-    }
-
-    private static string Format(FileAttributes? fileAttributes)
-    {
-        const string fatAttributes = "ARHS";
-
-        if (fileAttributes == null)
-        {
-            return new string('-', fatAttributes.Length);
-        }
-
-        var orderedAttributes = new[]
-        {
-            FileAttributes.Archive,
-            FileAttributes.ReadOnly,
-            FileAttributes.Hidden,
-            FileAttributes.System
-        };
-
-        return FormatAttributes(fatAttributes,
-            orderedAttributes.Select(x => fileAttributes.Value.HasFlag(x)).ToArray());
-    }
-
-    private static string FormatAttributes(string attributes, bool[] presentAttributes)
-    {
-        var attributesArray = attributes.ToCharArray();
-        for (var i = 0; i < presentAttributes.Length; i++)
-        {
-            if (presentAttributes[i])
+            switch (fileSystem)
             {
-                continue;
+                case ExtFileSystem extFileSystem:
+                    var unixFileInfo = extFileSystem.GetUnixFileInfo(path);
+                    attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.UnixFileMode,
+                        unixFileInfo?.Permissions.ToString()));
+                    break;
+                case FatFileSystem fatFileSystem:
+                    var fileAttributes = fatFileSystem.GetAttributes(path);
+                    attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.WindowsAttributes,
+                        fileAttributes.ToString()));
+                    break;
+                case NtfsFileSystem ntfsFileSystem:
+                    var ntfsFileAttributes = ntfsFileSystem.GetAttributes(path);
+                    attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.WindowsAttributes,
+                        ntfsFileAttributes.ToString()));
+                    break;
             }
-
-            attributesArray[i] = '-';
+        }
+        catch (Exception)
+        {
+            // ignored
         }
 
-        return new string(attributesArray);
+        return attributeProperties;
     }
 
     public Task<Stream> OpenEntry(Entry entry)
