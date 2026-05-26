@@ -1,5 +1,7 @@
 ﻿using System;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Hst.Imager.Core;
 
@@ -11,6 +13,7 @@ public class InterceptorStream : Stream
     private readonly Stream baseStream;
     private readonly long? length;
     private readonly Func<byte[], int, int, int> readHandler;
+    private readonly Func<byte[], int, int, Task<int>> readAsyncHandler;
     private readonly Action<byte[], int, int> writeHandler;
     private readonly Func<long, SeekOrigin, long> seekHandler;
     private readonly Action<long> setLengthHandler;
@@ -18,6 +21,7 @@ public class InterceptorStream : Stream
 
     public InterceptorStream(Stream baseStream, long? length = null,
         Func<byte[], int, int, int> readHandler = null,
+        Func<byte[], int, int, Task<int>> readAsyncHandler = null,
         Action<byte[], int, int> writeHandler = null,
         Func<long, SeekOrigin, long> seekHandler = null,
         Action<long> setLengthHandler = null,
@@ -28,6 +32,7 @@ public class InterceptorStream : Stream
         this.seekHandler = seekHandler;
         this.length = length;
         this.readHandler = readHandler;
+        this.readAsyncHandler = readAsyncHandler;
         this.writeHandler = writeHandler;
         this.closeHandler = closeHandler;
     }
@@ -59,6 +64,18 @@ public class InterceptorStream : Stream
     public override int Read(byte[] buffer, int offset, int count)
     {
         return readHandler?.Invoke(buffer, offset, count) ?? baseStream.Read(buffer, offset, count);
+    }
+
+    public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+    {
+        if (readAsyncHandler != null)
+        {
+            return readAsyncHandler.Invoke(buffer, offset, count);
+        }
+
+        return readHandler != null
+            ? Task.FromResult(readHandler.Invoke(buffer, offset, count))
+            : baseStream.ReadAsync(buffer, offset, count, cancellationToken);
     }
 
     public override long Seek(long offset, SeekOrigin origin)
