@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.ConsoleApp;
+﻿using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.ConsoleApp;
 
 using System.CommandLine;
 using Hst.Imager.Core.UaeMetadatas;
@@ -33,12 +35,18 @@ public static class FsCommandFactory
             new[] { "--uaemetadata", "-uae" },
             description: "Type of UAE metadata to read.",
             getDefaultValue: () => UaeMetadata.UaeFsDb);
-        
+
+        var attributesOption = new Option<AttributesMode>(
+            new[] { "--attributes", "-a" },
+            description: "Type of attributes to display.",
+            getDefaultValue: () => AttributesMode.Auto);
+
         var command = new Command("dir", "List files and subdirectories in a directory.");
-        command.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption, uaeMetadataOption, CommandFactory.FormatOption);
+        command.SetHandler(CommandHandler.FsDir, pathArgument, recursiveOption, uaeMetadataOption, attributesOption, CommandFactory.FormatOption);
         command.AddArgument(pathArgument);
         command.AddOption(recursiveOption);
         command.AddOption(uaeMetadataOption);
+        command.AddOption(attributesOption);
         command.AddOption(CommandFactory.FormatOption);
 
         return command;

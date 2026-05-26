@@ -53,6 +53,8 @@ public class AmigaVolumeEntryIterator(
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
 
+    public AttributesMode AttributesMode => AttributesMode.Amiga;
+
     public void Dispose()
     {
     }
@@ -303,9 +305,6 @@ public class AmigaVolumeEntryIterator(
 
             var isDir = entry.Type == EntryType.Dir || entry.Type == EntryType.DirLink;
 
-            var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
-
-            var attributes = EntryFormatter.FormatProtectionBits(entry.ProtectionBits);
             var properties = new Dictionary<string, string>
             {
                 { Constants.EntryPropertyNames.Comment, entry.Comment },
@@ -317,10 +316,11 @@ public class AmigaVolumeEntryIterator(
             {
                 properties.Add(Constants.EntryPropertyNames.Link, entry.LinkPath);
             }
-            
+
+            var attributes = string.Empty;
             var iteratorEntry = EntryIteratorFunctions.CreateEntry(mediaPath, DirPathComponents,
                 recursive, entryPath, entryPath, entry.Type, entry.Date, entry.Size,
-                attributes, properties, dirAttributes);
+                attributes, properties, attributes);
 
             var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(iteratorEntry.RelativePathComponents, recursive) && 
                           pathComponentMatcher.IsMatch(iteratorEntry.FullPathComponents);

@@ -159,6 +159,8 @@ public class LzxArchiveEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
 
+    public AttributesMode AttributesMode => AttributesMode.Amiga;
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -242,11 +244,10 @@ public class LzxArchiveEntryIterator : IEntryIterator
                 properties.Add(Constants.EntryPropertyNames.Comment, lzxEntry.Comment);
             }
 
-            var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
-
+            var attributes = string.Empty;
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryPath, lzxEntry.Name, isDir, lzxEntry.Date, lzxEntry.UnpackedSize,
-                EntryFormatter.FormatProtectionBits(protectionBits), properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {

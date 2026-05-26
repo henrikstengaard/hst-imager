@@ -11,7 +11,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using DiscUtils.Iso9660;
-using Helpers;
 using PathComponents;
 using UaeMetadatas;
 
@@ -120,7 +119,9 @@ public class Iso9660EntryIterator : IEntryIterator
     /// Dir path components from root path components that exist and is set during initialization.
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
-    
+
+    public AttributesMode AttributesMode => AttributesMode.Windows;
+
     public Media Media => null;
     public string RootPath => rootPath;
     
@@ -191,14 +192,16 @@ public class Iso9660EntryIterator : IEntryIterator
         {
             var entryName = FormatPath(dirName);
             
-            var attributes = FileAttributesFormatter.FormatMsDosAttributes((int)cdReader.GetAttributes(dirName));
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>
+            {
+                { Constants.EntryPropertyNames.WindowsAttributes, ((int)cdReader.GetAttributes(dirName)).ToString() }
+            };
 
-            var dirAttributes = FileAttributesFormatter.FormatMsDosAttributes((int)FileAttributes.Archive);
+            var attributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryName, entryName, true, cdReader.GetLastWriteTime(dirName), 0,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {
@@ -217,16 +220,18 @@ public class Iso9660EntryIterator : IEntryIterator
             var formattedFilename = Iso9660ExtensionRegex.Replace(fileName, string.Empty);
             var entryName = FormatPath(StripIso9660Extension(formattedFilename));
 
-            var attributes = FileAttributesFormatter.FormatMsDosAttributes((int)cdReader.GetAttributes(entryName));
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>
+            {
+                { Constants.EntryPropertyNames.WindowsAttributes, ((int)cdReader.GetAttributes(entryName)).ToString() }
+            };
 
             var date = cdReader.GetLastWriteTime(fileName);
             var size = cdReader.GetFileLength(fileName);
-            var dirAttributes = string.Empty;
+            var attributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
                 recursive, entryName, fileName, false, date, size,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {

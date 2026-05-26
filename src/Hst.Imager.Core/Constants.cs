@@ -19,6 +19,8 @@ namespace Hst.Imager.Core
             public const string Comment = "Comment";
             public const string Link = "Link";
             public const string ProtectionBits = "$ProtectionBits";
+            public const string WindowsAttributes = "$WindowsAttributes";
+            public const string UnixFileMode = "$UnixFileMode";
         }
     }
 }

@@ -18,6 +18,11 @@ public interface IEntryIterator : IDisposable
     string[] DirPathComponents { get; }
     
     /// <summary>
+    /// Default attributes mode for iterator.
+    /// </summary>
+    AttributesMode AttributesMode { get; }
+    
+    /// <summary>
     /// Media mounted.
     /// </summary>
     Media Media { get; }

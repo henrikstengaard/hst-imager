@@ -147,6 +147,8 @@ public class LhaArchiveEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; } = [];
 
+    public AttributesMode AttributesMode => AttributesMode.Amiga;
+
     public Media Media => null;
     public string RootPath => rootPath;
 
@@ -221,6 +223,13 @@ public class LhaArchiveEntryIterator : IEntryIterator
 
         foreach (var lhaEntry in lhaEntries)
         {
+            // skip lha entry, if name is empty.
+            // shareware version of picasso96.lha from aminet has 2 files in root directory without filename.
+            if (string.IsNullOrWhiteSpace(lhaEntry.Name))
+            {
+                continue;
+            }
+            
             var entryPath = GetEntryName(lhaEntry.Name);
 
             lhaEntryIndex.Add(entryPath, lhaEntry);
@@ -238,11 +247,10 @@ public class LhaArchiveEntryIterator : IEntryIterator
                 properties.Add(Core.Constants.EntryPropertyNames.Comment, comment);
             }
 
-            var dirAttributes = EntryFormatter.FormatProtectionBits(ProtectionBitsConverter.ToProtectionBits(0));
-
+            var attributes = string.Empty;
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
             recursive, entryPath, entryPath, isDir, lhaEntry.UnixLastModifiedStamp, lhaEntry.OriginalSize,
-            EntryFormatter.FormatProtectionBits(protectionBits), properties, dirAttributes).ToList();
+            attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {

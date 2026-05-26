@@ -73,6 +73,7 @@ public class UdfEntryIterator : IEntryIterator
     public string[] PathComponents => rootPathComponents;
 
     public string[] DirPathComponents => rootPathComponents;
+    public AttributesMode AttributesMode => AttributesMode.Windows;
     public Media Media => null;
     public string RootPath => rootPath;
     
@@ -135,14 +136,15 @@ public class UdfEntryIterator : IEntryIterator
         {
             var fullPathComponents = mediaPath.Split(dirName);
 
-            var attributes = FileAttributesFormatter.FormatMsDosAttributes((int)udfReader.GetAttributes(dirName));
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>
+            {
+                { Constants.EntryPropertyNames.WindowsAttributes, ((int)udfReader.GetAttributes(dirName)).ToString() }
+            };
 
-            var dirAttributes = FileAttributesFormatter.FormatMsDosAttributes((int)FileAttributes.Archive);
-
+            var attributes = string.Empty;
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
                 recursive, dirName, dirName, true, udfReader.GetLastWriteTime(dirName), 0,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {
@@ -162,16 +164,18 @@ public class UdfEntryIterator : IEntryIterator
 
             var fullPathComponents = mediaPath.Split(entryName);
 
-            var attributes = FileAttributesFormatter.FormatMsDosAttributes((int)udfReader.GetAttributes(entryName));
-            var properties = new Dictionary<string, string>();
+            var attributes = string.Empty;
+            var properties = new Dictionary<string, string>
+            {
+                { Constants.EntryPropertyNames.WindowsAttributes, ((int)udfReader.GetAttributes(entryName)).ToString() }
+            };
 
             var date = udfReader.GetLastWriteTime(fileName);
             var size = udfReader.GetFileLength(fileName);
-            var dirAttributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, rootPathComponents,
                 recursive, entryName, fileName, false, date, size,
-                attributes, properties, dirAttributes).ToList();
+                attributes, properties, attributes).ToList();
 
             foreach (var entry in entries)
             {

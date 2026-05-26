@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests
+﻿using DiscUtils;
+
+namespace Hst.Imager.Core.Tests
 {
     using System;
     using System.IO;

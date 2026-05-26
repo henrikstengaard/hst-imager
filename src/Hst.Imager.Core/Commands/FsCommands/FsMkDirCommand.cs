@@ -95,7 +95,6 @@ public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper comma
             var entry = new Entry
             {
                 Type = EntryType.Dir,
-                Attributes = string.Empty,
                 Date = DateTime.Now,
                 Name = dirPathComponents[i],
                 RawPath = MediaPath.AmigaOsPath.Join(entryPathComponents),
