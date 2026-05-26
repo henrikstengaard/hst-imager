@@ -251,7 +251,7 @@ public class FileSystemEntryIterator : IEntryIterator
             }
 
             var properties = new Dictionary<string, string>(GetAttributeProperties(dirPath));
-            
+
             var attributes = string.Empty;
 
             var entries = EntryIteratorFunctions.CreateEntries(mediaPath, pathComponentMatcher, DirPathComponents,
