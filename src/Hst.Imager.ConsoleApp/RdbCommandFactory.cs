@@ -335,6 +335,10 @@
                 ["--use-experimental"],
                 description: "Use experimental partition sizes.");
 
+            var startCylinderOption = new Option<uint>(
+                name: "StartCylinder",
+                description: "Start cylinder to add partition.");
+
             var rdbPartAddCommand = new Command("add", "Add partition.");
             rdbPartAddCommand.SetHandler(async (context) =>
             {
@@ -352,9 +356,10 @@
                 var bootPriority = context.ParseResult.GetValueForOption(bootPriorityOption);
                 var blockSize = context.ParseResult.GetValueForOption(blockSizeOption);
                 var useExperimental = context.ParseResult.GetValueForOption(useExperimentalOption);
+                var startCylinder = context.ParseResult.GetValueForOption(startCylinderOption);
 
                 await CommandHandler.RdbPartAdd(path, name, dosType, size, reserved, preAlloc, buffers, maxTransfer, mask,
-                    noMount, bootable, bootPriority, blockSize, useExperimental);
+                    noMount, bootable, bootPriority, blockSize, useExperimental, startCylinder);
             });
 
             rdbPartAddCommand.AddArgument(pathArgument);
@@ -371,6 +376,7 @@
             rdbPartAddCommand.AddOption(bootPriorityOption);
             rdbPartAddCommand.AddOption(blockSizeOption);
             rdbPartAddCommand.AddOption(useExperimentalOption);
+            rdbPartAddCommand.AddOption(startCylinderOption);
 
             return rdbPartAddCommand;
         }

@@ -17,8 +17,7 @@ namespace Hst.Imager.Core.Commands
     using Models;
     using Size = Models.Size;
     using PartitionBlock = Amiga.RigidDiskBlocks.PartitionBlock;
-    using RigidDiskBlockWriter = Amiga.RigidDiskBlocks.RigidDiskBlockWriter;
-    using Hst.Imager.Core.Helpers;
+    using Helpers;
 
     public class RdbPartAddCommand : CommandBase
     {
@@ -39,11 +38,12 @@ namespace Hst.Imager.Core.Commands
         private readonly int? bootPriority;
         private readonly int? fileSystemBlockSize;
         private readonly bool useExperimental;
+        private readonly uint? startCylinder;
 
         public RdbPartAddCommand(ILogger<RdbPartAddCommand> logger, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, string name, string dosType, Size size,
             uint? reserved, uint? preAlloc, uint? buffers, uint? maxTransfer, uint? mask, bool noMount, bool bootable,
-            int? bootPriority, int? fileSystemBlockSize, bool useExperimental)
+            int? bootPriority, int? fileSystemBlockSize, bool useExperimental, uint? startCylinder)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -62,6 +62,7 @@ namespace Hst.Imager.Core.Commands
             this.bootPriority = bootPriority;
             this.fileSystemBlockSize = fileSystemBlockSize;
             this.useExperimental = useExperimental;
+            this.startCylinder = startCylinder;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -131,27 +132,40 @@ namespace Hst.Imager.Core.Commands
             {
                 return new Result(new Error("Rigid Disk Block not found"));
             }
-            
-            var unallocatedPart = diskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(x =>
-                x.PartType == PartType.Unallocated && x.StartOffset > rdbPartitionTable.Reserved.EndOffset &&
-                x.Size >= partitionSize);
-            if (unallocatedPart == null)
-            {
-                return new Result(new Error(
-                    $"Rigid Disk Block does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
-            }
 
             var cylinderSize = diskInfo.RigidDiskBlock.Sectors * diskInfo.RigidDiskBlock.Heads *
                                diskInfo.RigidDiskBlock.BlockSize;
-            var lowCyl = Convert.ToUInt32(Math.Ceiling((double)unallocatedPart.StartOffset / cylinderSize));
-            if (lowCyl < diskInfo.RigidDiskBlock.LoCylinder)
+            
+            if (startCylinder.HasValue)
             {
-                lowCyl = diskInfo.RigidDiskBlock.LoCylinder;
+                if (startCylinder.Value > rigidDiskBlock.HiCylinder)
+                {
+                    return new Result(new Error(
+                        $"Start cylinder '{startCylinder}' is larger than Rigid Disk Block high cylinder '{diskInfo.RigidDiskBlock.HiCylinder}'"));
+                }
+                
+                if (startCylinder.Value < diskInfo.RigidDiskBlock.LoCylinder)
+                {
+                    return new Result(new Error(
+                        $"Start cylinder '{startCylinder}' is smaller than Rigid Disk Block low cylinder '{diskInfo.RigidDiskBlock.LoCylinder}'"));
+                }
             }
 
-            var cylinders = partitionSize == 0
-                ? diskInfo.RigidDiskBlock.HiCylinder - lowCyl + 1
-                : Convert.ToUInt32(Math.Ceiling((double)partitionSize / cylinderSize));
+            var firstAvailableOffset = diskInfo.RigidDiskBlock.LoCylinder * cylinderSize;
+            var startOffset = startCylinder.HasValue ? (long)startCylinder * cylinderSize : 0;
+            var unallocatedPart = FindUnallocatedPart(diskInfo.RdbPartitionTablePart.Parts, firstAvailableOffset,
+                startOffset, partitionSize);
+            
+            if (unallocatedPart == null)
+            {
+                return new Result(new Error(
+                    $"Rigid Disk Block does not have unallocated disk space {(startCylinder.HasValue ? $"at start cylinder '{startCylinder}' " : string.Empty)}for partition size '{size}' ({partitionSize} bytes)"));
+            }
+
+            var lowCyl = startCylinder ?? Convert.ToUInt32(Math.Ceiling((double)unallocatedPart.StartOffset / cylinderSize));
+            
+            var cylinders = Convert.ToUInt32(Math.Ceiling((double)(partitionSize == 0
+                ? unallocatedPart.Size : partitionSize) / cylinderSize));
 
             if (cylinders <= 0)
             {
@@ -256,6 +270,27 @@ namespace Hst.Imager.Core.Commands
             await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
             return new Result();
+        }
+        
+        private static PartInfo FindUnallocatedPart(IEnumerable<PartInfo> parts, long firstAvailableOffset,
+            long startOffset, long partitionSize)
+        {
+            var unallocatedParts = parts.Where(part => part.PartType == PartType.Unallocated &&
+                                                       part.StartOffset >= firstAvailableOffset);
+
+            if (startOffset > 0)
+            {
+                unallocatedParts = unallocatedParts.Where(part => part.StartOffset <= startOffset);
+            }
+
+            if (partitionSize > 0)
+            {
+                unallocatedParts = startOffset > 0
+                    ? unallocatedParts.Where(part => startOffset + partitionSize - 1 <= part.EndOffset)
+                    : unallocatedParts.Where(part => part.Size >= partitionSize);
+            }
+            
+            return unallocatedParts.FirstOrDefault();
         }
     }
 }

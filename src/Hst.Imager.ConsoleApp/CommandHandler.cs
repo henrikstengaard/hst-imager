@@ -575,13 +575,13 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,
             uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int? priority,
-            int? fileSystemBlockSize, bool useExperimental)
+            int? fileSystemBlockSize, bool useExperimental, uint startCylinder)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
                 ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, priority,
-                fileSystemBlockSize, useExperimental));
+                fileSystemBlockSize, useExperimental, startCylinder));
         }
 
         public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,

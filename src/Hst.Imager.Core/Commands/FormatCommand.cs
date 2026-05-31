@@ -539,7 +539,9 @@ namespace Hst.Imager.Core.Commands
                 // add workbench partition
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
-                physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null, 0x1fe00, null, false, true, null, 512, useExperimental);
+                physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null,
+                    0x1fe00, null, false, true, null, 512,
+                    useExperimental, null);
                 AddMessageEvents(rdbPartAddCommand);
 
                 rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationToken);
@@ -588,7 +590,8 @@ namespace Hst.Imager.Core.Commands
                 partitionName = $"DH{partitionNumber}";
                 rdbPartAddCommand = new RdbPartAddCommand(loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper,
                     physicalDrives, rdbPath, partitionName, dosType, partitionSize, null, null, null,
-                    0x1fe00, null, false, false, null, 512, useExperimental);
+                    0x1fe00, null, false, false, null, 512,
+                    useExperimental, null);
                 AddMessageEvents(rdbPartAddCommand);
 
                 rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationToken);
@@ -636,19 +639,6 @@ namespace Hst.Imager.Core.Commands
             }
 
             var formatSize = diskSize.ResolveSize(size).ToSectorSize();
-
-
-            // should be a argument?
-            //var piStormDiskCount = 1;
-            
-            
-            // limit to 1 pistorm disk by default, if size is not defined and disk size is larger than 128gb
-            // if ((size == null || size.Value == 0)
-            //     && formatSize > 128.GB()
-            //     && diskSize > 128.GB())
-            // {
-            //     formatSize = 128.GB();
-            // }
 
             long lastSector = formatSize / 512;
 
