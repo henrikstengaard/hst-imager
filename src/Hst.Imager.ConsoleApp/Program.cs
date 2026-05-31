@@ -4,8 +4,7 @@ using Hst.Imager.Core.PhysicalDrives;
 
 namespace Hst.Imager.ConsoleApp
 {
-    using System.CommandLine.Builder;
-    using System.CommandLine.Parsing;
+    using System.CommandLine;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -63,41 +62,37 @@ namespace Hst.Imager.ConsoleApp
 
             var rootCommand = CommandFactory.CreateRootCommand();
 
-            // global handler for verbose and log file options
-            var parser = new CommandLineBuilder(rootCommand).AddMiddleware(async (context, next) =>
+            var parseResult = rootCommand.Parse(args);
+
+            var verbose = parseResult.GetValue(CommandFactory.VerboseOption);
+            var logFile = parseResult.GetValue(CommandFactory.LogFileOption);
+            var format = parseResult.GetValue(CommandFactory.FormatOption);
+
+            AppState.Instance.LoggingLevelSwitch.MinimumLevel =
+                verbose ? LogEventLevel.Debug : LogEventLevel.Information;
+
+            if (format == FormatEnum.Json)
             {
-                var verbose = context.ParseResult.GetValueForOption(CommandFactory.VerboseOption);
-                var logFile = context.ParseResult.GetValueForOption(CommandFactory.LogFileOption);
-                var format = context.ParseResult.GetValueForOption(CommandFactory.FormatOption);
+                AppState.Instance.LoggingLevelSwitch.MinimumLevel = LogEventLevel.Error;
+            }
 
-                AppState.Instance.LoggingLevelSwitch.MinimumLevel =
-                    verbose ? LogEventLevel.Debug : LogEventLevel.Information;
+            AddLogFile(logFile);
 
-                if (format == FormatEnum.Json)
-                {
-                    AppState.Instance.LoggingLevelSwitch.MinimumLevel = LogEventLevel.Error;
-                }
+            if (verbose)
+            {
+                Pfs3Logger.Instance.RegisterLogger(new SerilogPfs3Logger());
+            }
 
-                AddLogFile(logFile);
+            var appState = AppState.Instance;
+            var app =
+                $"Hst Imager v{appState.Version.Major}.{appState.Version.Minor}.{appState.Version.Build} ({appState.BuildDate})";
+            var author = "Henrik Nørfjand Stengaard";
 
-                if (verbose)
-                {
-                    Pfs3Logger.Instance.RegisterLogger(new SerilogPfs3Logger());
-                }
+            Log.Logger.Information(app);
+            Log.Logger.Information(author);
+            Log.Logger.Information($"[CMD] {string.Join(" ", args)}");
 
-                var appState = AppState.Instance;
-                var app =
-                    $"Hst Imager v{appState.Version.Major}.{appState.Version.Minor}.{appState.Version.Build} ({appState.BuildDate})";
-                var author = "Henrik Nørfjand Stengaard";
-
-                Log.Logger.Information(app);
-                Log.Logger.Information(author);
-                Log.Logger.Information($"[CMD] {string.Join(" ", args)}");
-
-                await next(context);
-            }).UseDefaults().Build();
-
-            return await parser.InvokeAsync(args);
+            return await parseResult.InvokeAsync(new InvocationConfiguration());
         }
     }
 }
