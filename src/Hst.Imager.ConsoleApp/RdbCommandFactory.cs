@@ -335,7 +335,7 @@
                 ["--use-experimental"],
                 description: "Use experimental partition sizes.");
 
-            var startCylinderOption = new Option<uint>(
+            var startCylinderOption = new Option<uint?>(
                 name: "StartCylinder",
                 description: "Start cylinder to add partition.");
 
