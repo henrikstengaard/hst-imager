@@ -1,7 +1,5 @@
 using System;
 using System.CommandLine;
-using System.CommandLine.Builder;
-using System.CommandLine.Parsing;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -15,15 +13,13 @@ namespace Hst.Imager.ConsoleApp.Tests
             // arrange - create root command
             var rootCommand = CommandFactory.CreateRootCommand();
 
-            // arrange - create command line parser
-            var parser = new CommandLineBuilder(rootCommand).UseDefaults().Build();
-
             // act & assert - invoke subcommands in root command and assert no exception is thrown
             foreach (var command in rootCommand.Subcommands)
             {
                 try
                 {
-                    await parser.InvokeAsync([command.Name]);
+                    var parseResult = rootCommand.Parse([command.Name]);
+                    await parseResult.InvokeAsync(new InvocationConfiguration());
                 }
                 catch (Exception e)
                 {
@@ -41,16 +37,14 @@ namespace Hst.Imager.ConsoleApp.Tests
             // arrange - create root command
             var rootCommand = CommandFactory.CreateRootCommand();
 
-            // arrange - create command line parser
-            var parser = new CommandLineBuilder(rootCommand).UseDefaults().Build();
-
             try
             {
                 // arrange - create empty image file
                 await File.WriteAllBytesAsync(imgPath, Array.Empty<byte>());
 
                 // act - info command with image file
-                var errorCode = await parser.InvokeAsync(new[] { "info", imgPath });
+                var parseResult = rootCommand.Parse(new[] { "info", imgPath });
+                var errorCode = await parseResult.InvokeAsync(new InvocationConfiguration());
 
                 // assert - info command returned 0
                 Assert.Equal(0, errorCode);
