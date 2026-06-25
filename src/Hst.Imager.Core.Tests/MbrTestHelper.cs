@@ -15,8 +15,17 @@ namespace Hst.Imager.Core.Tests;
 
 public static class MbrTestHelper
 {
+    public static async Task CreateFatFormattedFloppy(TestCommandHelper testCommandHelper, string path)
+    {
+        const int mediaSize = 1474560;
+        var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: mediaSize, create: true);
+        using var media = mediaResult.Value;
+
+        FatFileSystem.FormatFloppy(media.Stream, FloppyDiskType.HighDensity, "TEST       ");
+    }
+    
     public static async Task CreateMbrFatFormattedDisk(TestCommandHelper testCommandHelper, string path,
-        long diskSize = 10 * 1024 * 1024)
+        long diskSize = 10 * 1024 * 1024, byte biosPartitionType = BiosPartitionTypes.Fat32Lba)
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(path, size: diskSize, create: true);
         using var media = mediaResult.Value;
@@ -24,7 +33,7 @@ public static class MbrTestHelper
         var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = BiosPartitionTable.Initialize(disk);
         var partitionIndex = biosPartitionTable.CreatePrimaryBySector(1, (disk.Capacity / disk.SectorSize) - 1,
-            BiosPartitionTypes.Fat32Lba, true);
+            biosPartitionType, true);
         FatFileSystem.FormatPartition(disk, partitionIndex, "FATDISK");
     }
     
@@ -159,7 +168,7 @@ public static class MbrTestHelper
         media.Dispose();
     }
 
-    public static async Task CreateFile(TestCommandHelper testCommandHelper, string path, string[] pathComponents)
+    public static async Task CreateFile(TestCommandHelper testCommandHelper, string path, string[] pathComponents, byte[] data = null)
     {
         var (media, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
 
@@ -167,8 +176,23 @@ public static class MbrTestHelper
         {
             fileSystem.CreateDirectory(string.Join("\\",  pathComponents.Take(pathComponents.Length - 1)));
         }
-        
-        await using var file = fileSystem.OpenFile(string.Join("\\",  pathComponents), FileMode.Create, FileAccess.Write);
+
+        using (var file = fileSystem.OpenFile(string.Join("\\", pathComponents), FileMode.Create, FileAccess.Write))
+        {
+            if (data != null)
+            {
+                await file.WriteAsync(data, 0, data.Length);
+            }
+        }
+
+        media.Dispose();
+    }
+
+    public static async Task DeleteFile(TestCommandHelper testCommandHelper, string path, string[] pathComponents)
+    {
+        var (media, fileSystem) = await MountFileSystem(testCommandHelper, path, 0, true);
+
+        fileSystem.DeleteFile(string.Join("\\", pathComponents));
 
         media.Dispose();
     }
@@ -185,6 +209,11 @@ public static class MbrTestHelper
         }
             
         var media = mediaResult.Value;
+
+        if (media.Size == 1474560)
+        {
+            return (mediaResult.Value, new FatFileSystem(media.Stream));
+        }
         
         var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = new BiosPartitionTable(disk);
@@ -232,7 +261,8 @@ public static class MbrTestHelper
             Type = EntryType.File,
             Name = Path.GetFileName(x),
             RawPath = x,
-            FullPathComponents = x.Split(['\\', '/'])
+            FullPathComponents = x.Split(['\\', '/']),
+            Size = fileSystem.GetFileLength(x)
         }).ToList();
 
         media.Dispose();

@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Extensions;
+using Hst.Imager.Core.FileSystems.Fat;
 
 namespace Hst.Imager.Core.FileSystems.Fat32;
 
@@ -171,7 +172,7 @@ public static class Fat32Formatter
         }
 
         // create volume id entry
-        var volumeIdEntry = new Fat32Entry
+        var volumeIdEntry = new FatEntry
         {
             Name = Fat32FileNameHelper.MakeValidVolumeLabel(volumeLabel),
             Attribute = 8,
@@ -179,7 +180,7 @@ public static class Fat32Formatter
         };
 
         // build volume id entry bytes
-        var volumeIdEntryBytes = Fat32EntryWriter.Build(volumeIdEntry);
+        var volumeIdEntryBytes = FatEntryWriter.Build(volumeIdEntry);
 
         // calculate root directory location
         var rootDirSector = reservedSectorCount + (numberOfFats * fatSizeInSectors);

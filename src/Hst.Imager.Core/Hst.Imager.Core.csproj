@@ -3,7 +3,7 @@
     <ItemGroup>
       <PackageReference Include="Hst.Amiga" Version="0.6.222" />
       <PackageReference Include="hst.compression" Version="0.4.85" />
-      <PackageReference Include="Hst.Core" Version="0.4.87" />
+      <PackageReference Include="Hst.Core" Version="0.4.91" />
       <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.74" />
       <PackageReference Include="LTRData.DiscUtils.ExFat" Version="1.0.74" />
       <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.74" />
@@ -22,6 +22,7 @@
 
     <ItemGroup>
       <Folder Include="Compressions\Xz\" />
+      <Folder Include="FileSystems\Fat\docs\" />
       <Folder Include="Properties\" />
     </ItemGroup>
 

@@ -112,6 +112,32 @@ Cluster 2 until end of partition are data area.
 | Reserved sectors - (Reserved sectors + Fat Size)           | Fat Tables                                  |
 | Reserved sectors + (# of Sectors Per FAT * number of fats) | Data Area (Starts with Cluster #2)          |
 
+
+#
+
+Reserved values
+Not all values mean "next cluster" — the full meaning of a FAT16 entry:
+
+| Value         | Meaning               |
+|---------------|-----------------------|
+| 0x0000        | Free cluster          |
+| 0x0001        | Reserved              |
+| 0x0002–0xFFEF | Next cluster in chain |
+| 0xFFF0–0xFFF6 | Reserved              |
+| 0xFFF7        | Bad cluster           |
+| 0xFFF8–0xFFFF | End of chain (EOF)    |
+
+
+# Structure
+
+FAT partition structure:
+- Boot sector
+- Reserved sectors
+- FAT1
+- FAT2
+- Data Area (Starts with Cluster #2)
+
+
 ## Cluster Meaning
 
 A Cluster is a Group of Sectors on the Hard Drive that have information in them. A 4K Cluster has 8 Sectors in it (512*8=4096). Each Cluster is given a spot in the FAT Table. When you look at an Entry in the FAT, the number there tells you whether or not that cluster has data in it, and if so, if it is the end of the data or there is another cluster after it. All Data on a Partition starts with Cluster #2. If the FAT Entry is 0, then there is no data in that cluster. If the FAT Entry is 0FFFFFFFh, then it is the last entry in the chain.

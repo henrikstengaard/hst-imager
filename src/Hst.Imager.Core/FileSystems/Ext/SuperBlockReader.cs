@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text;
+using Hst.Core.Converters;
 
 namespace Hst.Imager.Core.FileSystems.Ext;
 
