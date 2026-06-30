@@ -238,9 +238,9 @@ public static class FsCommandFactory
             Description = "Path to directory or file to delete locally, in physical drive or image file."
         };
 
-        var command = new Command("delete", "Create a directory.");
+        var command = new Command("delete", "Delete a directory or file.");
         command.Aliases.Add("del");
-        command.SetAction((ParseResult ctx) =>
+        command.SetAction(ctx =>
         {
             var path = ctx.GetValue(pathArgument);
             return CommandHandler.FsDelete(path);
