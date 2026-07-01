@@ -28,13 +28,14 @@ The FAT file system comes in three main variants: FAT12, FAT16, and FAT32, each 
 | FAT32       | 28 bits        | 268,435,445             | 512 B - 32 KB | 2 TB (up to 8 TB) | 4 GB           |
 
 Maximum Volume Size = Number of Clusters * Cluster Size.
+
 Maximum Volume Size = 65,536 clusters * 32KB = 2GB for FAT16.
 
 FAT32 does not support partitions smaller than 512 MB.
 
 Theoretically FAT32 can support volumes up to 16 TB with 64 KB cluster size, but MBR and Windows limits it to 2 TB.
 
-The FAT type can be determined by the number of clusters in the data area:
+The FAT type is determined by the number of clusters in the data area:
 - FAT12: 0 - 4,085 clusters.
 - FAT16: 4,086 - 65,525 clusters.
 - FAT32: 65,526 - 268,435,445 clusters.
@@ -140,3 +141,55 @@ The Extended Bios Parameter Block (EBPB) for FAT32 has the following structure:
 | 0x43   | 4             | UInt32       | Volume serial number (BS_VolID)      | -                                              | This field has the same definition as it does for FAT12 and FAT16 media. The only difference for FAT32 media is that the field is at a different offset in the boot sector.                                                                     |
 | 0x47   | 11            | ASCII String | Volume label (BS_VolLab)             | "NO NAME    " (default)                        | This field has the same definition as it does for FAT12 and FAT16 media. The only difference for FAT32 media is that the field is at a different offset in the boot sector.                                                                     |
 | 0x52   | 8             | ASCII String | File system type (BS_FilSysType)     | "FAT32   " (for FAT32)                         | This field has the same definition as it does for FAT12 and FAT16 media. The only difference for FAT32 media is that the field is at a different offset in the boot sector.                                                                     |  
+
+## Calculations
+
+Number of sectors in FAT area is determined by the following formula:
+```
+If(BPB_FATSz16 != 0)
+    FATSz = BPB_FATSz16;
+Else
+    FATSz = BPB_FATSz32;
+```
+
+First data sector of the volume is calculated as follows:
+```
+FirstDataSector = BPB_ResvdSecCnt + (BPB_NumFATs * FATSz) + RootDirSectors;
+```
+
+First sector of cluster N is calculated as follows:
+```
+FirstSectorofCluster = ((N – 2) * BPB_SecPerClus) + FirstDataSector;
+```
+
+Total number of sectors in the volume is calculated as follows:
+```
+If(BPB_TotSec16 != 0)
+    TotSec = BPB_TotSec16;
+Else
+    TotSec = BPB_TotSec32;
+```
+
+Number of data sectors is calculated as follows:
+```
+DataSec = TotSec – (BPB_ResvdSecCnt + (BPB_NumFATs * FATSz) + RootDirSectors);
+```
+
+Count of clusters in the data region is calculated as follows (computation rounds down):
+
+```
+CountofClusters = DataSec / BPB_SecPerClus;
+```
+
+FAT type is determined by the number of clusters in the data area:
+
+```
+If(CountofClusters < 4085) {
+    /* Volume is FAT12 */
+} else if(CountofClusters < 65525) {
+    /* Volume is FAT16 */
+} else {
+    /* Volume is FAT32 */
+}
+```
+

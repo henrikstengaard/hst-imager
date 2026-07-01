@@ -4,7 +4,7 @@ using Hst.Core.Converters;
 namespace Hst.Imager.Core.FileSystems.Fat.Clusters;
 
 /// <summary>
-/// FAT16 iterator for reading cluster chain in file allocation table.
+/// FAT16 cluster reader for reading cluster chain in file allocation table.
 /// </summary>
 public static class Fat16Cluster
 {

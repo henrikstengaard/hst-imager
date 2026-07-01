@@ -174,9 +174,9 @@ public static class Fat32Formatter
         // create volume id entry
         var volumeIdEntry = new FatEntry
         {
-            Name = Fat32FileNameHelper.MakeValidVolumeLabel(volumeLabel),
+            Name = Encoding.ASCII.GetBytes(Fat32FileNameHelper.MakeValidVolumeLabel(volumeLabel)),
             Attribute = 8,
-            CreationDate = DateTime.Now
+            CreatedDate = DateTime.Now
         };
 
         // build volume id entry bytes

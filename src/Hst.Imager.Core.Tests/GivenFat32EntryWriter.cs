@@ -15,9 +15,9 @@ public class GivenFatEntryWriter
         // arrange - fat entry
         var fatEntry = new FatEntry
         {
-            Name = "DISK",
+            Name = Encoding.ASCII.GetBytes("DISK"),
             Attribute = 0x8,
-            CreationDate = new DateTime(2025, 3, 1, 12, 0, 0, DateTimeKind.Utc),
+            CreatedDate = new DateTime(2025, 3, 1, 12, 0, 0, DateTimeKind.Utc),
         };
 
         // act - build fat entry bytes
@@ -27,16 +27,16 @@ public class GivenFatEntryWriter
         Assert.Equal(Encoding.ASCII.GetBytes("DISK       "), fatEntryBytes.Take(11));
 
         // assert - creation date is written correctly
-        var time = (fatEntry.CreationDate.Hour << 11) |
-                   (fatEntry.CreationDate.Minute << 5) |
-                   (fatEntry.CreationDate.Second / 2);
+        var time = (fatEntry.CreatedDate.Hour << 11) |
+                   (fatEntry.CreatedDate.Minute << 5) |
+                   (fatEntry.CreatedDate.Second / 2);
         Assert.Equal(time & 0xff, fatEntryBytes[0x16]);
         Assert.Equal(time >> 8, fatEntryBytes[0x17]);
 
         // assert - creation time is written correctly
-        var date = ((fatEntry.CreationDate.Year - 1980) << 9) |
-                   (fatEntry.CreationDate.Month << 5) |
-                   fatEntry.CreationDate.Day;
+        var date = ((fatEntry.CreatedDate.Year - 1980) << 9) |
+                   (fatEntry.CreatedDate.Month << 5) |
+                   fatEntry.CreatedDate.Day;
         Assert.Equal(date & 0xff, fatEntryBytes[0x18]);
         Assert.Equal(date >> 8, fatEntryBytes[0x19]);
     }

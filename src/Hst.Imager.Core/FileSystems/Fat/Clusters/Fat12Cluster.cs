@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Hst.Imager.Core.FileSystems.Fat.Clusters;
 
 /// <summary>
-/// FAT12 iterator for reading cluster chain in file allocation table.
+/// FAT12 cluster reader for reading cluster chain in file allocation table.
 /// </summary>
 public static class Fat12Cluster
 {

@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,9 +20,8 @@ public static class FatReader
 
         var biosParameterBlock = BiosParameterBlockReader.Read(sectorData);
 
-        var totalSectors = biosParameterBlock.TotalSectors != 0
-            ? (long)biosParameterBlock.TotalSectors
-            : biosParameterBlock.TotalSectorsFat32;
+        var rootDirSectors = (biosParameterBlock.RootEntriesCount * Constants.FatEntrySize +
+            biosParameterBlock.BytesPerSector - 1) / biosParameterBlock.BytesPerSector;
 
         var extendedBiosParameterBlock = biosParameterBlock.FatSectors != 0
             ? ExtendedBiosParameterBlockReader.Read(sectorData)
@@ -31,22 +31,31 @@ public static class FatReader
             ? biosParameterBlock.FatSectors
             : extendedBiosParameterBlock.FatSectorsFat32;
 
-        var firstRootSector = biosParameterBlock.ReservedSectorCount + (biosParameterBlock.NumberOfFats * fatSectors);
+        long firstDataSector = biosParameterBlock.ReservedSectorCount + (biosParameterBlock.NumberOfFats * fatSectors);
 
-        var rootSectors = (biosParameterBlock.RootEntriesCount * Constants.FatEntrySize +
-                              biosParameterBlock.BytesPerSector - 1) /
-                          biosParameterBlock.BytesPerSector;
+        var totalSectors = biosParameterBlock.TotalSectors != 0
+            ? (long)biosParameterBlock.TotalSectors
+            : biosParameterBlock.TotalSectorsFat32;
 
-        var firstDataSector = firstRootSector + rootSectors;
+        var dataSectors = totalSectors - firstDataSector + rootDirSectors;
 
-        var dataSectors = totalSectors - firstDataSector;
+        var clusterCount = Convert.ToInt64(Math.Floor((double)dataSectors / biosParameterBlock.SectorsPerCluster));
 
-        var clusterCount = dataSectors / biosParameterBlock.SectorsPerCluster;
+        var firstRootSector = firstDataSector;
+        
+        // first data sector starts after root directory sectors for fat12/fat16.
+        firstDataSector += rootDirSectors;
 
         var fatType = GetFatType(clusterCount);
 
+        if (biosParameterBlock.RootEntriesCount == 0)
+        {
+            firstRootSector += (extendedBiosParameterBlock.RootCluster - Constants.ReservedClusters) *
+                               biosParameterBlock.SectorsPerCluster;
+        }
+        
         return new FatFileSystem(biosParameterBlock, extendedBiosParameterBlock, totalSectors, fatSectors,
-            firstRootSector, rootSectors, firstDataSector, dataSectors, clusterCount, fatType);
+            rootDirSectors, firstRootSector, firstDataSector, dataSectors, clusterCount, fatType);
     }
 
     /// <summary>
