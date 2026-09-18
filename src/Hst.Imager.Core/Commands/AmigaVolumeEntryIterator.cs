@@ -186,19 +186,6 @@ public class AmigaVolumeEntryIterator(
         return new Result();
     }
     
-    public async Task<Result> RenameEntry(string[] fullPathComponents)
-    {
-        var changeDirectoryResult = await ChangeDirectoryIfNeeded(fullPathComponents.Take(fullPathComponents.Length - 1).ToArray());
-        if (changeDirectoryResult.IsFaulted)
-        {
-            return changeDirectoryResult;
-        }
-
-        await fileSystemVolume.Rename(fullPathComponents[^1], "newname");
-
-        return new Result();
-    }
-    
     private async Task<bool> IsDirectoryChanged(string[] fullPathComponents)
     {
         if (currentDirectoryBlockNumber != fileSystemVolume.CurrentDirectoryBlockNumber)

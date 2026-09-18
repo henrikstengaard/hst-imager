@@ -215,6 +215,11 @@ public class LhaArchiveEntryIterator : IEntryIterator
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Lha archive")));
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Move is not supported for Lha archive")));
+    }
+
     private void EnqueueEntries()
     {
         var uniqueEntries = new Dictionary<string, Entry>();

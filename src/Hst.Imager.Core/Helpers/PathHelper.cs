@@ -10,6 +10,19 @@ namespace Hst.Imager.Core.Helpers
 
     public static class PathHelper
     {
+        public static char GetDirectorySeparatorChar(string path)
+        {
+            var directorySeparatorChar = Path.DirectorySeparatorChar;
+
+            foreach (var chr in path.Where(chr => chr is '\\' or '/'))
+            {
+                directorySeparatorChar = chr;
+                break;
+            }
+
+            return directorySeparatorChar;
+        }
+        
         public static string[] Split(string path) =>
             (path.StartsWith("/") ? new []{"/"} : Array.Empty<string>())
             .Concat(path.Split(new[] { '\\', '/' }, StringSplitOptions.RemoveEmptyEntries)).ToArray();
@@ -45,8 +58,13 @@ namespace Hst.Imager.Core.Helpers
             }
 
             // split path into directory and filename
-            var dirName = Path.GetDirectoryName(path) ?? string.Empty;
-            var fileName = Path.GetFileName(path) ?? string.Empty;
+            // use custom directory separator char, because Path.GetDirectoryName and Path.GetFileName
+            // does not work correctly for mixed directory separator chars, e.g. "dir1/dir2\file.txt"
+            // and windows paths ending with special amiga chars like "dir1\file1/" 
+            var directorySeparatorChar = GetDirectorySeparatorChar(path);
+            var lastDirectorySeparatorChar = path.LastIndexOf(directorySeparatorChar);
+            var dirName = lastDirectorySeparatorChar >= 0 ? path.Substring(0, lastDirectorySeparatorChar) : string.Empty;
+            var fileName = lastDirectorySeparatorChar >= 0 ? path.Substring(lastDirectorySeparatorChar + 1) : path;
 
             // get full path for directory and combine with filename
             // main reason to not get full path for path, is because Windows 10

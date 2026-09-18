@@ -474,7 +474,7 @@ public abstract partial class FsCommandBase : CommandBase
         {
             return forceOverwrite
                 ? await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, true)
-                : new Result<IEntryWriter>(new FileExistsError($"File already exists '{destPath}'"));
+                : new Result<IEntryWriter>(new PathExistsError($"Path already exists '{destPath}'"));
         }
 
         var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);

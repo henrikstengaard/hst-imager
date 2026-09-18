@@ -181,6 +181,11 @@ public class Iso9660EntryIterator : IEntryIterator
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Iso9660")));
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Move is not supported for Iso9660")));
+    }
+
     private Task EnqueueDirectory(string[] pathComponents)
     {
         var uniqueEntries = new Dictionary<string, Entry>();

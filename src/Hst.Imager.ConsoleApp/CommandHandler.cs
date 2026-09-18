@@ -704,6 +704,16 @@ namespace Hst.Imager.ConsoleApp
             await Execute(command);
         }
 
+        public static async Task FsMove(string srcPath, string destPath, UaeMetadata uaeMetadata,
+            bool forceOverwrite)
+        {
+            using var commandHelper = GetCommandHelper(useCache: true);
+            var command = new FsMoveCommand(GetLogger<FsMoveCommand>(), commandHelper,
+                await GetPhysicalDrives(), srcPath, destPath, forceOverwrite: forceOverwrite,
+                uaeMetadata: uaeMetadata);
+            await Execute(command);
+        }
+
         public static async Task ArcList(string path, bool recursive)
         {
             using var commandHelper = GetCommandHelper();

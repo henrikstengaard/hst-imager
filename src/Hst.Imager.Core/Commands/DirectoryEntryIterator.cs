@@ -23,6 +23,7 @@ public class DirectoryEntryIterator : IEntryIterator
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
 
+    private readonly LocalDirectoryMedia media;
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
     private readonly string[] rootPathComponents;
@@ -36,6 +37,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public DirectoryEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata, IAppCache appCache)
     {
+        this.media = new LocalDirectoryMedia(path, Path.GetFileName(path));
         this.nextEntries = new Stack<Entry>();
         rootPath = PathHelper.GetFullPath(path);
         this.recursive = recursive;
@@ -163,7 +165,7 @@ public class DirectoryEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; }
 
-    public Media Media => null;
+    public Media Media => media;
 
     public Entry Current => currentEntry;
 
@@ -222,17 +224,53 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
     }
 
-    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    public async Task<Result> DeleteEntry(string[] fullPathComponents)
     {
-        var entryPath = Path.Combine(fullPathComponents);
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(UaeMetadata, fullPathComponents);
+        
+        var entryPath = uaeMetadataEntry != null && uaeMetadataEntry.UaeMetadataExists
+            ? Path.Combine(uaeMetadataEntry.NormalPathComponents)
+            : Path.Combine(fullPathComponents);
 
         if (File.Exists(entryPath))
         {
             File.Delete(entryPath);
-            return Task.FromResult(new Result());
         }
 
-        Directory.Delete(entryPath, true);
+        if (Directory.Exists(entryPath))
+        {
+            Directory.Delete(entryPath, true);
+        }
+        
+        await UaeMetadataHelper.RemoveUaeMetadata(entryPath);
+
+        return new Result();
+    }
+
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        var sourcePath = Path.Combine(srcFullPathComponents);
+        var destinationPath = Path.Combine(destFullPathComponents);
+
+        if (File.Exists(sourcePath))
+        {
+            if (File.Exists(destinationPath))
+            {
+                File.Delete(destinationPath);
+            }
+
+            File.Move(sourcePath, destinationPath);
+        }
+        else
+        {
+            if (Directory.Exists(destinationPath))
+            {
+                Directory.Delete(destinationPath, true);
+            }
+
+            Directory.Move(sourcePath, destinationPath);
+        }
+
         return Task.FromResult(new Result());
     }
 

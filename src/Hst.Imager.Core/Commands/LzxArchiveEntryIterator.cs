@@ -221,6 +221,11 @@ public class LzxArchiveEntryIterator : IEntryIterator
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Lzx archive")));
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Move is not supported for Lzx archive")));
+    }
+
     private void EnqueueEntries()
     {
         var uniqueEntries = new Dictionary<string, Entry>();

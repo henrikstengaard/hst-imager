@@ -1240,6 +1240,8 @@ namespace Hst.Imager.Core.Commands
                 }
             }
 
+            string fileSystemPath;
+
             // physical drive
             var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(physicalDrivePath);
             if (physicalDrivePathMatch.Success)
@@ -1248,7 +1250,7 @@ namespace Hst.Imager.Core.Commands
                 var firstSeparatorIndex = physicalDrivePath.IndexOf(directorySeparatorChar.ToString(),
                     physicalDriveMediaPath.Length, StringComparison.Ordinal);
 
-                var fileSystemPath = firstSeparatorIndex >= 0
+                fileSystemPath = firstSeparatorIndex >= 0
                         ? physicalDrivePath.Substring(firstSeparatorIndex + 1,
                             physicalDrivePath.Length - (firstSeparatorIndex + 1))
                         : string.Empty;
@@ -1273,8 +1275,9 @@ namespace Hst.Imager.Core.Commands
             // if path starts with a network path, update next to start after network path start
             var networkPath = GetNetworkPath(path);
             var next = string.IsNullOrWhiteSpace(networkPath) ? 0 : networkPath.Length;
-            
+
             // detect if path contains a media file
+            var existingMediaPath = string.Empty;
             do
             {
                 next = path.IndexOf(directorySeparatorChar.ToString(), next + 1, StringComparison.OrdinalIgnoreCase);
@@ -1282,7 +1285,7 @@ namespace Hst.Imager.Core.Commands
 
                 if (File.Exists(mediaPath))
                 {
-                    var fileSystemPath = mediaPath.Length + 1 < path.Length
+                    fileSystemPath = mediaPath.Length + 1 < path.Length
                             ? path.Substring(mediaPath.Length + 1, path.Length - (mediaPath.Length + 1))
                             : string.Empty;
 
@@ -1305,6 +1308,8 @@ namespace Hst.Imager.Core.Commands
                 {
                     break;
                 }
+
+                existingMediaPath = mediaPath;
             } while (next != -1);
 
             if (!Directory.Exists(path) && !allowNonExisting)
@@ -1312,11 +1317,18 @@ namespace Hst.Imager.Core.Commands
                 return new Result<MediaResult>(new PathNotFoundError($"Path not found '{path}'", path));
             }
             
+            fileSystemPath = existingMediaPath.Length + 1 < path.Length
+                ? path.Substring(existingMediaPath.Length + 1, path.Length - (existingMediaPath.Length + 1))
+                : string.Empty;
+            
+            logger.LogDebug($"Media Path: '{existingMediaPath}'");
+            logger.LogDebug($"File system Path: '{fileSystemPath}'");
+
             return new Result<MediaResult>(new MediaResult
             {
                 FullPath = path,
-                MediaPath = path,
-                FileSystemPath = string.Empty,
+                MediaPath = existingMediaPath,
+                FileSystemPath = fileSystemPath,
                 DirectorySeparatorChar = directorySeparatorChar.ToString(),
                 Modifiers = modifiersResult.Modifiers,
                 ByteSwap = byteSwap

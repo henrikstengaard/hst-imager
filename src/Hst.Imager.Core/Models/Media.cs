@@ -13,7 +13,8 @@
             Vhd,
             CompressedRaw,
             CompressedVhd,
-            Floppy
+            Floppy,
+            LocalDirectory
         }
 
         public string Path;
@@ -62,7 +63,7 @@
             this.Stream = stream;
         }
 
-        public bool Equals(Media other)
+        public virtual bool Equals(Media other)
         {
             if (other is null) return false;
             if (ReferenceEquals(this, other)) return true;

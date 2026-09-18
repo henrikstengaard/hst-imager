@@ -11,6 +11,7 @@ public static class FsCommandFactory
 
         command.AddCommand(CreateFsDir());
         command.AddCommand(CreateFsCopy());
+        command.AddCommand(CreateFsMove());
         command.AddCommand(CreateFsExtract());
         command.AddCommand(CreateFsMkDir());
         command.AddCommand(CreateFsDelete());
@@ -96,6 +97,38 @@ public static class FsCommandFactory
         command.AddOption(quietOption);
         command.AddOption(uaeMetadataOption);
         command.AddOption(makeDirectoryOption);
+        command.AddOption(forceOption);
+
+        return command;
+    }
+
+    private static Command CreateFsMove()
+    {
+        var sourcePathArgument = new Argument<string>(
+            name: "SourcePath",
+            description: "Path to source physical drive, image file or directory.");
+
+        var destinationPathArgument = new Argument<string>(
+            name: "DestinationPath",
+            description: "Path to destination physical drive, image file or directory.");
+
+        var uaeMetadataOption = new Option<UaeMetadata>(
+            new[] { "--uaemetadata", "-uae" },
+            description: "Type of UAE metadata to read and write.",
+            getDefaultValue: () => UaeMetadata.UaeFsDb);
+
+        var forceOption = new Option<bool>(
+            new[] { "--force", "-f" },
+            description: "Force overwriting any existing files.",
+            getDefaultValue: () => false);
+
+        var command = new Command("move", "Move a file or subdirectory from source to destination.");
+        command.AddAlias("mv");
+        command.SetHandler(CommandHandler.FsMove, sourcePathArgument, destinationPathArgument,
+            uaeMetadataOption, forceOption);
+        command.AddArgument(sourcePathArgument);
+        command.AddArgument(destinationPathArgument);
+        command.AddOption(uaeMetadataOption);
         command.AddOption(forceOption);
 
         return command;

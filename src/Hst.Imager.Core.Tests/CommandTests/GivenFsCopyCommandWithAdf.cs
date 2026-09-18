@@ -130,7 +130,7 @@ public class GivenFsCopyCommandWithAdf : FsCommandTestBase
             
             // assert - copy failed with file exists error
             Assert.True(result.IsFaulted);
-            Assert.IsType<FileExistsError>(result.Error);
+            Assert.IsType<PathExistsError>(result.Error);
         }
         finally
         {

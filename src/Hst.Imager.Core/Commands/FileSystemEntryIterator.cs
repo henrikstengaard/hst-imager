@@ -417,6 +417,21 @@ public class FileSystemEntryIterator(
         return Task.FromResult(new Result());
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        var srcEntryPath = mediaPath.Join(srcFullPathComponents);
+        var destEntryPath = mediaPath.Join(destFullPathComponents);
+
+        if (fileSystem.FileExists(srcEntryPath))
+        {
+            fileSystem.MoveFile(srcEntryPath, destEntryPath);
+            return Task.FromResult(new Result());
+        }
+
+        fileSystem.MoveDirectory(srcEntryPath, destEntryPath);
+        return Task.FromResult(new Result());
+    }
+
     public string[] GetPathComponents(string path) => mediaPath.Split(path);
 
     public bool UsesPattern => pathComponentMatcher.UsesPattern;

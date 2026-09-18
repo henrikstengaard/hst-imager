@@ -125,6 +125,11 @@ public class UdfEntryIterator : IEntryIterator
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Udf")));
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Move is not supported for Udf")));
+    }
+
     private int EnqueueDirectory(string[] pathComponents)
     {
         var uniqueEntries = new Dictionary<string, Entry>();

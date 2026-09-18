@@ -611,7 +611,123 @@ public class UaeMetadataHelper(IAppCache appCache)
 
         return !(comment1 ?? string.Empty).Equals(comment2 ?? string.Empty);
     }
-    
+
+    /// <summary>
+    /// Remove UAE metadata from directory or file.
+    /// </summary>
+    /// <param name="path">Path to directory or file to remove UAE metadata from.</param>
+    public static async Task RemoveUaeMetadata(string path)
+    {
+        await RemoveUaeFsDb(path);
+        await RemoveUaeMetafile(path);
+    }
+
+    /// <summary>
+    /// Remove UAE metafile from directory or file.
+    /// </summary>
+    /// <param name="path">Path to directory or file to remove UAE metafile from.</param>
+    public static async Task RemoveUaeMetafile(string path)
+    {
+        var uaeMetafilePath = string.Concat(path, Amiga.DataTypes.UaeMetafiles.Constants.UaeMetafileExtension);
+
+        if (!File.Exists(uaeMetafilePath))
+        {
+            return;
+        }
+
+        File.Delete(uaeMetafilePath);
+    }
+
+    /// <summary>
+    /// Remove UAEFSDB node from UAEFSDB file or alternative streams.
+    /// </summary>
+    /// <param name="path">Path to directory or file to remove UAEFSDB from.</param>
+    public static async Task RemoveUaeFsDb(string path)
+    {
+        await RemoveUaeFsDbVersion1(path);
+        await RemoveUaeFsDbVersion2(path);
+    }
+
+    /// <summary>
+    /// Remove UAEFSDB node from UAEFSDB file (version 1).
+    /// </summary>
+    /// <param name="path">Path to directory or file to remove UAEFSDB from.</param>
+    public static async Task RemoveUaeFsDbVersion1(string path)
+    {
+        var dirPath = Path.GetDirectoryName(path) ?? Directory.GetCurrentDirectory();
+        var uaeFsDbPath = Path.Combine(dirPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+
+        if (!File.Exists(uaeFsDbPath))
+        {
+            return;
+        }
+        
+        var normalName = Path.GetFileName(path);
+        
+        var hasNode = false;
+        var nodeCount = 0;
+        UaeFsDbNode node = null;
+        
+        var toPosition = 0L;
+        var fromPosition = 0L;
+        
+        using (var stream = new FileStream(uaeFsDbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
+        {
+            while (stream.Length >= Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size && stream.Position < stream.Length)
+            {
+                nodeCount++;
+                toPosition = stream.Position;    
+                var nodeBytes = await stream.ReadBytes(Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbNodeVersion1Size);
+
+                node = UaeFsDbReader.ReadFromBytes(nodeBytes);
+
+                if (!node.NormalName.Equals(normalName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                hasNode = true;
+                fromPosition = stream.Position;
+                break;
+            }
+
+            if (hasNode && nodeCount > 1)
+            {
+                var remainingBytes = new byte[stream.Length - fromPosition];
+                await stream.ReadExactlyAsync(remainingBytes, 0, remainingBytes.Length);
+                stream.Seek(toPosition, SeekOrigin.Begin);
+                await stream.WriteAsync(remainingBytes, 0, remainingBytes.Length);
+                stream.SetLength(stream.Position);
+            }
+        }
+
+        if (!hasNode)
+        {
+            return;
+        }
+        
+        if (nodeCount == 1)
+        {
+            File.Delete(uaeFsDbPath);
+        }
+    }
+
+    /// <summary>
+    /// Remove UAEFSDB node from alternative data stream (version 2).
+    /// </summary>
+    /// <param name="path">Path to directory or file to remove UAEFSDB from.</param>
+    public static async Task RemoveUaeFsDbVersion2(string path)
+    {
+        var uaeFsDbVersion2FilePath = string.Concat(path, ":", Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
+        
+        if (!File.Exists(uaeFsDbVersion2FilePath))
+        {
+            return;
+        }
+
+        File.Delete(uaeFsDbVersion2FilePath);
+    }
+
     public static async Task WriteUaeMetadata(UaeMetadata uaeMetadata, string dirPath, string amigaName, 
         string normalName, int? protectionBits = null, DateTime? date = null, string comment = null)
     {
@@ -633,7 +749,7 @@ public class UaeMetadataHelper(IAppCache appCache)
 
     public static async Task WriteUaeFsDb(string dirPath, string amigaName, string normalName, int? protectionBits, string comment)
     {
-        var uaeFsDbPath = Path.Combine(dirPath, "_UAEFSDB.___");
+        var uaeFsDbPath = Path.Combine(dirPath, Amiga.DataTypes.UaeFsDbs.Constants.UaeFsDbFileName);
 
         await using var stream = new FileStream(uaeFsDbPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
 

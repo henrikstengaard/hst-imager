@@ -37,7 +37,7 @@ public class AmigaVolumeEntryWriter(
     private Models.FileSystems.EntryType lastPathComponentEntryType = Models.FileSystems.EntryType.Dir;
     private bool isInitialized;
     
-    private readonly IMediaPath mediaPath = PathComponents.MediaPath.AmigaOsPath;
+    private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.AmigaOsPath;
 
     private List<string> currentPathComponents = new(10);
     private uint currentDirectoryBlockNumber = fileSystemVolume.CurrentDirectoryBlockNumber;
@@ -362,6 +362,73 @@ public class AmigaVolumeEntryWriter(
         {
             await fileSystemVolume.SetDate(fileName, entry.Date.Value);
         }
+
+        return new Result();
+    }
+
+    public async Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool isSingleFileEntry)
+    {
+        if (!isInitialized)
+        {
+            return new Result(new Error("AmigaVolumeEntryWriter is not initialized."));
+        }
+
+        // get destination full path components
+        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+
+        // get source and destination entry names and destination entry path
+        var srcName = srcEntryPathComponents[^1];
+        var destName = destFullPathComponents[^1];
+        var destEntryPath = string.Concat("/", mediaPath.Join(destFullPathComponents));
+        
+        // change directory to destination path components
+        var destRequiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
+        var destChangeDirectoryResult = await ChangeDirectoryIfNeeded(destRequiredPathComponentsToExist,
+            [.. destFullPathComponents.Take(destFullPathComponents.Length - 1)]);
+        if (destChangeDirectoryResult.IsFaulted)
+        {
+            return destChangeDirectoryResult;
+        }
+        
+        // check if destination path exists
+        var findDestEntryResult = await fileSystemVolume.FindEntry(destName);
+        var destNameExists = !findDestEntryResult.PartsNotFound.Any();
+
+        // change directory to source path components
+        var srcRequiredPathComponentsToExist = srcEntryPathComponents.Length > 1
+            ? srcEntryPathComponents.Take(srcEntryPathComponents.Length - 1).ToArray()
+            : [];
+        var srcChangeDirectoryResult = await ChangeDirectoryIfNeeded(srcRequiredPathComponentsToExist,
+            [.. srcEntryPathComponents.Take(srcEntryPathComponents.Length - 1)]);
+        if (srcChangeDirectoryResult.IsFaulted)
+        {
+            return srcChangeDirectoryResult;
+        }
+
+        // check if source path exists
+        var findSrcEntryResult = await fileSystemVolume.FindEntry(srcName);
+        if (findSrcEntryResult.PartsNotFound.Any())
+        {
+            return new Result(new PathNotFoundError($"Source path '{srcName}' not found", srcName));
+        }
+        
+        if (!forceOverwrite && destNameExists)
+        {
+            return new Result(new PathExistsError($"Destination path '{destName}' already exists"));
+        }
+        
+        if (destNameExists)
+        {
+            if (findDestEntryResult.Entry.Type == EntryType.Dir)
+            {
+                return new Result(new PathExistsError($"Can't overwrite destination path '{destName}' because it is a directory"));
+            }
+
+            await fileSystemVolume.Delete(destName, true);
+        }
+        
+        await fileSystemVolume.Rename(srcName, destEntryPath);
 
         return new Result();
     }

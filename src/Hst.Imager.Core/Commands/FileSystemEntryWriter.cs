@@ -28,7 +28,7 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
     IFileSystem fileSystem, string[] rootPathComponents, bool recursive, bool createDirectory, bool forceOverwrite) : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
-    private readonly IMediaPath mediaPath = PathComponents.MediaPath.GenericMediaPath;
+    private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
     private bool disposed;
     private readonly HashSet<string> dirPathsCreated = new();
 
@@ -217,6 +217,52 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         } while (bytesRead != 0);
         
         return new Result();
+    }
+
+    public Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool singleFile)
+    {
+        if (!isInitialized)
+        {
+            return Task.FromResult(new Result(new Error("FileSystemEntryWriter is not initialized.")));
+        }
+
+        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
+            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, singleFile);
+
+        var srcEntryPath = mediaPath.Join(srcEntryPathComponents);
+        var destEntryPath = mediaPath.Join(destFullPathComponents);
+
+        if (string.IsNullOrEmpty(destEntryPath))
+        {
+            return Task.FromResult(new Result(new Error("Destination path is null or empty.")));
+        }
+
+        if (!fileSystem.Exists(srcEntryPath))
+        {
+            return Task.FromResult(new Result(new PathNotFoundError($"Source path '{srcEntryPath}' not found", srcEntryPath)));
+        }
+        
+        var destEntryExists = fileSystem.Exists(destEntryPath);
+        if (!forceOverwrite && destEntryExists)
+        {
+            return Task.FromResult(new Result(new PathExistsError($"Destination path '{destEntryPath}' already exists")));
+        }
+        
+        if (entry.Type == Models.FileSystems.EntryType.Dir)
+        {
+            fileSystem.MoveDirectory(srcEntryPath, destEntryPath);
+        }
+        else
+        {
+            if (destEntryExists && forceOverwrite)
+            {
+                fileSystem.DeleteFile(destEntryPath);
+            }
+
+            fileSystem.MoveFile(srcEntryPath, destEntryPath);
+        }
+        
+        return Task.FromResult(new Result());
     }
 
     public Task Flush()

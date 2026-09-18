@@ -85,6 +85,11 @@ public class LzwArchiveEntryIterator : IEntryIterator
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Lzw archive")));
     }
 
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        return new Task<Result>(() => new Result(new Error("Move is not supported for Lzw archive")));
+    }
+
     private static readonly Regex LzwExtensionRegex =
         new Regex("\\.Z$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
     
