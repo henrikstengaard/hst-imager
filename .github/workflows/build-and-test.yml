@@ -42,4 +42,5 @@ jobs:
       - name: Test
         working-directory: ./src
         shell: pwsh
-        run: dotnet test --no-build --verbosity normal
+        run: >
+          dotnet test --no-build --no-restore --verbosity normal -m:1 --logger "trx;LogFileName=test-results.trx" --blame-crash --blame-hang --blame-hang-timeout 60s

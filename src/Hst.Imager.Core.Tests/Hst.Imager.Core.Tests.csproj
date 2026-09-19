@@ -23,6 +23,9 @@
     </ItemGroup>
 
     <ItemGroup>
+      <None Update="xunit.runner.json">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </None>
       <None Update="TestData\Lzx\amiga.lzx">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
