@@ -15,6 +15,8 @@ public interface IEntryWriter : IDisposable
     Media Media { get; }
     string MediaPath { get; }
     string FileSystemPath { get; }
+    public string[] PathComponents { get; }
+    public string[] DirPathComponents { get; }
 
     /// <summary>
     /// Initialize the entry writer verifying the root path components exist.

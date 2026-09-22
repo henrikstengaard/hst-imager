@@ -62,6 +62,9 @@ public class DirectoryEntryWriter : IEntryWriter
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
 
+    public string[] PathComponents => rootPathComponents;
+    public string[] DirPathComponents => dirPathComponents;
+    
     public void Dispose()
     {
         appCache.Dispose();
@@ -308,14 +311,14 @@ public class DirectoryEntryWriter : IEntryWriter
         return new Result();
     }
 
-    public async Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool isSingleFileEntry)
+    public async Task<Result> MoveEntry(Entry entry, string[] destPathComponents, bool isSingleFileEntry)
     {
         if (!isInitialized)
         {
             return new Result(new Error("DirectoryEntryWriter is not initialized."));
         }
         
-        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
+        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, destPathComponents,
             lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
         
         var srcEntryPath = await uaeMetadataHelper.CreateUaeMetadataEntry(UaeMetadata, entry.FullPathComponents);

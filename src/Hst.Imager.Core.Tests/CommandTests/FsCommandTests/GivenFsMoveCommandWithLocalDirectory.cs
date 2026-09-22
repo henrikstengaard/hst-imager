@@ -464,4 +464,136 @@ public class GivenFsMoveCommandWithLocalDirectory : FsCommandTestBase
             DeletePaths(mediaPath);
         }
     }
+
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMedia_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var srcMediaPath = $"{Guid.NewGuid()}-local";
+        var srcPath = srcMediaPath;
+        var destMediaPath = $"{Guid.NewGuid()}-local";
+        var destPath = destMediaPath;
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+            
+            // arrange - create src media directory with files
+            Directory.CreateDirectory(srcMediaPath);
+            await LocalTestHelper.CreateDirectoriesAndFiles(srcMediaPath);
+
+            // arrange - create dest media directory
+            Directory.CreateDirectory(destMediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - src media directory is removed
+            var srcDirExist = Directory.Exists(srcMediaPath);
+            Assert.False(srcDirExist);
+
+            // assert - dest media directory contains moved files and directories
+            var destDirExist = Directory.Exists(destMediaPath);
+            Assert.True(destDirExist);
+            var destDirs = Directory.GetDirectories(destMediaPath, "*", SearchOption.TopDirectoryOnly);
+            Assert.Single(destDirs);
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == srcMediaPath);
+            
+            // assert - dest media directory contains moved files and directories in src media directory
+            var destMediaPathWithSrcDir = Path.Combine(destMediaPath, srcMediaPath);
+            destDirs = Directory.GetDirectories(destMediaPathWithSrcDir, "*", SearchOption.TopDirectoryOnly);
+            Assert.Equal(2, destDirs.Length);
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir1");
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir2");
+            var destFiles = Directory.GetFiles(destMediaPathWithSrcDir, "*", SearchOption.TopDirectoryOnly);
+            Assert.Empty(destFiles);
+            
+            // assert - dest media directory contains moved files and directories in src media directory dir1
+            var destMediaPathWithSrcDirAndDir1 = Path.Combine(destMediaPathWithSrcDir, "dir1");
+            destDirs = Directory.GetDirectories(destMediaPathWithSrcDirAndDir1, "*", SearchOption.TopDirectoryOnly);
+            Assert.Single(destDirs);
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir3");
+            destFiles = Directory.GetFiles(destMediaPathWithSrcDirAndDir1, "*", SearchOption.TopDirectoryOnly);
+            Assert.Single(destFiles);
+            Assert.Contains(destFiles, file => Path.GetFileName(file) == "file1.txt");
+        }
+        finally
+        {
+            DeletePaths(srcMediaPath, destMediaPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMediaWithPattern_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var srcMediaPath = $"{Guid.NewGuid()}-local";
+        var srcPath = Path.Combine(srcMediaPath, "*");
+        var destMediaPath = $"{Guid.NewGuid()}-local";
+        var destPath = destMediaPath;
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+            
+            // arrange - create src media directory with files
+            Directory.CreateDirectory(srcMediaPath);
+            await LocalTestHelper.CreateDirectoriesAndFiles(srcMediaPath);
+
+            // arrange - create dest media directory
+            Directory.CreateDirectory(destMediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - src media directory is empty
+            var srcDirExist = Directory.Exists(srcMediaPath);
+            Assert.True(srcDirExist);
+            var srcFiles = Directory.GetFiles(srcMediaPath, "*", SearchOption.TopDirectoryOnly);
+            Assert.Empty(srcFiles);
+            var srcDirs = Directory.GetDirectories(srcMediaPath, "*", SearchOption.TopDirectoryOnly);
+            Assert.Empty(srcDirs);
+
+            // assert - dest media directory contains moved files and directories
+            var destDirExist = Directory.Exists(destMediaPath);
+            Assert.True(destDirExist);
+            var destDirs = Directory.GetDirectories(destMediaPath, "*", SearchOption.TopDirectoryOnly);
+            Assert.Equal(2, destDirs.Length);
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir1");
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir2");
+            var destFiles = Directory.GetFiles(destMediaPath, "*", SearchOption.TopDirectoryOnly);
+            Assert.Empty(destFiles);
+            
+            // assert - dest media directory contains moved files and directories in src media directory dir1
+            var destMediaPathWithDir1 = Path.Combine(destMediaPath, "dir1");
+            destDirs = Directory.GetDirectories(destMediaPathWithDir1, "*", SearchOption.TopDirectoryOnly);
+            Assert.Single(destDirs);
+            Assert.Contains(destDirs, dir => Path.GetFileName(dir) == "dir3");
+            destFiles = Directory.GetFiles(destMediaPathWithDir1, "*", SearchOption.TopDirectoryOnly);
+            Assert.Single(destFiles);
+            Assert.Contains(destFiles, file => Path.GetFileName(file) == "file1.txt");
+        }
+        finally
+        {
+            DeletePaths(srcMediaPath, destMediaPath);
+        }
+    }
 }

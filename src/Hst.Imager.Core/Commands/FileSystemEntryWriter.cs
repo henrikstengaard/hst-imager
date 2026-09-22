@@ -47,6 +47,8 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
     public int PartitionNumber => partitionNumber;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
+    public string[] PathComponents => rootPathComponents;
+    public string[] DirPathComponents => dirPathComponents;
 
     private void Dispose(bool disposing)
     {
@@ -229,7 +231,7 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
             lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, singleFile);
 
-        var srcEntryPath = mediaPath.Join(srcEntryPathComponents);
+        var srcEntryPath = mediaPath.Join(entry.FullPathComponents);
         var destEntryPath = mediaPath.Join(destFullPathComponents);
 
         if (string.IsNullOrEmpty(destEntryPath))

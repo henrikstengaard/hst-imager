@@ -413,4 +413,106 @@ public class GivenFsMoveCommandWithAdf : FsCommandTestBase
             DeletePaths(srcMediaPath, destMediaPath);
         }
     }
+
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMedia_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var mediaPath = $"{Guid.NewGuid()}.adf";
+        var srcPath = Path.Combine(mediaPath, "dir1");
+        var destPath = Path.Combine(mediaPath, "dir2");
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create media directory with files
+            await AdfTestHelper.CreateFormattedAdfDisk(commandHelper, mediaPath);
+            await AdfTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+            
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - media root directory contains dir2 entry and not dir1 entry
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                [])).ToList();
+            Assert.Single(entries);
+            Assert.Contains("dir2", entries.Select(e => e.Name));
+
+            // assert - media dir2 directory contains dir1
+            entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                ["dir2"])).ToList();
+            Assert.Single(entries);
+            Assert.Contains("dir1", entries.Select(e => e.Name));
+            
+            // assert - media dir2/dir1 directory contains file1 and dir3 from dir1
+            entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                ["dir2", "dir1"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("file1.txt", entries.Select(e => e.Name));
+            Assert.Contains("dir3", entries.Select(e => e.Name));
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMediaWithPattern_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var mediaPath = $"{Guid.NewGuid()}.adf";
+        var srcPath = Path.Combine(mediaPath, "dir1", "*");
+        var destPath = Path.Combine(mediaPath, "dir2");
+        const bool forceOverwrite = false;
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create media directory with files
+            await AdfTestHelper.CreateFormattedAdfDisk(commandHelper, mediaPath);
+            await AdfTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath, forceOverwrite);
+            
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - media root directory contains dir1 and dir2 entries
+            var entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                [])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("dir1", entries.Select(e => e.Name));
+            Assert.Contains("dir2", entries.Select(e => e.Name));
+
+            // assert - media dir2 directory contains file1 and dir3 from dir1
+            entries = (await AdfTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                ["dir2"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("file1.txt", entries.Select(e => e.Name));
+            Assert.Contains("dir3", entries.Select(e => e.Name));
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
 }

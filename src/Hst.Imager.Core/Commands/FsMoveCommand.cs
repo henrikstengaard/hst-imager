@@ -39,6 +39,8 @@ public class FsMoveCommand(
         }
         
         using var destEntryWriter = destEntryWriterResult.Value;
+        var destMediaIsDir = destEntryWriter.PathComponents.Length == destEntryWriter.DirPathComponents.Length &&
+                             destEntryWriter.PathComponents.SequenceEqual(destEntryWriter.DirPathComponents);
 
         // get source entry iterator
         var srcEntryIteratorResult = await GetEntryIterator(fromPath);
@@ -48,6 +50,8 @@ public class FsMoveCommand(
         }
         
         using var srcEntryIterator = srcEntryIteratorResult.Value;
+        var srcMediaIsDir = srcEntryIterator.PathComponents.Length == srcEntryIterator.DirPathComponents.Length &&
+                             srcEntryIterator.PathComponents.SequenceEqual(srcEntryIterator.DirPathComponents);
 
         if (destEntryWriter.ArePathComponentsSelfCopy(srcEntryIterator))
         {
@@ -67,7 +71,7 @@ public class FsMoveCommand(
         destEntryWriter.UaeMetadata = destEntryWriter.SupportsUaeMetadata && uaeMetadata != UaeMetadata.None
             ? uaeMetadata
             : UaeMetadata.None;
-        
+
         var stopwatch = new Stopwatch();
 
         stopwatch.Start();
@@ -75,14 +79,60 @@ public class FsMoveCommand(
         OnInformationMessage($"Moving '{fromPath}' to '{toPath}'");
 
         var sameMedia = srcEntryIterator.Media.Equals(destEntryWriter.Media);
-        var count = 0;
+
         var filesCount = 0;
         var dirsCount = 0;
         var totalBytes = 0L;
+
+        var deleteEntries = new List<Entry>();
+        string[] destRootPathComponents = [];
+        var srcDirsMovedIndex = new HashSet<string>();
+        var iterateSrcEntries = true;
         
-        while (await srcEntryIterator.Next())
+        var entries = new List<Entry>();
+
+        if (srcMediaIsDir && destMediaIsDir)
         {
-            token.ThrowIfCancellationRequested();
+            var destRootEntryName = srcEntryIterator.PathComponents.Last();
+            var rootEntry = new Entry
+            {
+                Name = destRootEntryName,
+                Type = EntryType.Dir,
+                RelativePathComponents = [],
+                FullPathComponents = srcEntryIterator.PathComponents
+            };
+            destRootPathComponents = [destRootEntryName];
+            
+            if (sameMedia && !srcEntryIterator.UsesPattern)
+            {
+                var moveResult = await MoveEntry(destEntryWriter, destRootPathComponents, rootEntry,
+                    srcEntryIterator.IsSingleFileEntryNext);
+                if (moveResult.IsFaulted)
+                {
+                    return new Result(moveResult.Error);
+                }
+                srcDirsMovedIndex.Add(string.Join("|", rootEntry.FullPathComponents));
+                iterateSrcEntries = false;
+                dirsCount++;
+            }
+            else
+            {
+                await destEntryWriter.CreateDirectory(rootEntry, destRootPathComponents,
+                    false, srcEntryIterator.IsSingleFileEntryNext);
+                deleteEntries.Add(rootEntry);
+            }
+        }
+        
+        var count = 0;
+        
+        while (iterateSrcEntries && await srcEntryIterator.Next())
+        {
+            count++;
+            if (count >= 200)
+            {
+                count = 0;
+                await srcEntryIterator.Flush();
+            }
 
             var entry = srcEntryIterator.Current;
 
@@ -92,9 +142,19 @@ public class FsMoveCommand(
             {
                 continue;
             }
+            
+            entries.Add(entry);
+        }
 
-            //var isSingleFileOrUsesPattern = IsSingleFileOrUsesPattern(entry, srcEntryIterator);
+        count = 0;
+        await srcEntryIterator.Flush();
 
+        var dirPathComponents = srcEntryIterator.DirPathComponents.Length > 0
+            ? new[] { srcEntryIterator.DirPathComponents[^1] }
+            : [];
+        
+        foreach (var entry in entries.OrderBy(e => e.RelativePathComponents.Length))
+        {
             switch (entry.Type)
             {
                 case EntryType.Dir:
@@ -102,34 +162,77 @@ public class FsMoveCommand(
                     dirsCount++;
                     break;
                 case EntryType.File:
-                case EntryType.LinkFile:
-                {
                     filesCount++;
                     totalBytes += entry.Size;
                     break;
-                }
+                case EntryType.LinkFile:
+                    filesCount++;
+                    break;
             }
+            
+            var entryPathComponents = destRootPathComponents.Concat(entry.RelativePathComponents).ToArray();
+            var pathComponents = srcEntryIterator.IsSingleFileEntryNext
+                ? entryPathComponents
+                : dirPathComponents.Concat(entryPathComponents).ToArray();
+            
+            OnInformationMessage($"{srcEntryIterator.MediaPath.Join(pathComponents)}");
 
             if (sameMedia)
             {
-                var moveResult = await MoveEntry(srcEntryIterator, destEntryWriter, entry, srcEntryIterator.IsSingleFileEntryNext);
-                if (moveResult.IsFaulted)
+                var isSrcEntryPathMoved = false;
+                
+                for(var i = 1; i < entry.FullPathComponents.Length; i++)
                 {
-                    return new Result(moveResult.Error);
+                    var srcEntryPathComponents = entry.FullPathComponents.Take(i).ToArray();
+                    var srcEntryPathKey = string.Join("|", srcEntryPathComponents);
+                    if (srcDirsMovedIndex.Contains(srcEntryPathKey))
+                    {
+                        isSrcEntryPathMoved = true;
+                        break;
+                    }
+                }
+                
+                if (!isSrcEntryPathMoved)
+                {
+                    var moveResult = await MoveEntry(destEntryWriter, destRootPathComponents, entry,
+                        srcEntryIterator.IsSingleFileEntryNext);
+                    if (moveResult.IsFaulted)
+                    {
+                        return new Result(moveResult.Error);
+                    }
+                    var srcEntryPathKey = string.Join("|", entry.FullPathComponents);
+                    srcDirsMovedIndex.Add(srcEntryPathKey);
                 }
             }
             else
             {
-                var copyResult = await CopyEntry(srcEntryIterator, entry, destEntryWriter, token);
+                var copyResult = await CopyEntry(srcEntryIterator, entry, destRootPathComponents, destEntryWriter,
+                    token);
                 if (copyResult.IsFaulted)
                 {
                     return new Result(copyResult.Error);
                 }
 
-                var result = await srcEntryIterator.DeleteEntry(entry.FullPathComponents);
-                if (result.IsFaulted)
+                switch (entry.Type)
                 {
-                    return result;
+                    case EntryType.File:
+                    case EntryType.LinkFile:
+                        filesCount++;
+                        totalBytes += entry.Size;
+
+                        var result = await srcEntryIterator.DeleteEntry(entry.FullPathComponents);
+                        if (result.IsFaulted)
+                        {
+                            return result;
+                        }
+
+                        break;
+                    case EntryType.Dir:
+                    case EntryType.LinkDir:
+                        dirsCount++;
+
+                        deleteEntries.Add(entry);
+                        break;
                 }
             }
             
@@ -143,6 +246,16 @@ public class FsMoveCommand(
             count = 0;
             await srcEntryIterator.Flush();
             await destEntryWriter.Flush();
+        }
+
+        foreach (var entry in deleteEntries.OrderByDescending(x => x.FullPathComponents.Length))
+        {
+            token.ThrowIfCancellationRequested();
+            var result = await srcEntryIterator.DeleteEntry(entry.FullPathComponents);
+            if (result.IsFaulted)
+            {
+                return result;
+            }
         }
 
         await srcEntryIterator.Flush();
@@ -177,27 +290,25 @@ public class FsMoveCommand(
         entryIterator.IsSingleFileEntryNext ||
         entryIterator.UsesPattern;
 
-    private async Task<Result> MoveEntry(IEntryIterator iterator, IEntryWriter destWriter, Entry entry, bool singleFile)
+    private async Task<Result> MoveEntry(IEntryWriter destWriter, string[] destRootPathComponents, Entry entry,
+        bool singleFile)
     {
-        var result = await destWriter.MoveEntry(entry, entry.RelativePathComponents, singleFile);
-        if (result.IsFaulted)
-        {
-            return result;
-        }
+        var destEntryPathComponents = destRootPathComponents.Concat(entry.RelativePathComponents).ToArray();
 
-        return new Result();
+        var result = await destWriter.MoveEntry(entry, destEntryPathComponents, singleFile);
+
+        return result.IsFaulted ? result : new Result();
     }
 
     private static async Task<Result> CopyEntry(IEntryIterator source, Entry entry,
-        IEntryWriter destination,
-        CancellationToken token)
+        string[] destPathComponents, IEntryWriter destination, CancellationToken token)
     {
         if (entry.Type == EntryType.Dir && (source.IsSingleFileEntryNext || entry.RelativePathComponents.Length == 0))
         {
             return new Result();
         }
 
-        var path = entry.RelativePathComponents;
+        var path = destPathComponents.Concat(entry.RelativePathComponents).ToArray();
 
         Result result;
         if (entry.Type is EntryType.Dir or EntryType.LinkDir)
@@ -210,43 +321,9 @@ public class FsMoveCommand(
             result = await destination.CreateFile(entry, path, stream, false, source.IsSingleFileEntryNext);
         }
 
-        if (result.IsFaulted)
-        {
-            return result;
-        }
-
-        return new Result();
+        return result.IsFaulted ? result : new Result();
     }
 
-    // private static async Task<Result> DeleteEntry(IEntryIterator iterator, IReadOnlyList<Entry> entry,
-    //     CancellationToken token)
-    // {
-    //     foreach (var entry in entries.OrderByDescending(x => x.FullPathComponents.Length))
-    //     {
-    //         token.ThrowIfCancellationRequested();
-    //         var result = await iterator.DeleteEntry(entry.FullPathComponents);
-    //         if (result.IsFaulted)
-    //         {
-    //             return result;
-    //         }
-    //     }
-    //
-    //     await iterator.Flush();
-    //     return new Result();
-    // }
-    //
-    // private static async Task<Result<List<Entry>>> ReadEntries(IEntryIterator iterator, CancellationToken token)
-    // {
-    //     var entries = new List<Entry>();
-    //     while (await iterator.Next())
-    //     {
-    //         token.ThrowIfCancellationRequested();
-    //         entries.Add(iterator.Current);
-    //     }
-    //
-    //     return new Result<List<Entry>>(entries);
-    // }
-    
     private async Task<Result<IEntryIterator>> GetEntryIterator(string path)
     {
         // resolve media path

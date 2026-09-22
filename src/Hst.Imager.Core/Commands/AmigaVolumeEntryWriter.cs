@@ -46,6 +46,8 @@ public class AmigaVolumeEntryWriter(
     public Media Media => media;
     public string MediaPath => media.Path;
     public string FileSystemPath { get; } = fileSystemPath;
+    public string[] PathComponents => rootPathComponents;
+    public string[] DirPathComponents => dirPathComponents;
 
     private void Dispose(bool disposing)
     {
@@ -366,21 +368,23 @@ public class AmigaVolumeEntryWriter(
         return new Result();
     }
 
-    public async Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool isSingleFileEntry)
+    public async Task<Result> MoveEntry(Entry entry, string[] destPathComponents, bool isSingleFileEntry)
     {
         if (!isInitialized)
         {
             return new Result(new Error("AmigaVolumeEntryWriter is not initialized."));
         }
 
+        var srcFullPathComponents = entry.FullPathComponents;
+
         // get destination full path components
-        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
+        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, destPathComponents,
             lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         // get source and destination entry names and destination entry path
-        var srcName = srcEntryPathComponents[^1];
+        var srcName = srcFullPathComponents[^1];
         var destName = destFullPathComponents[^1];
-        var destEntryPath = string.Concat("/", mediaPath.Join(destFullPathComponents));
+        var destEntryPath = string.Concat(mediaPath.PathSeparator, mediaPath.Join(destFullPathComponents));
         
         // change directory to destination path components
         var destRequiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
@@ -396,11 +400,11 @@ public class AmigaVolumeEntryWriter(
         var destNameExists = !findDestEntryResult.PartsNotFound.Any();
 
         // change directory to source path components
-        var srcRequiredPathComponentsToExist = srcEntryPathComponents.Length > 1
-            ? srcEntryPathComponents.Take(srcEntryPathComponents.Length - 1).ToArray()
+        var srcRequiredPathComponentsToExist = srcFullPathComponents.Length > 1
+            ? srcFullPathComponents.Take(srcFullPathComponents.Length - 1).ToArray()
             : [];
         var srcChangeDirectoryResult = await ChangeDirectoryIfNeeded(srcRequiredPathComponentsToExist,
-            [.. srcEntryPathComponents.Take(srcEntryPathComponents.Length - 1)]);
+            [.. srcFullPathComponents.Take(srcFullPathComponents.Length - 1)]);
         if (srcChangeDirectoryResult.IsFaulted)
         {
             return srcChangeDirectoryResult;

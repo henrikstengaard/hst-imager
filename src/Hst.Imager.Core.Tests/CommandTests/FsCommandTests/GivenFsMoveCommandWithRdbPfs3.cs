@@ -421,4 +421,235 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             DeletePaths(srcMediaPath, destMediaPath);
         }
     }
+
+    [Fact]
+    public async Task When_MovingDirsAndFilesFromLocalDirectoryToRdb_Then_DirsAndFilesAreMoved()
+    {
+        // arrange - create paths
+        var srcMediaPath = $"{Guid.NewGuid()}-local";
+        var srcPath = srcMediaPath;
+        var destMediaPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = Path.Combine(destMediaPath, "rdb", "1");
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create src media directory with files
+            Directory.CreateDirectory(srcMediaPath);
+            await LocalTestHelper.CreateDirectoriesAndFiles(srcMediaPath);
+            
+            // arrange - create dest rdb pfs3 disk
+            await commandHelper.AddTestMedia(destMediaPath);
+            await TestHelper.CreatePfs3FormattedDisk(commandHelper, destMediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - src media directory is removed
+            var srcDirExist = Directory.Exists(srcMediaPath);
+            Assert.False(srcDirExist);
+
+            // assert - dest root directory contains src media directory entry
+            commandHelper.ClearActiveMedias();
+            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, destMediaPath,
+                0, [])).ToList();
+            Assert.Single(entries);
+            Assert.Contains(entries, entry => entry.Name == srcMediaPath);
+            
+            // assert - dest src media directory contains dir1 and dir2 entries
+            commandHelper.ClearActiveMedias();
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, destMediaPath,
+                0, [srcMediaPath])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.Name == "dir1");
+            Assert.Contains(entries, entry => entry.Name == "dir2");
+            
+            // assert - dest dir1 directory contains dir3 and file1.txt entries
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, destMediaPath,
+                0, [srcMediaPath, "dir1"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.Name == "dir3");
+            Assert.Contains(entries, entry => entry.Name == "file1.txt");
+        }
+        finally
+        {
+            DeletePaths(srcMediaPath, destMediaPath);
+        }
+    }
+    
+    [Fact]
+    public async Task When_MovingDirsAndFilesFromLocalDirectoryToRdbWithWildcard_Then_DirsAndFilesAreMoved()
+    {
+        // arrange - create paths
+        var srcMediaPath = $"{Guid.NewGuid()}-local";
+        var srcPath = Path.Combine(srcMediaPath, "*");
+        var destMediaPath = $"{Guid.NewGuid()}.vhd";
+        var destPath = Path.Combine(destMediaPath, "rdb", "1");
+
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create src media directory with files
+            Directory.CreateDirectory(srcMediaPath);
+            await LocalTestHelper.CreateDirectoriesAndFiles(srcMediaPath);
+            
+            // arrange - create dest rdb pfs3 disk
+            await commandHelper.AddTestMedia(destMediaPath);
+            await TestHelper.CreatePfs3FormattedDisk(commandHelper, destMediaPath);
+
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - src media directory is empty
+            var srcDirEntries = Directory.GetDirectories(srcMediaPath, "*", SearchOption.AllDirectories);
+            var srcFileEntries = Directory.GetFiles(srcMediaPath, "*", SearchOption.AllDirectories);
+            Assert.Empty(srcDirEntries);
+            Assert.Empty(srcFileEntries);
+            
+            // assert - dest root directory contains dir1 and dir2 entries
+            commandHelper.ClearActiveMedias();
+            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, destMediaPath,
+                0, [])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.Name == "dir1");
+            Assert.Contains(entries, entry => entry.Name == "dir2");
+            
+            // assert - dest dir1 directory contains dir3 and file1.txt entries
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, destMediaPath,
+                0, ["dir1"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains(entries, entry => entry.Name == "dir3");
+            Assert.Contains(entries, entry => entry.Name == "file1.txt");
+        }
+        finally
+        {
+            DeletePaths(srcMediaPath, destMediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMedia_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1");
+        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir2");
+        
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create media with directories and files
+            await commandHelper.AddTestMedia(mediaPath);
+            await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
+            await RdbTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
+            
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+            
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - media root directory contains dir2 entry and not dir1 entry
+            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, [])).ToList();
+            Assert.Single(entries);
+            Assert.Contains("dir2", entries.Select(e => e.Name));
+
+            // assert - media dir2 directory contains dir1
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, ["dir2"])).ToList();
+            Assert.Single(entries);
+            Assert.Contains("dir1", entries.Select(e => e.Name));
+            
+            // assert - media dir2/dir1 directory contains file1 and dir3 from dir1
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, ["dir2", "dir1"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("file1.txt", entries.Select(e => e.Name));
+            Assert.Contains("dir3", entries.Select(e => e.Name));
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_MovingADirFromAndToSameMediaWithPattern_Then_DirIsMoved()
+    {
+        // arrange - create paths
+        var mediaPath = $"{Guid.NewGuid()}.vhd";
+        var srcPath = Path.Combine(mediaPath, "rdb", "1", "dir1", "*");
+        var destPath = Path.Combine(mediaPath, "rdb", "1", "dir2");
+        
+        try
+        {
+            // arrange - create test command helper
+            using var commandHelper = new TestCommandHelper();
+
+            // arrange - create media with directories and files
+            await commandHelper.AddTestMedia(mediaPath);
+            await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
+            await RdbTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
+            
+            // arrange - create fs move command
+            var command = new FsMoveCommand(new NullLogger<FsMoveCommand>(), commandHelper,
+                new List<IPhysicalDrive>(), srcPath, destPath);
+            
+            // act - execute fs move command
+            var result = await command.Execute(CancellationToken.None);
+            commandHelper.ClearActiveMedias();
+
+            // assert - result is success
+            Assert.True(result.IsSuccess, result.Error?.ToString());
+
+            // assert - media root directory contains dir1 and dir2 entries
+            var entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, [])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("dir1", entries.Select(e => e.Name));
+            Assert.Contains("dir2", entries.Select(e => e.Name));
+
+            // assert - media dir1 directory is empty
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, ["dir1"])).ToList();
+            Assert.Empty(entries);
+            
+            // assert - media dir2 directory contains file1 and dir3 from dir1
+            entries = (await RdbTestHelper.GetEntriesFromFileSystemVolume(commandHelper, mediaPath,
+                0, ["dir2"])).ToList();
+            Assert.Equal(2, entries.Count);
+            Assert.Contains("file1.txt", entries.Select(e => e.Name));
+            Assert.Contains("dir3", entries.Select(e => e.Name));
+        }
+        finally
+        {
+            DeletePaths(mediaPath);
+        }
+    }
 }

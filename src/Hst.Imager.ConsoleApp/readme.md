@@ -633,6 +633,35 @@ Example of copying files and subdirectories recursively from 16GB img image file
 hst.imager fs copy 16gb.img\rdb\dh0 dh0 --recursive --uaemetadata=UaeMetafile
 ```
 
+### Move directories and files from source to destination file system
+
+Moves a file or subdirectory from the source path to the destination path. Moving between paths on the same media renames or relocates the entry. Moving between different media copies the entry and removes it from the source.
+
+Example of displaying usage for moving a file or subdirectory:
+```
+hst.imager fs move
+```
+
+Example of moving a file from one directory to another in a local file system:
+```
+hst.imager fs move dh0\file.txt dh0\games
+```
+
+Example of moving a file from a local file system to an image file Rigid Disk Block partition DH0:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games
+```
+
+Example of moving a file and overwriting an existing destination file:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games --force
+```
+
+Example of moving a file and reading or writing UAE metadata used by FS-UAE Amiga emulator:
+```
+hst.imager fs move 16gb.img\rdb\dh0\file.info dh0 --uaemetadata=UaeMetafile
+```
+
 ### Extract directories and files from source to destination file system
 
 Example of displaying usage for extracting files and subdirectories from source to destination file system:
