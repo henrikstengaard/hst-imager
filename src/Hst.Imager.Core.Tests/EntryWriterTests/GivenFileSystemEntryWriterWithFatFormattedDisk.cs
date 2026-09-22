@@ -84,7 +84,6 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
             RawPath = entryPath,
             FullPathComponents = entryPathComponents,
             RelativePathComponents = entryPathComponents,
-            Attributes = "A---",
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.Dir
@@ -102,7 +101,6 @@ public class GivenFileSystemEntryWriterWithFatFormattedDisk : FsCommandTestBase
             RawPath = entryPath,
             FullPathComponents = entryPathComponents,
             RelativePathComponents = entryPathComponents,
-            Attributes = "A---",
             Date = DateTime.Now,
             Size = 0,
             Type = EntryType.File

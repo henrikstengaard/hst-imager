@@ -543,11 +543,13 @@ namespace Hst.Imager.Core.Commands
         private static async Task<Media> ResolveRarMedia(string path, string name, Stream stream, bool byteSwap)
         {
             stream.Position = 0;
-            var rarArchive = RarArchive.Open(stream);
+            var rarArchive = RarArchive.OpenArchive(stream);
             var rarEntry =
                 rarArchive.Entries.FirstOrDefault(x =>
-                    x.Key.EndsWith(".img", StringComparison.OrdinalIgnoreCase) ||
-                    x.Key.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase));
+                    !string.IsNullOrEmpty(x.Key) &&
+                    (x.Key.EndsWith(".img", StringComparison.OrdinalIgnoreCase) ||
+                    x.Key.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) ||
+                    x.Key.EndsWith(".hdf", StringComparison.OrdinalIgnoreCase)));
             if (rarEntry == null)
             {
                 return null;
@@ -556,7 +558,7 @@ namespace Hst.Imager.Core.Commands
             var headerBytes = new byte[512];
             stream.Position = 0;
             Stream rarEntryStream;
-            await using (rarEntryStream = rarEntry.OpenEntryStream())
+            await using (rarEntryStream = await rarEntry.OpenEntryStreamAsync())
             {
                 if (await rarEntryStream.ReadAsync(headerBytes, 0, headerBytes.Length) == 0)
                 {
@@ -564,7 +566,7 @@ namespace Hst.Imager.Core.Commands
                 }
             }
 
-            rarEntryStream = rarEntry.OpenEntryStream();
+            rarEntryStream = await rarEntry.OpenEntryStreamAsync();
             var baseStream = byteSwap
                 ? new SectorStream(rarEntryStream, leaveOpen: false, byteSwap: true)
                 : rarEntryStream;
@@ -572,8 +574,8 @@ namespace Hst.Imager.Core.Commands
                         && dataType == DataType.Vhd;
             return new Media(path, Path.GetFileName(rarEntry.Key),
                 isVhd ? Media.MediaType.CompressedVhd : Media.MediaType.CompressedRaw, false, new InterceptorStream(baseStream,
-                    length: rarEntry.Size, closeHandler: stream.Dispose, readHandler: (buffer, offset, count) => 
-                        rarEntryStream.Fill(buffer, offset, count)), byteSwap);
+                    length: rarEntry.Size, closeHandler: stream.Dispose, readAsyncHandler: async (buffer, offset, count) => 
+                        await rarEntryStream.FillAsync(buffer, offset, count)), byteSwap);
         }
         
         private static async Task<Media> ResolveZipMedia(string path, string name, Stream stream, bool byteSwap)
@@ -583,7 +585,8 @@ namespace Hst.Imager.Core.Commands
             var zipEntry =
                 zipArchive.Entries.FirstOrDefault(x =>
                     x.Name.EndsWith(".img", StringComparison.OrdinalIgnoreCase) ||
-                    x.Name.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase));
+                    x.Name.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase) ||
+                    x.Name.EndsWith(".hdf", StringComparison.OrdinalIgnoreCase));
             if (zipEntry == null)
             {
                 return null;

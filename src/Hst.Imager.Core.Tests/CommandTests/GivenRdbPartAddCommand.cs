@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Core;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.Collections.Generic;
@@ -33,7 +35,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize, false);
+            false, true, 0, fileSystemBlockSize, false, null);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -76,7 +78,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(50, Unit.Percent), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize, false);
+            false, true, 0, fileSystemBlockSize, false, null);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -119,7 +121,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(2.MB(), Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize, false);
+            false, true, 0, fileSystemBlockSize, false, null);
 
         // act - execute rdb partition add
         var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -129,7 +131,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH1", "PFS3", new Size(2.MB(), Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize, false);
+            false, true, 0, fileSystemBlockSize, false, null);
 
         // act - execute rdb partition add
         result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -174,7 +176,7 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
         var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
             new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
             null,
-            false, true, 0, fileSystemBlockSize, false);
+            false, true, 0, fileSystemBlockSize, false, null);
 
         // act - execute rdb partition add
         var rdbPartAddResult = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
@@ -216,5 +218,86 @@ public class GivenRdbPartAddCommand : FsCommandTestBase
 
         // assert - mbr partition start offset is larger than rdb partition end offset
         Assert.True(mbrPartition.StartOffset > rdbPartition.EndOffset);
+    }
+
+    [Fact]
+    public async Task When_AddRdbPartitionWithStartCylinder_Then_PartitionIsAdded()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var fileSystemBlockSize = 512;
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        const uint startCylinder = 5;
+        
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // act - create rdb of size 5mb with pfs3 file system at sector 2 (rdb block lo) 
+        await CreateRdbWithPfs3(testCommandHelper, imgPath, rdbSize: 5.MB(), rdbBlockLo: 2);
+
+        // act - rdb partition add command with partition name DH0 and size 0
+        var cancellationTokenSource = new CancellationTokenSource();
+        var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
+            null,
+            false, true, 0, fileSystemBlockSize, false, startCylinder);
+
+        // act - execute rdb part add command
+        var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
+        
+        // assert - rdb part add command succeeded 
+        Assert.True(result.IsSuccess);
+        
+        // assert - read disk info
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using var media = mediaResult.Value;
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        Assert.NotNull(diskInfo);
+
+        // assert - disk img contains 1 partition tables
+        Assert.Single(diskInfo.PartitionTables);
+
+        // assert - rdb has 1 partition
+        var rdbPartition = diskInfo.RdbPartitionTablePart.Parts
+            .FirstOrDefault(x => x.PartType == PartType.Partition);
+        Assert.NotNull(rdbPartition);
+        
+        // assert - partition has start cylinder 5
+        Assert.Equal(5,  rdbPartition.StartCylinder);
+    }
+
+    [Fact]
+    public async Task When_AddRdbPartitionWithStartCylinderLargerThanRdb_Then_ErrorIsReturned()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var fileSystemBlockSize = 512;
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+        const uint startCylinder = 10;
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // act - create rdb of size 5mb with pfs3 file system at sector 2 (rdb block lo) 
+        await CreateRdbWithPfs3(testCommandHelper, imgPath, rdbSize: 5.MB(), rdbBlockLo: 2);
+
+        // act - rdb partition add command with partition name DH0 and size 0
+        var cancellationTokenSource = new CancellationTokenSource();
+        var rdbPartAddCommand = new RdbPartAddCommand(new NullLogger<RdbPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, "DH0", "PFS3", new Size(0, Unit.Bytes), null, null, null, null,
+            null,
+            false, true, 0, fileSystemBlockSize, false, startCylinder);
+
+        // act - execute rdb part add command
+        var result = await rdbPartAddCommand.Execute(cancellationTokenSource.Token);
+
+        // assert - rdb part add command failed 
+        Assert.True(result.IsFaulted);
+        
+        // assert - error is returned
+        Assert.IsType<Error>(result.Error);
     }
 }

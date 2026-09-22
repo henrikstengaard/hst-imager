@@ -237,7 +237,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var lines = await File.ReadAllLinesAsync(path);
             var scriptLines = lines.Where(x => !string.IsNullOrWhiteSpace(x) && !x.Trim().StartsWith("#"))
-                .Select(x => CommandLineStringSplitter.Instance.Split(x)).ToList();
+                .Select(CommandLineParser.SplitCommandLine).ToList();
 
             var rootCommand = CommandFactory.CreateRootCommand();
             foreach (var scriptLine in scriptLines)
@@ -246,7 +246,7 @@ namespace Hst.Imager.ConsoleApp
 
                 Log.Logger.Information($"[CMD] {string.Join(" ", args)}");
 
-                if (await rootCommand.InvokeAsync(args) != 0)
+                if (await rootCommand.Parse(args).InvokeAsync(new InvocationConfiguration()) != 0)
                 {
                     Environment.Exit(1);
                 }
@@ -575,13 +575,13 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,
             uint? preAlloc, uint? buffers, string maxTransfer, string mask, bool noMount, bool bootable, int? priority,
-            int? fileSystemBlockSize, bool useExperimental)
+            int? fileSystemBlockSize, bool useExperimental, uint? startCylinder)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new RdbPartAddCommand(GetLogger<RdbPartAddCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, name, dosType, ParseSize(size), reserved, preAlloc, buffers,
                 ParseHexOrIntegerValue(maxTransfer), ParseHexOrIntegerValue(mask), noMount, bootable, priority,
-                fileSystemBlockSize, useExperimental));
+                fileSystemBlockSize, useExperimental, startCylinder));
         }
 
         public static async Task RdbPartUpdate(string path, int partitionNumber, string name, string dosType,
@@ -666,14 +666,15 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, blockSize, start));
         }
         
-        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, FormatEnum format)
+        public static async Task FsDir(string path, bool recursive, UaeMetadata uaeMetadata, AttributesMode attributesMode,
+            FormatEnum format)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsDirCommand(GetLogger<FsDirCommand>(), commandHelper,
                 await GetPhysicalDrives(), path, recursive, uaeMetadata: uaeMetadata);
             command.EntriesRead += (_, args) =>
             {
-                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, format));
+                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, attributesMode, format));
             };
             await Execute(command);
         }
@@ -711,18 +712,6 @@ namespace Hst.Imager.ConsoleApp
             var command = new FsMoveCommand(GetLogger<FsMoveCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, forceOverwrite: forceOverwrite,
                 uaeMetadata: uaeMetadata);
-            await Execute(command);
-        }
-
-        public static async Task ArcList(string path, bool recursive)
-        {
-            using var commandHelper = GetCommandHelper();
-            var command = new ArcListCommand(GetLogger<ArcListCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, recursive);
-            command.EntriesRead += (_, args) =>
-            {
-                Console.Write(EntriesPresenter.PresentEntries(args.EntriesInfo, FormatEnum.Table));
-            };
             await Execute(command);
         }
 

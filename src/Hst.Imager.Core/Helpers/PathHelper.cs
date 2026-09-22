@@ -66,6 +66,12 @@ namespace Hst.Imager.Core.Helpers
             var dirName = lastDirectorySeparatorChar >= 0 ? path.Substring(0, lastDirectorySeparatorChar) : string.Empty;
             var fileName = lastDirectorySeparatorChar >= 0 ? path.Substring(lastDirectorySeparatorChar + 1) : path;
 
+            // set filename empty, if it's current directory (.)
+            if (fileName.Equals(".", StringComparison.OrdinalIgnoreCase))
+            {
+                fileName = string.Empty;
+            }
+
             // get full path for directory and combine with filename
             // main reason to not get full path for path, is because Windows 10
             // return "\\.\AUX" when path ends with filename "AUX".

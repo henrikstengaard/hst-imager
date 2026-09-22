@@ -47,6 +47,9 @@ public class LzwArchiveEntryIterator : IEntryIterator
     public string[] PathComponents { get; }
 
     public string[] DirPathComponents { get; }
+    
+    public AttributesMode AttributesMode => AttributesMode.Auto;
+    
     public Media Media => null;
     public string RootPath { get; }
 

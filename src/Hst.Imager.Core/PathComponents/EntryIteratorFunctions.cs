@@ -134,7 +134,6 @@ public static class EntryIteratorFunctions
                 Date = DateTime.Now,
                 Size = 0,
                 Type = Models.FileSystems.EntryType.Dir,
-                Attributes = attributes,
                 Properties = new Dictionary<string, string>()
             };
 
@@ -199,7 +198,6 @@ public static class EntryIteratorFunctions
             Type = isDir
                 ? Models.FileSystems.EntryType.Dir
                 : Models.FileSystems.EntryType.File,
-            Attributes = attributes,
             Properties = properties
         };
     }
@@ -234,7 +232,6 @@ public static class EntryIteratorFunctions
             Date = date,
             Size = size,
             Type = GetType(entryType),
-            Attributes = attributes,
             Properties = properties
         };
     }

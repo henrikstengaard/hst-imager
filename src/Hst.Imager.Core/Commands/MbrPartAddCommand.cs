@@ -97,7 +97,7 @@ namespace Hst.Imager.Core.Commands
 
             // available size and default start offset
             var availableSize = disk.Capacity;
-            long startOffset = 512;
+            var startOffset = startSector.HasValue ? startSector.Value * disk.SectorSize : 512L;
 
             // get rdb partition table
             var rdbPartitionTable =
@@ -108,7 +108,10 @@ namespace Hst.Imager.Core.Commands
             if (rdbPartitionTable != null)
             {
                 OnDebugMessage($"Rigid Disk Block found");
-                startOffset = rdbPartitionTable.Size.ToSectorSize();
+                if (rdbPartitionTable.Size.ToSectorSize() > startOffset)
+                {
+                    startOffset = rdbPartitionTable.Size.ToSectorSize();
+                }
                 availableSize = diskInfo.Size - startOffset;
             }
 
@@ -117,19 +120,25 @@ namespace Hst.Imager.Core.Commands
                 ? 0
                 : availableSize.ResolveSize(size).ToSectorSize();
             
-            // find unallocated part for partition size with start offset equal or larger
-            var unallocatedPart = diskInfo.DiskParts
-                .OrderByDescending(x => x.Size)
-                .FirstOrDefault(x => x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
+            var firstSector = rdbPartitionTable == null
+                ? 63
+                : rdbPartitionTable.Size / 512;
+
+            var parts = diskInfo.DiskParts.ToList();
+            var firstAvailableOffset = biosPartitionTable.Partitions.Count > 0
+                ? firstSector * disk.BlockSize
+                : disk.BlockSize;
+            if (rdbPartitionTable != null)
+            {
+                firstAvailableOffset = rdbPartitionTable.Reserved.EndOffset + 1;
+            }
+            var unallocatedPart = FindUnallocatedPart(parts, firstAvailableOffset,
+                startOffset, partitionSize);
             if (unallocatedPart == null)
             {
                 return new Result(new Error($"Master Boot Record does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
             }
 
-            var firstSector = rdbPartitionTable == null
-                ? 63
-                : rdbPartitionTable.Size / 512;
-            
             // add rdb mbr gap, if rdb is present and mbr doesn't have any partitions
             if (rdbPartitionTable != null && !biosPartitionTable.Partitions.Any())
             {
@@ -227,6 +236,30 @@ namespace Hst.Imager.Core.Commands
                 MbrPartType.PiStormRdb => new Result<byte>(Core.Constants.BiosPartitionTypes.PiStormRdb),
                 _ => new Result<byte>(new Error($"Unsupported partition type '{type}'"))
             };
+        }
+        
+        private static PartInfo FindUnallocatedPart(IEnumerable<PartInfo> parts, long firstAvailableOffset,
+            long startOffset, long partitionSize)
+        {
+            var unallocatedParts = parts.Where(part => part.PartType == PartType.Unallocated &&
+                                                       part.StartOffset >= firstAvailableOffset);
+
+            if (startOffset > 0)
+            {
+                // a part's start offset can less or equal than start offset, if the part is unallocated.
+                // unallocated parts start offset can be greater or equal than start offset. 
+                unallocatedParts = unallocatedParts.Where(part => part.StartOffset <= startOffset ||
+                                                                  part.StartOffset >= startOffset);
+            }
+
+            if (partitionSize > 0)
+            {
+                unallocatedParts = startOffset > 0
+                    ? unallocatedParts.Where(part => startOffset + partitionSize - 1 <= part.EndOffset)
+                    : unallocatedParts.Where(part => part.Size >= partitionSize);
+            }
+            
+            return unallocatedParts.FirstOrDefault();
         }
     }
 }

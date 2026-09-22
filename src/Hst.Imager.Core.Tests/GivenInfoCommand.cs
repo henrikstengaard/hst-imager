@@ -288,6 +288,49 @@ namespace Hst.Imager.Core.Tests
         }
 
         [Fact]
+        public async Task When_ReadInfoFromRarCompressedVhd_Then_DiskInfoMatches()
+        {
+            // arrange
+            var imgPath = $"{Guid.NewGuid()}.vhd.rar";
+
+            try
+            {
+                var testCommandHelper = new TestCommandHelper();
+
+                // arrange - zip compressed vhd media
+                File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.rar"), imgPath);
+
+                // arrange - info command
+                var cancellationTokenSource = new CancellationTokenSource();
+                var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
+                    [], imgPath, false);
+                MediaInfo mediaInfo = null;
+                infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
+
+                // act - read info
+                var result = await infoCommand.Execute(cancellationTokenSource.Token);
+                Assert.True(result.IsSuccess);
+
+                // assert - media info matches disk size and partitions
+                Assert.NotNull(mediaInfo);
+                Assert.Equal(1020055040, mediaInfo.DiskSize);
+                Assert.NotNull(mediaInfo.DiskInfo);
+                Assert.Equal(1020055040, mediaInfo.DiskInfo.Size);
+                var partitionTable =
+                    mediaInfo.DiskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.RigidDiskBlock);
+                Assert.NotNull(partitionTable);
+                Assert.Equal(2, partitionTable.Partitions.Count());
+            }
+            finally
+            {
+                if (File.Exists(imgPath))
+                {
+                    File.Delete(imgPath);
+                }
+            }
+        }
+
+        [Fact]
         public async Task When_ReadInfoFromMbrPiStormRdbPartition_Then_DiskInfoIsRead()
         {
             // arrange - img and info paths

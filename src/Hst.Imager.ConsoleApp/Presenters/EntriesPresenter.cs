@@ -1,4 +1,8 @@
-﻿namespace Hst.Imager.ConsoleApp.Presenters;
+﻿using Hst.Imager.ConsoleApp.ViewModels;
+using Hst.Imager.Core.FileSystems;
+using Hst.Imager.Core.Models;
+
+namespace Hst.Imager.ConsoleApp.Presenters;
 
 using System;
 using System.Collections.Generic;
@@ -12,29 +16,40 @@ using Core.Models.FileSystems;
 
 public static class EntriesPresenter
 {
-    public static string PresentEntries(EntriesInfo entriesInfo, FormatEnum format)
+    public static string PresentEntries(EntriesInfo entriesInfo, AttributesMode attributesMode, FormatEnum format)
     {
+        var entriesAttributesMode = attributesMode != AttributesMode.Auto
+            ? attributesMode
+            : entriesInfo.AttributesMode;
+        
+        if (entriesAttributesMode == AttributesMode.Auto)
+        {
+            entriesAttributesMode = OperatingSystem.IsWindows() ? AttributesMode.Windows : AttributesMode.Unix;
+        }
+        
         switch (format)
         {
             case FormatEnum.Table:
-                return FormatTable(entriesInfo);
+                return FormatTable(entriesInfo, entriesAttributesMode);
             case FormatEnum.Json:
-                return FormatJson(entriesInfo);
+                return FormatJson(entriesInfo, entriesAttributesMode);
             default:
                 throw new ArgumentException($"Unsupported format '{format}'", nameof(format));
         }
     }
 
-    private static string FormatJson(EntriesInfo entriesInfo)
+    private static string FormatJson(EntriesInfo entriesInfo, AttributesMode attributesMode)
     {
-        return JsonSerializer.Serialize(entriesInfo, new JsonSerializerOptions
+        var viewModel = entriesInfo.ToViewModel();
+        
+        return JsonSerializer.Serialize(viewModel, new JsonSerializerOptions
         {
             WriteIndented = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         });
     }
     
-    private static string FormatTable(EntriesInfo entriesInfo)
+    private static string FormatTable(EntriesInfo entriesInfo, AttributesMode attributesMode)
     {
         var outputBuilder = new StringBuilder();
         
@@ -84,7 +99,7 @@ public static class EntriesPresenter
                 entry.FormattedName,
                 entry.Type == EntryType.Dir ? "<DIR>" : entry.Size.FormatBytes(),
                 entry.Date == null ? string.Empty : entry.Date.Value.ToString(CultureInfo.CurrentCulture),
-                entry.Attributes ?? string.Empty
+                AttributesFormatter.FormatAttributes(entry, attributesMode)
             });
 
             foreach (var property in propertiesOrdered)

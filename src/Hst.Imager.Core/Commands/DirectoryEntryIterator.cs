@@ -166,6 +166,7 @@ public class DirectoryEntryIterator : IEntryIterator
     public string[] DirPathComponents { get; private set; }
 
     public Media Media => media;
+    public AttributesMode AttributesMode => AttributesMode.Auto;
 
     public Entry Current => currentEntry;
 
@@ -314,7 +315,11 @@ public class DirectoryEntryIterator : IEntryIterator
             var fullPathComponents = GetPathComponents(dirInfo.FullName);
 
             var date = dirInfo.LastWriteTime;
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>
+            {
+                [Constants.EntryPropertyNames.WindowsAttributes] = ((uint)dirInfo.Attributes).ToString(),
+                [Constants.EntryPropertyNames.UnixFileMode] = ((uint)dirInfo.UnixFileMode).ToString()
+            };
 
             var relativePathComponents = fullPathComponents.Skip(DirPathComponents.Length).ToArray();
 
@@ -333,12 +338,12 @@ public class DirectoryEntryIterator : IEntryIterator
                     
                     if (uaeMetadataEntry.Comment != null)
                     {
-                        properties[Core.Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
+                        properties[Constants.EntryPropertyNames.Comment] = uaeMetadataEntry.Comment;
                     }
 
                     if (uaeMetadataEntry.ProtectionBits.HasValue)
                     {
-                        properties[Core.Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
+                        properties[Constants.EntryPropertyNames.ProtectionBits] = uaeMetadataEntry.ProtectionBits.ToString();
                     }
                 }
             }
@@ -373,7 +378,11 @@ public class DirectoryEntryIterator : IEntryIterator
             var fullPathComponents = GetPathComponents(fileInfo.FullName);
 
             var date = fileInfo.LastWriteTime;
-            var properties = new Dictionary<string, string>();
+            var properties = new Dictionary<string, string>
+            {
+                [Constants.EntryPropertyNames.WindowsAttributes] = ((uint)fileInfo.Attributes).ToString(),
+                [Constants.EntryPropertyNames.UnixFileMode] = ((uint)fileInfo.UnixFileMode).ToString()
+            };
 
             var relativePathComponents = fullPathComponents.Skip(DirPathComponents.Length).ToArray();
 
@@ -411,7 +420,7 @@ public class DirectoryEntryIterator : IEntryIterator
 
             var relativePath = string.Join(Path.DirectorySeparatorChar, relativePathComponents);
 
-            this.nextEntries.Push(new Entry
+            nextEntries.Push(new Entry
             {
                 Name = relativePath,
                 FormattedName = relativePath,
