@@ -29,12 +29,30 @@ public class LocalDirectoryMedia : Media
             return Drive.Name.Equals(otherLocalDirectoryMedia.Drive.Name, StringComparison.OrdinalIgnoreCase);
         }
 
-        var stat = OperatingSystem.IsLinux()
-            ? LinuxFileInfo.GetStat(Path)
-            : MacOsFileInfo.GetStat(Path);
-        var otherStat = OperatingSystem.IsLinux()
-            ? LinuxFileInfo.GetStat(otherLocalDirectoryMedia.Path)
-            : MacOsFileInfo.GetStat(otherLocalDirectoryMedia.Path);
-        return stat.DeviceId.Equals(otherStat.DeviceId);
+        // compare device id of paths, if stat is available for both paths.
+        // otherwise fallback to comparing drive names.
+        if (TryGetStat(Path, out var stat) &&
+            TryGetStat(otherLocalDirectoryMedia.Path, out var otherStat))
+        {
+            return stat.DeviceId.Equals(otherStat.DeviceId);
+        }
+
+        return Drive.Name.Equals(otherLocalDirectoryMedia.Drive.Name, StringComparison.Ordinal);
+    }
+
+    private static bool TryGetStat(string path, out Stat stat)
+    {
+        if (OperatingSystem.IsLinux())
+        {
+            return LinuxFileInfo.TryGetStat(path, out stat);
+        }
+
+        if (OperatingSystem.IsMacOS())
+        {
+            return MacOsFileInfo.TryGetStat(path, out stat);
+        }
+
+        stat = null;
+        return false;
     }
 }
