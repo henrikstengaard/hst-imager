@@ -1,5 +1,4 @@
 ﻿using Hst.Core;
-using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -23,7 +22,7 @@ public class DirectoryEntryIterator : IEntryIterator
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
 
-    private readonly LocalDirectoryMedia media;
+    private readonly Media media;
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
     private readonly string[] rootPathComponents;
@@ -32,19 +31,17 @@ public class DirectoryEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool isFirst;
     private bool initialized;
-    private readonly IAppCache appCache;
     private readonly UaeMetadataHelper uaeMetadataHelper;
 
-    public DirectoryEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata, IAppCache appCache)
+    public DirectoryEntryIterator(Media media, string path, bool recursive, UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
     {
-        this.media = new LocalDirectoryMedia(path, Path.GetFileName(path));
+        this.media = media;
         this.nextEntries = new Stack<Entry>();
         rootPath = PathHelper.GetFullPath(path);
         this.recursive = recursive;
         this.isFirst = true;
         this.UaeMetadata = uaeMetadata;
-        this.appCache = appCache;
-        uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        this.uaeMetadataHelper = uaeMetadataHelper;
         rootPathComponents = PathHelper.Split(rootPath);
     }
 
@@ -441,7 +438,6 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public void Dispose()
     {
-        appCache.Dispose();
     }
 
     public UaeMetadata UaeMetadata { get; set; }

@@ -44,12 +44,15 @@ public class FsCopyCommand(
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        using var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
         OnInformationMessage($"Copying from source Path '{srcPath}' to destination path '{destPath}'");
 
         var stopwatch = new Stopwatch();
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite, uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
@@ -185,7 +188,10 @@ public class FsCopyCommand(
     protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path,
         UaeMetadata uaeMetadata)
     {
-        var entryIteratorResult = await GetEntryIteratorFromMedia(entryWriter, path);
+        var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        
+        var entryIteratorResult = await GetEntryIteratorFromMedia(entryWriter, path, uaeMetadataHelper);
         if (entryIteratorResult.IsSuccess)
         {
             return entryIteratorResult;
@@ -193,7 +199,7 @@ public class FsCopyCommand(
         
         // get directory entry iterator and return if successful
         var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
-            new MemoryAppCache());
+            uaeMetadataHelper);
         if (directoryEntryIterator.IsFaulted)
         {
             return new Result<IEntryIterator>(directoryEntryIterator.Error);
@@ -205,7 +211,8 @@ public class FsCopyCommand(
             : new Result<IEntryIterator>(initializeResult.Error);
     }
     
-    private async Task<Result<IEntryIterator>> GetEntryIteratorFromMedia(IEntryWriter entryWriter, string path)
+    private async Task<Result<IEntryIterator>> GetEntryIteratorFromMedia(IEntryWriter entryWriter, string path,
+        UaeMetadataHelper uaeMetadataHelper)
     {
         // path is not a directory, so must be a file
         
@@ -223,7 +230,7 @@ public class FsCopyCommand(
         // file entry iterator
         if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
-            var fileEntryIterator = await GetFileEntryIterator(path, recursive, uaeMetadata);
+            var fileEntryIterator = await GetFileEntryIterator(path, recursive, uaeMetadata, uaeMetadataHelper);
             if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
             {
                 var initializeResult = await fileEntryIterator.Value.Initialize();

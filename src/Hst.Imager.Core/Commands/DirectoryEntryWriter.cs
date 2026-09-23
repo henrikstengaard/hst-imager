@@ -33,7 +33,6 @@ public class DirectoryEntryWriter : IEntryWriter
     private bool lastPathComponentExist = true;
     private EntryType lastPathComponentEntryType = EntryType.Dir;
     private bool isInitialized;
-    private readonly IAppCache appCache;
     private readonly UaeMetadataHelper uaeMetadataHelper;
 
     /// <summary>
@@ -43,17 +42,16 @@ public class DirectoryEntryWriter : IEntryWriter
     /// <param name="recursive">Recursive creating directories and files.</param>
     /// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
     /// <param name="forceOverwrite">Force overwriting any existing files.</param>
-    /// <param name="appCache">Application cache.</param>
+    /// <param name="uaeMetadataHelper">UAE metadata helper.</param>
     public DirectoryEntryWriter(string rootPath, bool recursive, bool createDirectory, bool forceOverwrite,
-        IAppCache appCache)
+        UaeMetadataHelper uaeMetadataHelper)
     {
         this.media = new LocalDirectoryMedia(rootPath, Path.GetFileName(rootPath));
         this.rootPath = rootPath;
         this.recursive = recursive;
         this.createDirectory = createDirectory;
         this.forceOverwrite = forceOverwrite;
-        this.appCache = appCache;
-        uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        this.uaeMetadataHelper = uaeMetadataHelper;
         rootPathComponents = PathHelper.Split(rootPath);
     }
 
@@ -67,7 +65,6 @@ public class DirectoryEntryWriter : IEntryWriter
     
     public void Dispose()
     {
-        appCache.Dispose();
     }
 
     public async Task<Result> Initialize()
@@ -399,8 +396,11 @@ public class DirectoryEntryWriter : IEntryWriter
 
     public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
     {
-        return new DirectoryEntryIterator(string.Join(Path.PathSeparator, rootPathComponents), recursive,
-            UaeMetadata, new MemoryAppCache());
+        var path = string.Join(Path.PathSeparator, rootPathComponents);
+        
+        var localDirectoryMedia = new LocalDirectoryMedia(path, Path.GetFileName(path));
+        
+        return new DirectoryEntryIterator(localDirectoryMedia, path, recursive, UaeMetadata, uaeMetadataHelper);
     }
 
     public bool ArePathComponentsSelfCopy(IEntryIterator entryIterator)

@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.MagicBytes;
+﻿using Hst.Imager.Core.Caching;
+using Hst.Imager.Core.MagicBytes;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -41,6 +42,9 @@ public class FsExtractCommand(
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        using var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
         OnInformationMessage($"Extracting from source path '{srcPath}' to destination path '{destPath}'");
 
         var stopwatch = new Stopwatch();
@@ -53,7 +57,8 @@ public class FsExtractCommand(
         }
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite,
+            uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

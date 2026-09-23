@@ -6,6 +6,7 @@ using DiscUtils.Partitions;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Tests.EntryWriterTests;
 
@@ -114,8 +115,11 @@ public static class EntryWriterTestHelper
             Directory.CreateDirectory(path);
         }
         
+        using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        
         return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), false,
-            createDestDirectory, false, new TestAppCache());
+            createDestDirectory, false, uaeMetadataHelper);
     }
 
     public static async Task CreateDirectory(EntryWriterType entryWriterType, TestCommandHelper testCommandHelper,

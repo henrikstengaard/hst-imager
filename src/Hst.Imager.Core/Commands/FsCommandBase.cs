@@ -145,32 +145,75 @@ public abstract partial class FsCommandBase : CommandBase
                MagicBytesRegister.Instance.TryResolve(data, out var dataType) &&
                dataType == DataType.Iso9660;
     }
-
-    protected async Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive,
-        UaeMetadata uaeMetadata, IAppCache appCache)
+    
+    protected async Task<LocalDirectoryMedia> CreateLocalDirectoryMediaFromPath(string path, UaeMetadata uaeMetadata,
+        UaeMetadataHelper uaeMetadataHelper)
     {
         var fullPath = PathHelper.GetFullPath(path);
         
-        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        var pathComponents = PathHelper.Split(fullPath);
+        
+        if (pathComponents.Length == 0)
+        {
+            throw new ArgumentException($"Invalid path '{path}'");
+        }
+        
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
+            uaeMetadata, pathComponents);
+        var hasUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+
+        var localDirectoryPathComponents = hasUaeMetadata ? uaeMetadataEntry.NormalPathComponents : pathComponents;
+
+        var localDirectoryPath = string.Empty;
+        for(var i = 1; i <= localDirectoryPathComponents.Length; i++)
+        {
+            var dirPath = Path.Combine(localDirectoryPathComponents.Take(i).ToArray());
+            if (!Directory.Exists(dirPath))
+            {
+                break;
+            }
+            localDirectoryPath = dirPath;
+        }
+        
+        if (string.IsNullOrEmpty(localDirectoryPath))
+        {
+            throw new ArgumentException($"Invalid path '{path}' results in no existing local directory path");
+        }
+        
+        return new LocalDirectoryMedia(localDirectoryPath, hasUaeMetadata
+            ? uaeMetadataEntry.UaePathComponents[^1] : pathComponents[^1]);
+    }
+
+    protected async Task<Result<IEntryIterator>> GetDirectoryEntryIterator(string path, bool recursive,
+        UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
+    {
+        var fullPath = PathHelper.GetFullPath(path);
 
         var pathComponents = PathHelper.Split(fullPath);
         
         var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
             uaeMetadata, pathComponents);
-        var pathExistsInUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
-
+        var hasUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+        
+        var localDirectoryMedia = await CreateLocalDirectoryMediaFromPath(path, uaeMetadata, uaeMetadataHelper);
+        
         var dirPath = Path.GetDirectoryName(fullPath) ?? string.Empty;
         
-        return pathExistsInUaeMetadata || Directory.Exists(fullPath) || Directory.Exists(dirPath)
-            ? new Result<IEntryIterator>(new DirectoryEntryIterator(fullPath, recursive, uaeMetadata, appCache))
+        return hasUaeMetadata || Directory.Exists(fullPath) || Directory.Exists(dirPath)
+            ? new Result<IEntryIterator>(new DirectoryEntryIterator(localDirectoryMedia, fullPath, recursive,
+                uaeMetadata, uaeMetadataHelper))
             : new Result<IEntryIterator>(new PathNotFoundError($"Path not found '{fullPath}'", fullPath));
     }
 
-    protected Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata)
+    protected async Task<Result<IEntryIterator>> GetFileEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata,
+        UaeMetadataHelper uaeMetadataHelper)
     {
         path = PathHelper.GetFullPath(path);
-        return Task.FromResult(new Result<IEntryIterator>(new DirectoryEntryIterator(path, recursive,
-            uaeMetadata, new MemoryAppCache())));
+
+        var localDirectoryMedia = await CreateLocalDirectoryMediaFromPath(path, uaeMetadata, uaeMetadataHelper);
+        
+        return new Result<IEntryIterator>(new DirectoryEntryIterator(localDirectoryMedia, path, recursive,
+            uaeMetadata, uaeMetadataHelper));
     }
 
     protected async Task<Result<IEntryIterator>> GetZipEntryIterator(MediaResult resolvedMedia, bool recursive)
@@ -421,7 +464,7 @@ public abstract partial class FsCommandBase : CommandBase
     }
 
     private async Task<Result<IEntryWriter>> GetDirectoryEntryWriter(string path, bool recursive, bool createDirectory,
-        bool forceOverwrite)
+        bool forceOverwrite, UaeMetadataHelper uaeMetadataHelper)
     {
         // ensure path is full path
         path = PathHelper.GetFullPath(path);
@@ -436,7 +479,7 @@ public abstract partial class FsCommandBase : CommandBase
         }
 
         var directoryEntryWriter = new DirectoryEntryWriter(path, recursive, createDirectory, forceOverwrite,
-            new MemoryAppCache());
+            uaeMetadataHelper);
 
         var initializeResult = await directoryEntryWriter.Initialize();
         return initializeResult.IsFaulted
@@ -445,7 +488,7 @@ public abstract partial class FsCommandBase : CommandBase
     }
 
     protected async Task<Result<IEntryWriter>> GetEntryWriter(string destPath, bool recursive, bool createDestDirectory,
-        bool forceOverwrite)
+        bool forceOverwrite, UaeMetadataHelper uaeMetadataHelper)
     {
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(destPath);
@@ -458,12 +501,12 @@ public abstract partial class FsCommandBase : CommandBase
                 return new Result<IEntryWriter>(mediaResult.Error);
             }
 
-            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite, uaeMetadataHelper);
         }
 
         if (Directory.Exists(destPath))
         {
-            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite);
+            return await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, forceOverwrite, uaeMetadataHelper);
         }
 
         OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
@@ -473,7 +516,7 @@ public abstract partial class FsCommandBase : CommandBase
             string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
         {
             return forceOverwrite
-                ? await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, true)
+                ? await GetDirectoryEntryWriter(destPath, recursive, createDestDirectory, true, uaeMetadataHelper)
                 : new Result<IEntryWriter>(new PathExistsError($"Path already exists '{destPath}'"));
         }
 

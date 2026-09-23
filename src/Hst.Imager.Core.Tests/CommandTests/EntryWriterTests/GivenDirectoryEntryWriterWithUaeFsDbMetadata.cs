@@ -25,14 +25,15 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(initPath, false, createDirectory,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
 
             // act - initialize writer
@@ -91,8 +92,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -124,7 +126,7 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(initPath, false, createDirectory,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
 
             // act - initialize writer
@@ -203,8 +205,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -213,7 +216,7 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
             Assert.True(initializeResult.IsSuccess);
@@ -272,8 +275,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
         const bool createDirectory = true;
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -282,7 +286,7 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, createDirectory,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
             Assert.True(initializeResult.IsSuccess);
@@ -364,8 +368,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -374,7 +379,7 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
             Assert.True(initializeResult.IsSuccess);
@@ -448,8 +453,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
         const UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb;
         
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -458,7 +464,7 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
 
             // arrange - directory entry writer
             var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
-                false, appCache);
+                false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
             Assert.True(initializeResult.IsSuccess);

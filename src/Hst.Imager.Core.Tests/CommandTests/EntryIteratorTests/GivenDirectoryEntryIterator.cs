@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.UaeMetadatas;
 using Xunit;
@@ -18,9 +19,10 @@ public class GivenDirectoryEntryIterator
         // arrange - paths
         var mediaPath = Guid.NewGuid().ToString();
 
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
-        
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
         try
         {
             // arrange - create directory and files
@@ -34,8 +36,9 @@ public class GivenDirectoryEntryIterator
             await File.WriteAllBytesAsync(uaeFsDbPath, []);
             
             // arrange - directory entry iterator
-            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, UaeMetadata.UaeFsDb,
-                appCache);
+            var localDirectoryMedia = new LocalDirectoryMedia(mediaPath, mediaPath);
+            var directoryEntryIterator = new DirectoryEntryIterator(localDirectoryMedia, mediaPath, false, UaeMetadata.UaeFsDb,
+                uaeMetadataHelper);
 
             // arrange - initialize directory entry iterator
             await directoryEntryIterator.Initialize();
@@ -88,8 +91,9 @@ public class GivenDirectoryEntryIterator
         // arrange - paths
         var mediaPath = Guid.NewGuid().ToString();
 
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -100,8 +104,9 @@ public class GivenDirectoryEntryIterator
             await File.WriteAllBytesAsync(Path.Combine(mediaPath, "test3.txt"), []);
             
             // arrange - directory entry iterator
-            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, UaeMetadata.UaeFsDb,
-                appCache);
+            var localDirectoryMedia = new LocalDirectoryMedia(mediaPath, mediaPath);
+            var directoryEntryIterator = new DirectoryEntryIterator(localDirectoryMedia, mediaPath, false, UaeMetadata.UaeFsDb,
+                uaeMetadataHelper);
 
             // arrange - initialize directory entry iterator
             await directoryEntryIterator.Initialize();
@@ -165,8 +170,9 @@ public class GivenDirectoryEntryIterator
         var file2Date = new DateTime(2024, 4, 3, 0, 0, 0);
         var file3Date = new DateTime(2024, 4, 4, 0, 0, 0);
 
-        // arrange - test app cache
+        // arrange - test app cache and uae metadata helper
         using var appCache = new TestAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
         try
         {
@@ -182,7 +188,9 @@ public class GivenDirectoryEntryIterator
             new FileInfo(file3Path).LastWriteTime = file3Date;
             
             // arrange - directory entry iterator
-            var directoryEntryIterator = new DirectoryEntryIterator(mediaPath, false, uaeMetadata, appCache);
+            var localDirectoryMedia = new LocalDirectoryMedia(mediaPath, mediaPath);
+            var directoryEntryIterator = new DirectoryEntryIterator(localDirectoryMedia, mediaPath, false,
+                uaeMetadata, uaeMetadataHelper);
 
             // arrange - initialize directory entry iterator
             await directoryEntryIterator.Initialize();

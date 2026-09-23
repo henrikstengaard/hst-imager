@@ -1,4 +1,6 @@
-﻿namespace Hst.Imager.Core.Tests.CommandTests;
+﻿using Hst.Imager.Core.UaeMetadatas;
+
+namespace Hst.Imager.Core.Tests.CommandTests;
 
 using System;
 using System.IO;
@@ -34,11 +36,13 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             // arrange - create directory
             Directory.CreateDirectory(path);
             
-            // arrange - create app cache
+            // arrange - test app cache and uae metadata helper
             using var appCache = new TestAppCache();
+            var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path, false, false, false, appCache);
+            var writer = new DirectoryEntryWriter(path, false, false, false,
+                uaeMetadataHelper);
 
             // arrange - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -74,12 +78,13 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
-            // arrange - create app cache
+            // arrange - test app cache and uae metadata helper
             using var appCache = new TestAppCache();
+            var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
             var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
-                false, false, appCache);
+                false, false, uaeMetadataHelper);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();
@@ -103,12 +108,13 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
         
         try
         {
-            // arrange - create app cache
+            // arrange - test app cache and uae metadata helper
             using var appCache = new TestAppCache();
+            var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
             var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
-                false, false, appCache);
+                false, false, uaeMetadataHelper);
 
             // act - initialize the writer
             var initializeResult = await writer.Initialize();

@@ -31,8 +31,12 @@ public class FsMoveCommand(
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        using var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(toPath, false, false, forceOverwrite);
+        var destEntryWriterResult = await GetEntryWriter(toPath, false, false, forceOverwrite,
+            uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);
@@ -43,7 +47,7 @@ public class FsMoveCommand(
                              destEntryWriter.PathComponents.SequenceEqual(destEntryWriter.DirPathComponents);
 
         // get source entry iterator
-        var srcEntryIteratorResult = await GetEntryIterator(fromPath);
+        var srcEntryIteratorResult = await GetEntryIterator(fromPath, uaeMetadataHelper);
         if (srcEntryIteratorResult.IsFaulted)
         {
             return new Result(srcEntryIteratorResult.Error);
@@ -324,7 +328,7 @@ public class FsMoveCommand(
         return result.IsFaulted ? result : new Result();
     }
 
-    private async Task<Result<IEntryIterator>> GetEntryIterator(string path)
+    private async Task<Result<IEntryIterator>> GetEntryIterator(string path, UaeMetadataHelper uaeMetadataHelper)
     {
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(path);
@@ -338,7 +342,7 @@ public class FsMoveCommand(
             }
 
             var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
-                new MemoryAppCache());
+                uaeMetadataHelper);
             if (directoryEntryIteratorResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(directoryEntryIteratorResult.Error);
@@ -355,7 +359,7 @@ public class FsMoveCommand(
             (Directory.Exists(path) || File.Exists(path)))
         {
             var entryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
-                new MemoryAppCache());
+                uaeMetadataHelper);
             if (entryIteratorResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(entryIteratorResult.Error);
