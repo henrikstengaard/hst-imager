@@ -1,4 +1,5 @@
-﻿using Hst.Imager.Core.UaeMetadatas;
+﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Tests.CommandTests;
 
@@ -41,7 +42,9 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(path, false, false, false,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(path,
+                UaeMetadata.None, uaeMetadataHelper);
+            var writer = new DirectoryEntryWriter(localDirectoryMedia, path, false, false, false,
                 uaeMetadataHelper);
 
             // arrange - initialize the writer
@@ -83,7 +86,10 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
+            var localDirectoryPath = fullPath ? Path.GetFullPath(path) : path;
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(
+                localDirectoryPath, UaeMetadata.None, uaeMetadataHelper);
+            var writer = new DirectoryEntryWriter(localDirectoryMedia, localDirectoryPath, false, 
                 false, false, uaeMetadataHelper);
 
             // act - initialize the writer
@@ -113,7 +119,10 @@ public class GivenDirectoryEntryWriter : FsCommandTestBase
             var uaeMetadataHelper = new UaeMetadataHelper(appCache);
             
             // arrange - create directory entry writer
-            var writer = new DirectoryEntryWriter(fullPath ? Path.GetFullPath(path) : path, false, 
+            var localDirectoryPath = fullPath ? Path.GetFullPath(path) : path;
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(
+                localDirectoryPath, UaeMetadata.None, uaeMetadataHelper);
+            var writer = new DirectoryEntryWriter(localDirectoryMedia, localDirectoryPath, false, 
                 false, false, uaeMetadataHelper);
 
             // act - initialize the writer

@@ -36,7 +36,7 @@ public class FsMoveCommand(
 
         // get destination entry writer
         var destEntryWriterResult = await GetEntryWriter(toPath, false, false, forceOverwrite,
-            uaeMetadataHelper);
+            uaeMetadata, uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

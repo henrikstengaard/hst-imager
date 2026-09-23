@@ -52,7 +52,8 @@ public class FsCopyCommand(
         var stopwatch = new Stopwatch();
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite, uaeMetadataHelper);
+        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite,
+            uaeMetadata, uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

@@ -55,7 +55,7 @@ public static class EntryWriterTestHelper
 
     public static async Task<IEntryWriter> CreateEntryWriter(EntryWriterType entryWriterType,
         TestCommandHelper testCommandHelper,
-        string path, string[] initializePathComponents, bool createDestDirectory)
+        string path, string[] initializePathComponents, bool createDestDirectory, UaeMetadata uaeMetadata)
     {
         return entryWriterType switch
         {
@@ -63,8 +63,8 @@ public static class EntryWriterTestHelper
                 testCommandHelper, path, initializePathComponents, createDestDirectory),
             EntryWriterType.FileSystemEntryWriter => await CreateFileSystemEntryWriter(
                 testCommandHelper, path, initializePathComponents, createDestDirectory),
-            EntryWriterType.DirectoryEntryWriter => CreateDirectoryEntryWriter(
-                testCommandHelper, path, initializePathComponents, createDestDirectory),
+            EntryWriterType.DirectoryEntryWriter => await CreateDirectoryEntryWriter(
+                testCommandHelper, path, initializePathComponents, createDestDirectory, uaeMetadata),
             _ => throw new ArgumentOutOfRangeException(nameof(entryWriterType), entryWriterType,
                 "Entry writer type not supported")
         };
@@ -107,8 +107,8 @@ public static class EntryWriterTestHelper
             initializePathComponents, false, createDestDirectory, false);
     }
 
-    public static IEntryWriter CreateDirectoryEntryWriter(TestCommandHelper testCommandHelper,
-        string path, string[] initializePathComponents, bool createDestDirectory)
+    public static async Task<IEntryWriter> CreateDirectoryEntryWriter(TestCommandHelper testCommandHelper,
+        string path, string[] initializePathComponents, bool createDestDirectory, UaeMetadata uaeMetadata)
     {
         if (!Directory.Exists(path))
         {
@@ -118,7 +118,11 @@ public static class EntryWriterTestHelper
         using var appCache = new TestAppCache();
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
         
-        return new DirectoryEntryWriter(Path.Combine(path, Path.Combine(initializePathComponents)), false,
+        var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(path, uaeMetadata,
+            uaeMetadataHelper);
+
+        var rootPath = Path.Combine(path, Path.Combine(initializePathComponents));
+        return new DirectoryEntryWriter(localDirectoryMedia, rootPath, false,
             createDestDirectory, false, uaeMetadataHelper);
     }
 

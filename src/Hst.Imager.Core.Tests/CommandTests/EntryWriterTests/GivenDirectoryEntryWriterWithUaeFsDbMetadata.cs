@@ -6,6 +6,7 @@ using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.UaeMetadatas;
 using Xunit;
 using Entry = Hst.Imager.Core.Models.FileSystems.Entry;
@@ -32,8 +33,10 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
         try
         {
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(initPath, false, createDirectory,
-                false, uaeMetadataHelper);
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, initPath, false,
+                createDirectory, false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
 
             // act - initialize writer
@@ -125,7 +128,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             }
             
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(initPath, false, createDirectory,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, initPath, false, createDirectory,
                 false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
 
@@ -215,7 +220,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             Directory.CreateDirectory(localPath);
 
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, localPath, false, false,
                 false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
@@ -285,7 +292,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             Directory.CreateDirectory(localPath);
 
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, createDirectory,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, localPath, false, createDirectory,
                 false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
@@ -378,7 +387,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             Directory.CreateDirectory(localPath);
 
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, localPath, false, false,
                 false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();
@@ -463,7 +474,9 @@ public class GivenDirectoryEntryWriterWithUaeFsDbMetadata
             Directory.CreateDirectory(localPath);
 
             // arrange - directory entry writer
-            var directoryEntryWriter = new DirectoryEntryWriter(localPath, false, false,
+            var localDirectoryMedia = await MediaHelper.CreateLocalDirectoryMediaFromPath(localPath,
+                uaeMetadata, uaeMetadataHelper);
+            var directoryEntryWriter = new DirectoryEntryWriter(localDirectoryMedia, localPath, false, false,
                 false, uaeMetadataHelper);
             directoryEntryWriter.UaeMetadata = uaeMetadata;
             var initializeResult = await directoryEntryWriter.Initialize();

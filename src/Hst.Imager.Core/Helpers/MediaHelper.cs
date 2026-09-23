@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Hst.Core;
 using Hst.Imager.Core.Extensions;
 using Hst.Imager.Core.MagicBytes;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -289,7 +290,43 @@ namespace Hst.Imager.Core.Helpers
         
         public static bool IsVhd(string path) => path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
 
+        public static async Task<LocalDirectoryMedia> CreateLocalDirectoryMediaFromPath(string path,
+            UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
+        {
+            var fullPath = PathHelper.GetFullPath(path);
         
+            var pathComponents = PathHelper.Split(fullPath);
+        
+            if (pathComponents.Length == 0)
+            {
+                throw new ArgumentException($"Invalid path '{path}'");
+            }
+        
+            var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
+                uaeMetadata, pathComponents);
+            var hasUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+
+            var localDirectoryPathComponents = hasUaeMetadata ? uaeMetadataEntry.NormalPathComponents : pathComponents;
+
+            var localDirectoryPath = string.Empty;
+            for(var i = 1; i <= localDirectoryPathComponents.Length; i++)
+            {
+                var dirPath = Path.Combine(localDirectoryPathComponents.Take(i).ToArray());
+                if (!Directory.Exists(dirPath))
+                {
+                    break;
+                }
+                localDirectoryPath = dirPath;
+            }
+        
+            if (string.IsNullOrEmpty(localDirectoryPath))
+            {
+                throw new ArgumentException($"Invalid path '{path}' results in no existing local directory path");
+            }
+        
+            return new LocalDirectoryMedia(localDirectoryPath, hasUaeMetadata
+                ? uaeMetadataEntry.UaePathComponents[^1] : pathComponents[^1]);
+        }
     }
 
     public class PiStormRdbMediaResult

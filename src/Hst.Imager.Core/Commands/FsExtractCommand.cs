@@ -58,7 +58,7 @@ public class FsExtractCommand(
 
         // get destination entry writer
         var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite,
-            uaeMetadataHelper);
+            uaeMetadata, uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {
             return new Result(destEntryWriterResult.Error);

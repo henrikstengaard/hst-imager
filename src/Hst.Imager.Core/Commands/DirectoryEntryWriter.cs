@@ -1,5 +1,4 @@
 ﻿using Hst.Core;
-using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -18,7 +17,7 @@ public class DirectoryEntryWriter : IEntryWriter
     private readonly byte[] buffer = new byte[4096];
     private readonly IList<string> logs = new List<string>();
 
-    private readonly LocalDirectoryMedia media;
+    private readonly Media media;
     private readonly string rootPath;
     private readonly bool recursive;
     private readonly bool createDirectory;
@@ -38,15 +37,16 @@ public class DirectoryEntryWriter : IEntryWriter
     /// <summary>
     /// Directory entry writer.
     /// </summary>
+    /// <param name="media">Media.</param>
     /// <param name="rootPath">Root path components.</param>
     /// <param name="recursive">Recursive creating directories and files.</param>
     /// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
     /// <param name="forceOverwrite">Force overwriting any existing files.</param>
     /// <param name="uaeMetadataHelper">UAE metadata helper.</param>
-    public DirectoryEntryWriter(string rootPath, bool recursive, bool createDirectory, bool forceOverwrite,
+    public DirectoryEntryWriter(Media media, string rootPath, bool recursive, bool createDirectory, bool forceOverwrite,
         UaeMetadataHelper uaeMetadataHelper)
     {
-        this.media = new LocalDirectoryMedia(rootPath, Path.GetFileName(rootPath));
+        this.media = media;
         this.rootPath = rootPath;
         this.recursive = recursive;
         this.createDirectory = createDirectory;
