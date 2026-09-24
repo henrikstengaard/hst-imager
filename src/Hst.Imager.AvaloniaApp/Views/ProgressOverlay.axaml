@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             x:Class="Hst.Imager.AvaloniaApp.Views.ProgressOverlay"
+             x:DataType="vm:ProgressViewModel">
+
+  <Border Background="#CC1A2933"
+          IsVisible="{Binding IsRunning}">
+    <StackPanel HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Spacing="12"
+                MaxWidth="500">
+
+      <TextBlock Text="{Binding Title}"
+                 FontSize="14"
+                 FontWeight="SemiBold"
+                 Foreground="White"
+                 HorizontalAlignment="Center" />
+
+      <ProgressBar Value="{Binding PercentComplete}"
+                   Minimum="0" Maximum="100"
+                   Height="8"
+                   Width="400" />
+
+      <TextBlock Text="{Binding BytesText}"
+                 Foreground="#AAAAAA"
+                 FontSize="12"
+                 HorizontalAlignment="Center" />
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
+        <TextBlock Text="{Binding SpeedText}"
+                   Foreground="#AAAAAA"
+                   FontSize="12" />
+        <TextBlock Text="{Binding EtaText}"
+                   Foreground="#AAAAAA"
+                   FontSize="12" />
+      </StackPanel>
+
+    </StackPanel>
+  </Border>
+</UserControl>

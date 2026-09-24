@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             x:Class="Hst.Imager.AvaloniaApp.Views.InfoView"
+             x:DataType="vm:InfoViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="12" Margin="0,8">
+
+      <TextBlock Classes="page-title" Text="Info" />
+      <TextBlock Classes="page-description"
+                 Text="Get detailed information about a disk or image file." />
+
+      <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
+              IsVisible="{Binding HasError}">
+        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+      </Border>
+
+      <!-- Physical disk selector -->
+      <TextBlock Text="Physical disk or image file" Foreground="#AAAAAA" FontSize="12" />
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <ComboBox Grid.Column="0"
+                  ItemsSource="{Binding MediaItems}"
+                  SelectedItem="{Binding SelectedMedia}"
+                  DisplayMemberBinding="{Binding Label}"
+                  HorizontalAlignment="Stretch"
+                  IsEnabled="{Binding !UseCustomPath}" />
+        <Button Grid.Column="1" Margin="8,0,0,0"
+                Command="{Binding RefreshMediaCommand}">
+          &#8635;
+        </Button>
+        <Button Grid.Column="2" Margin="8,0,0,0"
+                Command="{Binding BrowsePathCommand}"
+                ToolTip.Tip="Browse for image file">
+          ...
+        </Button>
+      </Grid>
+
+      <CheckBox Content="Use custom path" IsChecked="{Binding UseCustomPath}" />
+      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding UseCustomPath}">
+        <TextBox Grid.Column="0" Text="{Binding CustomPath}" Watermark="Custom path..." />
+        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding GetInfoCommand}">Get Info</Button>
+      </Grid>
+
+      <CheckBox Content="Byteswap" IsChecked="{Binding Byteswap}" />
+
+      <!-- Loading indicator -->
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+
+      <!-- Disk info display -->
+      <Border Classes="card" IsVisible="{Binding HasDiskInfo}">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Disk Information" FontWeight="SemiBold" Foreground="White" />
+          <TextBox Text="{Binding DiskInfoText}"
+                   IsReadOnly="True"
+                   Background="Transparent"
+                   BorderThickness="0"
+                   Foreground="#CCCCCC"
+                   FontFamily="Courier New, Monospace"
+                   FontSize="12"
+                   AcceptsReturn="True" />
+        </StackPanel>
+      </Border>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

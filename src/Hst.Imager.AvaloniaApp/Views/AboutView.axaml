@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             x:Class="Hst.Imager.AvaloniaApp.Views.AboutView"
+             x:DataType="vm:AboutViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="12" Margin="0,8">
+      <TextBlock Classes="page-title" Text="{Binding AppName}" />
+
+      <TextBlock Text="{Binding AppVersion}"
+                 Foreground="#AAAAAA"
+                 FontSize="14" />
+
+      <TextBlock Text="{Binding Description}"
+                 Foreground="#CCCCCC"
+                 FontSize="13"
+                 TextWrapping="Wrap"
+                 Margin="0,8,0,0" />
+
+      <TextBlock Text="{Binding Copyright}"
+                 Foreground="#888888"
+                 FontSize="12"
+                 Margin="0,8,0,0" />
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

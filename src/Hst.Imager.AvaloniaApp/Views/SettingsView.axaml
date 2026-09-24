@@ -1,0 +1,71 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             x:Class="Hst.Imager.AvaloniaApp.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <ScrollViewer>
+    <StackPanel Spacing="12" Margin="0,8">
+      <TextBlock Classes="page-title" Text="Settings" />
+      <TextBlock Classes="page-description" Text="Configure settings for read, write, and debug." />
+
+      <!-- General -->
+      <TextBlock Text="General" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
+
+      <CheckBox Content="Show all physical drives (except system/boot drives)"
+                IsChecked="{Binding AllPhysicalDrives}" />
+
+      <Border Background="#3A2800" CornerRadius="4" Padding="8"
+              IsVisible="{Binding AllPhysicalDrives}">
+        <TextBlock TextWrapping="Wrap" Foreground="#FFBB33" FontSize="12"
+                   Text="Warning: All physical drives shown enables reading and writing to all disks. Be very sure to select the correct drive." />
+      </Border>
+
+      <!-- Read and Write -->
+      <TextBlock Text="Read and Write" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
+
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Text="Retries:" Foreground="#AAAAAA" VerticalAlignment="Center" />
+        <NumericUpDown Value="{Binding Retries}" Minimum="0" Maximum="100"
+                       Width="100" />
+      </StackPanel>
+
+      <CheckBox Content="Force and ignore errors when retries are exceeded"
+                IsChecked="{Binding Force}" />
+
+      <CheckBox Content="Verify while reading and writing"
+                IsChecked="{Binding Verify}" />
+
+      <CheckBox Content="Skip unused sectors"
+                IsChecked="{Binding SkipUnusedSectors}" />
+
+      <Border Background="#3A2800" CornerRadius="4" Padding="8"
+              IsVisible="{Binding SkipUnusedSectors}">
+        <TextBlock TextWrapping="Wrap" Foreground="#FFBB33" FontSize="12"
+                   Text="Warning: Skip unused sectors will skip sectors containing only zeroes. ChromeOS images may not recover properly if unused sectors are skipped." />
+      </Border>
+
+      <CheckBox Content="Sparse files (save disk space for empty regions)"
+                IsChecked="{Binding SparseFiles}" />
+
+      <CheckBox Content="Use cache for physical drive operations"
+                IsChecked="{Binding UseCache}" />
+
+      <!-- Debug -->
+      <TextBlock Text="Debug" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
+
+      <CheckBox Content="Debug mode (applied after restart)"
+                IsChecked="{Binding DebugMode}" />
+
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+        <TextBlock Text="Logs path:" Foreground="#AAAAAA" VerticalAlignment="Center" FontSize="12" />
+        <TextBlock Text="{Binding LogsPath}" Foreground="#CCCCCC" FontSize="12" VerticalAlignment="Center" />
+      </StackPanel>
+
+      <TextBlock Text="Settings are saved automatically."
+                 Foreground="#66AA66" FontSize="12"
+                 IsVisible="{Binding IsSaved}" />
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

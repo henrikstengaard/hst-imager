@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             x:Class="Hst.Imager.AvaloniaApp.Views.ReadView"
+             x:DataType="vm:ReadViewModel">
+
+  <Grid RowDefinitions="*,Auto">
+    <ScrollViewer Grid.Row="0">
+      <StackPanel Spacing="12" Margin="0,8">
+
+        <TextBlock Classes="page-title" Text="Read" />
+        <TextBlock Classes="page-description"
+                   Text="Reads a physical disk or part of it to an image file." />
+
+        <!-- Error message -->
+        <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
+                IsVisible="{Binding HasError}">
+          <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Source disk -->
+        <TextBlock Text="Source physical disk" Foreground="#AAAAAA" FontSize="12" />
+        <Grid ColumnDefinitions="*,Auto">
+          <ComboBox Grid.Column="0"
+                    ItemsSource="{Binding MediaItems}"
+                    SelectedItem="{Binding SelectedMedia}"
+                    DisplayMemberBinding="{Binding Label}"
+                    HorizontalAlignment="Stretch" />
+          <Button Grid.Column="1" Margin="8,0,0,0"
+                  Command="{Binding RefreshMediaCommand}"
+                  ToolTip.Tip="Refresh media list">
+            &#8635;
+          </Button>
+        </Grid>
+
+        <!-- Destination path -->
+        <TextBlock Text="Destination image file" Foreground="#AAAAAA" FontSize="12" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0"
+                   Text="{Binding DestinationPath}"
+                   Watermark="Path to destination image file..." />
+          <Button Grid.Column="1" Margin="8,0,0,0"
+                  Command="{Binding BrowseDestinationCommand}"
+                  ToolTip.Tip="Browse...">
+            ...
+          </Button>
+        </Grid>
+
+        <!-- Advanced options (Expander) -->
+        <Expander Header="Advanced options" IsExpanded="False">
+          <StackPanel Spacing="8" Margin="0,8">
+
+            <TextBlock Text="Start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
+            <NumericUpDown Value="{Binding StartOffset}" Minimum="0" Increment="512" />
+
+            <TextBlock Text="Size (bytes, 0 = full disk)" Foreground="#AAAAAA" FontSize="12" />
+            <NumericUpDown Value="{Binding Size}" Minimum="0" Increment="1048576" />
+
+            <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
+
+          </StackPanel>
+        </Expander>
+
+        <!-- Progress -->
+        <Border IsVisible="{Binding Progress.IsRunning}" Classes="card">
+          <StackPanel Spacing="8">
+            <TextBlock Text="{Binding Progress.Title}" Foreground="White" FontWeight="SemiBold" />
+            <ProgressBar Value="{Binding Progress.PercentComplete}" Minimum="0" Maximum="100" Height="8" />
+            <StackPanel Orientation="Horizontal" Spacing="16">
+              <TextBlock Text="{Binding Progress.BytesText}" Foreground="#AAAAAA" FontSize="12" />
+              <TextBlock Text="{Binding Progress.SpeedText}" Foreground="#AAAAAA" FontSize="12" />
+              <TextBlock Text="{Binding Progress.EtaText}" Foreground="#AAAAAA" FontSize="12" />
+            </StackPanel>
+            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}"
+                       IsVisible="{Binding Progress.HasError}" />
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Action buttons -->
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
+      <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">
+        Cancel
+      </Button>
+      <Button Command="{Binding StartReadCommand}"
+              IsVisible="{Binding !Progress.IsRunning}"
+              Classes="accent">
+        Start Read
+      </Button>
+    </StackPanel>
+  </Grid>
+</UserControl>

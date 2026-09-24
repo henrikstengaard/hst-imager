@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"electron\\\\|Electron\" /c/Projects/hst/hst-imager-bugfix/hst-imager/src --include=\"*.csproj\" --include=\"*.cs\" --include=\"*.json\" 2>/dev/null | head -50)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager/src/Hst.Imager.AvaloniaApp\" && dotnet build 2>&1)"
+    ]
+  }
+}

@@ -1,0 +1,175 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        x:Class="Hst.Imager.AvaloniaApp.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Hst Imager"
+        Width="1280" Height="720"
+        MinWidth="900" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="#1A2933"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1">
+
+  <Grid RowDefinitions="32,*">
+
+    <!-- Custom Title Bar -->
+    <Grid Grid.Row="0" Background="#0F1E28"
+          IsHitTestVisible="True">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0"
+                 Text="Hst Imager"
+                 Foreground="#CCCCCC"
+                 FontSize="12"
+                 VerticalAlignment="Center"
+                 Margin="12,0,0,0"
+                 IsHitTestVisible="False" />
+
+      <StackPanel Grid.Column="1" Orientation="Horizontal">
+        <Button Name="MinimizeButton"
+                Background="Transparent"
+                Foreground="#CCCCCC"
+                BorderThickness="0"
+                Width="46" Height="32"
+                Content="_"
+                Click="OnMinimizeClick" />
+        <Button Name="MaximizeButton"
+                Background="Transparent"
+                Foreground="#CCCCCC"
+                BorderThickness="0"
+                Width="46" Height="32"
+                Content="□"
+                Click="OnMaximizeClick" />
+        <Button Name="CloseButton"
+                Background="Transparent"
+                Foreground="#CCCCCC"
+                BorderThickness="0"
+                Width="46" Height="32"
+                Content="✕"
+                Click="OnCloseClick">
+          <Button.Styles>
+            <Style Selector="Button:pointerover /template/ ContentPresenter">
+              <Setter Property="Background" Value="#C42B1C" />
+            </Style>
+          </Button.Styles>
+        </Button>
+      </StackPanel>
+    </Grid>
+
+    <!-- Main Content Area -->
+    <Grid Grid.Row="1" ColumnDefinitions="62,*">
+
+      <!-- Navigation Sidebar -->
+      <Border Grid.Column="0" Background="#0F1E28">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="2" Margin="4,8">
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Start"
+                    Width="54" Height="52" ToolTip.Tip="Start">
+              <ia:Icon Value="fa-home" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Read"
+                    Width="54" Height="52" ToolTip.Tip="Read">
+              <ia:Icon Value="fa-upload" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Write"
+                    Width="54" Height="52" ToolTip.Tip="Write">
+              <ia:Icon Value="fa-download" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Info"
+                    Width="54" Height="52" ToolTip.Tip="Info">
+              <ia:Icon Value="fa-info" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Transfer"
+                    Width="54" Height="52" ToolTip.Tip="Transfer">
+              <ia:Icon Value="fa-exchange-alt" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Compare"
+                    Width="54" Height="52" ToolTip.Tip="Compare">
+              <ia:Icon Value="fa-check" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Blank"
+                    Width="54" Height="52" ToolTip.Tip="Blank">
+              <ia:Icon Value="fa-plus" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Optimize"
+                    Width="54" Height="52" ToolTip.Tip="Optimize">
+              <ia:Icon Value="fa-compress" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Format"
+                    Width="54" Height="52" ToolTip.Tip="Format">
+              <ia:Icon Value="fa-eraser" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Settings"
+                    Width="54" Height="52" ToolTip.Tip="Settings">
+              <ia:Icon Value="fa-cog" FontSize="16" />
+            </Button>
+
+            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="About"
+                    Width="54" Height="52" ToolTip.Tip="About">
+              <ia:Icon Value="fa-question" FontSize="16" />
+            </Button>
+
+          </StackPanel>
+        </ScrollViewer>
+      </Border>
+
+      <!-- Page Content -->
+      <ContentControl Grid.Column="1"
+                      Content="{Binding CurrentPage}"
+                      Margin="16">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:StartViewModel">
+            <views:StartView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:ReadViewModel">
+            <views:ReadView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:WriteViewModel">
+            <views:WriteView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:InfoViewModel">
+            <views:InfoView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:TransferViewModel">
+            <views:TransferView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:CompareViewModel">
+            <views:CompareView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:BlankViewModel">
+            <views:BlankView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OptimizeViewModel">
+            <views:OptimizeView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:FormatViewModel">
+            <views:FormatView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:SettingsViewModel">
+            <views:SettingsView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:AboutViewModel">
+            <views:AboutView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Grid>
+  </Grid>
+</Window>

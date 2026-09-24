@@ -105,7 +105,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            rids: [win-x64, win-arm64]
+          - os: macos-latest
+            rids: [osx-x64, osx-arm64]
+          - os: ubuntu-latest
+            rids: [linux-x64, linux-arm64]
 
     steps:
       - uses: actions/checkout@v4
@@ -121,8 +127,6 @@ jobs:
           "VERSION={0}" -f ($version) >> $env:GITHUB_ENV
           "BUILD_VERSION={0}" -f ($version -replace '^(.*)\.\d+.*$', "`$1.$commitCount") >> $env:GITHUB_ENV
           "BUILD_VERSION_SHA={0}" -f ($commitSha) >> $env:GITHUB_ENV
-          "${{ env.BUILD_VERSION }}" > hst-imager.release-tag.txt
-          "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
       - name: Show version
         shell: pwsh
@@ -130,151 +134,125 @@ jobs:
           "VERSION: ${{ env.VERSION }}"
           "BUILD_VERSION: ${{ env.BUILD_VERSION }}"
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
-      
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
-            6.0.x
             8.0.x
 
       - name: Restore tool
         working-directory: ./src
         shell: pwsh
         run: dotnet tool restore
-        
+
       - name: Update version
         shell: pwsh
         working-directory: ./src
         run: |
           [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '${{ env.VERSION }}', '${{ env.BUILD_VERSION }}'))
-          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/electron.manifest.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/electron.manifest.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
-          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/package.json', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/package.json') -replace '0.1.0', '${{ env.BUILD_VERSION }}'))
-          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/public/index.html', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/public/index.html') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
-          [System.IO.File]::WriteAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js', ([System.IO.File]::ReadAllText('Hst.Imager.GuiApp/ClientApp/src/Constants.js') -replace '0.1.0', '${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}'))
 
-      - name: Build gui app for Windows
-        working-directory: ./src
+      - name: Build gui app for Windows x64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: |
-          cd Hst.Imager.GuiApp
-          dotnet electronize build /target win /p:DefineConstants=ELECTRON
+        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
         if: matrix.os == 'windows-latest'
 
-      - name: Build gui app for macOS
-        working-directory: ./src
+      - name: Build gui app for Windows arm64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64
+        if: matrix.os == 'windows-latest'
+
+      - name: Pack gui app for Windows x64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-x64 --outputDir artifacts/win-x64 --packTitle "Hst Imager"
+        if: matrix.os == 'windows-latest'
+
+      - name: Pack gui app for Windows arm64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-arm64 --outputDir artifacts/win-arm64 --packTitle "Hst Imager"
+        if: matrix.os == 'windows-latest'
+
+      - name: Set Windows x64 setup artifact
+        id: windows_x64_setup
         shell: pwsh
         run: |
-          cd Hst.Imager.GuiApp
-          dotnet electronize build /target osx /p:DefineConstants=ELECTRON
+          $artifactName='hst-imager.gui.win-x64-setup.exe'
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/win-x64' -Filter '*Setup.exe' | Select-Object -First 1).FullName
+          Rename-Item $artifactFile -NewName $artifactName
+          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
+          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
+        if: matrix.os == 'windows-latest'
+
+      - name: Upload Windows x64 setup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.windows_x64_setup.outputs.artifact_name }}"
+          path: "${{ steps.windows_x64_setup.outputs.artifact_path }}"
+          retention-days: 3
+        if: matrix.os == 'windows-latest'
+
+      - name: Set Windows arm64 setup artifact
+        id: windows_arm64_setup
+        shell: pwsh
+        run: |
+          $artifactName='hst-imager.gui.win-arm64-setup.exe'
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/win-arm64' -Filter '*Setup.exe' | Select-Object -First 1).FullName
+          Rename-Item $artifactFile -NewName $artifactName
+          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
+          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
+          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
+        if: matrix.os == 'windows-latest'
+
+      - name: Upload Windows arm64 setup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: "${{ steps.windows_arm64_setup.outputs.artifact_name }}"
+          path: "${{ steps.windows_arm64_setup.outputs.artifact_path }}"
+          retention-days: 3
+        if: matrix.os == 'windows-latest'
+
+      - name: Build gui app for macOS x64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true -o publish/osx-x64
         if: matrix.os == 'macos-latest'
 
-      - name: Build gui app for Linux
-        working-directory: ./src
+      - name: Build gui app for macOS arm64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: |
-          cd Hst.Imager.GuiApp
-          dotnet electronize build /target linux /p:DefineConstants=ELECTRON
-        if: matrix.os == 'ubuntu-latest'
-      
-      - name: List gui app output
+        run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64
+        if: matrix.os == 'macos-latest'
+
+      - name: Pack gui app for macOS x64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: |
-          Get-ChildItem './src/Hst.Imager.GuiApp/bin/Desktop' -recurse -name
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager"
+        if: matrix.os == 'macos-latest'
 
-      - name: Set Windows 64-bit/arm64 setup artifact
-        id: windows_x64_arm64_setup
+      - name: Pack gui app for macOS arm64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.win-x64-arm64-setup.exe'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager Setup ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'windows-latest'
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager"
+        if: matrix.os == 'macos-latest'
 
-      - name: Upload Windows 64-bit/arm64 setup artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.windows_x64_arm64_setup.outputs.artifact_name }}"
-          path: "${{ steps.windows_x64_arm64_setup.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'windows-latest'
-
-      - name: Set Windows 64-bit/arm64 portable artifact
-        id: windows_x64_arm64_portable
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.win-x64-arm64-portable.exe'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager ${{ env.BUILD_VERSION }}.exe' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'windows-latest'
-
-      - name: Upload Windows 64-bit/arm64 portable artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.windows_x64_arm64_portable.outputs.artifact_name }}"
-          path: "${{ steps.windows_x64_arm64_portable.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'windows-latest'
-
-      - name: Set Windows 64-bit zip artifact
-        id: windows_x64_zip
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.win-x64.zip'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-win.zip' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'windows-latest'
-
-      - name: Upload Windows 64-bit zip artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.windows_x64_zip.outputs.artifact_name }}"
-          path: "${{ steps.windows_x64_zip.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'windows-latest'
-
-      - name: Set Windows arm64 zip artifact
-        id: windows_arm64_zip
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.win-arm64.zip'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter 'Hst Imager-${{ env.BUILD_VERSION }}-arm64-win.zip' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'windows-latest'
-
-      - name: Upload Windows 64-bit zip artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.windows_arm64_zip.outputs.artifact_name }}"
-          path: "${{ steps.windows_arm64_zip.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'windows-latest'
-
-      - name: Set macOS 64-bit dmg artifact
+      - name: Set macOS x64 dmg artifact
         id: macos_x64_dmg
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.osx-x64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.dmg' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-x64' -Filter '*.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
 
-      - name: Upload macOS 64-bit dmg artifact
+      - name: Upload macOS x64 dmg artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
@@ -287,7 +265,7 @@ jobs:
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.osx-arm64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}-arm64.dmg' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-arm64' -Filter '*.dmg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
@@ -302,19 +280,43 @@ jobs:
           retention-days: 3
         if: matrix.os == 'macos-latest'
 
-      - name: Set Linux 64-bit appimage artifact
+      - name: Build gui app for Linux x64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux-x64
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Build gui app for Linux arm64
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true -o publish/linux-arm64
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Pack gui app for Linux x64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-x64 --outputDir artifacts/linux-x64 --packTitle "Hst Imager"
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Pack gui app for Linux arm64 (Velopack)
+        working-directory: ./src/Hst.Imager.AvaloniaApp
+        shell: pwsh
+        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-arm64 --outputDir artifacts/linux-arm64 --packTitle "Hst Imager"
+        if: matrix.os == 'ubuntu-latest'
+
+      - name: Set Linux x64 AppImage artifact
         id: linux_x64_appimage
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-x64.AppImage'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/linux-x64' -Filter '*.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'ubuntu-latest'
 
-      - name: Upload Linux 64-bit appimage artifact
+      - name: Upload Linux x64 AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.linux_x64_appimage.outputs.artifact_name }}"
@@ -322,63 +324,23 @@ jobs:
           retention-days: 3
         if: matrix.os == 'ubuntu-latest'
 
-      - name: Set Linux arm64 appimage artifact
+      - name: Set Linux arm64 AppImage artifact
         id: linux_arm64_appimage
         shell: pwsh
         run: |
           $artifactName='hst-imager.gui.linux-arm64.AppImage'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}-arm64.AppImage' | Select-Object -First 1).FullName
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/linux-arm64' -Filter '*.AppImage' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'ubuntu-latest'
 
-      - name: Upload Linux arm64 appimage artifact
+      - name: Upload Linux arm64 AppImage artifact
         uses: actions/upload-artifact@v4
         with:
           name: "${{ steps.linux_arm64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_arm64_appimage.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Set Linux amd64 deb artifact
-        id: linux_amd64_deb
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.linux-amd64.deb'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_amd64.deb' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Upload Linux amd64 deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.linux_amd64_deb.outputs.artifact_name }}"
-          path: "${{ steps.linux_amd64_deb.outputs.artifact_path }}"
-          retention-days: 3
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Set Linux arm64 deb artifact
-        id: linux_arm64_deb
-        shell: pwsh
-        run: |
-          $artifactName='hst-imager.gui.linux-arm64.deb'
-          $artifactFile=(gci './src/Hst.Imager.GuiApp/bin/Desktop' -Recurse -Filter '*${{ env.BUILD_VERSION }}_arm64.deb' | Select-Object -First 1).FullName
-          Rename-Item $artifactFile -NewName $artifactName
-          $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
-          Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
-          Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
-        if: matrix.os == 'ubuntu-latest'
-
-      - name: Upload Linux arm64 deb artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: "${{ steps.linux_arm64_deb.outputs.artifact_name }}"
-          path: "${{ steps.linux_arm64_deb.outputs.artifact_path }}"
           retention-days: 3
         if: matrix.os == 'ubuntu-latest'
 
@@ -418,25 +380,15 @@ jobs:
         with:
           name: hst-imager.console.win-arm64.zip
         
-      - name: Download Gui Windows 64-bit/arm64 setup artifact
+      - name: Download Gui Windows x64 setup artifact
         uses: actions/download-artifact@v4
         with:
-          name: hst-imager.gui.win-x64-arm64-setup.exe
+          name: hst-imager.gui.win-x64-setup.exe
 
-      - name: Download Gui Windows 64-bit/arm64 portable artifact
+      - name: Download Gui Windows arm64 setup artifact
         uses: actions/download-artifact@v4
         with:
-          name: hst-imager.gui.win-x64-arm64-portable.exe
-
-      - name: Download Gui Windows 64-bit zip artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hst-imager.gui.win-x64.zip
-
-      - name: Download Gui Windows arm64 zip artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hst-imager.gui.win-arm64.zip
+          name: hst-imager.gui.win-arm64-setup.exe
 
         # macos
       - name: Download Console macOS 64-bit zip artifact
@@ -485,26 +437,14 @@ jobs:
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
-      - name: Download Gui Linux amd64-bit deb artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hst-imager.gui.linux-amd64.deb
-
-      - name: Download Gui Linux arm64-bit deb artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: hst-imager.gui.linux-arm64.deb
-
       - name: Version artifacts
         shell: pwsh
         run: |
           Rename-Item -Path hst-imager.console.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_windows_x64.zip"
           Rename-Item -Path hst-imager.console.win-x86.zip -NewName "${{ env.RELEASE_VERSION }}_console_windows_x86.zip"
           Rename-Item -Path hst-imager.console.win-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_windows_arm64.zip"
-          Rename-Item -Path hst-imager.gui.win-x64-arm64-setup.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64-arm64_setup.exe"
-          Rename-Item -Path hst-imager.gui.win-x64-arm64-portable.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64-arm64_portable.exe"
-          Rename-Item -Path hst-imager.gui.win-x64.zip -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64.zip"
-          Rename-Item -Path hst-imager.gui.win-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_gui_windows_arm64.zip"
+          Rename-Item -Path hst-imager.gui.win-x64-setup.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe"
+          Rename-Item -Path hst-imager.gui.win-arm64-setup.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe"
           Rename-Item -Path hst-imager.console.osx-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_x64.zip"
           Rename-Item -Path hst-imager.console.osx-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip"
           Rename-Item -Path hst-imager.gui.osx-x64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg"
@@ -514,8 +454,6 @@ jobs:
           Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
           Rename-Item -Path hst-imager.gui.linux-x64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage"
           Rename-Item -Path hst-imager.gui.linux-arm64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
-          Rename-Item -Path hst-imager.gui.linux-amd64.deb -NewName "${{ env.RELEASE_VERSION }}_gui_linux_amd64.deb"
-          Rename-Item -Path hst-imager.gui.linux-arm64.deb -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -524,10 +462,8 @@ jobs:
             ${{ env.RELEASE_VERSION }}_console_windows_x64.zip
             ${{ env.RELEASE_VERSION }}_console_windows_x86.zip
             ${{ env.RELEASE_VERSION }}_console_windows_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_windows_x64-arm64_setup.exe
-            ${{ env.RELEASE_VERSION }}_gui_windows_x64-arm64_portable.exe
-            ${{ env.RELEASE_VERSION }}_gui_windows_x64.zip
-            ${{ env.RELEASE_VERSION }}_gui_windows_arm64.zip
+            ${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe
+            ${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe
             ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
             ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
@@ -537,8 +473,6 @@ jobs:
             ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip
             ${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage
             ${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage
-            ${{ env.RELEASE_VERSION }}_gui_linux_amd64.deb
-            ${{ env.RELEASE_VERSION }}_gui_linux_arm64.deb
   
           tag_name: ${{ env.RELEASE_TAG }}
           name: ${{ env.RELEASE_VERSION }}

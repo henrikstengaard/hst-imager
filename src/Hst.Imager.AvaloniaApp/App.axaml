@@ -1,0 +1,66 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Hst.Imager.AvaloniaApp.App"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             RequestedThemeVariant="Dark">
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <Style Selector="Window">
+      <Setter Property="Background" Value="#1A2933" />
+    </Style>
+
+    <Style Selector="Button.nav-item">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="BorderThickness" Value="0" />
+    </Style>
+    <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2D3F4C" />
+    </Style>
+    <Style Selector="Button.nav-item.active">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+
+    <Style Selector="TextBlock.page-title">
+      <Setter Property="FontSize" Value="18" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+
+    <Style Selector="TextBlock.page-description">
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Margin" Value="0,0,0,12" />
+    </Style>
+
+    <Style Selector="TextBlock.error-text">
+      <Setter Property="Foreground" Value="#FF6B6B" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
+    <Style Selector="Border.progress-overlay">
+      <Setter Property="Background" Value="#CC1A2933" />
+    </Style>
+
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="#243340" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="12" />
+      <Setter Property="Margin" Value="0,4" />
+    </Style>
+
+    <Style Selector="TextBox">
+      <Setter Property="Background" Value="#1E2D38" />
+    </Style>
+
+    <Style Selector="ComboBox">
+      <Setter Property="Background" Value="#1E2D38" />
+    </Style>
+  </Application.Styles>
+
+</Application>

@@ -9,10 +9,10 @@
       ],
       "rollForward": false
     },
-    "electronnet.cli": {
-      "version": "23.6.2",
+    "vpk": {
+      "version": "0.0.884",
       "commands": [
-        "electronize"
+        "vpk"
       ],
       "rollForward": false
     }
