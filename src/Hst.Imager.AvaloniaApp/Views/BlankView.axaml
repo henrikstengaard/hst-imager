@@ -20,24 +20,34 @@
           <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseOutputCommand}">...</Button>
         </Grid>
 
-        <TextBlock Text="Size (bytes)" Foreground="#AAAAAA" FontSize="12" />
-        <NumericUpDown Value="{Binding Size}" Minimum="512" Increment="1048576" />
+        <TextBlock Text="Size" Foreground="#AAAAAA" FontSize="12" />
+        <Grid ColumnDefinitions="*,Auto">
+          <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+          <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+                    ItemsSource="{x:Static vm:BlankViewModel.SizeUnits}"
+                    SelectedItem="{Binding SizeUnit}" />
+        </Grid>
 
-        <CheckBox Content="Compatible size (rounds to nearest MB)" IsChecked="{Binding CompatibleSize}" />
+        <CheckBox Content="Size compatible with SD/CF-cards, SSD and hard-disk brands"
+                  IsChecked="{Binding CompatibleSize}" />
 
         <Border IsVisible="{Binding Progress.IsRunning}" Classes="card">
           <StackPanel Spacing="8">
             <TextBlock Text="{Binding Progress.Title}" Foreground="White" FontWeight="SemiBold" />
             <ProgressBar Value="{Binding Progress.PercentComplete}" Minimum="0" Maximum="100" Height="8" />
-            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}" IsVisible="{Binding Progress.HasError}" />
+            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}"
+                       IsVisible="{Binding Progress.HasError}" />
           </StackPanel>
         </Border>
       </StackPanel>
     </ScrollViewer>
 
-    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
       <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">Cancel</Button>
-      <Button Command="{Binding StartBlankCommand}" IsVisible="{Binding !Progress.IsRunning}" Classes="accent">Create Blank Image</Button>
+      <Button Command="{Binding StartBlankCommand}"
+              IsVisible="{Binding !Progress.IsRunning}"
+              Classes="accent">Create Blank Image</Button>
     </StackPanel>
   </Grid>
 </UserControl>

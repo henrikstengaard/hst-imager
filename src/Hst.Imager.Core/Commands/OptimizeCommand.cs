@@ -5,11 +5,9 @@
     using System.Threading.Tasks;
     using Hst.Core;
     using Extensions;
-    using Microsoft.Extensions.Logging;
     using Models;
 
     public class OptimizeCommand(
-        ILogger<OptimizeCommand> logger,
         ICommandHelper commandHelper,
         string path,
         Size size,

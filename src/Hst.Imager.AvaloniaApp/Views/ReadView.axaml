@@ -1,7 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
-             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              x:Class="Hst.Imager.AvaloniaApp.Views.ReadView"
              x:DataType="vm:ReadViewModel">
 
@@ -13,7 +12,6 @@
         <TextBlock Classes="page-description"
                    Text="Reads a physical disk or part of it to an image file." />
 
-        <!-- Error message -->
         <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
                 IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
@@ -29,9 +27,7 @@
                     HorizontalAlignment="Stretch" />
           <Button Grid.Column="1" Margin="8,0,0,0"
                   Command="{Binding RefreshMediaCommand}"
-                  ToolTip.Tip="Refresh media list">
-            &#8635;
-          </Button>
+                  ToolTip.Tip="Refresh media list">&#8635;</Button>
         </Grid>
 
         <!-- Destination path -->
@@ -41,21 +37,23 @@
                    Text="{Binding DestinationPath}"
                    Watermark="Path to destination image file..." />
           <Button Grid.Column="1" Margin="8,0,0,0"
-                  Command="{Binding BrowseDestinationCommand}"
-                  ToolTip.Tip="Browse...">
-            ...
-          </Button>
+                  Command="{Binding BrowseDestinationCommand}">...</Button>
         </Grid>
 
-        <!-- Advanced options (Expander) -->
-        <Expander Header="Advanced options" IsExpanded="False">
+        <!-- Advanced options -->
+        <Expander Header="Advanced" IsExpanded="False">
           <StackPanel Spacing="8" Margin="0,8">
 
             <TextBlock Text="Start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
             <NumericUpDown Value="{Binding StartOffset}" Minimum="0" Increment="512" />
 
-            <TextBlock Text="Size (bytes, 0 = full disk)" Foreground="#AAAAAA" FontSize="12" />
-            <NumericUpDown Value="{Binding Size}" Minimum="0" Increment="1048576" />
+            <TextBlock Text="Size (0 = full disk)" Foreground="#AAAAAA" FontSize="12" />
+            <Grid ColumnDefinitions="*,Auto">
+              <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+              <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+                        ItemsSource="{x:Static vm:ReadViewModel.SizeUnits}"
+                        SelectedItem="{Binding SizeUnit}" />
+            </Grid>
 
             <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
 
@@ -80,17 +78,12 @@
       </StackPanel>
     </ScrollViewer>
 
-    <!-- Action buttons -->
     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
                 Spacing="8" Margin="0,12,0,0">
-      <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">
-        Cancel
-      </Button>
+      <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">Cancel</Button>
       <Button Command="{Binding StartReadCommand}"
               IsVisible="{Binding !Progress.IsRunning}"
-              Classes="accent">
-        Start Read
-      </Button>
+              Classes="accent">Start Read</Button>
     </StackPanel>
   </Grid>
 </UserControl>

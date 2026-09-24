@@ -8,7 +8,8 @@
     <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="12" Margin="0,8">
         <TextBlock Classes="page-title" Text="Optimize" />
-        <TextBlock Classes="page-description" Text="Optimizes an image file by shrinking it to the minimum required size." />
+        <TextBlock Classes="page-description"
+                   Text="Optimizes an image file by shrinking it to the minimum required size." />
 
         <Border Background="#4A1A1A" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
@@ -20,24 +21,40 @@
           <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseImageCommand}">...</Button>
         </Grid>
 
-        <TextBlock Text="Size limit (bytes, 0 = no limit)" Foreground="#AAAAAA" FontSize="12" />
-        <NumericUpDown Value="{Binding Size}" Minimum="0" Increment="1048576" />
+        <!-- Advanced options -->
+        <Expander Header="Advanced" IsExpanded="False">
+          <StackPanel Spacing="8" Margin="0,8">
 
-        <CheckBox Content="Byteswap" IsChecked="{Binding Byteswap}" />
+            <TextBlock Text="Size limit (0 = no limit)" Foreground="#AAAAAA" FontSize="12" />
+            <Grid ColumnDefinitions="*,Auto">
+              <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+              <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+                        ItemsSource="{x:Static vm:OptimizeViewModel.SizeUnits}"
+                        SelectedItem="{Binding SizeUnit}" />
+            </Grid>
+
+            <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+
+          </StackPanel>
+        </Expander>
 
         <Border IsVisible="{Binding Progress.IsRunning}" Classes="card">
           <StackPanel Spacing="8">
             <TextBlock Text="{Binding Progress.Title}" Foreground="White" FontWeight="SemiBold" />
             <ProgressBar Value="{Binding Progress.PercentComplete}" Minimum="0" Maximum="100" Height="8" />
-            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}" IsVisible="{Binding Progress.HasError}" />
+            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}"
+                       IsVisible="{Binding Progress.HasError}" />
           </StackPanel>
         </Border>
       </StackPanel>
     </ScrollViewer>
 
-    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
       <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">Cancel</Button>
-      <Button Command="{Binding StartOptimizeCommand}" IsVisible="{Binding !Progress.IsRunning}" Classes="accent">Start Optimize</Button>
+      <Button Command="{Binding StartOptimizeCommand}"
+              IsVisible="{Binding !Progress.IsRunning}"
+              Classes="accent">Optimize Image</Button>
     </StackPanel>
   </Grid>
 </UserControl>

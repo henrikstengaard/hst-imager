@@ -10,11 +10,11 @@ using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.PathComponents;
-using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.Core.Commands.FsCommands;
 
-public class FsMkDirCommand(ILogger<FsMkDirCommand> logger, ICommandHelper commandHelper,
+public class FsMkDirCommand(
+    ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives, string path)
     : FsCommandBase(commandHelper, physicalDrives)
 {

@@ -24,7 +24,7 @@ class Program
 
         try
         {
-            BuildAvaloniaApp(appDataPath).StartWithClassicDesktopLifetime(args);
+            BuildAvaloniaApp(appDataPath, args).StartWithClassicDesktopLifetime(args);
         }
         catch (Exception e)
         {
@@ -37,12 +37,12 @@ class Program
         }
     }
 
-    public static AppBuilder BuildAvaloniaApp(string? appDataPath = null)
+    public static AppBuilder BuildAvaloniaApp(string? appDataPath = null, string[]? startupArgs = null)
     {
         IconProvider.Current
             .Register<FontAwesomeIconProvider>();
 
-        return AppBuilder.Configure<App>(() => new App(appDataPath ?? ApplicationDataHelper.GetApplicationDataDir("HstImager")))
+        return AppBuilder.Configure<App>(() => new App(appDataPath ?? ApplicationDataHelper.GetApplicationDataDir("HstImager"), startupArgs ?? []))
             .UsePlatformDetect()
             .WithInterFont()
             .UseReactiveUI()

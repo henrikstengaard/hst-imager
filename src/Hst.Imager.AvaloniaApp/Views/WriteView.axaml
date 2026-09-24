@@ -24,9 +24,7 @@
                    Text="{Binding SourcePath}"
                    Watermark="Path to source image file..." />
           <Button Grid.Column="1" Margin="8,0,0,0"
-                  Command="{Binding BrowseSourceCommand}">
-            ...
-          </Button>
+                  Command="{Binding BrowseSourceCommand}">...</Button>
         </Grid>
 
         <!-- Destination disk -->
@@ -38,18 +36,26 @@
                     DisplayMemberBinding="{Binding Label}"
                     HorizontalAlignment="Stretch" />
           <Button Grid.Column="1" Margin="8,0,0,0"
-                  Command="{Binding RefreshMediaCommand}">
-            &#8635;
-          </Button>
+                  Command="{Binding RefreshMediaCommand}">&#8635;</Button>
         </Grid>
 
-        <Expander Header="Advanced options" IsExpanded="False">
+        <!-- Advanced options -->
+        <Expander Header="Advanced" IsExpanded="False">
           <StackPanel Spacing="8" Margin="0,8">
+
             <TextBlock Text="Start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
             <NumericUpDown Value="{Binding StartOffset}" Minimum="0" Increment="512" />
-            <TextBlock Text="Size (bytes, 0 = full image)" Foreground="#AAAAAA" FontSize="12" />
-            <NumericUpDown Value="{Binding Size}" Minimum="0" Increment="1048576" />
+
+            <TextBlock Text="Size (0 = full image)" Foreground="#AAAAAA" FontSize="12" />
+            <Grid ColumnDefinitions="*,Auto">
+              <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+              <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+                        ItemsSource="{x:Static vm:WriteViewModel.SizeUnits}"
+                        SelectedItem="{Binding SizeUnit}" />
+            </Grid>
+
             <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
+
           </StackPanel>
         </Expander>
 

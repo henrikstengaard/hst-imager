@@ -292,7 +292,7 @@ namespace Hst.Imager.ConsoleApp
         public static async Task Optimize(string path, string size, PartitionTable? partitionTable)
         {
             using var commandHelper = GetCommandHelper();
-            var command = new OptimizeCommand(GetLogger<OptimizeCommand>(), commandHelper, path, ParseSize(size),
+            var command = new OptimizeCommand(commandHelper, path, ParseSize(size),
                 partitionTable);
             await Execute(command);
         }
@@ -682,16 +682,14 @@ namespace Hst.Imager.ConsoleApp
         public static async Task FsMkDir(string path)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
-            var command = new FsMkDirCommand(GetLogger<FsMkDirCommand>(), commandHelper,
-                await GetPhysicalDrives(), path);
+            var command = new FsMkDirCommand(commandHelper, await GetPhysicalDrives(), path);
             await Execute(command);
         }
 
         public static async Task FsDelete(string path)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
-            var command = new FsDelCommand(GetLogger<FsDelCommand>(), commandHelper,
-                await GetPhysicalDrives(), path);
+            var command = new FsDelCommand(commandHelper, await GetPhysicalDrives(), path);
             await Execute(command);
         }
         

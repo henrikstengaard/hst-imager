@@ -49,7 +49,6 @@
                     appState.IsAdministrator, appState.Settings.SparseFiles, appState.Settings.UseCache,
                     appState.Settings.CacheType);
                 var optimizeCommand = new OptimizeCommand(
-                    loggerFactory.CreateLogger<OptimizeCommand>(),
                     commandHelper, 
                     string.Concat(optimizeBackgroundTask.Byteswap ? "+bs:" : string.Empty, optimizeBackgroundTask.Path),
                     new Size(optimizeBackgroundTask.Size, Unit.Bytes), PartitionTable.None);

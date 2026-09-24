@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(grep -r \"electron\\\\|Electron\" /c/Projects/hst/hst-imager-bugfix/hst-imager/src --include=\"*.csproj\" --include=\"*.cs\" --include=\"*.json\" 2>/dev/null | head -50)",
-      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager/src/Hst.Imager.AvaloniaApp\" && dotnet build 2>&1)"
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager/src/Hst.Imager.AvaloniaApp\" && dotnet build 2>&1)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | tail -50)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | tail -20)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | grep -E \"error|warning NU|Build |Error|Warning\" | grep -v \"CS9113\\\\|CA1416\\\\|NU1603\\\\|AVLN3001\" | tail -20)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | grep -E \"^.*error|Build |Error\\\\\\(s\\\\\\)|Warning\\\\\\(s\\\\\\)\" | grep -v \"CS9113\\\\|CA1416\\\\|NU1603\\\\|AVLN3001\" | tail -15)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | grep \"warning\" | grep -v \"CS9113\\\\|CA1416\\\\|NU1603\\\\|AVLN3001\" | head -10)",
+      "Bash(find \"C:/Projects/hst/hst-imager-bugfix/hst-imager/src/Hst.Imager.GuiApp/ClientApp/src/utils\" -name \"*.js\" | xargs cat 2>/dev/null | head -100)",
+      "Bash(cd \"C:/Projects/hst/hst-imager-bugfix/hst-imager\" && dotnet build src/Hst.Imager.AvaloniaApp 2>&1 | grep -E \"error|Build |Error\\\\\\(s\\\\\\)|Warning\\\\\\(s\\\\\\)\" | grep -v \"CS9113\\\\|CA1416\\\\|NU1603\\\\|AVLN3001\" | tail -20)",
+      "Bash(cd \"C:\\\\Projects\\\\hst\\\\hst-imager-bugfix\\\\hst-imager\\\\src\\\\Hst.Imager.AvaloniaApp\" && dotnet build -c Debug 2>&1 | tail -30)",
+      "Bash(cd \"C:\\\\Projects\\\\hst\\\\hst-imager-bugfix\\\\hst-imager\\\\src\\\\Hst.Imager.AvaloniaApp\" && dotnet build -c Debug 2>&1 | grep -E \"error|Error|succeeded|failed\" | tail -10)",
+      "Bash(cd \"C:\\\\Projects\\\\hst\\\\hst-imager-bugfix\\\\hst-imager\\\\src\\\\Hst.Imager.AvaloniaApp\" && dotnet build -c Debug 2>&1 | grep -E \"warning\" | grep -v \"NU1603\\\\|AVLN3001\")",
+      "Bash(cd \"C:\\\\Projects\\\\hst\\\\hst-imager-bugfix\\\\hst-imager\\\\src\\\\Hst.Imager.AvaloniaApp\" && dotnet build -c Debug 2>&1 | grep \"warning\")",
+      "Bash(cd \"C:\\\\Projects\\\\hst\\\\hst-imager-bugfix\\\\hst-imager\\\\src\\\\Hst.Imager.AvaloniaApp\" && dotnet build -c Debug 2>&1)"
     ]
   }
 }

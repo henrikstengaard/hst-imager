@@ -13,11 +13,14 @@ public class BlankViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
 
     private string _outputPath = string.Empty;
-    private long _size = 1_000_000_000; // 1 GB default
-    private bool _compatibleSize;
+    private decimal _size = 16m;
+    private string _sizeUnit = "GB";
+    private bool _compatibleSize = true;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private CancellationTokenSource? _cts;
+
+    public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public BlankViewModel(IImagingService imagingService, IDialogService dialogService)
     {
@@ -28,21 +31,60 @@ public class BlankViewModel : ViewModelBase
 
         BrowseOutputCommand = ReactiveCommand.CreateFromTask(BrowseOutputAsync);
         StartBlankCommand = ReactiveCommand.CreateFromTask(StartBlankAsync,
-            this.WhenAnyValue(x => x.OutputPath, x => x.Progress.IsRunning,
-                (path, running) => !string.IsNullOrEmpty(path) && !running));
+            this.WhenAnyValue(x => x.OutputPath, x => x.Size, x => x.Progress.IsRunning,
+                (path, size, running) => !string.IsNullOrEmpty(path) && size > 0 && !running));
         CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.Progress.IsRunning));
     }
 
     public ProgressViewModel Progress { get; }
-    public string OutputPath { get => _outputPath; set => this.RaiseAndSetIfChanged(ref _outputPath, value); }
-    public long Size { get => _size; set => this.RaiseAndSetIfChanged(ref _size, value); }
-    public bool CompatibleSize { get => _compatibleSize; set => this.RaiseAndSetIfChanged(ref _compatibleSize, value); }
-    public string ErrorMessage { get => _errorMessage; set => this.RaiseAndSetIfChanged(ref _errorMessage, value); }
-    public bool HasError { get => _hasError; set => this.RaiseAndSetIfChanged(ref _hasError, value); }
+
+    public string OutputPath
+    {
+        get => _outputPath;
+        set => this.RaiseAndSetIfChanged(ref _outputPath, value);
+    }
+
+    public decimal Size
+    {
+        get => _size;
+        set => this.RaiseAndSetIfChanged(ref _size, value);
+    }
+
+    public string SizeUnit
+    {
+        get => _sizeUnit;
+        set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
+    }
+
+    public bool CompatibleSize
+    {
+        get => _compatibleSize;
+        set => this.RaiseAndSetIfChanged(ref _compatibleSize, value);
+    }
+
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set => this.RaiseAndSetIfChanged(ref _errorMessage, value);
+    }
+
+    public bool HasError
+    {
+        get => _hasError;
+        set => this.RaiseAndSetIfChanged(ref _hasError, value);
+    }
 
     public ReactiveCommand<Unit, Unit> BrowseOutputCommand { get; }
     public ReactiveCommand<Unit, Unit> StartBlankCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+
+    private long SizeInBytes => _sizeUnit switch
+    {
+        "GB" => (long)(_size * 1_000_000_000m),
+        "MB" => (long)(_size * 1_000_000m),
+        "KB" => (long)(_size * 1_000m),
+        _ => (long)_size
+    };
 
     private async Task BrowseOutputAsync()
     {
@@ -67,7 +109,7 @@ public class BlankViewModel : ViewModelBase
                 Progress.Update(p);
                 if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
             });
-            await _imagingService.BlankAsync(OutputPath, Size, CompatibleSize, progress, _cts.Token);
+            await _imagingService.BlankAsync(OutputPath, SizeInBytes, CompatibleSize, progress, _cts.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }

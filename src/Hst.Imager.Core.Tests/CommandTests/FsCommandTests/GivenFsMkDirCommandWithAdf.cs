@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Hst.Amiga.FileSystems;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.FsCommands;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
@@ -31,8 +30,7 @@ public class GivenFsMkDirCommandWithAdf
             testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -66,8 +64,7 @@ public class GivenFsMkDirCommandWithAdf
             testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -112,8 +109,7 @@ public class GivenFsMkDirCommandWithAdf
             testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -144,8 +140,7 @@ public class GivenFsMkDirCommandWithAdf
             await File.WriteAllTextAsync(mediaPath, string.Empty);
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -181,8 +176,7 @@ public class GivenFsMkDirCommandWithAdf
             testCommandHelper.ClearActiveMedias();
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);

@@ -16,7 +16,7 @@
         <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
       </Border>
 
-      <!-- Physical disk selector -->
+      <!-- Source selector -->
       <TextBlock Text="Physical disk or image file" Foreground="#AAAAAA" FontSize="12" />
       <Grid ColumnDefinitions="*,Auto,Auto">
         <ComboBox Grid.Column="0"
@@ -25,15 +25,10 @@
                   DisplayMemberBinding="{Binding Label}"
                   HorizontalAlignment="Stretch"
                   IsEnabled="{Binding !UseCustomPath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0"
-                Command="{Binding RefreshMediaCommand}">
-          &#8635;
-        </Button>
-        <Button Grid.Column="2" Margin="8,0,0,0"
-                Command="{Binding BrowsePathCommand}"
-                ToolTip.Tip="Browse for image file">
-          ...
-        </Button>
+        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding RefreshMediaCommand}"
+                ToolTip.Tip="Refresh drives">&#8635;</Button>
+        <Button Grid.Column="2" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}"
+                ToolTip.Tip="Browse for image file">...</Button>
       </Grid>
 
       <CheckBox Content="Use custom path" IsChecked="{Binding UseCustomPath}" />
@@ -42,25 +37,231 @@
         <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding GetInfoCommand}">Get Info</Button>
       </Grid>
 
-      <CheckBox Content="Byteswap" IsChecked="{Binding Byteswap}" />
+      <!-- Advanced -->
+      <Expander Header="Advanced" IsExpanded="False">
+        <StackPanel Spacing="8" Margin="0,4">
+          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+        </StackPanel>
+      </Expander>
 
       <!-- Loading indicator -->
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
 
-      <!-- Disk info display -->
-      <Border Classes="card" IsVisible="{Binding HasDiskInfo}">
-        <StackPanel Spacing="8">
-          <TextBlock Text="Disk Information" FontWeight="SemiBold" Foreground="White" />
-          <TextBox Text="{Binding DiskInfoText}"
-                   IsReadOnly="True"
-                   Background="Transparent"
-                   BorderThickness="0"
-                   Foreground="#CCCCCC"
-                   FontFamily="Courier New, Monospace"
-                   FontSize="12"
-                   AcceptsReturn="True" />
-        </StackPanel>
-      </Border>
+      <!-- Tabbed disk info -->
+      <TabControl IsVisible="{Binding HasDiskInfo}">
+
+        <!-- Overview tab -->
+        <TabItem Header="Overview">
+          <StackPanel Spacing="8" Margin="0,8">
+            <CheckBox Content="Show unallocated" IsChecked="{Binding ShowUnallocated}" />
+
+            <ItemsControl ItemsSource="{Binding OverviewSections}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="vm:OverviewSectionViewModel">
+                  <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                    <DataGrid ItemsSource="{Binding Parts}"
+                              IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                              GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                      <DataGrid.Columns>
+                        <DataGridTextColumn Header="Type" Binding="{Binding TypeDisplay}" Width="140" />
+                        <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="100" />
+                        <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="40" />
+                        <DataGridTextColumn Header="Size" Binding="{Binding Size}" Width="90" />
+                        <DataGridTextColumn Header="Start offset" Binding="{Binding StartOffset}" Width="90" />
+                        <DataGridTextColumn Header="End offset" Binding="{Binding EndOffset}" Width="90" />
+                        <DataGridTextColumn Header="Start" Binding="{Binding StartSecOrCyl}" Width="80" />
+                        <DataGridTextColumn Header="End" Binding="{Binding EndSecOrCyl}" Width="80" />
+                      </DataGrid.Columns>
+                    </DataGrid>
+                  </Expander>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </TabItem>
+
+        <!-- Details tab -->
+        <TabItem Header="Details">
+          <StackPanel Spacing="8" Margin="0,8">
+            <CheckBox Content="Show human readable sizes" IsChecked="{Binding ShowHumanReadable}" />
+
+            <ItemsControl ItemsSource="{Binding DetailSections}" x:CompileBindings="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <ContentControl Content="{Binding}">
+                    <ContentControl.DataTemplates>
+
+                      <DataTemplate DataType="vm:DiskInfoDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                            <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Foreground="White" />
+                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path}" Foreground="White" TextWrapping="Wrap" />
+                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Size}" Foreground="White" />
+                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Sparse file size" Foreground="#AAAAAA"
+                                         IsVisible="{Binding IsSparseFile}" />
+                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SparseFileSize}" Foreground="White"
+                                         IsVisible="{Binding IsSparseFile}" />
+                            </Grid>
+                          </Border>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:GeometryDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                            <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
+                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Capacity}" Foreground="White" />
+                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Sector size" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SectorSize}" Foreground="White" />
+                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Total sectors" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalSectors}" Foreground="White" />
+                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Cylinders" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Cylinders}" Foreground="White" />
+                              <TextBlock Grid.Row="4" Grid.Column="0" Text="Heads per cyl" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HeadsPerCylinder}" Foreground="White" />
+                              <TextBlock Grid.Row="5" Grid.Column="0" Text="Sectors per track" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SectorsPerTrack}" Foreground="White" />
+                            </Grid>
+                          </Border>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:MbrPartitionsDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <DataGrid ItemsSource="{Binding Rows}"
+                                    IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                            <DataGrid.Columns>
+                              <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
+                              <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
+                              <DataGridTextColumn Header="Type" Binding="{Binding Type}" />
+                              <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" />
+                              <DataGridTextColumn Header="Size" Binding="{Binding Size}" />
+                              <DataGridTextColumn Header="Start sector" Binding="{Binding StartSector}" />
+                              <DataGridTextColumn Header="End sector" Binding="{Binding EndSector}" />
+                              <DataGridTextColumn Header="Active" Binding="{Binding Active}" />
+                              <DataGridTextColumn Header="Primary" Binding="{Binding Primary}" />
+                            </DataGrid.Columns>
+                          </DataGrid>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:GptPartitionsDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <DataGrid ItemsSource="{Binding Rows}"
+                                    IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                            <DataGrid.Columns>
+                              <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
+                              <DataGridTextColumn Header="GUID" Binding="{Binding Guid}" />
+                              <DataGridTextColumn Header="Type" Binding="{Binding Type}" />
+                              <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" />
+                              <DataGridTextColumn Header="Size" Binding="{Binding Size}" />
+                              <DataGridTextColumn Header="Start sector" Binding="{Binding StartSector}" />
+                              <DataGridTextColumn Header="End sector" Binding="{Binding EndSector}" />
+                            </DataGrid.Columns>
+                          </DataGrid>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:RdbInfoDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                            <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
+                              <TextBlock Grid.Row="0"  Grid.Column="0" Text="Product"        Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="0"  Grid.Column="1" Text="{Binding Product}" Foreground="White" />
+                              <TextBlock Grid.Row="1"  Grid.Column="0" Text="Vendor"         Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="1"  Grid.Column="1" Text="{Binding Vendor}" Foreground="White" />
+                              <TextBlock Grid.Row="2"  Grid.Column="0" Text="Revision"       Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="2"  Grid.Column="1" Text="{Binding Revision}" Foreground="White" />
+                              <TextBlock Grid.Row="3"  Grid.Column="0" Text="Size"           Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="3"  Grid.Column="1" Text="{Binding Size}" Foreground="White" />
+                              <TextBlock Grid.Row="4"  Grid.Column="0" Text="Cylinders"      Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="4"  Grid.Column="1" Text="{Binding Cylinders}" Foreground="White" />
+                              <TextBlock Grid.Row="5"  Grid.Column="0" Text="Heads"          Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="5"  Grid.Column="1" Text="{Binding Heads}" Foreground="White" />
+                              <TextBlock Grid.Row="6"  Grid.Column="0" Text="Sectors"        Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="6"  Grid.Column="1" Text="{Binding Sectors}" Foreground="White" />
+                              <TextBlock Grid.Row="7"  Grid.Column="0" Text="Block size"     Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="7"  Grid.Column="1" Text="{Binding BlockSize}" Foreground="White" />
+                              <TextBlock Grid.Row="8"  Grid.Column="0" Text="Start cylinder" Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="8"  Grid.Column="1" Text="{Binding StartCylinder}" Foreground="White" />
+                              <TextBlock Grid.Row="9"  Grid.Column="0" Text="End cylinder"   Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="9"  Grid.Column="1" Text="{Binding EndCylinder}" Foreground="White" />
+                              <TextBlock Grid.Row="10" Grid.Column="0" Text="Flags"          Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding Flags}" Foreground="White" />
+                              <TextBlock Grid.Row="11" Grid.Column="0" Text="Host id"        Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding HostId}" Foreground="White" />
+                              <TextBlock Grid.Row="12" Grid.Column="0" Text="RDB block lo"   Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="12" Grid.Column="1" Text="{Binding RdbBlockLo}" Foreground="White" />
+                              <TextBlock Grid.Row="13" Grid.Column="0" Text="RDB block hi"   Foreground="#AAAAAA" />
+                              <TextBlock Grid.Row="13" Grid.Column="1" Text="{Binding RdbBlockHi}" Foreground="White" />
+                            </Grid>
+                          </Border>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:RdbFileSystemsDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <DataGrid ItemsSource="{Binding Rows}"
+                                    IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                            <DataGrid.Columns>
+                              <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
+                              <DataGridTextColumn Header="DOS type" Binding="{Binding DosType}" />
+                              <DataGridTextColumn Header="Version" Binding="{Binding Version}" />
+                              <DataGridTextColumn Header="File system name" Binding="{Binding FileSystemName}" />
+                              <DataGridTextColumn Header="Size" Binding="{Binding Size}" />
+                            </DataGrid.Columns>
+                          </DataGrid>
+                        </Expander>
+                      </DataTemplate>
+
+                      <DataTemplate DataType="vm:RdbPartitionsDetailSection">
+                        <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
+                          <ScrollViewer HorizontalScrollBarVisibility="Auto">
+                            <DataGrid ItemsSource="{Binding Rows}"
+                                      IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                                      GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                              <DataGrid.Columns>
+                                <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
+                                <DataGridTextColumn Header="Name" Binding="{Binding Name}" />
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size}" />
+                                <DataGridTextColumn Header="Start cyl" Binding="{Binding StartCyl}" />
+                                <DataGridTextColumn Header="End cyl" Binding="{Binding EndCyl}" />
+                                <DataGridTextColumn Header="Total cyl" Binding="{Binding TotalCyl}" />
+                                <DataGridTextColumn Header="Heads" Binding="{Binding Heads}" />
+                                <DataGridTextColumn Header="Blks/track" Binding="{Binding BlocksPerTrack}" />
+                                <DataGridTextColumn Header="Buffers" Binding="{Binding Buffers}" />
+                                <DataGridTextColumn Header="FS block" Binding="{Binding FsBlockSize}" />
+                                <DataGridTextColumn Header="Reserved" Binding="{Binding Reserved}" />
+                                <DataGridTextColumn Header="PreAlloc" Binding="{Binding PreAlloc}" />
+                                <DataGridTextColumn Header="Bootable" Binding="{Binding Bootable}" />
+                                <DataGridTextColumn Header="Boot pri" Binding="{Binding BootPriority}" />
+                                <DataGridTextColumn Header="No mount" Binding="{Binding NoMount}" />
+                                <DataGridTextColumn Header="DOS type" Binding="{Binding DosType}" />
+                                <DataGridTextColumn Header="Mask" Binding="{Binding Mask}" />
+                                <DataGridTextColumn Header="Max xfer" Binding="{Binding MaxTransfer}" />
+                              </DataGrid.Columns>
+                            </DataGrid>
+                          </ScrollViewer>
+                        </Expander>
+                      </DataTemplate>
+
+                    </ContentControl.DataTemplates>
+                  </ContentControl>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </TabItem>
+
+      </TabControl>
 
     </StackPanel>
   </ScrollViewer>

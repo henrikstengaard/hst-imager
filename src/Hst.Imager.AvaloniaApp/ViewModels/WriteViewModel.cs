@@ -19,11 +19,14 @@ public class WriteViewModel : ViewModelBase
     private MediaItemViewModel? _selectedMedia;
     private string _sourcePath = string.Empty;
     private long _startOffset;
-    private long _size;
+    private decimal _size;
+    private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private CancellationTokenSource? _cts;
+
+    public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public WriteViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService)
     {
@@ -70,10 +73,16 @@ public class WriteViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _startOffset, value);
     }
 
-    public long Size
+    public decimal Size
     {
         get => _size;
         set => this.RaiseAndSetIfChanged(ref _size, value);
+    }
+
+    public string SizeUnit
+    {
+        get => _sizeUnit;
+        set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
     }
 
     public bool Byteswap
@@ -98,6 +107,14 @@ public class WriteViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> StartWriteCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+
+    private long SizeInBytes => _sizeUnit switch
+    {
+        "GB" => (long)(_size * 1_000_000_000m),
+        "MB" => (long)(_size * 1_000_000m),
+        "KB" => (long)(_size * 1_000m),
+        _ => (long)_size
+    };
 
     private async Task RefreshMediaAsync()
     {
@@ -153,7 +170,7 @@ public class WriteViewModel : ViewModelBase
                     Progress.IsRunning = false;
             });
 
-            await _imagingService.WriteAsync(SourcePath, destPath, StartOffset, Size, Byteswap,
+            await _imagingService.WriteAsync(SourcePath, destPath, StartOffset, SizeInBytes, Byteswap,
                 progress, _cts.Token);
         }
         catch (OperationCanceledException)

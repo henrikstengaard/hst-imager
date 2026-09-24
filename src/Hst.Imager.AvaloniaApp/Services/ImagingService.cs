@@ -5,9 +5,7 @@ using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.Core;
 using Hst.Imager.Core.Commands;
-using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
-using Hst.Imager.Core.Models.BackgroundTasks;
 using Hst.Imager.Core.PhysicalDrives;
 using Microsoft.Extensions.Logging;
 
@@ -122,9 +120,7 @@ public class ImagingService : IImagingService
         using var commandHelper = CreateCommandHelper();
 
         var optimizePath = string.Concat(byteswap ? "+bs:" : string.Empty, path);
-        var cmd = new OptimizeCommand(
-            _loggerFactory.CreateLogger<OptimizeCommand>(), commandHelper,
-            optimizePath, new Size(size, Unit.Bytes), PartitionTable.None);
+        var cmd = new OptimizeCommand(commandHelper, optimizePath, new Size(size, Unit.Bytes), PartitionTable.None);
 
         var result = await cmd.Execute(cancellationToken);
         progress.Report(FinalProgress("Optimizing", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));

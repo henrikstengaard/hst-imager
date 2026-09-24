@@ -5,7 +5,6 @@ using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
-using Hst.Imager.Core.Commands;
 using ReactiveUI;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
@@ -20,11 +19,14 @@ public class ReadViewModel : ViewModelBase
     private MediaItemViewModel? _selectedMedia;
     private string _destinationPath = string.Empty;
     private long _startOffset;
-    private long _size;
+    private decimal _size;
+    private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private CancellationTokenSource? _cts;
+
+    public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public ReadViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService)
     {
@@ -76,10 +78,16 @@ public class ReadViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _startOffset, value);
     }
 
-    public long Size
+    public decimal Size
     {
         get => _size;
         set => this.RaiseAndSetIfChanged(ref _size, value);
+    }
+
+    public string SizeUnit
+    {
+        get => _sizeUnit;
+        set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
     }
 
     public bool Byteswap
@@ -109,6 +117,14 @@ public class ReadViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartReadCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+
+    private long SizeInBytes => _sizeUnit switch
+    {
+        "GB" => (long)(_size * 1_000_000_000m),
+        "MB" => (long)(_size * 1_000_000m),
+        "KB" => (long)(_size * 1_000m),
+        _ => (long)_size
+    };
 
     private async Task RefreshMediaAsync()
     {
@@ -179,7 +195,7 @@ public class ReadViewModel : ViewModelBase
                     Progress.IsRunning = false;
             });
 
-            await _imagingService.ReadAsync(sourcePath, DestinationPath, StartOffset, Size, Byteswap,
+            await _imagingService.ReadAsync(sourcePath, DestinationPath, StartOffset, SizeInBytes, Byteswap,
                 progress, _cts.Token);
         }
         catch (OperationCanceledException)

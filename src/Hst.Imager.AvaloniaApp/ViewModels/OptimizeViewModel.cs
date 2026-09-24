@@ -13,11 +13,14 @@ public class OptimizeViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
 
     private string _imagePath = string.Empty;
-    private long _size;
+    private decimal _size;
+    private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private CancellationTokenSource? _cts;
+
+    public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public OptimizeViewModel(IImagingService imagingService, IDialogService dialogService)
     {
@@ -34,15 +37,54 @@ public class OptimizeViewModel : ViewModelBase
     }
 
     public ProgressViewModel Progress { get; }
-    public string ImagePath { get => _imagePath; set => this.RaiseAndSetIfChanged(ref _imagePath, value); }
-    public long Size { get => _size; set => this.RaiseAndSetIfChanged(ref _size, value); }
-    public bool Byteswap { get => _byteswap; set => this.RaiseAndSetIfChanged(ref _byteswap, value); }
-    public string ErrorMessage { get => _errorMessage; set => this.RaiseAndSetIfChanged(ref _errorMessage, value); }
-    public bool HasError { get => _hasError; set => this.RaiseAndSetIfChanged(ref _hasError, value); }
+
+    public string ImagePath
+    {
+        get => _imagePath;
+        set => this.RaiseAndSetIfChanged(ref _imagePath, value);
+    }
+
+    public decimal Size
+    {
+        get => _size;
+        set => this.RaiseAndSetIfChanged(ref _size, value);
+    }
+
+    public string SizeUnit
+    {
+        get => _sizeUnit;
+        set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
+    }
+
+    public bool Byteswap
+    {
+        get => _byteswap;
+        set => this.RaiseAndSetIfChanged(ref _byteswap, value);
+    }
+
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set => this.RaiseAndSetIfChanged(ref _errorMessage, value);
+    }
+
+    public bool HasError
+    {
+        get => _hasError;
+        set => this.RaiseAndSetIfChanged(ref _hasError, value);
+    }
 
     public ReactiveCommand<Unit, Unit> BrowseImageCommand { get; }
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+
+    private long SizeInBytes => _sizeUnit switch
+    {
+        "GB" => (long)(_size * 1_000_000_000m),
+        "MB" => (long)(_size * 1_000_000m),
+        "KB" => (long)(_size * 1_000m),
+        _ => (long)_size
+    };
 
     private async Task BrowseImageAsync()
     {
@@ -67,7 +109,7 @@ public class OptimizeViewModel : ViewModelBase
                 Progress.Update(p);
                 if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
             });
-            await _imagingService.OptimizeAsync(ImagePath, Size, Byteswap, progress, _cts.Token);
+            await _imagingService.OptimizeAsync(ImagePath, SizeInBytes, Byteswap, progress, _cts.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }

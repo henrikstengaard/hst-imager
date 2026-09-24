@@ -8,32 +8,49 @@
     <ScrollViewer Grid.Row="0">
       <StackPanel Spacing="12" Margin="0,8">
         <TextBlock Classes="page-title" Text="Transfer" />
-        <TextBlock Classes="page-description" Text="Transfer data between two physical disks or image files." />
+        <TextBlock Classes="page-description"
+                   Text="Transfer converts, imports or exports from an image file or part of to another." />
 
         <Border Background="#4A1A1A" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
         </Border>
 
-        <TextBlock Text="Source disk" Foreground="#AAAAAA" FontSize="12" />
+        <!-- Source image file -->
+        <TextBlock Text="Source image file" Foreground="#AAAAAA" FontSize="12" />
         <Grid ColumnDefinitions="*,Auto">
-          <ComboBox Grid.Column="0" ItemsSource="{Binding SourceMediaItems}" SelectedItem="{Binding SourceMedia}"
-                    DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
-          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding RefreshMediaCommand}">&#8635;</Button>
+          <TextBox Grid.Column="0" Text="{Binding SourcePath}"
+                   Watermark="Path to source image file..." />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}">...</Button>
         </Grid>
 
-        <TextBlock Text="Destination disk" Foreground="#AAAAAA" FontSize="12" />
-        <ComboBox ItemsSource="{Binding DestMediaItems}" SelectedItem="{Binding DestMedia}"
-                  DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
+        <!-- Destination image file -->
+        <TextBlock Text="Destination image file" Foreground="#AAAAAA" FontSize="12" />
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding DestinationPath}"
+                   Watermark="Path to destination image file..." />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}">...</Button>
+        </Grid>
 
-        <Expander Header="Advanced options" IsExpanded="False">
+        <!-- Advanced options -->
+        <Expander Header="Advanced" IsExpanded="False">
           <StackPanel Spacing="8" Margin="0,8">
+
             <TextBlock Text="Source start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
             <NumericUpDown Value="{Binding SrcStartOffset}" Minimum="0" Increment="512" />
+
             <TextBlock Text="Destination start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
             <NumericUpDown Value="{Binding DestStartOffset}" Minimum="0" Increment="512" />
-            <TextBlock Text="Size (bytes, 0 = full)" Foreground="#AAAAAA" FontSize="12" />
-            <NumericUpDown Value="{Binding Size}" Minimum="0" Increment="1048576" />
+
+            <TextBlock Text="Size (0 = full)" Foreground="#AAAAAA" FontSize="12" />
+            <Grid ColumnDefinitions="*,Auto">
+              <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+              <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+                        ItemsSource="{x:Static vm:TransferViewModel.SizeUnits}"
+                        SelectedItem="{Binding SizeUnit}" />
+            </Grid>
+
             <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
+
           </StackPanel>
         </Expander>
 
@@ -46,15 +63,19 @@
               <TextBlock Text="{Binding Progress.SpeedText}" Foreground="#AAAAAA" FontSize="12" />
               <TextBlock Text="{Binding Progress.EtaText}" Foreground="#AAAAAA" FontSize="12" />
             </StackPanel>
-            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}" IsVisible="{Binding Progress.HasError}" />
+            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}"
+                       IsVisible="{Binding Progress.HasError}" />
           </StackPanel>
         </Border>
       </StackPanel>
     </ScrollViewer>
 
-    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,12,0,0">
+    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
+                Spacing="8" Margin="0,12,0,0">
       <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">Cancel</Button>
-      <Button Command="{Binding StartTransferCommand}" IsVisible="{Binding !Progress.IsRunning}" Classes="accent">Start Transfer</Button>
+      <Button Command="{Binding StartTransferCommand}"
+              IsVisible="{Binding !Progress.IsRunning}"
+              Classes="accent">Start Transfer</Button>
     </StackPanel>
   </Grid>
 </UserControl>

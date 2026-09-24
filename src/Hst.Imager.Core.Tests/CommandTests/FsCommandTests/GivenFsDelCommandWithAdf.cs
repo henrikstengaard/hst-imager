@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.UaeMetadatas;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
@@ -28,8 +27,7 @@ public class GivenFsDelCommandWithAdf
         await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
-        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
-            deletePath, uaeMetadata);
+        var fsDelCommand = new FsDelCommand(testCommandHelper, [], deletePath, uaeMetadata);
         
         // act - execute fs del command
         var result = await fsDelCommand.Execute(CancellationToken.None);
@@ -69,8 +67,7 @@ public class GivenFsDelCommandWithAdf
         await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
-        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
-            deletePath, uaeMetadata);
+        var fsDelCommand = new FsDelCommand(testCommandHelper, [], deletePath, uaeMetadata);
         
         // act - execute fs del command
         var result = await fsDelCommand.Execute(CancellationToken.None);
@@ -110,8 +107,7 @@ public class GivenFsDelCommandWithAdf
         await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
-        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
-            deletePath, uaeMetadata);
+        var fsDelCommand = new FsDelCommand(testCommandHelper, [], deletePath, uaeMetadata);
         
         // act - execute fs del command
         var result = await fsDelCommand.Execute(CancellationToken.None);
@@ -151,8 +147,7 @@ public class GivenFsDelCommandWithAdf
         await AdfTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
 
         // arrange - create fs del command
-        var fsDelCommand = new FsDelCommand(new NullLogger<FsDelCommand>(), testCommandHelper, [],
-            deletePath, uaeMetadata);
+        var fsDelCommand = new FsDelCommand(testCommandHelper, [], deletePath, uaeMetadata);
         
         // act - execute fs del command
         var result = await fsDelCommand.Execute(CancellationToken.None);

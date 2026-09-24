@@ -7,10 +7,7 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.AvaloniaApp.ViewModels;
 using Hst.Imager.AvaloniaApp.Views;
-using Hst.Imager.Core.Helpers;
-using Hst.Imager.Core.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace Hst.Imager.AvaloniaApp;
@@ -18,11 +15,13 @@ namespace Hst.Imager.AvaloniaApp;
 public partial class App : Application
 {
     private readonly string _appDataPath;
+    private readonly string[] _startupArgs;
     private IServiceProvider? _services;
 
-    public App(string appDataPath)
+    public App(string appDataPath, string[] startupArgs)
     {
         _appDataPath = appDataPath;
+        _startupArgs = startupArgs;
     }
 
     public override void Initialize()
@@ -32,7 +31,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        _services = ConfigureServices(_appDataPath);
+        _services = ConfigureServices(_appDataPath, _startupArgs);
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -47,7 +46,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private static IServiceProvider ConfigureServices(string appDataPath)
+    private static IServiceProvider ConfigureServices(string appDataPath, string[] startupArgs)
     {
         var services = new ServiceCollection();
 
@@ -87,7 +86,7 @@ public partial class App : Application
         services.AddTransient<FormatViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<AboutViewModel>();
-        services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<MainWindowViewModel>(sp => new MainWindowViewModel(sp, startupArgs));
 
         return services.BuildServiceProvider();
     }

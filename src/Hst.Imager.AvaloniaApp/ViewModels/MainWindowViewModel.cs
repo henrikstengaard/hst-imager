@@ -9,15 +9,18 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 public class MainWindowViewModel : ViewModelBase
 {
     private readonly IServiceProvider _services;
+    private readonly string[] _startupArgs;
     private ViewModelBase _currentPage;
     private string _currentPageName = "Start";
 
-    public MainWindowViewModel(IServiceProvider services)
+    public MainWindowViewModel(IServiceProvider services, string[] startupArgs)
     {
         _services = services;
+        _startupArgs = startupArgs;
         _currentPage = services.GetRequiredService<StartViewModel>();
 
         NavigateToCommand = ReactiveCommand.Create<string>(NavigateTo);
+        ElevateCommand = ReactiveCommand.Create(Elevate);
     }
 
     public ViewModelBase CurrentPage
@@ -32,7 +35,10 @@ public class MainWindowViewModel : ViewModelBase
         private set => this.RaiseAndSetIfChanged(ref _currentPageName, value);
     }
 
+    public bool IsElevated => User.IsAdministrator();
+
     public ReactiveCommand<string, Unit> NavigateToCommand { get; }
+    public ReactiveCommand<Unit, Unit> ElevateCommand { get; }
 
     public void NavigateTo(string page)
     {
@@ -52,5 +58,10 @@ public class MainWindowViewModel : ViewModelBase
             "About" => _services.GetRequiredService<AboutViewModel>(),
             _ => _services.GetRequiredService<StartViewModel>()
         };
+    }
+
+    private void Elevate()
+    {
+        User.Elevate(_startupArgs);
     }
 }

@@ -1,6 +1,4 @@
 using System;
-using System.Collections.ObjectModel;
-using System.Linq;
 using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,68 +9,124 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 
 public class TransferViewModel : ViewModelBase
 {
-    private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
 
-    private ObservableCollection<MediaItemViewModel> _sourceMediaItems = [];
-    private ObservableCollection<MediaItemViewModel> _destMediaItems = [];
-    private MediaItemViewModel? _sourceMedia;
-    private MediaItemViewModel? _destMedia;
+    private string _sourcePath = string.Empty;
+    private string _destinationPath = string.Empty;
     private long _srcStartOffset;
     private long _destStartOffset;
-    private long _size;
+    private decimal _size;
+    private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private CancellationTokenSource? _cts;
 
-    public TransferViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService)
+    public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
+
+    public TransferViewModel(IImagingService imagingService, IDialogService dialogService)
     {
-        _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
 
         Progress = new ProgressViewModel();
 
-        RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
+        BrowseSourceCommand = ReactiveCommand.CreateFromTask(BrowseSourceAsync);
+        BrowseDestinationCommand = ReactiveCommand.CreateFromTask(BrowseDestinationAsync);
         StartTransferCommand = ReactiveCommand.CreateFromTask(StartTransferAsync,
-            this.WhenAnyValue(x => x.SourceMedia, x => x.DestMedia, x => x.Progress.IsRunning,
-                (src, dst, running) => src != null && dst != null && src.Path != dst.Path && !running));
+            this.WhenAnyValue(x => x.SourcePath, x => x.DestinationPath, x => x.Progress.IsRunning,
+                (src, dst, running) => !string.IsNullOrEmpty(src) && !string.IsNullOrEmpty(dst) && !running));
         CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.Progress.IsRunning));
-
-        _ = RefreshMediaAsync();
     }
 
     public ProgressViewModel Progress { get; }
-    public ObservableCollection<MediaItemViewModel> SourceMediaItems { get => _sourceMediaItems; set => this.RaiseAndSetIfChanged(ref _sourceMediaItems, value); }
-    public ObservableCollection<MediaItemViewModel> DestMediaItems { get => _destMediaItems; set => this.RaiseAndSetIfChanged(ref _destMediaItems, value); }
-    public MediaItemViewModel? SourceMedia { get => _sourceMedia; set => this.RaiseAndSetIfChanged(ref _sourceMedia, value); }
-    public MediaItemViewModel? DestMedia { get => _destMedia; set => this.RaiseAndSetIfChanged(ref _destMedia, value); }
-    public long SrcStartOffset { get => _srcStartOffset; set => this.RaiseAndSetIfChanged(ref _srcStartOffset, value); }
-    public long DestStartOffset { get => _destStartOffset; set => this.RaiseAndSetIfChanged(ref _destStartOffset, value); }
-    public long Size { get => _size; set => this.RaiseAndSetIfChanged(ref _size, value); }
-    public bool Byteswap { get => _byteswap; set => this.RaiseAndSetIfChanged(ref _byteswap, value); }
-    public string ErrorMessage { get => _errorMessage; set => this.RaiseAndSetIfChanged(ref _errorMessage, value); }
-    public bool HasError { get => _hasError; set => this.RaiseAndSetIfChanged(ref _hasError, value); }
 
-    public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
+    public string SourcePath
+    {
+        get => _sourcePath;
+        set => this.RaiseAndSetIfChanged(ref _sourcePath, value);
+    }
+
+    public string DestinationPath
+    {
+        get => _destinationPath;
+        set => this.RaiseAndSetIfChanged(ref _destinationPath, value);
+    }
+
+    public long SrcStartOffset
+    {
+        get => _srcStartOffset;
+        set => this.RaiseAndSetIfChanged(ref _srcStartOffset, value);
+    }
+
+    public long DestStartOffset
+    {
+        get => _destStartOffset;
+        set => this.RaiseAndSetIfChanged(ref _destStartOffset, value);
+    }
+
+    public decimal Size
+    {
+        get => _size;
+        set => this.RaiseAndSetIfChanged(ref _size, value);
+    }
+
+    public string SizeUnit
+    {
+        get => _sizeUnit;
+        set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
+    }
+
+    public bool Byteswap
+    {
+        get => _byteswap;
+        set => this.RaiseAndSetIfChanged(ref _byteswap, value);
+    }
+
+    public string ErrorMessage
+    {
+        get => _errorMessage;
+        set => this.RaiseAndSetIfChanged(ref _errorMessage, value);
+    }
+
+    public bool HasError
+    {
+        get => _hasError;
+        set => this.RaiseAndSetIfChanged(ref _hasError, value);
+    }
+
+    public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
+    public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartTransferCommand { get; }
     public ReactiveCommand<Unit, Unit> CancelCommand { get; }
 
-    private async Task RefreshMediaAsync()
+    private long SizeInBytes => _sizeUnit switch
     {
-        try
-        {
-            var medias = await _mediaService.ListMediaAsync();
-            var items = medias.Select(m => new MediaItemViewModel
-                { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }).ToList();
-            SourceMediaItems = new ObservableCollection<MediaItemViewModel>(items);
-            DestMediaItems = new ObservableCollection<MediaItemViewModel>(items);
-            if (SourceMedia == null && items.Count > 0) SourceMedia = items[0];
-            if (DestMedia == null && items.Count > 1) DestMedia = items[1];
-        }
-        catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
+        "GB" => (long)(_size * 1_000_000_000m),
+        "MB" => (long)(_size * 1_000_000m),
+        "KB" => (long)(_size * 1_000m),
+        _ => (long)_size
+    };
+
+    private async Task BrowseSourceAsync()
+    {
+        var path = await _dialogService.ShowOpenFileDialogAsync("Select source image file",
+        [
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip"] },
+            new FileFilterItem { Name = "All files", Extensions = ["*"] }
+        ]);
+        if (path != null) SourcePath = path;
+    }
+
+    private async Task BrowseDestinationAsync()
+    {
+        var path = await _dialogService.ShowSaveFileDialogAsync("Select destination image file",
+        [
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "gz", "zip"] },
+            new FileFilterItem { Name = "All files", Extensions = ["*"] }
+        ]);
+        if (path != null) DestinationPath = path;
     }
 
     private async Task StartTransferAsync()
@@ -88,8 +142,8 @@ public class TransferViewModel : ViewModelBase
                 Progress.Update(p);
                 if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
             });
-            await _imagingService.TransferAsync(_sourceMedia!.Path, SrcStartOffset,
-                _destMedia!.Path, DestStartOffset, Size, Byteswap, progress, _cts.Token);
+            await _imagingService.TransferAsync(SourcePath, SrcStartOffset,
+                DestinationPath, DestStartOffset, SizeInBytes, Byteswap, progress, _cts.Token);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
