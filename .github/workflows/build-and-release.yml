@@ -66,17 +66,11 @@ jobs:
         shell: pwsh
         run: dotnet tool restore
 
-      - name: Update version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '${{ env.VERSION }}', '${{ env.BUILD_VERSION }}'))
-
       - name: Build console app
         working-directory: src/Hst.Imager.ConsoleApp
         shell: pwsh
         run: |
-          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
+          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }} -p:Version=${{ env.BUILD_VERSION }}
 
       - name: List console app output
         working-directory: src/Hst.Imager.ConsoleApp/publish
@@ -152,22 +146,16 @@ jobs:
         shell: pwsh
         run: dotnet tool restore
 
-      - name: Update version
-        shell: pwsh
-        working-directory: ./src
-        run: |
-          [System.IO.File]::WriteAllText('Directory.Build.props', ([System.IO.File]::ReadAllText('Directory.Build.props') -replace '${{ env.VERSION }}', '${{ env.BUILD_VERSION }}'))
-
       - name: Build gui app for Windows x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
+        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'windows-latest'
 
       - name: Build gui app for Windows arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64
+        run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'windows-latest'
 
       - name: Pack gui app for Windows x64 (Velopack)
@@ -225,13 +213,13 @@ jobs:
       - name: Build gui app for macOS x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true -o publish/osx-x64
+        run: dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true -o publish/osx-x64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'macos-latest'
 
       - name: Build gui app for macOS arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64
+        run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'macos-latest'
 
       - name: Pack gui app for macOS x64 (Velopack)
@@ -289,13 +277,13 @@ jobs:
       - name: Build gui app for Linux x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux-x64
+        run: dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux-x64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'ubuntu-latest'
 
       - name: Build gui app for Linux arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true -o publish/linux-arm64
+        run: dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true -o publish/linux-arm64 -p:Version=${{ env.BUILD_VERSION }}
         if: matrix.os == 'ubuntu-latest'
 
       - name: Pack gui app for Linux x64 (Velopack)
