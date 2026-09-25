@@ -61,6 +61,11 @@
       <Setter Property="FontSize" Value="12" />
     </Style>
 
+    <Style Selector="TextBlock.field-help">
+      <Setter Property="Foreground" Value="#999999" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+
     <Style Selector="ia|Icon.field-icon">
       <Setter Property="Foreground" Value="#AAAAAA" />
       <Setter Property="FontSize" Value="12" />

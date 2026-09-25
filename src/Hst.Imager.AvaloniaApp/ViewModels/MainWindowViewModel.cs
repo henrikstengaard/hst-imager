@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reactive;
 using Hst.Imager.AvaloniaApp.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -37,10 +38,21 @@ public class MainWindowViewModel : ViewModelBase
     public string CurrentPageName
     {
         get => _currentPageName;
-        private set => this.RaiseAndSetIfChanged(ref _currentPageName, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _currentPageName, value);
+            this.RaisePropertyChanged(nameof(ShowElevationWarning));
+        }
     }
 
-    public bool IsElevated => User.IsAdministrator();
+    public bool IsElevated { get; } = User.IsAdministrator();
+
+    /// <summary>
+    /// Pages accessing physical disks, which requires administrator privileges.
+    /// </summary>
+    private static readonly HashSet<string> PagesRequiringElevation = ["Read", "Write", "Info", "Compare", "Format"];
+
+    public bool ShowElevationWarning => !IsElevated && PagesRequiringElevation.Contains(_currentPageName);
 
     public ReactiveCommand<string, Unit> NavigateToCommand { get; }
     public ReactiveCommand<Unit, Unit> ElevateCommand { get; }

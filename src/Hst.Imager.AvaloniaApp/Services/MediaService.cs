@@ -24,7 +24,15 @@ public class MediaService : IMediaService
         _appState = appState;
     }
 
-    public async Task<IEnumerable<MediaInfo>> ListMediaAsync(CancellationToken cancellationToken = default)
+    // commands runs on thread pool to keep ui responsive while accessing physical disks
+    public Task<IEnumerable<MediaInfo>> ListMediaAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(() => ListMedia(cancellationToken), cancellationToken);
+
+    public Task<MediaInfo?> GetMediaInfoAsync(string path, bool byteswap = false, bool allowNonExisting = false,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetMediaInfo(path, byteswap, allowNonExisting, cancellationToken), cancellationToken);
+
+    private async Task<IEnumerable<MediaInfo>> ListMedia(CancellationToken cancellationToken)
     {
         var physicalDriveManager = CreatePhysicalDriveManager();
         var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();
@@ -45,7 +53,7 @@ public class MediaService : IMediaService
         return result;
     }
 
-    public async Task<MediaInfo?> GetMediaInfoAsync(string path, bool byteswap = false, bool allowNonExisting = false, CancellationToken cancellationToken = default)
+    private async Task<MediaInfo?> GetMediaInfo(string path, bool byteswap, bool allowNonExisting, CancellationToken cancellationToken)
     {
         var physicalDriveManager = CreatePhysicalDriveManager();
         var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();

@@ -17,14 +17,14 @@ public class AppStateService : IAppStateService
     public async Task<AppStateModel> GetAppStateAsync()
     {
         _appState.Settings = await ApplicationDataHelper.ReadSettings<Settings>(
-            _appState.AppDataPath, Constants.AppName) ?? new Settings();
+            _appState.AppDataPath, Constants.AppName) ?? SettingsService.CreateDefaultSettings();
         return _appState;
     }
 
     public async Task<Settings> GetSettingsAsync()
     {
         var settings = await ApplicationDataHelper.ReadSettings<Settings>(
-            _appState.AppDataPath, Constants.AppName) ?? new Settings();
+            _appState.AppDataPath, Constants.AppName) ?? SettingsService.CreateDefaultSettings();
         _appState.Settings = settings;
         return settings;
     }

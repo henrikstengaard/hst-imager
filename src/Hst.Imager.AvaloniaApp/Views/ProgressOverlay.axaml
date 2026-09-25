@@ -16,8 +16,14 @@
 
         <!-- Running -->
         <StackPanel Spacing="8" IsVisible="{Binding IsRunning}">
-          <ProgressBar Value="{Binding PercentComplete}" Minimum="0" Maximum="100" Height="8" />
-          <TextBlock Text="{Binding PercentText}" Foreground="#AAAAAA" FontSize="12" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding Stage}" IsVisible="{Binding HasStage}"
+                     Foreground="#CCCCCC" HorizontalAlignment="Center" />
+          <ProgressBar Value="{Binding PercentComplete}" Minimum="0" Maximum="100" Height="8"
+                       IsIndeterminate="{Binding IsFinishing}" />
+          <TextBlock Text="{Binding PercentText}" Foreground="#AAAAAA" FontSize="12" HorizontalAlignment="Center"
+                     IsVisible="{Binding !IsFinishing}" />
+          <TextBlock Text="Finishing, please wait..." Foreground="#AAAAAA" FontSize="12" HorizontalAlignment="Center"
+                     IsVisible="{Binding IsFinishing}" />
           <TextBlock Text="{Binding BytesText}" Foreground="#AAAAAA" FontSize="12" HorizontalAlignment="Center" />
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
             <TextBlock Text="{Binding SpeedText}" Foreground="#AAAAAA" FontSize="12" />

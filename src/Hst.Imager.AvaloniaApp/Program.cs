@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using Avalonia;
 using Avalonia.ReactiveUI;
+using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
 using Projektanker.Icons.Avalonia;
 using Projektanker.Icons.Avalonia.FontAwesome;
 using Serilog;
@@ -21,6 +23,8 @@ class Program
         var appDataPath = ApplicationDataHelper.GetApplicationDataDir("HstImager");
 
         SetupLogging(appDataPath);
+
+        StartAsAdministratorIfEnabled(appDataPath, args);
 
         try
         {
@@ -47,6 +51,35 @@ class Program
             .WithInterFont()
             .UseReactiveUI()
             .LogToTrace();
+    }
+
+    /// <summary>
+    /// Restart app with administrator privileges, if enabled in settings and not already running as administrator.
+    /// Continues without administrator privileges, if elevation fails or is declined.
+    /// </summary>
+    private static void StartAsAdministratorIfEnabled(string appDataPath, string[] args)
+    {
+        try
+        {
+            var settings = ApplicationDataHelper.ReadSettings<Settings>(appDataPath, Constants.AppName)
+                .GetAwaiter().GetResult();
+            if (settings is not { StartAsAdministrator: true } || User.IsAdministrator())
+            {
+                return;
+            }
+
+            Log.Information("Start as administrator is enabled, restarting with administrator privileges");
+
+            // exits current process, if elevated process is started
+            if (!User.Elevate(args, settings))
+            {
+                Log.Warning("Failed to start as administrator, continuing without administrator privileges");
+            }
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to start as administrator, continuing without administrator privileges");
+        }
     }
 
     private static void SetupLogging(string appDataPath)

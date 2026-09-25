@@ -14,7 +14,7 @@
         ExtendClientAreaChromeHints="NoChrome"
         ExtendClientAreaTitleBarHeightHint="-1">
 
-  <Grid RowDefinitions="32,Auto,*">
+  <Grid RowDefinitions="32,*">
 
     <!-- Custom Title Bar -->
     <Grid Grid.Row="0" Background="#0F1E28"
@@ -42,6 +42,34 @@
 
       <!-- Window controls -->
       <StackPanel Grid.Column="2" Orientation="Horizontal">
+        <!-- Administrator privileges warning for pages accessing physical disks -->
+        <Button Name="ElevationWarningButton"
+                IsVisible="{Binding ShowElevationWarning}"
+                Background="Transparent"
+                BorderThickness="0"
+                Width="40" Height="32"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                PointerEntered="OnElevationWarningPointerEntered">
+          <ia:Icon Value="fa-triangle-exclamation" FontSize="14" Foreground="#FFBB33" />
+          <Button.Flyout>
+            <Flyout Placement="BottomEdgeAlignedRight">
+              <StackPanel Spacing="10" MaxWidth="320">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <ia:Icon Value="fa-triangle-exclamation" Foreground="#FFBB33" VerticalAlignment="Top" Margin="0,2,0,0" />
+                  <TextBlock TextWrapping="Wrap" MaxWidth="290" FontSize="12"
+                             Text="Administrator privileges are required to access physical disks." />
+                </StackPanel>
+                <Button Command="{Binding ElevateCommand}" Classes="accent" HorizontalAlignment="Right">
+                  <StackPanel Orientation="Horizontal" Spacing="6">
+                    <ia:Icon Value="fa-shield-halved" />
+                    <TextBlock Text="Restart as Administrator" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </Flyout>
+          </Button.Flyout>
+        </Button>
         <Button Name="MinimizeButton"
                 Background="Transparent"
                 Foreground="#CCCCCC"
@@ -78,22 +106,8 @@
       </StackPanel>
     </Grid>
 
-    <!-- Elevation Banner -->
-    <Border Grid.Row="1" Background="#7A4A00" Padding="10,6"
-            IsVisible="{Binding !IsElevated}">
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBlock Grid.Column="0"
-                   Text="Administrator privileges are required to access physical disks."
-                   Foreground="#FFD080" FontSize="12"
-                   VerticalAlignment="Center" />
-        <Button Grid.Column="1" Margin="12,0,0,0"
-                Command="{Binding ElevateCommand}"
-                Padding="10,4">Restart as Administrator</Button>
-      </Grid>
-    </Border>
-
     <!-- Main Content Area -->
-    <Grid Grid.Row="2" ColumnDefinitions="62,*">
+    <Grid Grid.Row="1" ColumnDefinitions="62,*">
 
       <!-- Navigation Sidebar -->
       <Border Grid.Column="0" Background="#0F1E28">
@@ -202,6 +216,6 @@
     </Grid>
 
     <!-- Progress overlay for running tasks, covers navigation and pages -->
-    <views:ProgressOverlay Grid.Row="1" Grid.RowSpan="2" DataContext="{Binding Progress}" />
+    <views:ProgressOverlay Grid.Row="1" DataContext="{Binding Progress}" />
   </Grid>
 </Window>

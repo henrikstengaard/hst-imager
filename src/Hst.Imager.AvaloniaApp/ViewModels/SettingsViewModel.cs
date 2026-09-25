@@ -16,14 +16,16 @@ public class SettingsViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly AppStateModel _appState;
 
-    private Settings _settings = new();
+    private Settings _settings = SettingsService.CreateDefaultSettings();
     private bool _allPhysicalDrives;
+    private bool _startAsAdministrator;
     private SelectOption _macOsElevateMethod;
     private bool _verify;
     private bool _force;
     private int _retries = 5;
     private bool _skipUnusedSectors;
     private bool _sparseFiles = true;
+    private bool _useCache;
     private bool _debugMode;
     private bool _isMacOs;
     private bool _isSaved;
@@ -60,6 +62,7 @@ public class SettingsViewModel : ViewModelBase
     public List<SelectOption> MacOsElevateMethodOptions { get; }
 
     public bool AllPhysicalDrives { get => _allPhysicalDrives; set => this.RaiseAndSetIfChanged(ref _allPhysicalDrives, value); }
+    public bool StartAsAdministrator { get => _startAsAdministrator; set => this.RaiseAndSetIfChanged(ref _startAsAdministrator, value); }
 
     public SelectOption MacOsElevateMethod
     {
@@ -79,6 +82,7 @@ public class SettingsViewModel : ViewModelBase
     public int Retries { get => _retries; set => this.RaiseAndSetIfChanged(ref _retries, value); }
     public bool SkipUnusedSectors { get => _skipUnusedSectors; set => this.RaiseAndSetIfChanged(ref _skipUnusedSectors, value); }
     public bool SparseFiles { get => _sparseFiles; set => this.RaiseAndSetIfChanged(ref _sparseFiles, value); }
+    public bool UseCache { get => _useCache; set => this.RaiseAndSetIfChanged(ref _useCache, value); }
     public bool DebugMode { get => _debugMode; set => this.RaiseAndSetIfChanged(ref _debugMode, value); }
     public bool IsMacOs { get => _isMacOs; set => this.RaiseAndSetIfChanged(ref _isMacOs, value); }
     public bool IsSaved { get => _isSaved; set => this.RaiseAndSetIfChanged(ref _isSaved, value); }
@@ -97,6 +101,7 @@ public class SettingsViewModel : ViewModelBase
         {
             _settings = await _settingsService.GetSettingsAsync();
             AllPhysicalDrives = _settings.AllPhysicalDrives;
+            StartAsAdministrator = _settings.StartAsAdministrator;
             MacOsElevateMethod = MacOsElevateMethodOptions.FirstOrDefault(x => x.Value == _settings.MacOsElevateMethod.ToString())
                                  ?? MacOsElevateMethodOptions[1];
             Verify = _settings.Verify;
@@ -104,6 +109,7 @@ public class SettingsViewModel : ViewModelBase
             Retries = _settings.Retries;
             SkipUnusedSectors = _settings.SkipUnusedSectors;
             SparseFiles = _settings.SparseFiles;
+            UseCache = _settings.UseCache;
             DebugMode = _settings.DebugMode;
         }
         catch { /* use defaults */ }
@@ -116,6 +122,7 @@ public class SettingsViewModel : ViewModelBase
             var settings = new Settings
             {
                 AllPhysicalDrives = AllPhysicalDrives,
+                StartAsAdministrator = StartAsAdministrator,
                 MacOsElevateMethod = Enum.TryParse<Settings.MacOsElevateMethodEnum>(MacOsElevateMethod.Value, out var method)
                     ? method
                     : _settings.MacOsElevateMethod,
@@ -125,7 +132,7 @@ public class SettingsViewModel : ViewModelBase
                 SkipUnusedSectors = SkipUnusedSectors,
                 SparseFiles = SparseFiles,
                 DebugMode = DebugMode,
-                UseCache = _settings.UseCache,
+                UseCache = UseCache,
                 CacheType = _settings.CacheType
             };
             _appState.Settings = settings;

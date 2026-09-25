@@ -24,6 +24,13 @@ public partial class MainWindow : Window
             BeginMoveDrag(e);
     }
 
+    private void OnElevationWarningPointerEntered(object? sender, PointerEventArgs e)
+    {
+        // show administrator privileges warning and restart button on mouse over
+        if (sender is Button { Flyout: { IsOpen: false } flyout } button)
+            flyout.ShowAt(button);
+    }
+
     private void OnMinimizeClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         WindowState = WindowState.Minimized;

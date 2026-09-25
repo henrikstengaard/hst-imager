@@ -10,5 +10,5 @@ public class AppStateModel
     public bool IsLinux { get; set; }
     public string AppDataPath { get; set; } = string.Empty;
     public string LogsPath { get; set; } = string.Empty;
-    public Settings Settings { get; set; } = new();
+    public Settings Settings { get; set; } = Services.SettingsService.CreateDefaultSettings();
 }

@@ -14,10 +14,16 @@ public class SettingsService : ISettingsService
         _appState = appState;
     }
 
+    /// <summary>
+    /// Default settings for avalonia app. Use cache is disabled by default, as it slows down reading and writing
+    /// physical disks and image files.
+    /// </summary>
+    public static Settings CreateDefaultSettings() => new() { UseCache = false };
+
     public async Task<Settings> GetSettingsAsync()
     {
         var settings = await ApplicationDataHelper.ReadSettings<Settings>(
-            _appState.AppDataPath, Constants.AppName) ?? new Settings();
+            _appState.AppDataPath, Constants.AppName) ?? CreateDefaultSettings();
         _appState.Settings = settings;
         return settings;
     }

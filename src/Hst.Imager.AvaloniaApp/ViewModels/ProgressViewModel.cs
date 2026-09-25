@@ -28,7 +28,8 @@ public class ProgressViewModel : ViewModelBase
 
     public ProgressViewModel()
     {
-        CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.IsRunning));
+        CancelCommand = ReactiveCommand.Create(Cancel,
+            this.WhenAnyValue(x => x.IsRunning, x => x.IsCancelling, (running, cancelling) => running && !cancelling));
         OkCommand = ReactiveCommand.Create(() => { IsVisible = false; }, this.WhenAnyValue(x => x.IsComplete));
     }
 
@@ -44,8 +45,28 @@ public class ProgressViewModel : ViewModelBase
     public bool IsRunning
     {
         get => _isRunning;
-        set => this.RaiseAndSetIfChanged(ref _isRunning, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isRunning, value);
+            this.RaisePropertyChanged(nameof(IsFinishing));
+        }
     }
+
+    private bool _isCancelling;
+
+    /// <summary>
+    /// Cancel is requested and task is stopping.
+    /// </summary>
+    public bool IsCancelling
+    {
+        get => _isCancelling;
+        private set => this.RaiseAndSetIfChanged(ref _isCancelling, value);
+    }
+
+    /// <summary>
+    /// All data is processed, but task is still finishing like flushing and closing destination.
+    /// </summary>
+    public bool IsFinishing => _isRunning && _percentComplete >= 100;
 
     public bool IsComplete
     {
@@ -66,6 +87,7 @@ public class ProgressViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _percentComplete, value);
             this.RaisePropertyChanged(nameof(PercentText));
+            this.RaisePropertyChanged(nameof(IsFinishing));
         }
     }
 
@@ -76,6 +98,24 @@ public class ProgressViewModel : ViewModelBase
         get => _title;
         set => this.RaiseAndSetIfChanged(ref _title, value);
     }
+
+    private string _stage = string.Empty;
+    private bool _isCacheFlush;
+
+    /// <summary>
+    /// Current stage of task, e.g. writing cached data to destination. Empty for main stage.
+    /// </summary>
+    public string Stage
+    {
+        get => _stage;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _stage, value);
+            this.RaisePropertyChanged(nameof(HasStage));
+        }
+    }
+
+    public bool HasStage => !string.IsNullOrEmpty(_stage);
 
     public string SpeedText
     {
@@ -133,7 +173,10 @@ public class ProgressViewModel : ViewModelBase
         string? errorMessage = null;
         try
         {
-            await action(progress, _cts.Token);
+            // run task on thread pool to keep ui responsive, as commands has synchronous parts
+            // like flushing and closing destination when finishing. progress is reported to ui thread
+            var token = _cts.Token;
+            await Task.Run(() => action(progress, token), CancellationToken.None);
         }
         catch (Exception e)
         {
@@ -161,10 +204,29 @@ public class ProgressViewModel : ViewModelBase
         IsComplete = true;
     }
 
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel()
+    {
+        if (_cts == null || IsCancelling) return;
+
+        IsCancelling = true;
+        Stage = "Cancelling, please wait...";
+        _cts.Cancel();
+    }
 
     private void Update(ProgressModel p)
     {
+        // keep showing cancelling, when cancel is requested
+        if (IsCancelling)
+            return;
+
+        // cache flush stage is kept once entered, as late progress from main stage can arrive after
+        if (p.IsCacheFlush)
+            _isCacheFlush = true;
+        else if (_isCacheFlush)
+            return;
+
+        Stage = p.Stage ?? string.Empty;
+
         PercentComplete = p.PercentComplete;
 
         SpeedText = p.BytesPerSecond is > 0
@@ -185,6 +247,9 @@ public class ProgressViewModel : ViewModelBase
         IsComplete = false;
         PercentComplete = 0;
         Title = string.Empty;
+        Stage = string.Empty;
+        _isCacheFlush = false;
+        IsCancelling = false;
         SpeedText = string.Empty;
         EtaText = string.Empty;
         BytesText = string.Empty;

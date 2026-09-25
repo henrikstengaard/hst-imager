@@ -18,6 +18,9 @@
                    Text="All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!" />
       </Border>
 
+      <CheckBox Content="Start as administrator (applied after restart of app)"
+                IsChecked="{Binding StartAsAdministrator}" />
+
       <TextBlock Classes="field-label" Text="macOS elevate method" Margin="0,8,0,0" />
       <ComboBox ItemsSource="{Binding MacOsElevateMethodOptions}"
                 SelectedItem="{Binding MacOsElevateMethod}"
@@ -47,6 +50,12 @@
 
       <CheckBox Content="Sparse files"
                 IsChecked="{Binding SparseFiles}" />
+
+      <CheckBox Content="Use cache for physical drive operations"
+                IsChecked="{Binding UseCache}" />
+
+      <TextBlock Classes="field-help" TextWrapping="Wrap" Margin="28,-4,0,0"
+                 Text="Disabled by default, as using cache slows down reading and writing of physical disks and image files. When enabled, data is first written to a cache and then written to the physical disk or VHD image file when finished, which is shown as a separate progress." />
 
       <TextBlock Classes="section-title" Text="Debug" />
 

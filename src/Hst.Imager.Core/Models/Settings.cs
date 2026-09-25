@@ -50,6 +50,11 @@ namespace Hst.Imager.Core.Models
         /// </summary>
         public bool SparseFiles { get; set; }
 
+        /// <summary>
+        /// Start app with administrator privileges.
+        /// </summary>
+        public bool StartAsAdministrator { get; set; }
+
         public Settings()
         {
             AllPhysicalDrives = false;
@@ -62,6 +67,7 @@ namespace Hst.Imager.Core.Models
             UseCache = true;
             CacheType = CacheType.Disk;
             SparseFiles = true;
+            StartAsAdministrator = false;
         }
     }
 }
