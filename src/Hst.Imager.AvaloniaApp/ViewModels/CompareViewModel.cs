@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
+using Hst.Imager.Core.Commands;
 using ReactiveUI;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
@@ -14,33 +17,46 @@ public class CompareViewModel : ViewModelBase
     private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
+    private readonly INavigationService _navigationService;
 
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
-    private MediaItemViewModel? _sourceMedia;
-    private MediaItemViewModel? _destMedia;
-    private string _sourceType = "Image file";
-    private string _destType = "Physical disk";
+    private MediaItemViewModel? _sourceDisk;
+    private MediaItemViewModel? _destDisk;
+    private SelectOption _sourceType;
+    private SelectOption _destType;
     private string _sourcePath = string.Empty;
     private string _destinationPath = string.Empty;
-    private long _sourceStartOffset;
-    private long _destinationStartOffset;
+    private MediaInfo? _sourceMedia;
+    private MediaInfo? _destinationMedia;
     private decimal _size;
     private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
-    private CancellationTokenSource? _cts;
 
-    public static readonly string[] MediaTypes = ["Image file", "Physical disk"];
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
-    public CompareViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService)
+    public CompareViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
+        INavigationService navigationService, ProgressViewModel progress)
     {
         _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
+        _navigationService = navigationService;
 
-        Progress = new ProgressViewModel();
+        _sourceType = SourceTypeOptions[0];
+        _destType = SourceTypeOptions[0];
+
+        Progress = progress;
+        SrcPartPath = new PartPathSelection();
+        SrcPartPath.SelectionChanged += option =>
+        {
+            Size = option?.Value == MediaOptions.CustomPartPath ? _sourceMedia?.DiskSize ?? 0 : 0;
+            SizeUnit = "Bytes";
+            this.RaisePropertyChanged(nameof(IsSizeEnabled));
+        };
+        DestPartPath = new PartPathSelection();
+        DestPartPath.SelectionChanged += _ => this.RaisePropertyChanged(nameof(IsSizeEnabled));
 
         RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
         BrowseSourceCommand = ReactiveCommand.CreateFromTask(BrowseSourceAsync);
@@ -48,24 +64,36 @@ public class CompareViewModel : ViewModelBase
 
         var canStart = this.WhenAnyValue(
             x => x.SourceType, x => x.DestType,
-            x => x.SourcePath, x => x.SourceMedia,
-            x => x.DestinationPath, x => x.DestMedia,
+            x => x.SourcePath, x => x.SourceDisk,
+            x => x.DestinationPath, x => x.DestDisk,
             x => x.Progress.IsRunning,
-            (srcType, dstType, srcPath, srcMedia, dstPath, dstMedia, running) =>
-            {
-                if (running) return false;
-                var srcOk = srcType == "Image file" ? !string.IsNullOrEmpty(srcPath) : srcMedia != null;
-                var dstOk = dstType == "Image file" ? !string.IsNullOrEmpty(dstPath) : dstMedia != null;
-                return srcOk && dstOk;
-            });
+            (_, _, _, _, _, _, running) =>
+                !running && !string.IsNullOrWhiteSpace(EffectiveSourcePath) &&
+                !string.IsNullOrWhiteSpace(EffectiveDestinationPath));
 
         StartCompareCommand = ReactiveCommand.CreateFromTask(StartCompareAsync, canStart);
-        CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.Progress.IsRunning));
+        CancelCommand = ReactiveCommand.Create(Cancel);
+
+        this.WhenAnyValue(x => x.SourceType, x => x.SourcePath, x => x.SourceDisk)
+            .Throttle(TimeSpan.FromMilliseconds(500))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Select(_ => Observable.FromAsync(LoadSourceInfoAsync))
+            .Concat()
+            .Subscribe();
+        this.WhenAnyValue(x => x.DestType, x => x.DestinationPath, x => x.DestDisk)
+            .Throttle(TimeSpan.FromMilliseconds(500))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Select(_ => Observable.FromAsync(LoadDestinationInfoAsync))
+            .Concat()
+            .Subscribe();
 
         _ = RefreshMediaAsync();
     }
 
     public ProgressViewModel Progress { get; }
+    public PartPathSelection SrcPartPath { get; }
+    public PartPathSelection DestPartPath { get; }
+    public List<SelectOption> SourceTypeOptions { get; } = MediaOptions.SourceTypeOptions;
 
     public ObservableCollection<MediaItemViewModel> MediaItems
     {
@@ -73,28 +101,40 @@ public class CompareViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _mediaItems, value);
     }
 
-    public string SourceType
+    public SelectOption SourceType
     {
         get => _sourceType;
         set
         {
             this.RaiseAndSetIfChanged(ref _sourceType, value);
             this.RaisePropertyChanged(nameof(SourceIsImageFile));
+            this.RaisePropertyChanged(nameof(SourceIsPhysicalDisk));
+            this.RaisePropertyChanged(nameof(SrcPartPathLabel));
         }
     }
 
-    public string DestType
+    public SelectOption DestType
     {
         get => _destType;
         set
         {
             this.RaiseAndSetIfChanged(ref _destType, value);
             this.RaisePropertyChanged(nameof(DestIsImageFile));
+            this.RaisePropertyChanged(nameof(DestIsPhysicalDisk));
+            this.RaisePropertyChanged(nameof(DestPartPathLabel));
         }
     }
 
-    public bool SourceIsImageFile => _sourceType == "Image file";
-    public bool DestIsImageFile => _destType == "Image file";
+    public bool SourceIsImageFile => _sourceType.Value == MediaOptions.ImageFile;
+    public bool SourceIsPhysicalDisk => !SourceIsImageFile;
+    public bool DestIsImageFile => _destType.Value == MediaOptions.ImageFile;
+    public bool DestIsPhysicalDisk => !DestIsImageFile;
+
+    public string SrcPartPathLabel => $"Part of source {SourceTypeFormatted} to compare";
+    public string DestPartPathLabel => $"Part of destination {DestTypeFormatted} to compare";
+
+    private string SourceTypeFormatted => SourceIsImageFile ? "image file" : "physical disk";
+    private string DestTypeFormatted => DestIsImageFile ? "image file" : "physical disk";
 
     public string SourcePath
     {
@@ -108,29 +148,24 @@ public class CompareViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _destinationPath, value);
     }
 
-    public MediaItemViewModel? SourceMedia
+    public MediaItemViewModel? SourceDisk
     {
-        get => _sourceMedia;
-        set => this.RaiseAndSetIfChanged(ref _sourceMedia, value);
+        get => _sourceDisk;
+        set => this.RaiseAndSetIfChanged(ref _sourceDisk, value);
     }
 
-    public MediaItemViewModel? DestMedia
+    public MediaItemViewModel? DestDisk
     {
-        get => _destMedia;
-        set => this.RaiseAndSetIfChanged(ref _destMedia, value);
+        get => _destDisk;
+        set => this.RaiseAndSetIfChanged(ref _destDisk, value);
     }
 
-    public long SourceStartOffset
-    {
-        get => _sourceStartOffset;
-        set => this.RaiseAndSetIfChanged(ref _sourceStartOffset, value);
-    }
+    private string? EffectiveSourcePath => SourceIsImageFile ? _sourcePath : _sourceDisk?.Path;
+    private string? EffectiveDestinationPath => DestIsImageFile ? _destinationPath : _destDisk?.Path;
 
-    public long DestinationStartOffset
-    {
-        get => _destinationStartOffset;
-        set => this.RaiseAndSetIfChanged(ref _destinationStartOffset, value);
-    }
+    public bool HasSourceMedia => _sourceMedia != null;
+    public bool HasDestinationMedia => _destinationMedia != null;
+    public bool IsSizeEnabled => SrcPartPath.IsCustom || DestPartPath.IsCustom;
 
     public decimal Size
     {
@@ -147,7 +182,11 @@ public class CompareViewModel : ViewModelBase
     public bool Byteswap
     {
         get => _byteswap;
-        set => this.RaiseAndSetIfChanged(ref _byteswap, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _byteswap, value);
+            _ = LoadSourceInfoAsync();
+        }
     }
 
     public string ErrorMessage
@@ -176,6 +215,8 @@ public class CompareViewModel : ViewModelBase
         _ => (long)_size
     };
 
+    private string FormattedSize => SrcPartPath.IsCustom ? $" with size {_size} {_sizeUnit}" : string.Empty;
+
     private async Task RefreshMediaAsync()
     {
         try
@@ -183,19 +224,54 @@ public class CompareViewModel : ViewModelBase
             var medias = await _mediaService.ListMediaAsync();
             MediaItems = new ObservableCollection<MediaItemViewModel>(medias.Select(m => new MediaItemViewModel
                 { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }));
-            if (SourceMedia == null && !SourceIsImageFile && MediaItems.Count > 0)
-                SourceMedia = MediaItems[0];
-            if (DestMedia == null && !DestIsImageFile && MediaItems.Count > 0)
-                DestMedia = MediaItems[0];
+            if (SourceDisk == null && MediaItems.Count > 0)
+                SourceDisk = MediaItems[0];
+            if (DestDisk == null && MediaItems.Count > 0)
+                DestDisk = MediaItems[0];
         }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
     }
 
+    private async Task LoadSourceInfoAsync()
+    {
+        var path = EffectiveSourcePath;
+        var media = string.IsNullOrWhiteSpace(path) ? null : await GetInfoAsync(path, Byteswap);
+        if (path != EffectiveSourcePath) return;
+        _sourceMedia = media;
+        this.RaisePropertyChanged(nameof(HasSourceMedia));
+        SrcPartPath.Update(media);
+    }
+
+    private async Task LoadDestinationInfoAsync()
+    {
+        var path = EffectiveDestinationPath;
+        var media = string.IsNullOrWhiteSpace(path) ? null : await GetInfoAsync(path, false);
+        if (path != EffectiveDestinationPath) return;
+        _destinationMedia = media;
+        this.RaisePropertyChanged(nameof(HasDestinationMedia));
+        DestPartPath.Update(media);
+    }
+
+    private async Task<MediaInfo?> GetInfoAsync(string path, bool byteswap)
+    {
+        try
+        {
+            HasError = false;
+            return await _mediaService.GetMediaInfoAsync(path, byteswap);
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+            return null;
+        }
+    }
+
     private async Task BrowseSourceAsync()
     {
-        var path = await _dialogService.ShowOpenFileDialogAsync("Select source image file",
+        var path = await _dialogService.ShowOpenFileDialogAsync("Select source file",
         [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip"] },
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip", "rar"] },
             new FileFilterItem { Name = "All files", Extensions = ["*"] }
         ]);
         if (path != null) SourcePath = path;
@@ -205,7 +281,7 @@ public class CompareViewModel : ViewModelBase
     {
         var path = await _dialogService.ShowOpenFileDialogAsync("Select destination image file",
         [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip"] },
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip", "rar"] },
             new FileFilterItem { Name = "All files", Extensions = ["*"] }
         ]);
         if (path != null) DestinationPath = path;
@@ -213,26 +289,24 @@ public class CompareViewModel : ViewModelBase
 
     private async Task StartCompareAsync()
     {
-        HasError = false;
-        _cts = new CancellationTokenSource();
-        Progress.Reset();
-        Progress.IsRunning = true;
-        try
-        {
-            var srcPath = SourceIsImageFile ? SourcePath : _sourceMedia!.Path;
-            var dstPath = DestIsImageFile ? DestinationPath : _destMedia!.Path;
-            var progress = new Progress<Models.ProgressModel>(p =>
-            {
-                Progress.Update(p);
-                if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
-            });
-            await _imagingService.CompareAsync(srcPath, SourceStartOffset, dstPath,
-                DestinationStartOffset, SizeInBytes, Byteswap, progress, _cts.Token);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
-        finally { _cts?.Dispose(); _cts = null; Progress.IsRunning = false; }
+        var srcPath = EffectiveSourcePath!;
+        var dstPath = EffectiveDestinationPath!;
+        var srcName = _sourceMedia?.Name ?? srcPath;
+        var dstName = _destinationMedia?.Name ?? dstPath;
+        var description = $"'{srcName}{SrcPartPath.Formatted}' and '{dstName}{DestPartPath.Formatted}'{FormattedSize}";
+        if (!await _dialogService.ShowConfirmDialogAsync("Compare", $"Do you want to compare {description}?"))
+            return;
+
+        var sourcePath = SrcPartPath.ResolvePath(srcPath);
+        var srcStartOffset = SrcPartPath.StartOffset;
+        var destinationPath = DestPartPath.ResolvePath(dstPath);
+        var destStartOffset = DestPartPath.StartOffset;
+        var size = SizeInBytes;
+        var byteswap = Byteswap;
+        await Progress.RunAsync($"Comparing {description}", (progress, token) =>
+            _imagingService.CompareAsync(sourcePath, srcStartOffset, destinationPath, destStartOffset, size, byteswap,
+                progress, token));
     }
 
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel() => _navigationService.NavigateTo("Start");
 }

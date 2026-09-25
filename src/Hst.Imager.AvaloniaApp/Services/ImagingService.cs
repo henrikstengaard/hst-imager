@@ -40,7 +40,7 @@ public class ImagingService : IImagingService
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Reading", args));
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Reading", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task WriteAsync(string sourcePath, string destinationPath, long startOffset, long size, bool byteswap,
@@ -56,12 +56,12 @@ public class ImagingService : IImagingService
             _loggerFactory.CreateLogger<WriteCommand>(), commandHelper, physicalDrives,
             writePath, destinationPath,
             new Size(size, Unit.Bytes), _appState.Settings.Retries,
-            _appState.Settings.Verify, _appState.Settings.Force, _appState.Settings.SparseFiles,
+            _appState.Settings.Verify, _appState.Settings.Force, _appState.Settings.SkipUnusedSectors,
             startOffset);
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Writing", args));
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Writing", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task CompareAsync(string sourcePath, long sourceStartOffset, string destinationPath, long destinationStartOffset,
@@ -81,7 +81,7 @@ public class ImagingService : IImagingService
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Comparing", args));
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Comparing", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task TransferAsync(string sourcePath, long srcStartOffset, string destinationPath, long destStartOffset,
@@ -97,7 +97,7 @@ public class ImagingService : IImagingService
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Transferring", args));
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Transferring", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task BlankAsync(string path, long size, bool compatibleSize,
@@ -110,7 +110,7 @@ public class ImagingService : IImagingService
             path, new Size(size, Unit.Bytes), compatibleSize);
 
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Creating blank image", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task OptimizeAsync(string path, long size, bool byteswap,
@@ -123,7 +123,7 @@ public class ImagingService : IImagingService
         var cmd = new OptimizeCommand(commandHelper, optimizePath, new Size(size, Unit.Bytes), PartitionTable.None);
 
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Optimizing", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     public async Task FormatAsync(string path, FormatType formatType, string fileSystem, string? fileSystemPath,
@@ -144,7 +144,7 @@ public class ImagingService : IImagingService
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Formatting", args));
         var result = await cmd.Execute(cancellationToken);
-        progress.Report(FinalProgress("Formatting", result.IsFaulted, result.IsFaulted ? result.Error?.Message : null));
+        ThrowIfFaulted(result);
     }
 
     private async System.Threading.Tasks.Task<System.Collections.Generic.List<IPhysicalDrive>> GetPhysicalDrivesAsync()
@@ -185,12 +185,9 @@ public class ImagingService : IImagingService
         MillisecondsTotal = args.PercentComplete > 0 ? (long)args.TimeTotal.TotalMilliseconds : null
     };
 
-    private static ProgressModel FinalProgress(string title, bool hasError, string? errorMessage) => new()
+    private static void ThrowIfFaulted(Hst.Core.Result result)
     {
-        Title = title,
-        IsComplete = true,
-        HasError = hasError,
-        ErrorMessage = errorMessage,
-        PercentComplete = 100
-    };
+        if (result.IsFaulted)
+            throw new ImagingException(result.Error?.Message ?? "Command failed without an error message");
+    }
 }

@@ -1,34 +1,35 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:Class="Hst.Imager.AvaloniaApp.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
   <ScrollViewer>
-    <StackPanel Spacing="12" Margin="0,8">
+    <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
       <TextBlock Classes="page-title" Text="Settings" />
       <TextBlock Classes="page-description" Text="Configure settings for read, write, and debug." />
-
-      <!-- General -->
-      <TextBlock Text="General" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
 
       <CheckBox Content="Show all physical drives (except system/boot drives)"
                 IsChecked="{Binding AllPhysicalDrives}" />
 
-      <Border Background="#3A2800" CornerRadius="4" Padding="8"
-              IsVisible="{Binding AllPhysicalDrives}">
-        <TextBlock TextWrapping="Wrap" Foreground="#FFBB33" FontSize="12"
-                   Text="Warning: All physical drives shown enables reading and writing to all disks. Be very sure to select the correct drive." />
+      <Border Classes="warning" IsVisible="{Binding AllPhysicalDrives}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!" />
       </Border>
 
-      <!-- Read and Write -->
-      <TextBlock Text="Read and Write" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
+      <TextBlock Classes="field-label" Text="macOS elevate method" Margin="0,8,0,0" />
+      <ComboBox ItemsSource="{Binding MacOsElevateMethodOptions}"
+                SelectedItem="{Binding MacOsElevateMethod}"
+                DisplayMemberBinding="{Binding Title}"
+                IsEnabled="{Binding IsMacOs}"
+                HorizontalAlignment="Stretch" />
 
-      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <TextBlock Text="Retries:" Foreground="#AAAAAA" VerticalAlignment="Center" />
-        <NumericUpDown Value="{Binding Retries}" Minimum="0" Maximum="100"
-                       Width="100" />
-      </StackPanel>
+      <TextBlock Classes="section-title" Text="Read and write" />
+
+      <TextBlock Classes="field-label" Text="Retries" />
+      <NumericUpDown Value="{Binding Retries}" Minimum="0" Maximum="100" FormatString="0"
+                     Width="140" HorizontalAlignment="Left" />
 
       <CheckBox Content="Force and ignore errors when retries are exceeded"
                 IsChecked="{Binding Force}" />
@@ -39,33 +40,26 @@
       <CheckBox Content="Skip unused sectors"
                 IsChecked="{Binding SkipUnusedSectors}" />
 
-      <Border Background="#3A2800" CornerRadius="4" Padding="8"
-              IsVisible="{Binding SkipUnusedSectors}">
-        <TextBlock TextWrapping="Wrap" Foreground="#FFBB33" FontSize="12"
-                   Text="Warning: Skip unused sectors will skip sectors containing only zeroes. ChromeOS images may not recover properly if unused sectors are skipped." />
+      <Border Classes="warning" IsVisible="{Binding SkipUnusedSectors}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Skip unused sectors will make writing and comparing images much faster as sectors with only zeroes are skipped. It also means skipped sectors may contain old data that would otherwise be erased with zeroes and not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!" />
       </Border>
 
-      <CheckBox Content="Sparse files (save disk space for empty regions)"
+      <CheckBox Content="Sparse files"
                 IsChecked="{Binding SparseFiles}" />
 
-      <CheckBox Content="Use cache for physical drive operations"
-                IsChecked="{Binding UseCache}" />
+      <TextBlock Classes="section-title" Text="Debug" />
 
-      <!-- Debug -->
-      <TextBlock Text="Debug" FontWeight="SemiBold" Foreground="White" FontSize="14" Margin="0,8,0,0" />
+      <CheckBox Content="Debug mode (applied after restart of app)"
+                IsChecked="{Binding DebugMode}"
+                IsEnabled="{Binding IsDebugModeEnabled}" />
 
-      <CheckBox Content="Debug mode (applied after restart)"
-                IsChecked="{Binding DebugMode}" />
-
-      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-        <TextBlock Text="Logs path:" Foreground="#AAAAAA" VerticalAlignment="Center" FontSize="12" />
-        <TextBlock Text="{Binding LogsPath}" Foreground="#CCCCCC" FontSize="12" VerticalAlignment="Center" />
-      </StackPanel>
-
-      <TextBlock Text="Settings are saved automatically."
-                 Foreground="#66AA66" FontSize="12"
-                 IsVisible="{Binding IsSaved}" />
-
+      <Button Command="{Binding ViewLogsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ia:Icon Value="fa-chart-line" />
+          <TextBlock Text="View logs" />
+        </StackPanel>
+      </Button>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

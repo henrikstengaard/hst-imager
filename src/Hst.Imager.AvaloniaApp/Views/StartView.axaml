@@ -1,68 +1,41 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:Class="Hst.Imager.AvaloniaApp.Views.StartView"
-             x:DataType="vm:StartViewModel">
+             x:DataType="vm:StartViewModel"
+             x:Name="Root">
 
   <ScrollViewer>
-    <StackPanel Spacing="16" Margin="0,8">
-
-      <TextBlock Classes="page-title" Text="Hst Imager" />
-      <TextBlock Classes="page-description"
-                 Text="Physical disk imager for Amiga computers. Use the navigation on the left to get started." />
-
-      <WrapPanel Orientation="Horizontal">
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Read" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Read a physical disk to an image file."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Write" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Write an image file to a physical disk."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Compare" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Compare a physical disk with an image file."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Info" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Get disk information and partition table details."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Transfer" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Transfer between two disks or image files."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-        <Border Classes="card" Width="200" Margin="0,0,8,8">
-          <StackPanel Spacing="8">
-            <TextBlock Text="Format" FontWeight="SemiBold" Foreground="White" />
-            <TextBlock Text="Format a disk or image with a partition table."
-                       Foreground="#AAAAAA" FontSize="12" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-
-      </WrapPanel>
-
-    </StackPanel>
+    <ItemsControl ItemsSource="{Binding Actions}" Margin="0,8">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="2" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="vm:StartAction">
+          <Button Command="{Binding #Root.((vm:StartViewModel)DataContext).NavigateCommand}"
+                  CommandParameter="{Binding Page}"
+                  Background="#243340"
+                  CornerRadius="4"
+                  Padding="16"
+                  Margin="4"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Top">
+            <StackPanel Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
+                           Foreground="White" VerticalAlignment="Center" />
+                <ia:Icon Value="{Binding Icon}" FontSize="28" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="{Binding Description}" Foreground="#CCCCCC" TextWrapping="Wrap" />
+            </StackPanel>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
   </ScrollViewer>
 </UserControl>

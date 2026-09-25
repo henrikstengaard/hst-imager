@@ -18,10 +18,15 @@ public class MainWindowViewModel : ViewModelBase
         _services = services;
         _startupArgs = startupArgs;
         _currentPage = services.GetRequiredService<StartViewModel>();
+        Progress = services.GetRequiredService<ProgressViewModel>();
+
+        services.GetRequiredService<INavigationService>().NavigationRequested += NavigateTo;
 
         NavigateToCommand = ReactiveCommand.Create<string>(NavigateTo);
         ElevateCommand = ReactiveCommand.Create(Elevate);
     }
+
+    public ProgressViewModel Progress { get; }
 
     public ViewModelBase CurrentPage
     {
@@ -62,6 +67,6 @@ public class MainWindowViewModel : ViewModelBase
 
     private void Elevate()
     {
-        User.Elevate(_startupArgs);
+        User.Elevate(_startupArgs, _services.GetRequiredService<Models.AppStateModel>().Settings);
     }
 }

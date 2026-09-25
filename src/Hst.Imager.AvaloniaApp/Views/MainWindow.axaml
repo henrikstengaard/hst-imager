@@ -200,5 +200,8 @@
         </ContentControl.DataTemplates>
       </ContentControl>
     </Grid>
+
+    <!-- Progress overlay for running tasks, covers navigation and pages -->
+    <views:ProgressOverlay Grid.Row="1" Grid.RowSpan="2" DataContext="{Binding Progress}" />
   </Grid>
 </Window>

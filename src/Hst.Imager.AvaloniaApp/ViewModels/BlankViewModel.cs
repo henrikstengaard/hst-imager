@@ -11,6 +11,7 @@ public class BlankViewModel : ViewModelBase
 {
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
+    private readonly INavigationService _navigationService;
 
     private string _outputPath = string.Empty;
     private decimal _size = 16m;
@@ -18,22 +19,23 @@ public class BlankViewModel : ViewModelBase
     private bool _compatibleSize = true;
     private string _errorMessage = string.Empty;
     private bool _hasError;
-    private CancellationTokenSource? _cts;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
-    public BlankViewModel(IImagingService imagingService, IDialogService dialogService)
+    public BlankViewModel(IImagingService imagingService, IDialogService dialogService,
+        INavigationService navigationService, ProgressViewModel progress)
     {
         _imagingService = imagingService;
         _dialogService = dialogService;
+        _navigationService = navigationService;
 
-        Progress = new ProgressViewModel();
+        Progress = progress;
 
         BrowseOutputCommand = ReactiveCommand.CreateFromTask(BrowseOutputAsync);
         StartBlankCommand = ReactiveCommand.CreateFromTask(StartBlankAsync,
             this.WhenAnyValue(x => x.OutputPath, x => x.Size, x => x.Progress.IsRunning,
                 (path, size, running) => !string.IsNullOrEmpty(path) && size > 0 && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.Progress.IsRunning));
+        CancelCommand = ReactiveCommand.Create(Cancel);
     }
 
     public ProgressViewModel Progress { get; }
@@ -88,7 +90,7 @@ public class BlankViewModel : ViewModelBase
 
     private async Task BrowseOutputAsync()
     {
-        var path = await _dialogService.ShowSaveFileDialogAsync("Save blank image as",
+        var path = await _dialogService.ShowSaveFileDialogAsync("Select image file to create",
         [
             new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
             new FileFilterItem { Name = "All files", Extensions = ["*"] }
@@ -98,23 +100,16 @@ public class BlankViewModel : ViewModelBase
 
     private async Task StartBlankAsync()
     {
-        HasError = false;
-        _cts = new CancellationTokenSource();
-        Progress.Reset();
-        Progress.IsRunning = true;
-        try
-        {
-            var progress = new Progress<Models.ProgressModel>(p =>
-            {
-                Progress.Update(p);
-                if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
-            });
-            await _imagingService.BlankAsync(OutputPath, SizeInBytes, CompatibleSize, progress, _cts.Token);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
-        finally { _cts?.Dispose(); _cts = null; Progress.IsRunning = false; }
+        if (!await _dialogService.ShowConfirmDialogAsync("Blank",
+                $"Do you want to create blank image file '{OutputPath}' with size '{Size} {SizeUnit.ToUpperInvariant()}'?"))
+            return;
+
+        var path = OutputPath;
+        var size = SizeInBytes;
+        var compatibleSize = CompatibleSize;
+        await Progress.RunAsync($"Creating {Size} {SizeUnit} blank image '{path}'", (progress, token) =>
+            _imagingService.BlankAsync(path, size, compatibleSize, progress, token));
     }
 
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel() => _navigationService.NavigateTo("Start");
 }

@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
@@ -32,6 +33,17 @@ public partial class App : Application
     public override void OnFrameworkInitializationCompleted()
     {
         _services = ConfigureServices(_appDataPath, _startupArgs);
+
+        // load saved settings before any page lists or uses physical drives
+        try
+        {
+            var settingsService = _services.GetRequiredService<ISettingsService>();
+            Task.Run(settingsService.GetSettingsAsync).GetAwaiter().GetResult();
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "Failed to read settings, using defaults");
+        }
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
@@ -73,8 +85,10 @@ public partial class App : Application
         services.AddSingleton<IMediaService, MediaService>();
         services.AddSingleton<IImagingService, ImagingService>();
         services.AddSingleton<IAppStateService, AppStateService>();
+        services.AddSingleton<INavigationService, NavigationService>();
 
         // ViewModels
+        services.AddSingleton<ProgressViewModel>();
         services.AddTransient<StartViewModel>();
         services.AddTransient<ReadViewModel>();
         services.AddTransient<WriteViewModel>();

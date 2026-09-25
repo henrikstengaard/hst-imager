@@ -1,34 +1,41 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:Class="Hst.Imager.AvaloniaApp.Views.WriteView"
              x:DataType="vm:WriteViewModel">
 
-  <Grid RowDefinitions="*,Auto">
-    <ScrollViewer Grid.Row="0">
-      <StackPanel Spacing="12" Margin="0,8">
+    <ScrollViewer>
+      <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
 
         <TextBlock Classes="page-title" Text="Write" />
         <TextBlock Classes="page-description"
-                   Text="Writes an image file to a physical disk." />
+                   Text="Write an image file or part of to a physical disk." />
 
         <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
                 IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
         </Border>
 
-        <!-- Source image -->
-        <TextBlock Text="Source image file" Foreground="#AAAAAA" FontSize="12" />
+        <!-- Source image file -->
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Source image file" />
+        </StackPanel>
         <Grid ColumnDefinitions="*,Auto">
-          <TextBox Grid.Column="0"
-                   Text="{Binding SourcePath}"
-                   Watermark="Path to source image file..." />
+          <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
           <Button Grid.Column="1" Margin="8,0,0,0"
-                  Command="{Binding BrowseSourceCommand}">...</Button>
+                  Command="{Binding BrowseSourceCommand}"
+                  ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
         </Grid>
 
-        <!-- Destination disk -->
-        <TextBlock Text="Destination physical disk" Foreground="#AAAAAA" FontSize="12" />
+        <!-- Destination physical disk -->
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-hdd" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Destination physical disk" />
+        </StackPanel>
         <Grid ColumnDefinitions="*,Auto">
           <ComboBox Grid.Column="0"
                     ItemsSource="{Binding MediaItems}"
@@ -36,22 +43,55 @@
                     DisplayMemberBinding="{Binding Label}"
                     HorizontalAlignment="Stretch" />
           <Button Grid.Column="1" Margin="8,0,0,0"
-                  Command="{Binding RefreshMediaCommand}">&#8635;</Button>
+                  Command="{Binding RefreshMediaCommand}"
+                  ToolTip.Tip="Refresh">
+            <ia:Icon Value="fa-sync-alt" />
+          </Button>
         </Grid>
 
-        <!-- Advanced options -->
-        <Expander Header="Advanced" IsExpanded="False">
+        <!-- Advanced -->
+        <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+          <Expander.Header>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-gear" />
+              <TextBlock Text="Advanced" />
+            </StackPanel>
+          </Expander.Header>
           <StackPanel Spacing="8" Margin="0,8">
 
-            <TextBlock Text="Start offset (bytes)" Foreground="#AAAAAA" FontSize="12" />
-            <NumericUpDown Value="{Binding StartOffset}" Minimum="0" Increment="512" />
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-chart-pie" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Part of destination physical disk to write to" />
+            </StackPanel>
+            <ComboBox ItemsSource="{Binding PartPath.Options}"
+                      SelectedItem="{Binding PartPath.Selected}"
+                      DisplayMemberBinding="{Binding Title}"
+                      PlaceholderText="None available"
+                      IsEnabled="{Binding HasSelectedMedia}"
+                      HorizontalAlignment="Stretch" />
 
-            <TextBlock Text="Size (0 = full image)" Foreground="#AAAAAA" FontSize="12" />
-            <Grid ColumnDefinitions="*,Auto">
-              <NumericUpDown Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
-              <ComboBox Grid.Column="1" Margin="8,0,0,0" MinWidth="80"
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Start offset" />
+            </StackPanel>
+            <NumericUpDown Value="{Binding PartPath.StartOffset}" Minimum="0" Increment="512" FormatString="0"
+                           IsEnabled="{Binding PartPath.IsCustom}" />
+
+            <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">
+              <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+                <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+                <TextBlock Classes="field-label" Text="Size" />
+              </StackPanel>
+              <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                             IsEnabled="{Binding PartPath.IsCustom}" />
+              <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+                <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+                <TextBlock Classes="field-label" Text="Unit" />
+              </StackPanel>
+              <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
                         ItemsSource="{x:Static vm:WriteViewModel.SizeUnits}"
-                        SelectedItem="{Binding SizeUnit}" />
+                        SelectedItem="{Binding SizeUnit}"
+                        IsEnabled="{Binding PartPath.IsCustom}" />
             </Grid>
 
             <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
@@ -59,29 +99,21 @@
           </StackPanel>
         </Expander>
 
-        <Border IsVisible="{Binding Progress.IsRunning}" Classes="card">
-          <StackPanel Spacing="8">
-            <TextBlock Text="{Binding Progress.Title}" Foreground="White" FontWeight="SemiBold" />
-            <ProgressBar Value="{Binding Progress.PercentComplete}" Minimum="0" Maximum="100" Height="8" />
-            <StackPanel Orientation="Horizontal" Spacing="16">
-              <TextBlock Text="{Binding Progress.BytesText}" Foreground="#AAAAAA" FontSize="12" />
-              <TextBlock Text="{Binding Progress.SpeedText}" Foreground="#AAAAAA" FontSize="12" />
-              <TextBlock Text="{Binding Progress.EtaText}" Foreground="#AAAAAA" FontSize="12" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+          <Button Command="{Binding CancelCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-ban" />
+              <TextBlock Text="Cancel" />
             </StackPanel>
-            <TextBlock Classes="error-text" Text="{Binding Progress.ErrorMessage}"
-                       IsVisible="{Binding Progress.HasError}" />
-          </StackPanel>
-        </Border>
+          </Button>
+          <Button Command="{Binding StartWriteCommand}" Classes="accent">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-download" />
+              <TextBlock Text="Start write" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
 
       </StackPanel>
     </ScrollViewer>
-
-    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right"
-                Spacing="8" Margin="0,12,0,0">
-      <Button Command="{Binding CancelCommand}" IsVisible="{Binding Progress.IsRunning}">Cancel</Button>
-      <Button Command="{Binding StartWriteCommand}"
-              IsVisible="{Binding !Progress.IsRunning}"
-              Classes="accent">Start Write</Button>
-    </StackPanel>
-  </Grid>
 </UserControl>

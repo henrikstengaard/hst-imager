@@ -1,51 +1,114 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:Class="Hst.Imager.AvaloniaApp.Views.InfoView"
              x:DataType="vm:InfoViewModel">
 
   <ScrollViewer>
     <StackPanel Spacing="12" Margin="0,8">
 
-      <TextBlock Classes="page-title" Text="Info" />
-      <TextBlock Classes="page-description"
-                 Text="Get detailed information about a disk or image file." />
+      <StackPanel Spacing="8" MaxWidth="700" HorizontalAlignment="Left">
+        <TextBlock Classes="page-title" Text="Info" />
+        <TextBlock Classes="page-description"
+                   Text="Display information about an image file or a physical disk." />
 
-      <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
-              IsVisible="{Binding HasError}">
-        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
-      </Border>
+        <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
+                IsVisible="{Binding HasError}">
+          <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+        </Border>
 
-      <!-- Source selector -->
-      <TextBlock Text="Physical disk or image file" Foreground="#AAAAAA" FontSize="12" />
-      <Grid ColumnDefinitions="*,Auto,Auto">
-        <ComboBox Grid.Column="0"
-                  ItemsSource="{Binding MediaItems}"
-                  SelectedItem="{Binding SelectedMedia}"
-                  DisplayMemberBinding="{Binding Label}"
-                  HorizontalAlignment="Stretch"
-                  IsEnabled="{Binding !UseCustomPath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding RefreshMediaCommand}"
-                ToolTip.Tip="Refresh drives">&#8635;</Button>
-        <Button Grid.Column="2" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}"
-                ToolTip.Tip="Browse for image file">...</Button>
-      </Grid>
-
-      <CheckBox Content="Use custom path" IsChecked="{Binding UseCustomPath}" />
-      <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding UseCustomPath}">
-        <TextBox Grid.Column="0" Text="{Binding CustomPath}" Watermark="Custom path..." />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding GetInfoCommand}">Get Info</Button>
-      </Grid>
-
-      <!-- Advanced -->
-      <Expander Header="Advanced" IsExpanded="False">
-        <StackPanel Spacing="8" Margin="0,4">
-          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+        <!-- Source -->
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-upload" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Source" />
         </StackPanel>
-      </Expander>
+        <ComboBox ItemsSource="{Binding SourceTypeOptions}"
+                  SelectedItem="{Binding SourceType}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+
+        <!-- Source: image file -->
+        <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-file" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Image file" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
+              <ia:Icon Value="fa-folder-open" />
+            </Button>
+          </Grid>
+        </StackPanel>
+
+        <!-- Source: physical disk -->
+        <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-hdd" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Physical disk" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <ComboBox Grid.Column="0"
+                      ItemsSource="{Binding MediaItems}"
+                      SelectedItem="{Binding SelectedMedia}"
+                      DisplayMemberBinding="{Binding Label}"
+                      HorizontalAlignment="Stretch" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+              <ia:Icon Value="fa-sync-alt" />
+            </Button>
+          </Grid>
+        </StackPanel>
+
+        <!-- PiStorm disk -->
+        <StackPanel Spacing="4" IsVisible="{Binding HasPiStormDisks}">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-chart-pie" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="PiStorm disk to read" />
+          </StackPanel>
+          <ComboBox ItemsSource="{Binding PiStormDiskOptions}"
+                    SelectedItem="{Binding SelectedPiStormDisk}"
+                    DisplayMemberBinding="{Binding Title}"
+                    PlaceholderText="None available"
+                    HorizontalAlignment="Stretch" />
+        </StackPanel>
+
+        <!-- Advanced -->
+        <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+          <Expander.Header>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-gear" />
+              <TextBlock Text="Advanced" />
+            </StackPanel>
+          </Expander.Header>
+          <StackPanel Spacing="8" Margin="0,4">
+            <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+          </StackPanel>
+        </Expander>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
+          <Button Command="{Binding CancelCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-ban" />
+              <TextBlock Text="Cancel" />
+            </StackPanel>
+          </Button>
+          <Button Command="{Binding GetInfoCommand}" Classes="accent">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-info" />
+              <TextBlock Text="Get info" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </StackPanel>
 
       <!-- Loading indicator -->
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+
+      <StackPanel Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasDiskInfo}">
+        <TextBlock Classes="section-title" Margin="0" Text="{Binding SourceTypeFormatted, StringFormat='Source {0}'}" />
+        <TextBlock Foreground="#CCCCCC" Text="{Binding SourceTypeFormatted, StringFormat='Disk information read from source {0}.'}" />
+      </StackPanel>
 
       <!-- Tabbed disk info -->
       <TabControl IsVisible="{Binding HasDiskInfo}">

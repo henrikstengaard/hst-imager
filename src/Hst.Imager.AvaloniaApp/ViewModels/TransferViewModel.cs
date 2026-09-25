@@ -1,46 +1,77 @@
 using System;
+using System.IO;
 using System.Reactive;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
+using Hst.Imager.Core.Commands;
 using ReactiveUI;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
 public class TransferViewModel : ViewModelBase
 {
+    private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
+    private readonly INavigationService _navigationService;
 
     private string _sourcePath = string.Empty;
     private string _destinationPath = string.Empty;
-    private long _srcStartOffset;
-    private long _destStartOffset;
+    private MediaInfo? _sourceMedia;
+    private MediaInfo? _destinationMedia;
     private decimal _size;
     private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
-    private CancellationTokenSource? _cts;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
-    public TransferViewModel(IImagingService imagingService, IDialogService dialogService)
+    public TransferViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
+        INavigationService navigationService, ProgressViewModel progress)
     {
+        _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
+        _navigationService = navigationService;
 
-        Progress = new ProgressViewModel();
+        Progress = progress;
+        SrcPartPath = new PartPathSelection();
+        SrcPartPath.SelectionChanged += option =>
+        {
+            Size = option?.Value == MediaOptions.CustomPartPath ? _sourceMedia?.DiskSize ?? 0 : 0;
+            SizeUnit = "Bytes";
+            this.RaisePropertyChanged(nameof(IsSizeEnabled));
+        };
+        DestPartPath = new PartPathSelection();
+        DestPartPath.SelectionChanged += _ => this.RaisePropertyChanged(nameof(IsSizeEnabled));
 
         BrowseSourceCommand = ReactiveCommand.CreateFromTask(BrowseSourceAsync);
         BrowseDestinationCommand = ReactiveCommand.CreateFromTask(BrowseDestinationAsync);
         StartTransferCommand = ReactiveCommand.CreateFromTask(StartTransferAsync,
             this.WhenAnyValue(x => x.SourcePath, x => x.DestinationPath, x => x.Progress.IsRunning,
-                (src, dst, running) => !string.IsNullOrEmpty(src) && !string.IsNullOrEmpty(dst) && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel, this.WhenAnyValue(x => x.Progress.IsRunning));
+                (src, dst, running) => !string.IsNullOrWhiteSpace(src) && !string.IsNullOrWhiteSpace(dst) && !running));
+        CancelCommand = ReactiveCommand.Create(Cancel);
+
+        this.WhenAnyValue(x => x.SourcePath)
+            .Throttle(TimeSpan.FromMilliseconds(500))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Select(_ => Observable.FromAsync(LoadSourceInfoAsync))
+            .Concat()
+            .Subscribe();
+        this.WhenAnyValue(x => x.DestinationPath)
+            .Throttle(TimeSpan.FromMilliseconds(500))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Select(_ => Observable.FromAsync(LoadDestinationInfoAsync))
+            .Concat()
+            .Subscribe();
     }
 
     public ProgressViewModel Progress { get; }
+    public PartPathSelection SrcPartPath { get; }
+    public PartPathSelection DestPartPath { get; }
 
     public string SourcePath
     {
@@ -54,17 +85,9 @@ public class TransferViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _destinationPath, value);
     }
 
-    public long SrcStartOffset
-    {
-        get => _srcStartOffset;
-        set => this.RaiseAndSetIfChanged(ref _srcStartOffset, value);
-    }
-
-    public long DestStartOffset
-    {
-        get => _destStartOffset;
-        set => this.RaiseAndSetIfChanged(ref _destStartOffset, value);
-    }
+    public bool HasSourceMedia => _sourceMedia != null;
+    public bool HasDestinationMedia => _destinationMedia != null;
+    public bool IsSizeEnabled => SrcPartPath.IsCustom || DestPartPath.IsCustom;
 
     public decimal Size
     {
@@ -81,7 +104,11 @@ public class TransferViewModel : ViewModelBase
     public bool Byteswap
     {
         get => _byteswap;
-        set => this.RaiseAndSetIfChanged(ref _byteswap, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _byteswap, value);
+            _ = LoadSourceInfoAsync();
+        }
     }
 
     public string ErrorMessage
@@ -109,11 +136,48 @@ public class TransferViewModel : ViewModelBase
         _ => (long)_size
     };
 
+    private string FormattedSize => IsSizeEnabled ? $" with size {_size} {_sizeUnit}" : string.Empty;
+
+    private async Task LoadSourceInfoAsync()
+    {
+        var path = SourcePath;
+        var media = string.IsNullOrWhiteSpace(path) ? null : await GetInfoAsync(path, Byteswap, false);
+        if (path != SourcePath) return;
+        _sourceMedia = media;
+        this.RaisePropertyChanged(nameof(HasSourceMedia));
+        SrcPartPath.Update(_sourceMedia);
+    }
+
+    private async Task LoadDestinationInfoAsync()
+    {
+        var path = DestinationPath;
+        var media = string.IsNullOrWhiteSpace(path) ? null : await GetInfoAsync(path, false, true);
+        if (path != DestinationPath) return;
+        _destinationMedia = media;
+        this.RaisePropertyChanged(nameof(HasDestinationMedia));
+        DestPartPath.Update(_destinationMedia);
+    }
+
+    private async Task<MediaInfo?> GetInfoAsync(string path, bool byteswap, bool allowNonExisting)
+    {
+        try
+        {
+            HasError = false;
+            return await _mediaService.GetMediaInfoAsync(path, byteswap, allowNonExisting);
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+            return null;
+        }
+    }
+
     private async Task BrowseSourceAsync()
     {
         var path = await _dialogService.ShowOpenFileDialogAsync("Select source image file",
         [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip"] },
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip", "rar"] },
             new FileFilterItem { Name = "All files", Extensions = ["*"] }
         ]);
         if (path != null) SourcePath = path;
@@ -131,24 +195,22 @@ public class TransferViewModel : ViewModelBase
 
     private async Task StartTransferAsync()
     {
-        HasError = false;
-        _cts = new CancellationTokenSource();
-        Progress.Reset();
-        Progress.IsRunning = true;
-        try
-        {
-            var progress = new Progress<Models.ProgressModel>(p =>
-            {
-                Progress.Update(p);
-                if (p.IsComplete && !p.HasError) Progress.IsRunning = false;
-            });
-            await _imagingService.TransferAsync(SourcePath, SrcStartOffset,
-                DestinationPath, DestStartOffset, SizeInBytes, Byteswap, progress, _cts.Token);
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
-        finally { _cts?.Dispose(); _cts = null; Progress.IsRunning = false; }
+        var srcMediaName = _sourceMedia?.Name ?? Path.GetFileName(SourcePath);
+        var destMediaName = _destinationMedia?.Name ?? Path.GetFileName(DestinationPath);
+        var description = $"source image file '{srcMediaName}{SrcPartPath.Formatted}' to destination image file '{destMediaName}{DestPartPath.Formatted}'{FormattedSize}";
+        if (!await _dialogService.ShowConfirmDialogAsync("Transfer", $"Do you want to transfer {description}?"))
+            return;
+
+        var srcPath = SrcPartPath.ResolvePath(SourcePath);
+        var srcStartOffset = SrcPartPath.StartOffset;
+        var destPath = DestPartPath.ResolvePath(DestinationPath);
+        var destStartOffset = DestPartPath.StartOffset;
+        var size = SizeInBytes;
+        var byteswap = Byteswap;
+        await Progress.RunAsync($"Transferring {description}", (progress, token) =>
+            _imagingService.TransferAsync(srcPath, srcStartOffset, destPath, destStartOffset, size, byteswap,
+                progress, token));
     }
 
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel() => _navigationService.NavigateTo("Start");
 }

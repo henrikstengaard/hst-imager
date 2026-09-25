@@ -38,7 +38,10 @@ public class MediaService : IMediaService
             result = args.MediaInfos.Where(x => !x.SystemDrive).ToList();
         };
 
-        await listCommand.Execute(cancellationToken);
+        var commandResult = await listCommand.Execute(cancellationToken);
+        if (commandResult.IsFaulted)
+            throw new ImagingException(commandResult.Error?.Message ?? "List command returned error without message error");
+
         return result;
     }
 
@@ -57,7 +60,10 @@ public class MediaService : IMediaService
             result = args.MediaInfo;
         };
 
-        await infoCommand.Execute(cancellationToken);
+        var commandResult = await infoCommand.Execute(cancellationToken);
+        if (commandResult.IsFaulted)
+            throw new ImagingException(commandResult.Error?.Message ?? "Info command returned error without message error");
+
         return result;
     }
 

@@ -14,40 +14,47 @@ public class WriteViewModel : ViewModelBase
     private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
+    private readonly INavigationService _navigationService;
 
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
     private MediaItemViewModel? _selectedMedia;
     private string _sourcePath = string.Empty;
-    private long _startOffset;
     private decimal _size;
     private string _sizeUnit = "Bytes";
     private bool _byteswap;
     private string _errorMessage = string.Empty;
     private bool _hasError;
-    private CancellationTokenSource? _cts;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
-    public WriteViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService)
+    public WriteViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
+        INavigationService navigationService, ProgressViewModel progress)
     {
         _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
+        _navigationService = navigationService;
 
-        Progress = new ProgressViewModel();
+        Progress = progress;
+        PartPath = new PartPathSelection();
+        PartPath.SelectionChanged += option =>
+        {
+            Size = option?.Value == MediaOptions.CustomPartPath ? _selectedMedia?.DiskSize ?? 0 : 0;
+            SizeUnit = "Bytes";
+        };
 
         RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
         BrowseSourceCommand = ReactiveCommand.CreateFromTask(BrowseSourceAsync);
         StartWriteCommand = ReactiveCommand.CreateFromTask(StartWriteAsync,
             this.WhenAnyValue(x => x.SelectedMedia, x => x.SourcePath, x => x.Progress.IsRunning,
-                (media, src, running) => media != null && !string.IsNullOrEmpty(src) && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel,
-            this.WhenAnyValue(x => x.Progress.IsRunning));
+                (media, src, running) => media != null && !string.IsNullOrWhiteSpace(src) && !running));
+        CancelCommand = ReactiveCommand.Create(Cancel);
 
         _ = RefreshMediaAsync();
     }
 
     public ProgressViewModel Progress { get; }
+    public PartPathSelection PartPath { get; }
 
     public ObservableCollection<MediaItemViewModel> MediaItems
     {
@@ -58,19 +65,22 @@ public class WriteViewModel : ViewModelBase
     public MediaItemViewModel? SelectedMedia
     {
         get => _selectedMedia;
-        set => this.RaiseAndSetIfChanged(ref _selectedMedia, value);
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _selectedMedia, value);
+            this.RaisePropertyChanged(nameof(HasSelectedMedia));
+            PartPath.Update(null);
+            if (value != null)
+                _ = LoadDestinationInfoAsync(value.Path);
+        }
     }
+
+    public bool HasSelectedMedia => _selectedMedia != null;
 
     public string SourcePath
     {
         get => _sourcePath;
         set => this.RaiseAndSetIfChanged(ref _sourcePath, value);
-    }
-
-    public long StartOffset
-    {
-        get => _startOffset;
-        set => this.RaiseAndSetIfChanged(ref _startOffset, value);
     }
 
     public decimal Size
@@ -116,6 +126,8 @@ public class WriteViewModel : ViewModelBase
         _ => (long)_size
     };
 
+    private string FormattedSize => PartPath.IsCustom ? $" with size {_size} {_sizeUnit}" : string.Empty;
+
     private async Task RefreshMediaAsync()
     {
         try
@@ -142,11 +154,31 @@ public class WriteViewModel : ViewModelBase
         }
     }
 
+    private async Task LoadDestinationInfoAsync(string path)
+    {
+        try
+        {
+            HasError = false;
+            var info = await _mediaService.GetMediaInfoAsync(path);
+            if (info != null && _selectedMedia != null && _selectedMedia.Path == path)
+            {
+                _selectedMedia.MediaInfo = info;
+                _selectedMedia.DiskSize = info.DiskSize;
+                PartPath.Update(info);
+            }
+        }
+        catch (Exception ex)
+        {
+            HasError = true;
+            ErrorMessage = ex.Message;
+        }
+    }
+
     private async Task BrowseSourceAsync()
     {
         var path = await _dialogService.ShowOpenFileDialogAsync("Select source image file",
         [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "gz", "zip"] },
+            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip", "rar"] },
             new FileFilterItem { Name = "All files", Extensions = ["*"] }
         ]);
         if (path != null)
@@ -155,41 +187,19 @@ public class WriteViewModel : ViewModelBase
 
     private async Task StartWriteAsync()
     {
-        HasError = false;
-        _cts = new CancellationTokenSource();
-        Progress.Reset();
-        Progress.IsRunning = true;
+        var media = _selectedMedia!;
+        var description = $"source image file '{SourcePath}' to destination physical disk '{media.Name}{PartPath.Formatted}'{FormattedSize}";
+        if (!await _dialogService.ShowConfirmDialogAsync("Write", $"Do you want to write {description}?"))
+            return;
 
-        try
-        {
-            var destPath = _selectedMedia!.Path;
-            var progress = new Progress<Models.ProgressModel>(p =>
-            {
-                Progress.Update(p);
-                if (p.IsComplete && !p.HasError)
-                    Progress.IsRunning = false;
-            });
-
-            await _imagingService.WriteAsync(SourcePath, destPath, StartOffset, SizeInBytes, Byteswap,
-                progress, _cts.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            Progress.IsRunning = false;
-        }
-        catch (Exception ex)
-        {
-            HasError = true;
-            ErrorMessage = ex.Message;
-            Progress.IsRunning = false;
-        }
-        finally
-        {
-            _cts?.Dispose();
-            _cts = null;
-            Progress.IsRunning = false;
-        }
+        var sourcePath = SourcePath;
+        var destPath = PartPath.ResolvePath(media.Path);
+        var startOffset = PartPath.StartOffset;
+        var size = SizeInBytes;
+        var byteswap = Byteswap;
+        await Progress.RunAsync($"Writing {description}", (progress, token) =>
+            _imagingService.WriteAsync(sourcePath, destPath, startOffset, size, byteswap, progress, token));
     }
 
-    private void Cancel() => _cts?.Cancel();
+    private void Cancel() => _navigationService.NavigateTo("Start");
 }
