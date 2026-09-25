@@ -1,6 +1,12 @@
 name: Build and release
 
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+    inputs:
+      artifacts_only:
+        description: 'Only build artifacts, skip creating draft release'
+        type: boolean
+        default: false
 
 jobs:
   build-console:
@@ -346,6 +352,8 @@ jobs:
 
   publish:
     needs: [build-console, build-gui]
+    # skip draft release, when only building artifacts
+    if: ${{ !inputs.artifacts_only }}
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
