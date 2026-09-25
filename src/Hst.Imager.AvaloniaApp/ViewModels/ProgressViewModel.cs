@@ -237,8 +237,9 @@ public class ProgressViewModel : ViewModelBase
             ? $"ETA: {TimeSpan.FromMilliseconds(p.MillisecondsRemaining.Value).Humanize()}"
             : string.Empty;
 
-        BytesText = p.BytesProcessed.HasValue && p.BytesTotal.HasValue
-            ? $"{ByteSize.FromBytes(p.BytesProcessed.Value).Humanize("0.0")} / {ByteSize.FromBytes(p.BytesTotal.Value).Humanize("0.0")}"
+        BytesText = p.BytesProcessed.HasValue && p.BytesTotal.HasValue &&
+                    (p.BytesProcessed is not 0 || p.BytesRemaining is not (null or 0))
+            ?$"{ByteSize.FromBytes(p.BytesProcessed.Value).Humanize("0.0")} / {ByteSize.FromBytes(p.BytesTotal.Value).Humanize("0.0")}"
             : string.Empty;
     }
 
