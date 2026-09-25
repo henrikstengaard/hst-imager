@@ -10,7 +10,7 @@
       "rollForward": false
     },
     "vpk": {
-      "version": "0.0.884",
+      "version": "1.2.158",
       "commands": [
         "vpk"
       ],

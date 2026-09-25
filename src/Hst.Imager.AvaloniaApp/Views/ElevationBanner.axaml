@@ -1,0 +1,24 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             x:Class="Hst.Imager.AvaloniaApp.Views.ElevationBanner"
+             IsVisible="{Binding !$parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}">
+
+  <!-- Administrator privileges warning for pages accessing physical disks -->
+  <Border Background="#4A3A12" BorderBrush="#FFBB33" BorderThickness="1" CornerRadius="4" Padding="8">
+    <Grid ColumnDefinitions="Auto,*,Auto">
+      <ia:Icon Grid.Column="0" Value="fa-triangle-exclamation" Foreground="#FFBB33"
+               VerticalAlignment="Center" Margin="0,0,8,0" />
+      <TextBlock Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center"
+                 Text="Administrator privileges are required to access physical disks." />
+      <Button Grid.Column="2" Margin="8,0,0,0" Classes="accent" VerticalAlignment="Center"
+              Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ElevateCommand}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ia:Icon Value="fa-shield-halved" />
+          <TextBlock Text="Restart as Administrator" />
+        </StackPanel>
+      </Button>
+    </Grid>
+  </Border>
+</UserControl>

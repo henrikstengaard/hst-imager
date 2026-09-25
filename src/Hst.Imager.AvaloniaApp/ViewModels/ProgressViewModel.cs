@@ -230,7 +230,7 @@ public class ProgressViewModel : ViewModelBase
         PercentComplete = p.PercentComplete;
 
         SpeedText = p.BytesPerSecond is > 0
-            ? $"{ByteSize.FromBytes(p.BytesPerSecond.Value).Humanize("#.#")}/s"
+            ? $"{ByteSize.FromBytes(p.BytesPerSecond.Value).Humanize("0.0")}/s"
             : string.Empty;
 
         EtaText = p.MillisecondsRemaining is > 0
@@ -238,7 +238,7 @@ public class ProgressViewModel : ViewModelBase
             : string.Empty;
 
         BytesText = p.BytesProcessed.HasValue && p.BytesTotal.HasValue
-            ? $"{ByteSize.FromBytes(p.BytesProcessed.Value).Humanize("#.#")} / {ByteSize.FromBytes(p.BytesTotal.Value).Humanize("#.#")}"
+            ? $"{ByteSize.FromBytes(p.BytesProcessed.Value).Humanize("0.0")} / {ByteSize.FromBytes(p.BytesTotal.Value).Humanize("0.0")}"
             : string.Empty;
     }
 

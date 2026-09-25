@@ -1,12 +1,15 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              x:Class="Hst.Imager.AvaloniaApp.Views.CompareView"
              x:DataType="vm:CompareViewModel">
 
     <ScrollViewer>
       <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
+        <views:ElevationBanner />
+
         <TextBlock Classes="page-title" Text="Compare" />
         <TextBlock Classes="page-description"
                    Text="Compare image files and physical disks byte by byte." />

@@ -173,13 +173,13 @@ jobs:
       - name: Pack gui app for Windows x64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-x64 --outputDir artifacts/win-x64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-x64 --outputDir artifacts/win-x64 --packTitle "Hst Imager" --runtime win-x64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico
         if: matrix.os == 'windows-latest'
 
       - name: Pack gui app for Windows arm64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-arm64 --outputDir artifacts/win-arm64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-arm64 --outputDir artifacts/win-arm64 --packTitle "Hst Imager" --runtime win-arm64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico
         if: matrix.os == 'windows-latest'
 
       - name: Set Windows x64 setup artifact
@@ -237,52 +237,52 @@ jobs:
       - name: Pack gui app for macOS x64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager" --runtime osx-x64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns
         if: matrix.os == 'macos-latest'
 
       - name: Pack gui app for macOS arm64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager" --runtime osx-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns
         if: matrix.os == 'macos-latest'
 
-      - name: Set macOS x64 dmg artifact
-        id: macos_x64_dmg
+      - name: Set macOS x64 pkg artifact
+        id: macos_x64_pkg
         shell: pwsh
         run: |
-          $artifactName='hst-imager.gui.osx-x64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-x64' -Filter '*.dmg' | Select-Object -First 1).FullName
+          $artifactName='hst-imager.gui.osx-x64.pkg'
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-x64' -Filter '*Setup.pkg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
 
-      - name: Upload macOS x64 dmg artifact
+      - name: Upload macOS x64 pkg artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
-          path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
+          name: "${{ steps.macos_x64_pkg.outputs.artifact_name }}"
+          path: "${{ steps.macos_x64_pkg.outputs.artifact_path }}"
           retention-days: 3
         if: matrix.os == 'macos-latest'
 
-      - name: Set macOS arm64 dmg artifact
-        id: macos_arm64_dmg
+      - name: Set macOS arm64 pkg artifact
+        id: macos_arm64_pkg
         shell: pwsh
         run: |
-          $artifactName='hst-imager.gui.osx-arm64.dmg'
-          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-arm64' -Filter '*.dmg' | Select-Object -First 1).FullName
+          $artifactName='hst-imager.gui.osx-arm64.pkg'
+          $artifactFile=(gci './src/Hst.Imager.AvaloniaApp/artifacts/osx-arm64' -Filter '*Setup.pkg' | Select-Object -First 1).FullName
           Rename-Item $artifactFile -NewName $artifactName
           $artifactPath=(Join-Path (Split-Path $artifactFile -Parent) -ChildPath $artifactName)
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
 
-      - name: Upload macOS arm64 dmg artifact
+      - name: Upload macOS arm64 pkg artifact
         uses: actions/upload-artifact@v4
         with:
-          name: "${{ steps.macos_arm64_dmg.outputs.artifact_name }}"
-          path: "${{ steps.macos_arm64_dmg.outputs.artifact_path }}"
+          name: "${{ steps.macos_arm64_pkg.outputs.artifact_name }}"
+          path: "${{ steps.macos_arm64_pkg.outputs.artifact_path }}"
           retention-days: 3
         if: matrix.os == 'macos-latest'
 
@@ -301,13 +301,13 @@ jobs:
       - name: Pack gui app for Linux x64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-x64 --outputDir artifacts/linux-x64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-x64 --outputDir artifacts/linux-x64 --packTitle "Hst Imager" --runtime linux-x64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.png
         if: matrix.os == 'ubuntu-latest'
 
       - name: Pack gui app for Linux arm64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-arm64 --outputDir artifacts/linux-arm64 --packTitle "Hst Imager"
+        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/linux-arm64 --outputDir artifacts/linux-arm64 --packTitle "Hst Imager" --runtime linux-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.png
         if: matrix.os == 'ubuntu-latest'
 
       - name: Set Linux x64 AppImage artifact
@@ -409,15 +409,15 @@ jobs:
         with:
           name: hst-imager.console.osx-arm64.zip
 
-      - name: Download Gui macOS 64-bit dmg artifact
+      - name: Download Gui macOS 64-bit pkg artifact
         uses: actions/download-artifact@v4
         with:
-          name: hst-imager.gui.osx-x64.dmg
+          name: hst-imager.gui.osx-x64.pkg
 
-      - name: Download Gui macOS arm64 dmg artifact
+      - name: Download Gui macOS arm64 pkg artifact
         uses: actions/download-artifact@v4
         with:
-          name: hst-imager.gui.osx-arm64.dmg
+          name: hst-imager.gui.osx-arm64.pkg
 
         # linux
       - name: Download Console Linux 64-bit zip artifact
@@ -455,8 +455,8 @@ jobs:
           Rename-Item -Path hst-imager.gui.win-arm64-setup.exe -NewName "${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe"
           Rename-Item -Path hst-imager.console.osx-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_x64.zip"
           Rename-Item -Path hst-imager.console.osx-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip"
-          Rename-Item -Path hst-imager.gui.osx-x64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg"
-          Rename-Item -Path hst-imager.gui.osx-arm64.dmg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg"
+          Rename-Item -Path hst-imager.gui.osx-x64.pkg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_x64.pkg"
+          Rename-Item -Path hst-imager.gui.osx-arm64.pkg -NewName "${{ env.RELEASE_VERSION }}_gui_macos_arm64.pkg"
           Rename-Item -Path hst-imager.console.linux-x64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_x64.zip"
           Rename-Item -Path hst-imager.console.linux-arm.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm.zip"
           Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
@@ -474,8 +474,8 @@ jobs:
             ${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe
             ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
             ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
-            ${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg
+            ${{ env.RELEASE_VERSION }}_gui_macos_x64.pkg
+            ${{ env.RELEASE_VERSION }}_gui_macos_arm64.pkg
             ${{ env.RELEASE_VERSION }}_console_linux_x64.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm.zip
             ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip

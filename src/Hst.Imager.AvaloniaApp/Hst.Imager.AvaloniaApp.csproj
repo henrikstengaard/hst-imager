@@ -7,6 +7,8 @@
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>Assets\hst.imager.ico</ApplicationIcon>
+    <AssemblyTitle>Hst Imager</AssemblyTitle>
+    <Product>Hst Imager</Product>
   </PropertyGroup>
 
   <ItemGroup>
