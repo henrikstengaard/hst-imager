@@ -13,7 +13,7 @@
         <TextBlock Classes="page-title" Text="Format" />
         <TextBlock Classes="page-description" Text="Format a physical disk or an image file." />
 
-        <Border Background="#4A1A1A" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
+        <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
         </Border>
 

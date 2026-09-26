@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Styling;
+using Hst.Imager.Core.Models;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.AvaloniaApp.ViewModels;
@@ -38,7 +40,8 @@ public partial class App : Application
         try
         {
             var settingsService = _services.GetRequiredService<ISettingsService>();
-            Task.Run(settingsService.GetSettingsAsync).GetAwaiter().GetResult();
+            var settings = Task.Run(settingsService.GetSettingsAsync).GetAwaiter().GetResult();
+            ApplyColorMode(settings.ColorMode);
         }
         catch (Exception e)
         {
@@ -56,6 +59,25 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>
+    /// Apply color mode to app. System uses default theme variant, which follows operating system light or dark mode
+    /// and changes along with it while app is running.
+    /// </summary>
+    public static void ApplyColorMode(Settings.ColorModeEnum colorMode)
+    {
+        if (Current == null)
+        {
+            return;
+        }
+
+        Current.RequestedThemeVariant = colorMode switch
+        {
+            Settings.ColorModeEnum.Light => ThemeVariant.Light,
+            Settings.ColorModeEnum.Dark => ThemeVariant.Dark,
+            _ => ThemeVariant.Default
+        };
     }
 
     private static IServiceProvider ConfigureServices(string appDataPath, string[] startupArgs)

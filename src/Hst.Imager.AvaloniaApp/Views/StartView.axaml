@@ -17,7 +17,7 @@
         <DataTemplate DataType="vm:StartAction">
           <Button Command="{Binding #Root.((vm:StartViewModel)DataContext).NavigateCommand}"
                   CommandParameter="{Binding Page}"
-                  Background="#243340"
+                  Background="{DynamicResource AppCardBackgroundBrush}"
                   CornerRadius="4"
                   Padding="16"
                   Margin="4"
@@ -28,10 +28,10 @@
             <StackPanel Spacing="8">
               <StackPanel Orientation="Horizontal" Spacing="16">
                 <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
-                           Foreground="White" VerticalAlignment="Center" />
+                           Foreground="{DynamicResource AppStrongForegroundBrush}" VerticalAlignment="Center" />
                 <ia:Icon Value="{Binding Icon}" FontSize="28" VerticalAlignment="Center" />
               </StackPanel>
-              <TextBlock Text="{Binding Description}" Foreground="#CCCCCC" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Description}" Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap" />
             </StackPanel>
           </Button>
         </DataTemplate>

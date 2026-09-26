@@ -8,7 +8,15 @@
   <ScrollViewer>
     <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
       <TextBlock Classes="page-title" Text="Settings" />
-      <TextBlock Classes="page-description" Text="Configure settings for read, write, and debug." />
+      <TextBlock Classes="page-description" Text="Configure settings for appearance, read, write, and debug." />
+
+      <TextBlock Classes="field-label" Text="Color mode" />
+      <ComboBox ItemsSource="{Binding ColorModeOptions}"
+                SelectedItem="{Binding ColorMode}"
+                DisplayMemberBinding="{Binding Title}"
+                Width="200" HorizontalAlignment="Left" />
+      <TextBlock Classes="field-help" TextWrapping="Wrap"
+                 Text="System follows the light or dark mode used by the operating system." />
 
       <CheckBox Content="Show all physical drives (except system/boot drives)"
                 IsChecked="{Binding AllPhysicalDrives}" />

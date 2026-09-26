@@ -16,7 +16,7 @@
         <TextBlock Classes="page-description"
                    Text="Display information about an image file or a physical disk." />
 
-        <Border Background="#4A1A1A" CornerRadius="4" Padding="8"
+        <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
                 IsVisible="{Binding HasError}">
           <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
         </Border>
@@ -110,7 +110,7 @@
 
       <StackPanel Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasDiskInfo}">
         <TextBlock Classes="section-title" Margin="0" Text="{Binding SourceTypeFormatted, StringFormat='Source {0}'}" />
-        <TextBlock Foreground="#CCCCCC" Text="{Binding SourceTypeFormatted, StringFormat='Disk information read from source {0}.'}" />
+        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" Text="{Binding SourceTypeFormatted, StringFormat='Disk information read from source {0}.'}" />
       </StackPanel>
 
       <!-- Tabbed disk info -->
@@ -127,7 +127,7 @@
                   <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
                     <DataGrid ItemsSource="{Binding Parts}"
                               IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                              GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                              GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}" Margin="0,4">
                       <DataGrid.Columns>
                         <DataGridTextColumn Header="Type" Binding="{Binding TypeDisplay}" Width="140" />
                         <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="100" />
@@ -159,17 +159,17 @@
 
                       <DataTemplate DataType="vm:DiskInfoDetailSection">
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
-                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                          <Border Background="{DynamicResource AppPanelBackgroundBrush}" CornerRadius="4" Padding="8" Margin="0,4">
                             <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto">
-                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Foreground="White" />
-                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path}" Foreground="White" TextWrapping="Wrap" />
-                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Size}" Foreground="White" />
-                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Sparse file size" Foreground="#AAAAAA"
+                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Name" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Name}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Path" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Path}" Foreground="{DynamicResource AppStrongForegroundBrush}" TextWrapping="Wrap" />
+                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Size" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Size}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Sparse file size" Foreground="{DynamicResource AppSecondaryForegroundBrush}"
                                          IsVisible="{Binding IsSparseFile}" />
-                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SparseFileSize}" Foreground="White"
+                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding SparseFileSize}" Foreground="{DynamicResource AppStrongForegroundBrush}"
                                          IsVisible="{Binding IsSparseFile}" />
                             </Grid>
                           </Border>
@@ -178,20 +178,20 @@
 
                       <DataTemplate DataType="vm:GeometryDetailSection">
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
-                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                          <Border Background="{DynamicResource AppPanelBackgroundBrush}" CornerRadius="4" Padding="8" Margin="0,4">
                             <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
-                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Capacity}" Foreground="White" />
-                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Sector size" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SectorSize}" Foreground="White" />
-                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Total sectors" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalSectors}" Foreground="White" />
-                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Cylinders" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Cylinders}" Foreground="White" />
-                              <TextBlock Grid.Row="4" Grid.Column="0" Text="Heads per cyl" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HeadsPerCylinder}" Foreground="White" />
-                              <TextBlock Grid.Row="5" Grid.Column="0" Text="Sectors per track" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SectorsPerTrack}" Foreground="White" />
+                              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Capacity}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="0" Text="Sector size" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SectorSize}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="2" Grid.Column="0" Text="Total sectors" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding TotalSectors}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="3" Grid.Column="0" Text="Cylinders" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Cylinders}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="4" Grid.Column="0" Text="Heads per cyl" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding HeadsPerCylinder}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="5" Grid.Column="0" Text="Sectors per track" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SectorsPerTrack}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
                             </Grid>
                           </Border>
                         </Expander>
@@ -201,7 +201,7 @@
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
                           <DataGrid ItemsSource="{Binding Rows}"
                                     IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                                    GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}" Margin="0,4">
                             <DataGrid.Columns>
                               <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
                               <DataGridTextColumn Header="Id" Binding="{Binding Id}" />
@@ -221,7 +221,7 @@
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
                           <DataGrid ItemsSource="{Binding Rows}"
                                     IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                                    GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}" Margin="0,4">
                             <DataGrid.Columns>
                               <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
                               <DataGridTextColumn Header="GUID" Binding="{Binding Guid}" />
@@ -237,36 +237,36 @@
 
                       <DataTemplate DataType="vm:RdbInfoDetailSection">
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
-                          <Border Background="#0D1F2A" CornerRadius="4" Padding="8" Margin="0,4">
+                          <Border Background="{DynamicResource AppPanelBackgroundBrush}" CornerRadius="4" Padding="8" Margin="0,4">
                             <Grid ColumnDefinitions="160,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto">
-                              <TextBlock Grid.Row="0"  Grid.Column="0" Text="Product"        Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="0"  Grid.Column="1" Text="{Binding Product}" Foreground="White" />
-                              <TextBlock Grid.Row="1"  Grid.Column="0" Text="Vendor"         Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="1"  Grid.Column="1" Text="{Binding Vendor}" Foreground="White" />
-                              <TextBlock Grid.Row="2"  Grid.Column="0" Text="Revision"       Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="2"  Grid.Column="1" Text="{Binding Revision}" Foreground="White" />
-                              <TextBlock Grid.Row="3"  Grid.Column="0" Text="Size"           Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="3"  Grid.Column="1" Text="{Binding Size}" Foreground="White" />
-                              <TextBlock Grid.Row="4"  Grid.Column="0" Text="Cylinders"      Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="4"  Grid.Column="1" Text="{Binding Cylinders}" Foreground="White" />
-                              <TextBlock Grid.Row="5"  Grid.Column="0" Text="Heads"          Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="5"  Grid.Column="1" Text="{Binding Heads}" Foreground="White" />
-                              <TextBlock Grid.Row="6"  Grid.Column="0" Text="Sectors"        Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="6"  Grid.Column="1" Text="{Binding Sectors}" Foreground="White" />
-                              <TextBlock Grid.Row="7"  Grid.Column="0" Text="Block size"     Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="7"  Grid.Column="1" Text="{Binding BlockSize}" Foreground="White" />
-                              <TextBlock Grid.Row="8"  Grid.Column="0" Text="Start cylinder" Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="8"  Grid.Column="1" Text="{Binding StartCylinder}" Foreground="White" />
-                              <TextBlock Grid.Row="9"  Grid.Column="0" Text="End cylinder"   Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="9"  Grid.Column="1" Text="{Binding EndCylinder}" Foreground="White" />
-                              <TextBlock Grid.Row="10" Grid.Column="0" Text="Flags"          Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding Flags}" Foreground="White" />
-                              <TextBlock Grid.Row="11" Grid.Column="0" Text="Host id"        Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding HostId}" Foreground="White" />
-                              <TextBlock Grid.Row="12" Grid.Column="0" Text="RDB block lo"   Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="12" Grid.Column="1" Text="{Binding RdbBlockLo}" Foreground="White" />
-                              <TextBlock Grid.Row="13" Grid.Column="0" Text="RDB block hi"   Foreground="#AAAAAA" />
-                              <TextBlock Grid.Row="13" Grid.Column="1" Text="{Binding RdbBlockHi}" Foreground="White" />
+                              <TextBlock Grid.Row="0"  Grid.Column="0" Text="Product"        Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="0"  Grid.Column="1" Text="{Binding Product}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="1"  Grid.Column="0" Text="Vendor"         Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="1"  Grid.Column="1" Text="{Binding Vendor}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="2"  Grid.Column="0" Text="Revision"       Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="2"  Grid.Column="1" Text="{Binding Revision}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="3"  Grid.Column="0" Text="Size"           Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="3"  Grid.Column="1" Text="{Binding Size}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="4"  Grid.Column="0" Text="Cylinders"      Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="4"  Grid.Column="1" Text="{Binding Cylinders}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="5"  Grid.Column="0" Text="Heads"          Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="5"  Grid.Column="1" Text="{Binding Heads}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="6"  Grid.Column="0" Text="Sectors"        Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="6"  Grid.Column="1" Text="{Binding Sectors}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="7"  Grid.Column="0" Text="Block size"     Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="7"  Grid.Column="1" Text="{Binding BlockSize}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="8"  Grid.Column="0" Text="Start cylinder" Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="8"  Grid.Column="1" Text="{Binding StartCylinder}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="9"  Grid.Column="0" Text="End cylinder"   Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="9"  Grid.Column="1" Text="{Binding EndCylinder}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="10" Grid.Column="0" Text="Flags"          Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="10" Grid.Column="1" Text="{Binding Flags}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="11" Grid.Column="0" Text="Host id"        Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="11" Grid.Column="1" Text="{Binding HostId}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="12" Grid.Column="0" Text="RDB block lo"   Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="12" Grid.Column="1" Text="{Binding RdbBlockLo}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
+                              <TextBlock Grid.Row="13" Grid.Column="0" Text="RDB block hi"   Foreground="{DynamicResource AppSecondaryForegroundBrush}" />
+                              <TextBlock Grid.Row="13" Grid.Column="1" Text="{Binding RdbBlockHi}" Foreground="{DynamicResource AppStrongForegroundBrush}" />
                             </Grid>
                           </Border>
                         </Expander>
@@ -276,7 +276,7 @@
                         <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="0,4">
                           <DataGrid ItemsSource="{Binding Rows}"
                                     IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                                    GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                                    GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}" Margin="0,4">
                             <DataGrid.Columns>
                               <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
                               <DataGridTextColumn Header="DOS type" Binding="{Binding DosType}" />
@@ -293,7 +293,7 @@
                           <ScrollViewer HorizontalScrollBarVisibility="Auto">
                             <DataGrid ItemsSource="{Binding Rows}"
                                       IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                                      GridLinesVisibility="All" Background="#0D1F2A" Margin="0,4">
+                                      GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}" Margin="0,4">
                               <DataGrid.Columns>
                                 <DataGridTextColumn Header="Number" Binding="{Binding Number}" />
                                 <DataGridTextColumn Header="Name" Binding="{Binding Name}" />

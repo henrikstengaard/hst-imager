@@ -8,12 +8,12 @@
     <StackPanel Spacing="8" Margin="0,8">
       <TextBlock Classes="page-title" Text="About" />
 
-      <TextBlock Text="{Binding VersionText}" Foreground="#CCCCCC" />
+      <TextBlock Text="{Binding VersionText}" Foreground="{DynamicResource AppBodyForegroundBrush}" />
 
       <Image Source="avares://Hst.Imager.AvaloniaApp/Assets/hst.imager.png"
              Height="80" HorizontalAlignment="Left" Margin="2,0" />
 
-      <TextBlock Foreground="#CCCCCC" TextWrapping="Wrap"
+      <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap"
                  Text="Hst Imager is an imaging tool to read and write disk images to and from physical drives. This tool can be used to create new blank images or create images of physical drives like hard disks, SSD, CF- and MicroSD-cards for backup and/or modification and then write them to physical drives." />
 
       <Border Classes="warning">
@@ -28,21 +28,21 @@
                    Text="Hst Imager filters out fixed disks by default, so only removable and USB attached physical drives are accessible. All physical drives can be listed and accessed by Hst Imager when enabling &quot;Show all physical drives&quot; in settings. Be very sure to select the correct physical drive otherwise Hst Imager might destroy your disk and it's file system. Raw disk access requires administrator privileges, so you need to run as administrator or with sudo." />
       </Border>
 
-      <TextBlock Foreground="#CCCCCC" TextWrapping="Wrap"
+      <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap"
                  Text="Hst Imager is created and maintained by Henrik Nørfjand Stengaard in his spare time." />
 
       <WrapPanel>
-        <TextBlock Foreground="#CCCCCC" VerticalAlignment="Center"
+        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" VerticalAlignment="Center"
                    Text="Latest version of Hst Imager can be downloaded from " />
         <Button Classes="link" Command="{Binding OpenReleasesCommand}" Content="Hst Imager Github releases" />
-        <TextBlock Foreground="#CCCCCC" VerticalAlignment="Center" Text="." />
+        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" VerticalAlignment="Center" Text="." />
       </WrapPanel>
 
       <WrapPanel>
-        <TextBlock Foreground="#CCCCCC" VerticalAlignment="Center"
+        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" VerticalAlignment="Center"
                    Text="Please report issues by creating a new issue at " />
         <Button Classes="link" Command="{Binding OpenIssuesCommand}" Content="Hst Imager Github issues" />
-        <TextBlock Foreground="#CCCCCC" VerticalAlignment="Center" Text="." />
+        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" VerticalAlignment="Center" Text="." />
       </WrapPanel>
     </StackPanel>
   </ScrollViewer>

@@ -2,89 +2,145 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Hst.Imager.AvaloniaApp.App"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
-             RequestedThemeVariant="Dark">
+             RequestedThemeVariant="Default">
+
+  <!-- Color mode brushes, default variant follows operating system light or dark mode -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#1A2933" />
+          <SolidColorBrush x:Key="AppSidebarBackgroundBrush" Color="#0F1E28" />
+          <SolidColorBrush x:Key="AppNavForegroundBrush" Color="#AAAAAA" />
+          <SolidColorBrush x:Key="AppNavActiveForegroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppNavHoverBackgroundBrush" Color="#2D3F4C" />
+          <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppBodyForegroundBrush" Color="#CCCCCC" />
+          <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#AAAAAA" />
+          <SolidColorBrush x:Key="AppMutedForegroundBrush" Color="#999999" />
+          <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#243340" />
+          <SolidColorBrush x:Key="AppPanelBackgroundBrush" Color="#0D1F2A" />
+          <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#1E2D38" />
+          <SolidColorBrush x:Key="AppOverlayBackgroundBrush" Color="#CC1A2933" />
+          <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#4A1A1A" />
+          <SolidColorBrush x:Key="AppErrorForegroundBrush" Color="#FF6B6B" />
+          <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#3A2800" />
+          <SolidColorBrush x:Key="AppWarningBannerBackgroundBrush" Color="#4A3A12" />
+          <SolidColorBrush x:Key="AppWarningForegroundBrush" Color="#FFBB33" />
+          <SolidColorBrush x:Key="AppSuccessForegroundBrush" Color="#33CC33" />
+          <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#CC3333" />
+          <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#66B3FF" />
+          <SolidColorBrush x:Key="AppLinkHoverForegroundBrush" Color="#99CCFF" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F3F5F7" />
+          <SolidColorBrush x:Key="AppSidebarBackgroundBrush" Color="#DDE3E8" />
+          <SolidColorBrush x:Key="AppNavForegroundBrush" Color="#5A6670" />
+          <SolidColorBrush x:Key="AppNavActiveForegroundBrush" Color="#000000" />
+          <SolidColorBrush x:Key="AppNavHoverBackgroundBrush" Color="#C8D1D8" />
+          <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#1A1A1A" />
+          <SolidColorBrush x:Key="AppBodyForegroundBrush" Color="#333333" />
+          <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#555555" />
+          <SolidColorBrush x:Key="AppMutedForegroundBrush" Color="#666666" />
+          <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppPanelBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppInputBackgroundBrush" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="AppOverlayBackgroundBrush" Color="#CCF3F5F7" />
+          <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#FDE2E2" />
+          <SolidColorBrush x:Key="AppErrorForegroundBrush" Color="#B71C1C" />
+          <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#FFF4D6" />
+          <SolidColorBrush x:Key="AppWarningBannerBackgroundBrush" Color="#FFF4D6" />
+          <SolidColorBrush x:Key="AppWarningForegroundBrush" Color="#8A5A00" />
+          <SolidColorBrush x:Key="AppSuccessForegroundBrush" Color="#2E7D32" />
+          <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#C62828" />
+          <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#0063B1" />
+          <SolidColorBrush x:Key="AppLinkHoverForegroundBrush" Color="#004A85" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 
   <Application.Styles>
     <FluentTheme />
     <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
 
     <Style Selector="Window">
-      <Setter Property="Background" Value="#1A2933" />
+      <Setter Property="Background" Value="{DynamicResource AppWindowBackgroundBrush}" />
     </Style>
 
     <Style Selector="Button.nav-item">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Foreground" Value="{DynamicResource AppNavForegroundBrush}" />
       <Setter Property="Padding" Value="0" />
       <Setter Property="HorizontalContentAlignment" Value="Center" />
       <Setter Property="VerticalContentAlignment" Value="Center" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#2D3F4C" />
+      <Setter Property="Background" Value="{DynamicResource AppNavHoverBackgroundBrush}" />
     </Style>
     <Style Selector="Button.nav-item.active">
-      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AppNavActiveForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBlock.page-title">
       <Setter Property="FontSize" Value="18" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AppStrongForegroundBrush}" />
       <Setter Property="Margin" Value="0,0,0,4" />
     </Style>
 
     <Style Selector="TextBlock.page-description">
       <Setter Property="FontSize" Value="12" />
-      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Foreground" Value="{DynamicResource AppSecondaryForegroundBrush}" />
       <Setter Property="Margin" Value="0,0,0,12" />
     </Style>
 
     <Style Selector="TextBlock.error-text">
-      <Setter Property="Foreground" Value="#FF6B6B" />
+      <Setter Property="Foreground" Value="{DynamicResource AppErrorForegroundBrush}" />
       <Setter Property="FontSize" Value="12" />
     </Style>
 
     <Style Selector="Border.progress-overlay">
-      <Setter Property="Background" Value="#CC1A2933" />
+      <Setter Property="Background" Value="{DynamicResource AppOverlayBackgroundBrush}" />
     </Style>
 
     <Style Selector="Border.card">
-      <Setter Property="Background" Value="#243340" />
+      <Setter Property="Background" Value="{DynamicResource AppCardBackgroundBrush}" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="12" />
       <Setter Property="Margin" Value="0,4" />
     </Style>
 
     <Style Selector="TextBlock.field-label">
-      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Foreground" Value="{DynamicResource AppSecondaryForegroundBrush}" />
       <Setter Property="FontSize" Value="12" />
     </Style>
 
     <Style Selector="TextBlock.field-help">
-      <Setter Property="Foreground" Value="#999999" />
+      <Setter Property="Foreground" Value="{DynamicResource AppMutedForegroundBrush}" />
       <Setter Property="FontSize" Value="12" />
     </Style>
 
     <Style Selector="ia|Icon.field-icon">
-      <Setter Property="Foreground" Value="#AAAAAA" />
+      <Setter Property="Foreground" Value="{DynamicResource AppSecondaryForegroundBrush}" />
       <Setter Property="FontSize" Value="12" />
     </Style>
 
     <Style Selector="TextBlock.section-title">
       <Setter Property="FontSize" Value="16" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AppStrongForegroundBrush}" />
       <Setter Property="Margin" Value="0,16,0,0" />
     </Style>
 
     <Style Selector="Border.warning">
-      <Setter Property="Background" Value="#3A2800" />
+      <Setter Property="Background" Value="{DynamicResource AppWarningBackgroundBrush}" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="8" />
     </Style>
     <Style Selector="Border.warning TextBlock">
-      <Setter Property="Foreground" Value="#FFBB33" />
+      <Setter Property="Foreground" Value="{DynamicResource AppWarningForegroundBrush}" />
       <Setter Property="FontSize" Value="12" />
     </Style>
 
@@ -92,20 +148,20 @@
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="Foreground" Value="#66B3FF" />
+      <Setter Property="Foreground" Value="{DynamicResource AppLinkForegroundBrush}" />
       <Setter Property="Cursor" Value="Hand" />
     </Style>
     <Style Selector="Button.link:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#99CCFF" />
+      <Setter Property="Foreground" Value="{DynamicResource AppLinkHoverForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBox">
-      <Setter Property="Background" Value="#1E2D38" />
+      <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
     </Style>
 
     <Style Selector="ComboBox">
-      <Setter Property="Background" Value="#1E2D38" />
+      <Setter Property="Background" Value="{DynamicResource AppInputBackgroundBrush}" />
     </Style>
   </Application.Styles>
 

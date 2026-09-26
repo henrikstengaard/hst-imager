@@ -10,7 +10,7 @@
         Width="1280" Height="720"
         MinWidth="900" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        Background="#1A2933">
+        Background="{DynamicResource AppWindowBackgroundBrush}">
 
   <Grid>
 
@@ -18,7 +18,7 @@
     <Grid ColumnDefinitions="62,*">
 
       <!-- Navigation Sidebar -->
-      <Border Grid.Column="0" Background="#0F1E28">
+      <Border Grid.Column="0" Background="{DynamicResource AppSidebarBackgroundBrush}">
         <ScrollViewer VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="2" Margin="4,8">
 

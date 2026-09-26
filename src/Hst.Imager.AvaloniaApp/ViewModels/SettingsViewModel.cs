@@ -20,6 +20,7 @@ public class SettingsViewModel : ViewModelBase
     private bool _allPhysicalDrives;
     private bool _startAsAdministrator;
     private SelectOption _macOsElevateMethod;
+    private SelectOption _colorMode;
     private bool _verify;
     private bool _force;
     private int _retries = 5;
@@ -45,6 +46,14 @@ public class SettingsViewModel : ViewModelBase
         ];
         _macOsElevateMethod = MacOsElevateMethodOptions[1];
 
+        ColorModeOptions =
+        [
+            new SelectOption { Title = "System", Value = nameof(Settings.ColorModeEnum.System) },
+            new SelectOption { Title = "Light", Value = nameof(Settings.ColorModeEnum.Light) },
+            new SelectOption { Title = "Dark", Value = nameof(Settings.ColorModeEnum.Dark) }
+        ];
+        _colorMode = ColorModeOptions[0];
+
         SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync);
         ViewLogsCommand = ReactiveCommand.CreateFromTask(() => dialogService.OpenExternalAsync(LogsPath));
 
@@ -60,6 +69,17 @@ public class SettingsViewModel : ViewModelBase
     }
 
     public List<SelectOption> MacOsElevateMethodOptions { get; }
+    public List<SelectOption> ColorModeOptions { get; }
+
+    public SelectOption ColorMode
+    {
+        get => _colorMode;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _colorMode, value);
+            App.ApplyColorMode(ParseColorMode(value));
+        }
+    }
 
     public bool AllPhysicalDrives { get => _allPhysicalDrives; set => this.RaiseAndSetIfChanged(ref _allPhysicalDrives, value); }
     public bool StartAsAdministrator { get => _startAsAdministrator; set => this.RaiseAndSetIfChanged(ref _startAsAdministrator, value); }
@@ -95,6 +115,11 @@ public class SettingsViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> SaveCommand { get; }
     public ReactiveCommand<Unit, Unit> ViewLogsCommand { get; }
 
+    private static Settings.ColorModeEnum ParseColorMode(SelectOption? option) =>
+        Enum.TryParse<Settings.ColorModeEnum>(option?.Value, out var colorMode)
+            ? colorMode
+            : Settings.ColorModeEnum.System;
+
     private async Task LoadSettingsAsync()
     {
         try
@@ -111,6 +136,8 @@ public class SettingsViewModel : ViewModelBase
             SparseFiles = _settings.SparseFiles;
             UseCache = _settings.UseCache;
             DebugMode = _settings.DebugMode;
+            ColorMode = ColorModeOptions.FirstOrDefault(x => x.Value == _settings.ColorMode.ToString())
+                        ?? ColorModeOptions[0];
         }
         catch { /* use defaults */ }
     }
@@ -133,7 +160,8 @@ public class SettingsViewModel : ViewModelBase
                 SparseFiles = SparseFiles,
                 DebugMode = DebugMode,
                 UseCache = UseCache,
-                CacheType = _settings.CacheType
+                CacheType = _settings.CacheType,
+                ColorMode = ParseColorMode(ColorMode)
             };
             _appState.Settings = settings;
             await _settingsService.SaveSettingsAsync(settings);

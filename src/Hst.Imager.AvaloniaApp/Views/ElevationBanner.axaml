@@ -6,9 +6,9 @@
              IsVisible="{Binding !$parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}">
 
   <!-- Administrator privileges warning for pages accessing physical disks -->
-  <Border Background="#4A3A12" BorderBrush="#FFBB33" BorderThickness="1" CornerRadius="4" Padding="8">
+  <Border Background="{DynamicResource AppWarningBannerBackgroundBrush}" BorderBrush="{DynamicResource AppWarningForegroundBrush}" BorderThickness="1" CornerRadius="4" Padding="8">
     <Grid ColumnDefinitions="Auto,*,Auto">
-      <ia:Icon Grid.Column="0" Value="fa-triangle-exclamation" Foreground="#FFBB33"
+      <ia:Icon Grid.Column="0" Value="fa-triangle-exclamation" Foreground="{DynamicResource AppWarningForegroundBrush}"
                VerticalAlignment="Center" Margin="0,0,8,0" />
       <TextBlock Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center"
                  Text="Administrator privileges are required to access physical disks." />
