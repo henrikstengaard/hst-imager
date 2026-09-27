@@ -385,5 +385,70 @@ namespace Hst.Imager.Core.Tests
                 x=> x.FileSystem == "PDS\\3" && x.PartitionNumber == 1);
             Assert.NotNull(rdbPartitionPart);
         }
+
+        [Fact]
+        public async Task When_ReadInfoFromGptPiStormRdbPartition_Then_DiskInfoIsRead()
+        {
+            // arrange - vhd and info paths
+            var vhdPath = $"{Guid.NewGuid()}.vhd";
+            var infoPath = Path.Combine($"{vhdPath}", "gpt", "2");
+
+            // arrange - create test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create gpt pistorm rdb disk
+            await PiStormRdbTestHelper.CreateGptPiStormRdbDisk(testCommandHelper, vhdPath);
+
+            // arrange - info command
+            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
+                [], infoPath, false);
+            MediaInfo mediaInfo = null;
+            infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
+
+            // act - read info
+            var result = await infoCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert
+            Assert.NotNull(mediaInfo);
+            Assert.Null(mediaInfo.DiskInfo.MbrPartitionTablePart);
+            Assert.Null(mediaInfo.DiskInfo.GptPartitionTablePart);
+            Assert.NotNull(mediaInfo.DiskInfo.RdbPartitionTablePart);
+            var rdbPartitionPart = mediaInfo.DiskInfo.RdbPartitionTablePart.Parts.FirstOrDefault(
+                x=> x.FileSystem == "PFS\\3" && x.PartitionNumber == 1);
+            Assert.NotNull(rdbPartitionPart);
+        }
+
+        [Fact]
+        public async Task When_ReadInfoFromGptDiskWithPiStormRdbPartition_Then_PartitionTypeIsPiStormRdb()
+        {
+            // arrange - vhd path
+            var vhdPath = $"{Guid.NewGuid()}.vhd";
+
+            // arrange - create test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create gpt pistorm rdb disk
+            await PiStormRdbTestHelper.CreateGptPiStormRdbDisk(testCommandHelper, vhdPath);
+
+            // arrange - info command
+            var infoCommand = new InfoCommand(new NullLogger<InfoCommand>(), testCommandHelper,
+                [], vhdPath, false);
+            MediaInfo mediaInfo = null;
+            infoCommand.DiskInfoRead += (_, args) => { mediaInfo = args.MediaInfo; };
+
+            // act - read info
+            var result = await infoCommand.Execute(CancellationToken.None);
+            Assert.True(result.IsSuccess);
+
+            // assert - gpt partition 2 has pistorm rdb partition type and file system
+            Assert.NotNull(mediaInfo);
+            Assert.NotNull(mediaInfo.DiskInfo.GptPartitionTablePart);
+            var gptPartitionPart = mediaInfo.DiskInfo.GptPartitionTablePart.Parts.FirstOrDefault(
+                x => x.PartitionNumber == 2);
+            Assert.NotNull(gptPartitionPart);
+            Assert.Equal(Constants.FileSystemNames.PiStormRdb, gptPartitionPart.PartitionType);
+            Assert.Equal(Constants.FileSystemNames.PiStormRdb, gptPartitionPart.FileSystem);
+        }
     }
 }

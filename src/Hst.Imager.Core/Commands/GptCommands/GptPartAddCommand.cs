@@ -99,9 +99,15 @@ public class GptPartAddCommand : CommandBase
             ? 0
             : availableSize.ResolveSize(size).ToSectorSize();
         
-        // find unallocated part for partition size with start offset equal or larger
-        var unallocatedPart = diskInfo.DiskParts.FirstOrDefault(x =>
-            x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
+        // find unallocated part containing start sector, if start sector is set.
+        // otherwise find unallocated part for partition size with start offset equal or larger
+        var startSectorOffset = startSector * disk.SectorSize;
+        var unallocatedPart = startSectorOffset.HasValue
+            ? diskInfo.DiskParts.FirstOrDefault(x =>
+                x.PartType == PartType.Unallocated && x.StartOffset <= startSectorOffset.Value &&
+                x.EndOffset >= startSectorOffset.Value && x.EndOffset + 1 - startSectorOffset.Value >= partitionSize)
+            : diskInfo.DiskParts.FirstOrDefault(x =>
+                x.PartType == PartType.Unallocated && x.StartOffset >= startOffset && x.Size >= partitionSize);
         if (unallocatedPart == null)
         {
             return new Result(new Error($"Guid Partition Table does not have unallocated disk space for partition size '{size}' ({partitionSize} bytes)"));
@@ -129,7 +135,10 @@ public class GptPartAddCommand : CommandBase
 
 
         // calculate partition sectors
-        var partitionSectors = (partitionSize == 0 ? unallocatedPart.Size : partitionSize) / disk.SectorSize;
+        var unallocatedSize = startSectorOffset.HasValue
+            ? unallocatedPart.EndOffset + 1 - startSectorOffset.Value
+            : unallocatedPart.Size;
+        var partitionSectors = (partitionSize == 0 ? unallocatedSize : partitionSize) / disk.SectorSize;
 
         if (partitionSectors <= 0)
         {
