@@ -1,5 +1,6 @@
 using System;
 using System.Reactive;
+using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
@@ -22,7 +23,7 @@ public class MainWindowViewModel : ViewModelBase
         services.GetRequiredService<INavigationService>().NavigationRequested += NavigateTo;
 
         NavigateToCommand = ReactiveCommand.Create<string>(NavigateTo);
-        ElevateCommand = ReactiveCommand.Create(Elevate);
+        ElevateCommand = ReactiveCommand.CreateFromTask(ElevateAsync);
     }
 
     public ProgressViewModel Progress { get; }
@@ -57,8 +58,9 @@ public class MainWindowViewModel : ViewModelBase
         };
     }
 
-    private void Elevate()
+    private async Task ElevateAsync()
     {
-        User.Elevate(_startupArgs, _services.GetRequiredService<Models.AppStateModel>().Settings);
+        // exits current app, if elevated app is started
+        await User.ElevateAsync(_startupArgs, _services.GetRequiredService<Models.AppStateModel>().Settings);
     }
 }

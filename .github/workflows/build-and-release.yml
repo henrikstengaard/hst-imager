@@ -290,6 +290,23 @@ jobs:
         run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager" --runtime osx-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns
         if: matrix.os == 'macos-latest'
 
+      - name: Setup dmgbuild
+        shell: pwsh
+        run: |
+          # install dmgbuild in venv and combine dmg background images into multi resolution tiff for retina displays
+          $venvDir=(Join-Path $env:RUNNER_TEMP -ChildPath 'dmgbuild')
+          python3 -m venv $venvDir
+          & (Join-Path $venvDir -ChildPath 'bin/pip') install dmgbuild
+          if ($LASTEXITCODE -ne 0) { throw "Failed to install dmgbuild" }
+          $packagingDir=(Resolve-Path './src/Hst.Imager.AvaloniaApp/Packaging/macos').Path
+          $backgroundPath=(Join-Path $env:RUNNER_TEMP -ChildPath 'dmg-background.tiff')
+          tiffutil -cathidpicheck (Join-Path $packagingDir -ChildPath 'dmg-background.png') (Join-Path $packagingDir -ChildPath 'dmg-background@2x.png') -out $backgroundPath
+          if ($LASTEXITCODE -ne 0) { throw "Failed to create dmg background '$backgroundPath'" }
+          "DMGBUILD={0}" -f (Join-Path $venvDir -ChildPath 'bin/dmgbuild') >> $env:GITHUB_ENV
+          "DMG_SETTINGS={0}" -f (Join-Path $packagingDir -ChildPath 'dmg-settings.py') >> $env:GITHUB_ENV
+          "DMG_BACKGROUND={0}" -f $backgroundPath >> $env:GITHUB_ENV
+        if: matrix.os == 'macos-latest'
+
       - name: Create macOS x64 dmg artifact
         id: macos_x64_dmg
         shell: pwsh
@@ -298,13 +315,13 @@ jobs:
           $artifactName='hst-imager.gui.osx-x64.dmg'
           $artifactsDir=(Resolve-Path './src/Hst.Imager.AvaloniaApp/artifacts/osx-x64').Path
           $portableZip=(gci $artifactsDir -Filter '*-Portable.zip' | Select-Object -First 1).FullName
-          $dmgDir=(Join-Path $artifactsDir -ChildPath 'dmg')
-          New-Item -ItemType Directory -Path $dmgDir -Force | Out-Null
-          ditto -x -k $portableZip $dmgDir
-          if (-not (gci $dmgDir -Filter '*.app' -Directory)) { throw "No app bundle found in '$portableZip'" }
-          ln -s /Applications (Join-Path $dmgDir -ChildPath 'Applications')
+          $stagingDir=(Join-Path $artifactsDir -ChildPath 'dmg')
+          New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+          ditto -x -k $portableZip $stagingDir
+          $appPath=(gci $stagingDir -Filter '*.app' -Directory | Select-Object -First 1).FullName
+          if (-not $appPath) { throw "No app bundle found in '$portableZip'" }
           $artifactPath=(Join-Path $artifactsDir -ChildPath $artifactName)
-          hdiutil create -volname 'Hst Imager' -srcfolder $dmgDir -ov -format UDZO $artifactPath
+          & $env:DMGBUILD -s $env:DMG_SETTINGS -D "app=$appPath" -D "background=$env:DMG_BACKGROUND" 'Hst Imager' $artifactPath
           if ($LASTEXITCODE -ne 0) { throw "Failed to create dmg '$artifactPath'" }
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
@@ -326,13 +343,13 @@ jobs:
           $artifactName='hst-imager.gui.osx-arm64.dmg'
           $artifactsDir=(Resolve-Path './src/Hst.Imager.AvaloniaApp/artifacts/osx-arm64').Path
           $portableZip=(gci $artifactsDir -Filter '*-Portable.zip' | Select-Object -First 1).FullName
-          $dmgDir=(Join-Path $artifactsDir -ChildPath 'dmg')
-          New-Item -ItemType Directory -Path $dmgDir -Force | Out-Null
-          ditto -x -k $portableZip $dmgDir
-          if (-not (gci $dmgDir -Filter '*.app' -Directory)) { throw "No app bundle found in '$portableZip'" }
-          ln -s /Applications (Join-Path $dmgDir -ChildPath 'Applications')
+          $stagingDir=(Join-Path $artifactsDir -ChildPath 'dmg')
+          New-Item -ItemType Directory -Path $stagingDir -Force | Out-Null
+          ditto -x -k $portableZip $stagingDir
+          $appPath=(gci $stagingDir -Filter '*.app' -Directory | Select-Object -First 1).FullName
+          if (-not $appPath) { throw "No app bundle found in '$portableZip'" }
           $artifactPath=(Join-Path $artifactsDir -ChildPath $artifactName)
-          hdiutil create -volname 'Hst Imager' -srcfolder $dmgDir -ov -format UDZO $artifactPath
+          & $env:DMGBUILD -s $env:DMG_SETTINGS -D "app=$appPath" -D "background=$env:DMG_BACKGROUND" 'Hst Imager' $artifactPath
           if ($LASTEXITCODE -ne 0) { throw "Failed to create dmg '$artifactPath'" }
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
