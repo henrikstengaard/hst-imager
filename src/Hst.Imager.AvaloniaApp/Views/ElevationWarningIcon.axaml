@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             x:Class="Hst.Imager.AvaloniaApp.Views.ElevationWarningIcon"
+             IsVisible="{Binding !$parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}">
+
+  <!-- Administrator privileges warning for physical disk selection, transparent background makes tooltip show on whole area -->
+  <Border Background="Transparent" VerticalAlignment="Center" Padding="0,4"
+          ToolTip.Tip="Physical disk selection is disabled, because administrator privileges are required to access physical disks. Use 'Restart as Administrator' to enable it.">
+    <ia:Icon Value="fa-triangle-exclamation" Foreground="{DynamicResource AppWarningForegroundBrush}" />
+  </Border>
+</UserControl>

@@ -39,13 +39,16 @@
           <ia:Icon Value="fa-hdd" Classes="field-icon" />
           <TextBlock Classes="field-label" Text="Destination physical disk" />
         </StackPanel>
-        <Grid ColumnDefinitions="*,Auto">
-          <ComboBox Grid.Column="0"
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
+          <ComboBox Grid.Column="1"
+                    IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
                     ItemsSource="{Binding MediaItems}"
                     SelectedItem="{Binding SelectedMedia}"
                     DisplayMemberBinding="{Binding Label}"
                     HorizontalAlignment="Stretch" />
-          <Button Grid.Column="1" Margin="8,0,0,0"
+          <Button Grid.Column="2" Margin="8,0,0,0"
+                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
                   Command="{Binding RefreshMediaCommand}"
                   ToolTip.Tip="Refresh">
             <ia:Icon Value="fa-sync-alt" />
