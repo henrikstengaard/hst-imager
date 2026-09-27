@@ -20,6 +20,7 @@ public class CompareViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
 
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
+    private bool _isLoadingMedia;
     private MediaItemViewModel? _sourceDisk;
     private MediaItemViewModel? _destDisk;
     private SelectOption _sourceType;
@@ -201,6 +202,15 @@ public class CompareViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _hasError, value);
     }
 
+    /// <summary>
+    /// Physical disks are being loaded
+    /// </summary>
+    public bool IsLoadingMedia
+    {
+        get => _isLoadingMedia;
+        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
+    }
+
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
@@ -221,6 +231,7 @@ public class CompareViewModel : ViewModelBase
     {
         try
         {
+            IsLoadingMedia = true;
             var medias = await _mediaService.ListMediaAsync();
             MediaItems = new ObservableCollection<MediaItemViewModel>(medias.Select(m => new MediaItemViewModel
                 { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }));
@@ -230,6 +241,10 @@ public class CompareViewModel : ViewModelBase
                 DestDisk = MediaItems[0];
         }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
+        finally
+        {
+            IsLoadingMedia = false;
+        }
     }
 
     private async Task LoadSourceInfoAsync()

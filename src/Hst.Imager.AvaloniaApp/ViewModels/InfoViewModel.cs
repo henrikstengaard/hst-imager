@@ -19,6 +19,7 @@ public class InfoViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
 
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
+    private bool _isLoadingMedia;
     private MediaItemViewModel? _selectedMedia;
     private SelectOption _sourceType;
     private string _imagePath = string.Empty;
@@ -191,6 +192,15 @@ public class InfoViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _isLoading, value);
     }
 
+    /// <summary>
+    /// Physical disks are being loaded
+    /// </summary>
+    public bool IsLoadingMedia
+    {
+        get => _isLoadingMedia;
+        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
+    }
+
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> GetInfoCommand { get; }
@@ -200,6 +210,7 @@ public class InfoViewModel : ViewModelBase
     {
         try
         {
+            IsLoadingMedia = true;
             HasError = false;
             var medias = await _mediaService.ListMediaAsync();
             var items = medias.Select(m => new MediaItemViewModel
@@ -216,6 +227,10 @@ public class InfoViewModel : ViewModelBase
         {
             HasError = true;
             ErrorMessage = ex.Message;
+        }
+        finally
+        {
+            IsLoadingMedia = false;
         }
     }
 

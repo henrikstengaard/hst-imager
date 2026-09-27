@@ -78,6 +78,7 @@ public class FormatViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
 
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
+    private bool _isLoadingMedia;
     private MediaItemViewModel? _selectedMedia;
     private SelectOption _sourceType;
     private string _imagePath = string.Empty;
@@ -272,6 +273,15 @@ public class FormatViewModel : ViewModelBase
     public string ErrorMessage { get => _errorMessage; set => this.RaiseAndSetIfChanged(ref _errorMessage, value); }
     public bool HasError { get => _hasError; set => this.RaiseAndSetIfChanged(ref _hasError, value); }
 
+    /// <summary>
+    /// Physical disks are being loaded
+    /// </summary>
+    public bool IsLoadingMedia
+    {
+        get => _isLoadingMedia;
+        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
+    }
+
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseFileSystemPathCommand { get; }
@@ -321,12 +331,17 @@ public class FormatViewModel : ViewModelBase
     {
         try
         {
+            IsLoadingMedia = true;
             var medias = await _mediaService.ListMediaAsync();
             MediaItems = new ObservableCollection<MediaItemViewModel>(medias.Select(m => new MediaItemViewModel
                 { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }));
             if (SelectedMedia == null && MediaItems.Count > 0) SelectedMedia = MediaItems[0];
         }
         catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
+        finally
+        {
+            IsLoadingMedia = false;
+        }
     }
 
     private async Task LoadInfoAsync()

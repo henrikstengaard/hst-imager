@@ -53,12 +53,17 @@
           </StackPanel>
           <Grid ColumnDefinitions="Auto,*,Auto">
             <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-            <ComboBox Grid.Column="1"
-                      IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                      ItemsSource="{Binding MediaItems}"
-                      SelectedItem="{Binding SelectedMedia}"
-                      DisplayMemberBinding="{Binding Label}"
-                      HorizontalAlignment="Stretch" />
+            <Panel Grid.Column="1">
+              <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                        ItemsSource="{Binding MediaItems}"
+                        SelectedItem="{Binding SelectedMedia}"
+                        DisplayMemberBinding="{Binding Label}"
+                        HorizontalAlignment="Stretch" />
+              <!-- loading indicator shown while getting physical disks -->
+              <ia:Icon Value="fa-spinner" Animation="Spin"
+                       IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+            </Panel>
             <Button Grid.Column="2" Margin="8,0,0,0"
                     IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
                     Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
