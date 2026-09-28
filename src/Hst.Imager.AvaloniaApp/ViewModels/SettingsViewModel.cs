@@ -161,7 +161,9 @@ public class SettingsViewModel : ViewModelBase
                 DebugMode = DebugMode,
                 UseCache = UseCache,
                 CacheType = _settings.CacheType,
-                ColorMode = ParseColorMode(ColorMode)
+                ColorMode = ParseColorMode(ColorMode),
+                // sidebar expanded is changed from main window and not settings page
+                SidebarExpanded = _appState.Settings.SidebarExpanded
             };
             _appState.Settings = settings;
             await _settingsService.SaveSettingsAsync(settings);

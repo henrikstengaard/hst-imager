@@ -67,6 +67,11 @@ namespace Hst.Imager.Core.Models
         /// </summary>
         public ColorModeEnum ColorMode { get; set; }
 
+        /// <summary>
+        /// Sidebar expanded showing icons with labels, otherwise collapsed showing icons only.
+        /// </summary>
+        public bool SidebarExpanded { get; set; }
+
         public Settings()
         {
             AllPhysicalDrives = false;
@@ -81,6 +86,7 @@ namespace Hst.Imager.Core.Models
             SparseFiles = true;
             StartAsAdministrator = false;
             ColorMode = ColorModeEnum.System;
+            SidebarExpanded = true;
         }
     }
 }

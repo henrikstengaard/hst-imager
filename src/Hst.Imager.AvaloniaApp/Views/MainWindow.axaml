@@ -10,75 +10,57 @@
         Width="1280" Height="720"
         MinWidth="900" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource AppWindowBackgroundBrush}">
+        Background="{DynamicResource AppWindowBackgroundBrush}"
+        x:Name="Root">
+
+  <Window.Resources>
+    <DataTemplate x:Key="NavItemTemplate" DataType="vm:NavItemViewModel">
+      <Button Classes="nav-item" Classes.active="{Binding IsActive}" Margin="0,0,0,2"
+              Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+              CommandParameter="{Binding Page}"
+              ToolTip.Tip="{Binding Title}">
+        <Grid ColumnDefinitions="3,Auto,*">
+          <Border Grid.Column="0" Classes="nav-indicator" IsVisible="{Binding IsActive}" />
+          <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+            <ia:Icon Value="{Binding Icon}" FontSize="16" HorizontalAlignment="Center" />
+          </Panel>
+          <TextBlock Grid.Column="2" Classes="nav-label" Text="{Binding Title}"
+                     IsVisible="{Binding #Root.((vm:MainWindowViewModel)DataContext).IsSidebarExpanded}" />
+        </Grid>
+      </Button>
+    </DataTemplate>
+  </Window.Resources>
 
   <Grid>
 
     <!-- Main Content Area -->
-    <Grid ColumnDefinitions="62,*">
+    <Grid ColumnDefinitions="Auto,*">
 
-      <!-- Navigation Sidebar -->
-      <Border Grid.Column="0" Background="{DynamicResource AppSidebarBackgroundBrush}">
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="2" Margin="4,8">
+      <!-- Navigation Sidebar, expanded shows icons with labels and collapsed shows icons only -->
+      <Border Grid.Column="0" Classes="sidebar" Classes.collapsed="{Binding !IsSidebarExpanded}"
+              Background="{DynamicResource AppSidebarBackgroundBrush}">
+        <DockPanel Margin="4,8">
 
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Start"
-                    Width="54" Height="52" ToolTip.Tip="Start">
-              <ia:Icon Value="fa-home" FontSize="16" />
-            </Button>
+          <Button DockPanel.Dock="Top" Classes="nav-item" Margin="0,0,0,8"
+                  Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Toggle menu">
+            <Grid ColumnDefinitions="3,Auto,*">
+              <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+                <ia:Icon Value="fa-bars" FontSize="16" HorizontalAlignment="Center" />
+              </Panel>
+              <TextBlock Grid.Column="2" Classes="nav-label" Text="Hst Imager" FontWeight="SemiBold"
+                         IsVisible="{Binding IsSidebarExpanded}" />
+            </Grid>
+          </Button>
 
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Read"
-                    Width="54" Height="52" ToolTip.Tip="Read">
-              <ia:Icon Value="fa-upload" FontSize="16" />
-            </Button>
+          <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding FooterNavItems}"
+                        ItemTemplate="{StaticResource NavItemTemplate}" />
 
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Write"
-                    Width="54" Height="52" ToolTip.Tip="Write">
-              <ia:Icon Value="fa-download" FontSize="16" />
-            </Button>
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding NavItems}"
+                          ItemTemplate="{StaticResource NavItemTemplate}" />
+          </ScrollViewer>
 
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Info"
-                    Width="54" Height="52" ToolTip.Tip="Info">
-              <ia:Icon Value="fa-info" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Transfer"
-                    Width="54" Height="52" ToolTip.Tip="Transfer">
-              <ia:Icon Value="fa-exchange-alt" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Compare"
-                    Width="54" Height="52" ToolTip.Tip="Compare">
-              <ia:Icon Value="fa-check" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Blank"
-                    Width="54" Height="52" ToolTip.Tip="Blank">
-              <ia:Icon Value="fa-plus" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Optimize"
-                    Width="54" Height="52" ToolTip.Tip="Optimize">
-              <ia:Icon Value="fa-compress" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Format"
-                    Width="54" Height="52" ToolTip.Tip="Format">
-              <ia:Icon Value="fa-eraser" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="Settings"
-                    Width="54" Height="52" ToolTip.Tip="Settings">
-              <ia:Icon Value="fa-cog" FontSize="16" />
-            </Button>
-
-            <Button Classes="nav-item" Command="{Binding NavigateToCommand}" CommandParameter="About"
-                    Width="54" Height="52" ToolTip.Tip="About">
-              <ia:Icon Value="fa-question" FontSize="16" />
-            </Button>
-
-          </StackPanel>
-        </ScrollViewer>
+        </DockPanel>
       </Border>
 
       <!-- Page Content -->

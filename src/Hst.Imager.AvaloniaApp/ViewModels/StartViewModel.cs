@@ -24,8 +24,8 @@ public class StartViewModel : ViewModelBase
 
     public List<StartAction> Actions { get; } =
     [
-        new() { Title = "Read", Description = "Read a physical disk or part of to an image file.", Page = "Read", Icon = "fa-upload" },
-        new() { Title = "Write", Description = "Write an image file or part of to a physical disk.", Page = "Write", Icon = "fa-download" },
+        new() { Title = "Read", Description = "Read a physical disk or part of to an image file.", Page = "Read", Icon = "fa-file-import" },
+        new() { Title = "Write", Description = "Write an image file or part of to a physical disk.", Page = "Write", Icon = "fa-file-export" },
         new() { Title = "Info", Description = "Display information about an image file or a physical disk.", Page = "Info", Icon = "fa-info" },
         new() { Title = "Transfer", Description = "Transfer converts, imports or exports from an image file or part of to another.", Page = "Transfer", Icon = "fa-exchange-alt" },
         new() { Title = "Compare", Description = "Compare image files and physical disks byte by byte.", Page = "Compare", Icon = "fa-check" },

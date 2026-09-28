@@ -16,107 +16,113 @@
         <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
       </Border>
 
-      <!-- Source -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-upload" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Source" />
-      </StackPanel>
-      <ComboBox ItemsSource="{Binding SourceTypeOptions}"
-                SelectedItem="{Binding SourceType}"
-                DisplayMemberBinding="{Binding Title}"
-                HorizontalAlignment="Stretch" />
+      <!-- Source and destination side by side, when there is room for it -->
+      <controls:ResponsiveColumns>
+        <StackPanel Spacing="8">
+          <!-- Source -->
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-upload" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Source" />
+          </StackPanel>
+          <ComboBox ItemsSource="{Binding SourceTypeOptions}"
+                    SelectedItem="{Binding SourceType}"
+                    DisplayMemberBinding="{Binding Title}"
+                    HorizontalAlignment="Stretch" />
 
-      <!-- Source: image file -->
-      <StackPanel Spacing="4" IsVisible="{Binding SourceIsImageFile}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-file" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Source image file" />
+          <!-- Source: image file -->
+          <StackPanel Spacing="4" IsVisible="{Binding SourceIsImageFile}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-file" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Source image file" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
+              <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}" ToolTip.Tip="Browse">
+                <ia:Icon Value="fa-folder-open" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <!-- Source: physical disk -->
+          <StackPanel Spacing="4" IsVisible="{Binding SourceIsPhysicalDisk}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-hdd" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Source physical disk" />
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
+              <Panel Grid.Column="1">
+                <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                          ItemsSource="{Binding MediaItems}"
+                          SelectedItem="{Binding SourceDisk}"
+                          DisplayMemberBinding="{Binding Label}"
+                          HorizontalAlignment="Stretch" />
+                <!-- loading indicator shown while getting physical disks -->
+                <ia:Icon Value="fa-spinner" Animation="Spin"
+                         IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+              </Panel>
+              <Button Grid.Column="2" Margin="8,0,0,0"
+                      IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                      Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+                <ia:Icon Value="fa-sync-alt" />
+              </Button>
+            </Grid>
+          </StackPanel>
         </StackPanel>
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
-          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}" ToolTip.Tip="Browse">
-            <ia:Icon Value="fa-folder-open" />
-          </Button>
-        </Grid>
-      </StackPanel>
+        <StackPanel Spacing="8">
+          <!-- Destination -->
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-download" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Destination" />
+          </StackPanel>
+          <ComboBox ItemsSource="{Binding SourceTypeOptions}"
+                    SelectedItem="{Binding DestType}"
+                    DisplayMemberBinding="{Binding Title}"
+                    HorizontalAlignment="Stretch" />
 
-      <!-- Source: physical disk -->
-      <StackPanel Spacing="4" IsVisible="{Binding SourceIsPhysicalDisk}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-hdd" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Source physical disk" />
+          <!-- Destination: image file -->
+          <StackPanel Spacing="4" IsVisible="{Binding DestIsImageFile}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-file" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Destination image file" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding DestinationPath}" />
+              <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}" ToolTip.Tip="Browse">
+                <ia:Icon Value="fa-folder-open" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <!-- Destination: physical disk -->
+          <StackPanel Spacing="4" IsVisible="{Binding DestIsPhysicalDisk}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-hdd" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Destination physical disk" />
+            </StackPanel>
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
+              <Panel Grid.Column="1">
+                <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                          ItemsSource="{Binding MediaItems}"
+                          SelectedItem="{Binding DestDisk}"
+                          DisplayMemberBinding="{Binding Label}"
+                          HorizontalAlignment="Stretch" />
+                <!-- loading indicator shown while getting physical disks -->
+                <ia:Icon Value="fa-spinner" Animation="Spin"
+                         IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                         HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+              </Panel>
+              <Button Grid.Column="2" Margin="8,0,0,0"
+                      IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                      Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+                <ia:Icon Value="fa-sync-alt" />
+              </Button>
+            </Grid>
+          </StackPanel>
         </StackPanel>
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-          <Panel Grid.Column="1">
-            <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                      ItemsSource="{Binding MediaItems}"
-                      SelectedItem="{Binding SourceDisk}"
-                      DisplayMemberBinding="{Binding Label}"
-                      HorizontalAlignment="Stretch" />
-            <!-- loading indicator shown while getting physical disks -->
-            <ia:Icon Value="fa-spinner" Animation="Spin"
-                     IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-          </Panel>
-          <Button Grid.Column="2" Margin="8,0,0,0"
-                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                  Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
-            <ia:Icon Value="fa-sync-alt" />
-          </Button>
-        </Grid>
-      </StackPanel>
-
-      <!-- Destination -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-download" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Destination" />
-      </StackPanel>
-      <ComboBox ItemsSource="{Binding SourceTypeOptions}"
-                SelectedItem="{Binding DestType}"
-                DisplayMemberBinding="{Binding Title}"
-                HorizontalAlignment="Stretch" />
-
-      <!-- Destination: image file -->
-      <StackPanel Spacing="4" IsVisible="{Binding DestIsImageFile}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-file" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Destination image file" />
-        </StackPanel>
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBox Grid.Column="0" Text="{Binding DestinationPath}" />
-          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}" ToolTip.Tip="Browse">
-            <ia:Icon Value="fa-folder-open" />
-          </Button>
-        </Grid>
-      </StackPanel>
-
-      <!-- Destination: physical disk -->
-      <StackPanel Spacing="4" IsVisible="{Binding DestIsPhysicalDisk}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-hdd" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Destination physical disk" />
-        </StackPanel>
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-          <Panel Grid.Column="1">
-            <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                      ItemsSource="{Binding MediaItems}"
-                      SelectedItem="{Binding DestDisk}"
-                      DisplayMemberBinding="{Binding Label}"
-                      HorizontalAlignment="Stretch" />
-            <!-- loading indicator shown while getting physical disks -->
-            <ia:Icon Value="fa-spinner" Animation="Spin"
-                     IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-          </Panel>
-          <Button Grid.Column="2" Margin="8,0,0,0"
-                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                  Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
-            <ia:Icon Value="fa-sync-alt" />
-          </Button>
-        </Grid>
-      </StackPanel>
+      </controls:ResponsiveColumns>
 
       <!-- Advanced -->
       <Expander IsExpanded="False" HorizontalAlignment="Stretch">

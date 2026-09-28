@@ -14,29 +14,35 @@
         <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
       </Border>
 
-      <!-- Source image file -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-upload" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Source image file" />
-      </StackPanel>
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}" ToolTip.Tip="Browse">
-          <ia:Icon Value="fa-folder-open" />
-        </Button>
-      </Grid>
-
-      <!-- Destination image file -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-download" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Destination image file" />
-      </StackPanel>
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0" Text="{Binding DestinationPath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}" ToolTip.Tip="Browse">
-          <ia:Icon Value="fa-folder-open" />
-        </Button>
-      </Grid>
+      <!-- Source and destination side by side, when there is room for it -->
+      <controls:ResponsiveColumns>
+        <StackPanel Spacing="8">
+          <!-- Source image file -->
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-upload" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Source image file" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSourceCommand}" ToolTip.Tip="Browse">
+              <ia:Icon Value="fa-folder-open" />
+            </Button>
+          </Grid>
+        </StackPanel>
+        <StackPanel Spacing="8">
+          <!-- Destination image file -->
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-download" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Destination image file" />
+          </StackPanel>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0" Text="{Binding DestinationPath}" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseDestinationCommand}" ToolTip.Tip="Browse">
+              <ia:Icon Value="fa-folder-open" />
+            </Button>
+          </Grid>
+        </StackPanel>
+      </controls:ResponsiveColumns>
 
       <!-- Advanced -->
       <Expander IsExpanded="False" HorizontalAlignment="Stretch">

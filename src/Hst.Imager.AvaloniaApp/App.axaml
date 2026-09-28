@@ -15,6 +15,7 @@
           <SolidColorBrush x:Key="AppNavForegroundBrush" Color="#AAAAAA" />
           <SolidColorBrush x:Key="AppNavActiveForegroundBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="AppNavHoverBackgroundBrush" Color="#2D3F4C" />
+          <SolidColorBrush x:Key="AppNavActiveBackgroundBrush" Color="#243340" />
           <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#FFFFFF" />
           <SolidColorBrush x:Key="AppBodyForegroundBrush" Color="#CCCCCC" />
           <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#AAAAAA" />
@@ -48,6 +49,7 @@
           <SolidColorBrush x:Key="AppNavForegroundBrush" Color="#5A6670" />
           <SolidColorBrush x:Key="AppNavActiveForegroundBrush" Color="#000000" />
           <SolidColorBrush x:Key="AppNavHoverBackgroundBrush" Color="#C8D1D8" />
+          <SolidColorBrush x:Key="AppNavActiveBackgroundBrush" Color="#F3F5F7" />
           <SolidColorBrush x:Key="AppStrongForegroundBrush" Color="#1A1A1A" />
           <SolidColorBrush x:Key="AppBodyForegroundBrush" Color="#333333" />
           <SolidColorBrush x:Key="AppSecondaryForegroundBrush" Color="#555555" />
@@ -113,19 +115,46 @@
       <Setter Property="Background" Value="{DynamicResource AppWindowBackgroundBrush}" />
     </Style>
 
+    <Style Selector="Border.sidebar">
+      <Setter Property="Width" Value="200" />
+    </Style>
+    <Style Selector="Border.sidebar.collapsed">
+      <Setter Property="Width" Value="62" />
+    </Style>
+
     <Style Selector="Button.nav-item">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppNavForegroundBrush}" />
       <Setter Property="Padding" Value="0" />
-      <Setter Property="HorizontalContentAlignment" Value="Center" />
-      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Height" Value="44" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="VerticalContentAlignment" Value="Stretch" />
       <Setter Property="BorderThickness" Value="0" />
     </Style>
     <Style Selector="Button.nav-item:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="{DynamicResource AppNavHoverBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppNavActiveForegroundBrush}" />
     </Style>
     <Style Selector="Button.nav-item.active">
       <Setter Property="Foreground" Value="{DynamicResource AppNavActiveForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.nav-item.active /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppNavActiveBackgroundBrush}" />
+    </Style>
+    <Style Selector="Button.nav-item.active:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppNavHoverBackgroundBrush}" />
+    </Style>
+    <Style Selector="Border.nav-indicator">
+      <Setter Property="Background" Value="{DynamicResource AppPrimaryBackgroundBrush}" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="Margin" Value="0,8" />
+    </Style>
+    <Style Selector="TextBlock.nav-label">
+      <Setter Property="Margin" Value="14,0,8,0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="FontSize" Value="14" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
     </Style>
 
     <Style Selector="TextBlock.page-title">
@@ -158,8 +187,8 @@
     </Style>
 
     <Style Selector="TextBlock.field-label">
-      <Setter Property="Foreground" Value="{DynamicResource AppSecondaryForegroundBrush}" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource AppBodyForegroundBrush}" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
 
     <Style Selector="TextBlock.field-help">
@@ -168,8 +197,8 @@
     </Style>
 
     <Style Selector="ia|Icon.field-icon">
-      <Setter Property="Foreground" Value="{DynamicResource AppSecondaryForegroundBrush}" />
-      <Setter Property="FontSize" Value="12" />
+      <Setter Property="Foreground" Value="{DynamicResource AppBodyForegroundBrush}" />
+      <Setter Property="FontSize" Value="13" />
     </Style>
 
     <Style Selector="TextBlock.section-title">
