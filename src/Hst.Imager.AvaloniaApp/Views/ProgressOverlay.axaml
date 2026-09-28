@@ -50,7 +50,7 @@
             <TextBlock Foreground="{DynamicResource AppFailureForegroundBrush}" TextWrapping="Wrap" MaxWidth="480"
                        Text="{Binding ErrorMessage, StringFormat='Failed: {0}'}" />
           </StackPanel>
-          <Button Command="{Binding OkCommand}" Classes="accent" HorizontalAlignment="Center" MinWidth="80"
+          <Button Command="{Binding OkCommand}" Classes="primary" HorizontalAlignment="Center" MinWidth="80"
                   HorizontalContentAlignment="Center">Ok</Button>
         </StackPanel>
 

@@ -2,13 +2,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
 
-  <ScrollViewer>
-    <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
-      <TextBlock Classes="page-title" Text="Settings" />
-      <TextBlock Classes="page-description" Text="Configure settings for appearance, read, write, and debug." />
+  <controls:PageLayout Title="Settings"
+                       Description="Configure settings for appearance, read, write, and debug.">
+    <StackPanel Spacing="8">
 
       <TextBlock Classes="field-label" Text="Color mode" />
       <ComboBox ItemsSource="{Binding ColorModeOptions}"
@@ -78,5 +78,5 @@
         </StackPanel>
       </Button>
     </StackPanel>
-  </ScrollViewer>
+  </controls:PageLayout>
 </UserControl>

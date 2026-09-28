@@ -7,7 +7,7 @@
              x:Name="Root">
 
   <ScrollViewer>
-    <ItemsControl ItemsSource="{Binding Actions}" Margin="0,8">
+    <ItemsControl ItemsSource="{Binding Actions}" Margin="12">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
           <UniformGrid Columns="2" />

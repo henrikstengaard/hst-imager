@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Hst.Imager.AvaloniaApp.App"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              RequestedThemeVariant="Default">
 
   <!-- Color mode brushes, default variant follows operating system light or dark mode -->
@@ -31,6 +32,15 @@
           <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#CC3333" />
           <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#66B3FF" />
           <SolidColorBrush x:Key="AppLinkHoverForegroundBrush" Color="#99CCFF" />
+          <SolidColorBrush x:Key="AppDividerBrush" Color="#2D3F4C" />
+          <SolidColorBrush x:Key="AppActionBarBackgroundBrush" Color="#0F1E28" />
+          <SolidColorBrush x:Key="AppPrimaryBackgroundBrush" Color="#2F80D0" />
+          <SolidColorBrush x:Key="AppPrimaryHoverBackgroundBrush" Color="#4A94DC" />
+          <SolidColorBrush x:Key="AppPrimaryPressedBackgroundBrush" Color="#276DB2" />
+          <SolidColorBrush x:Key="AppDangerBackgroundBrush" Color="#C62828" />
+          <SolidColorBrush x:Key="AppDangerHoverBackgroundBrush" Color="#D84343" />
+          <SolidColorBrush x:Key="AppDangerPressedBackgroundBrush" Color="#A82222" />
+          <SolidColorBrush x:Key="AppOnColorForegroundBrush" Color="#FFFFFF" />
         </ResourceDictionary>
         <ResourceDictionary x:Key="Light">
           <SolidColorBrush x:Key="AppWindowBackgroundBrush" Color="#F3F5F7" />
@@ -55,8 +65,43 @@
           <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#C62828" />
           <SolidColorBrush x:Key="AppLinkForegroundBrush" Color="#0063B1" />
           <SolidColorBrush x:Key="AppLinkHoverForegroundBrush" Color="#004A85" />
+          <SolidColorBrush x:Key="AppDividerBrush" Color="#C8D1D8" />
+          <SolidColorBrush x:Key="AppActionBarBackgroundBrush" Color="#E8ECEF" />
+          <SolidColorBrush x:Key="AppPrimaryBackgroundBrush" Color="#1F6FBF" />
+          <SolidColorBrush x:Key="AppPrimaryHoverBackgroundBrush" Color="#2B7FD3" />
+          <SolidColorBrush x:Key="AppPrimaryPressedBackgroundBrush" Color="#195C9E" />
+          <SolidColorBrush x:Key="AppDangerBackgroundBrush" Color="#C62828" />
+          <SolidColorBrush x:Key="AppDangerHoverBackgroundBrush" Color="#D63B3B" />
+          <SolidColorBrush x:Key="AppDangerPressedBackgroundBrush" Color="#A82222" />
+          <SolidColorBrush x:Key="AppOnColorForegroundBrush" Color="#FFFFFF" />
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
+
+      <!-- Page layout with fixed header, scrollable full width content and fixed action bar -->
+      <ControlTheme x:Key="{x:Type controls:PageLayout}" TargetType="controls:PageLayout">
+        <Setter Property="Template">
+          <ControlTemplate>
+            <Grid RowDefinitions="Auto,*,Auto">
+              <StackPanel Grid.Row="0" Margin="16,16,16,0"
+                          IsVisible="{TemplateBinding Title, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <TextBlock Classes="page-title" Text="{TemplateBinding Title}" />
+                <TextBlock Classes="page-description" Text="{TemplateBinding Description}" TextWrapping="Wrap"
+                           IsVisible="{TemplateBinding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+              </StackPanel>
+              <ScrollViewer Grid.Row="1">
+                <ContentPresenter Name="PART_ContentPresenter"
+                                  Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  Margin="16,0,20,16" />
+              </ScrollViewer>
+              <Border Grid.Row="2" Classes="action-bar"
+                      IsVisible="{TemplateBinding Actions, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <ContentPresenter Content="{TemplateBinding Actions}" />
+              </Border>
+            </Grid>
+          </ControlTemplate>
+        </Setter>
+      </ControlTheme>
     </ResourceDictionary>
   </Application.Resources>
 
@@ -154,6 +199,50 @@
     <Style Selector="Button.link:pointerover /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="Foreground" Value="{DynamicResource AppLinkHoverForegroundBrush}" />
+    </Style>
+
+    <Style Selector="Border.action-bar">
+      <Setter Property="Background" Value="{DynamicResource AppActionBarBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppDividerBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+      <Setter Property="Padding" Value="16,10,20,10" />
+    </Style>
+    <Style Selector="Border.action-bar Button">
+      <Setter Property="MinWidth" Value="120" />
+      <Setter Property="MinHeight" Value="36" />
+      <Setter Property="Padding" Value="16,6" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+
+    <!-- Primary action button, e.g. start read -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="{DynamicResource AppPrimaryBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppPrimaryHoverBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppPrimaryPressedBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
+    </Style>
+
+    <!-- Destructive action button overwriting data, e.g. start write -->
+    <Style Selector="Button.danger">
+      <Setter Property="Background" Value="{DynamicResource AppDangerBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppDangerHoverBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
+    </Style>
+    <Style Selector="Button.danger:pressed /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppDangerPressedBackgroundBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource AppOnColorForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBox">

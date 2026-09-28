@@ -53,7 +53,7 @@ public class TransferViewModel : ViewModelBase
         StartTransferCommand = ReactiveCommand.CreateFromTask(StartTransferAsync,
             this.WhenAnyValue(x => x.SourcePath, x => x.DestinationPath, x => x.Progress.IsRunning,
                 (src, dst, running) => !string.IsNullOrWhiteSpace(src) && !string.IsNullOrWhiteSpace(dst) && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel);
+        BackCommand = ReactiveCommand.Create(Back);
 
         this.WhenAnyValue(x => x.SourcePath)
             .Throttle(TimeSpan.FromMilliseconds(500))
@@ -126,7 +126,7 @@ public class TransferViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartTransferCommand { get; }
-    public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+    public ReactiveCommand<Unit, Unit> BackCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -212,5 +212,5 @@ public class TransferViewModel : ViewModelBase
                 progress, token));
     }
 
-    private void Cancel() => _navigationService.NavigateTo("Start");
+    private void Back() => _navigationService.NavigateTo("Start");
 }

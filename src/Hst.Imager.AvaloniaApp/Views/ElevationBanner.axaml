@@ -12,7 +12,7 @@
                VerticalAlignment="Center" Margin="0,0,8,0" />
       <TextBlock Grid.Column="1" TextWrapping="Wrap" VerticalAlignment="Center"
                  Text="Administrator privileges are required to access physical disks." />
-      <Button Grid.Column="2" Margin="8,0,0,0" Classes="accent" VerticalAlignment="Center"
+      <Button Grid.Column="2" Margin="8,0,0,0" Classes="primary" VerticalAlignment="Center"
               Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ElevateCommand}">
         <StackPanel Orientation="Horizontal" Spacing="6">
           <ia:Icon Value="fa-shield-halved" />

@@ -44,7 +44,7 @@ public class OptimizeViewModel : ViewModelBase
         StartOptimizeCommand = ReactiveCommand.CreateFromTask(StartOptimizeAsync,
             this.WhenAnyValue(x => x.ImagePath, x => x.HasMedia, x => x.Progress.IsRunning,
                 (path, hasMedia, running) => !string.IsNullOrWhiteSpace(path) && hasMedia && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel);
+        BackCommand = ReactiveCommand.Create(Back);
 
         this.WhenAnyValue(x => x.ImagePath)
             .Throttle(TimeSpan.FromMilliseconds(500))
@@ -120,7 +120,7 @@ public class OptimizeViewModel : ViewModelBase
 
     public ReactiveCommand<Unit, Unit> BrowseImageCommand { get; }
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
-    public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+    public ReactiveCommand<Unit, Unit> BackCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -204,5 +204,5 @@ public class OptimizeViewModel : ViewModelBase
             _imagingService.OptimizeAsync(path, size, byteswap, progress, token));
     }
 
-    private void Cancel() => _navigationService.NavigateTo("Start");
+    private void Back() => _navigationService.NavigateTo("Start");
 }

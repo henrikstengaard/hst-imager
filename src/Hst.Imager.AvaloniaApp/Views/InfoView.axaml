@@ -3,18 +3,16 @@
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
              xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.InfoView"
              x:DataType="vm:InfoViewModel">
 
-  <ScrollViewer>
-    <StackPanel Spacing="12" Margin="0,8">
+  <controls:PageLayout Title="Info"
+                       Description="Display information about an image file or a physical disk.">
+    <StackPanel Spacing="12">
 
-      <StackPanel Spacing="8" MaxWidth="700" HorizontalAlignment="Left">
+      <StackPanel Spacing="8">
         <views:ElevationBanner />
-
-        <TextBlock Classes="page-title" Text="Info" />
-        <TextBlock Classes="page-description"
-                   Text="Display information about an image file or a physical disk." />
 
         <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
                 IsVisible="{Binding HasError}">
@@ -97,21 +95,6 @@
             <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
           </StackPanel>
         </Expander>
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
-          <Button Command="{Binding CancelCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-ban" />
-              <TextBlock Text="Cancel" />
-            </StackPanel>
-          </Button>
-          <Button Command="{Binding GetInfoCommand}" Classes="accent">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-info" />
-              <TextBlock Text="Get info" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
       </StackPanel>
 
       <!-- Loading indicator -->
@@ -301,5 +284,22 @@
       </TabControl>
 
     </StackPanel>
-  </ScrollViewer>
+
+    <controls:PageLayout.Actions>
+      <DockPanel>
+        <Button DockPanel.Dock="Left" Command="{Binding BackCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-arrow-left" />
+            <TextBlock Text="Back" />
+          </StackPanel>
+        </Button>
+        <Button HorizontalAlignment="Right" Command="{Binding GetInfoCommand}" Classes="primary">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-info" />
+            <TextBlock Text="Get info" />
+          </StackPanel>
+        </Button>
+      </DockPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
 </UserControl>

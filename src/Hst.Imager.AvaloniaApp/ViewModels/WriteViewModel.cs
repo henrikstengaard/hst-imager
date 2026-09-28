@@ -49,7 +49,7 @@ public class WriteViewModel : ViewModelBase
         StartWriteCommand = ReactiveCommand.CreateFromTask(StartWriteAsync,
             this.WhenAnyValue(x => x.SelectedMedia, x => x.SourcePath, x => x.Progress.IsRunning,
                 (media, src, running) => media != null && !string.IsNullOrWhiteSpace(src) && !running));
-        CancelCommand = ReactiveCommand.Create(Cancel);
+        BackCommand = ReactiveCommand.Create(Back);
 
         _ = RefreshMediaAsync();
     }
@@ -126,7 +126,7 @@ public class WriteViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> StartWriteCommand { get; }
-    public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+    public ReactiveCommand<Unit, Unit> BackCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -216,5 +216,5 @@ public class WriteViewModel : ViewModelBase
             _imagingService.WriteAsync(sourcePath, destPath, startOffset, size, byteswap, progress, token));
     }
 
-    private void Cancel() => _navigationService.NavigateTo("Start");
+    private void Back() => _navigationService.NavigateTo("Start");
 }

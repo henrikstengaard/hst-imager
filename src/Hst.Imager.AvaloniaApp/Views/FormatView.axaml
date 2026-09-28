@@ -3,182 +3,183 @@
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
              xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.FormatView"
              x:DataType="vm:FormatViewModel">
 
-    <ScrollViewer>
-      <StackPanel Spacing="8" Margin="0,8" MaxWidth="700" HorizontalAlignment="Left">
-        <views:ElevationBanner />
+  <controls:PageLayout Title="Format"
+                       Description="Format a physical disk or an image file.">
+    <StackPanel Spacing="8">
+      <views:ElevationBanner />
 
-        <TextBlock Classes="page-title" Text="Format" />
-        <TextBlock Classes="page-description" Text="Format a physical disk or an image file." />
+      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
+        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+      </Border>
 
-        <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
-          <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
-        </Border>
-
-        <!-- Source -->
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-upload" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Source" />
-        </StackPanel>
-        <ComboBox ItemsSource="{Binding SourceTypeOptions}"
-                  SelectedItem="{Binding SourceType}"
-                  DisplayMemberBinding="{Binding Title}"
-                  HorizontalAlignment="Stretch" />
-
-        <!-- Source: image file -->
-        <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-file" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Source image file" />
-          </StackPanel>
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
-            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
-              <ia:Icon Value="fa-folder-open" />
-            </Button>
-          </Grid>
-        </StackPanel>
-
-        <!-- Source: physical disk -->
-        <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-hdd" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Source physical disk" />
-          </StackPanel>
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-            <Panel Grid.Column="1">
-              <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                        ItemsSource="{Binding MediaItems}" SelectedItem="{Binding SelectedMedia}"
-                        DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
-              <!-- loading indicator shown while getting physical disks -->
-              <ia:Icon Value="fa-spinner" Animation="Spin"
-                       IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-            </Panel>
-            <Button Grid.Column="2" Margin="8,0,0,0"
-                    IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                    Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
-              <ia:Icon Value="fa-sync-alt" />
-            </Button>
-          </Grid>
-        </StackPanel>
-
-        <!-- Format type -->
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-sliders" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Format type" />
-        </StackPanel>
-        <ComboBox ItemsSource="{Binding FormatTypeOptions}"
-                  SelectedItem="{Binding SelectedFormatType}"
-                  DisplayMemberBinding="{Binding Title}"
-                  PlaceholderText="None available"
-                  HorizontalAlignment="Stretch" />
-
-        <!-- File system -->
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-sliders" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="File system" />
-        </StackPanel>
-        <ComboBox ItemsSource="{Binding FileSystemOptions}"
-                  SelectedItem="{Binding SelectedFileSystem}"
-                  DisplayMemberBinding="{Binding Title}"
-                  PlaceholderText="None available"
-                  HorizontalAlignment="Stretch" />
-
-        <CheckBox Content="Download pfs3aio from aminet.net"
-                  IsChecked="{Binding DownloadPfs3Aio}"
-                  IsVisible="{Binding ShowDownloadPfs3Aio}" />
-
-        <!-- File system file -->
-        <StackPanel Spacing="4" IsVisible="{Binding ShowFileSystemPath}">
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-file" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="File system file" />
-          </StackPanel>
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0" Text="{Binding FileSystemPath}" />
-            <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseFileSystemPathCommand}" ToolTip.Tip="Browse">
-              <ia:Icon Value="fa-folder-open" />
-            </Button>
-          </Grid>
-        </StackPanel>
-
-        <!-- Advanced -->
-        <Expander IsExpanded="False" HorizontalAlignment="Stretch">
-          <Expander.Header>
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-gear" />
-              <TextBlock Text="Advanced" />
-            </StackPanel>
-          </Expander.Header>
-          <StackPanel Spacing="8" Margin="0,8">
-
-            <Grid ColumnDefinitions="2*,*,Auto" RowDefinitions="Auto,Auto">
-              <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
-                <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
-                <TextBlock Classes="field-label" Text="Size" />
-              </StackPanel>
-              <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
-                             IsEnabled="{Binding HasMedia}" />
-              <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
-                <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
-                <TextBlock Classes="field-label" Text="Unit" />
-              </StackPanel>
-              <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
-                        ItemsSource="{x:Static vm:FormatViewModel.SizeUnits}"
-                        SelectedItem="{Binding SizeUnit}"
-                        IsEnabled="{Binding HasMedia}" />
-              <Button Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
-                      Command="{Binding ResetSizeCommand}"
-                      IsEnabled="{Binding HasMedia}"
-                      ToolTip.Tip="Reset">
-                <ia:Icon Value="fa-rotate-left" />
-              </Button>
-            </Grid>
-
-            <StackPanel Spacing="8" IsVisible="{Binding IsRdbFormat}">
-              <StackPanel Spacing="4" IsVisible="{Binding ShowUseExperimental}">
-                <CheckBox Content="Use PFS3 experimental partition sizes" IsChecked="{Binding UseExperimental}" />
-                <Border Classes="warning">
-                  <TextBlock TextWrapping="Wrap"
-                             Text="Using PFS3 experimental partition sizes might cause data loss and/or corruption." />
-                </Border>
-              </StackPanel>
-
-              <CheckBox IsChecked="{Binding Kickstart31}">
-                <TextBlock TextWrapping="Wrap"
-                           Text="Create Workbench partition size for Kickstart v3.1 or lower within first 4GB." />
-              </CheckBox>
-
-              <TextBlock Classes="field-label" Text="Max partition size" />
-              <ComboBox ItemsSource="{Binding MaxPartitionSizeOptions}"
-                        SelectedItem="{Binding MaxPartitionSize}"
-                        DisplayMemberBinding="{Binding Title}"
-                        PlaceholderText="None available"
-                        HorizontalAlignment="Stretch" />
-            </StackPanel>
-
-            <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
-          </StackPanel>
-        </Expander>
-
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
-          <Button Command="{Binding CancelCommand}">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-ban" />
-              <TextBlock Text="Cancel" />
-            </StackPanel>
-          </Button>
-          <Button Command="{Binding StartFormatCommand}" Classes="accent">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-check" />
-              <TextBlock Text="Format" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
+      <!-- Source -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-upload" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Source" />
       </StackPanel>
-    </ScrollViewer>
+      <ComboBox ItemsSource="{Binding SourceTypeOptions}"
+                SelectedItem="{Binding SourceType}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+
+      <!-- Source: image file -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Source image file" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Source: physical disk -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-hdd" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Source physical disk" />
+        </StackPanel>
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
+          <Panel Grid.Column="1">
+            <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                      ItemsSource="{Binding MediaItems}" SelectedItem="{Binding SelectedMedia}"
+                      DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
+            <!-- loading indicator shown while getting physical disks -->
+            <ia:Icon Value="fa-spinner" Animation="Spin"
+                     IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+          </Panel>
+          <Button Grid.Column="2" Margin="8,0,0,0"
+                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                  Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+            <ia:Icon Value="fa-sync-alt" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Format type -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-sliders" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Format type" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding FormatTypeOptions}"
+                SelectedItem="{Binding SelectedFormatType}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+
+      <!-- File system -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-sliders" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="File system" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding FileSystemOptions}"
+                SelectedItem="{Binding SelectedFileSystem}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+
+      <CheckBox Content="Download pfs3aio from aminet.net"
+                IsChecked="{Binding DownloadPfs3Aio}"
+                IsVisible="{Binding ShowDownloadPfs3Aio}" />
+
+      <!-- File system file -->
+      <StackPanel Spacing="4" IsVisible="{Binding ShowFileSystemPath}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="File system file" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding FileSystemPath}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseFileSystemPathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Advanced -->
+      <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+        <Expander.Header>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-gear" />
+            <TextBlock Text="Advanced" />
+          </StackPanel>
+        </Expander.Header>
+        <StackPanel Spacing="8" Margin="0,8">
+
+          <Grid ColumnDefinitions="2*,*,Auto" RowDefinitions="Auto,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+              <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Size" />
+            </StackPanel>
+            <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                           IsEnabled="{Binding HasMedia}" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+              <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Unit" />
+            </StackPanel>
+            <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                      ItemsSource="{x:Static vm:FormatViewModel.SizeUnits}"
+                      SelectedItem="{Binding SizeUnit}"
+                      IsEnabled="{Binding HasMedia}" />
+            <Button Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
+                    Command="{Binding ResetSizeCommand}"
+                    IsEnabled="{Binding HasMedia}"
+                    ToolTip.Tip="Reset">
+              <ia:Icon Value="fa-rotate-left" />
+            </Button>
+          </Grid>
+
+          <StackPanel Spacing="8" IsVisible="{Binding IsRdbFormat}">
+            <StackPanel Spacing="4" IsVisible="{Binding ShowUseExperimental}">
+              <CheckBox Content="Use PFS3 experimental partition sizes" IsChecked="{Binding UseExperimental}" />
+              <Border Classes="warning">
+                <TextBlock TextWrapping="Wrap"
+                           Text="Using PFS3 experimental partition sizes might cause data loss and/or corruption." />
+              </Border>
+            </StackPanel>
+
+            <CheckBox IsChecked="{Binding Kickstart31}">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Create Workbench partition size for Kickstart v3.1 or lower within first 4GB." />
+            </CheckBox>
+
+            <TextBlock Classes="field-label" Text="Max partition size" />
+            <ComboBox ItemsSource="{Binding MaxPartitionSizeOptions}"
+                      SelectedItem="{Binding MaxPartitionSize}"
+                      DisplayMemberBinding="{Binding Title}"
+                      PlaceholderText="None available"
+                      HorizontalAlignment="Stretch" />
+          </StackPanel>
+
+          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <DockPanel>
+        <Button DockPanel.Dock="Left" Command="{Binding BackCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-arrow-left" />
+            <TextBlock Text="Back" />
+          </StackPanel>
+        </Button>
+        <Button HorizontalAlignment="Right" Command="{Binding StartFormatCommand}" Classes="danger">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-check" />
+            <TextBlock Text="Format" />
+          </StackPanel>
+        </Button>
+      </DockPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
 </UserControl>

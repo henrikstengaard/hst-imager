@@ -128,7 +128,7 @@ public class FormatViewModel : ViewModelBase
             this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia,
                 x => x.SelectedFormatType, x => x.FileSystemPath, x => x.Progress.IsRunning,
                 (_, _, _, _, _, running) => !running && CanFormat));
-        CancelCommand = ReactiveCommand.Create(Cancel);
+        BackCommand = ReactiveCommand.Create(Back);
 
         this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia)
             .Throttle(TimeSpan.FromMilliseconds(500))
@@ -287,7 +287,7 @@ public class FormatViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseFileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetSizeCommand { get; }
     public ReactiveCommand<Unit, Unit> StartFormatCommand { get; }
-    public ReactiveCommand<Unit, Unit> CancelCommand { get; }
+    public ReactiveCommand<Unit, Unit> BackCommand { get; }
 
     private string? EffectivePath => IsImageFile ? _imagePath : _selectedMedia?.Path;
 
@@ -410,5 +410,5 @@ public class FormatViewModel : ViewModelBase
                 useExperimental, kickstart31, byteswap, progress, token));
     }
 
-    private void Cancel() => _navigationService.NavigateTo("Start");
+    private void Back() => _navigationService.NavigateTo("Start");
 }

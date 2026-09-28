@@ -1,12 +1,12 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.AboutView"
              x:DataType="vm:AboutViewModel">
 
-  <ScrollViewer>
-    <StackPanel Spacing="8" Margin="0,8">
-      <TextBlock Classes="page-title" Text="About" />
+  <controls:PageLayout Title="About">
+    <StackPanel Spacing="8">
 
       <TextBlock Text="{Binding VersionText}" Foreground="{DynamicResource AppBodyForegroundBrush}" />
 
@@ -45,5 +45,5 @@
         <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" VerticalAlignment="Center" Text="." />
       </WrapPanel>
     </StackPanel>
-  </ScrollViewer>
+  </controls:PageLayout>
 </UserControl>

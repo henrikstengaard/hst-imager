@@ -83,8 +83,7 @@
 
       <!-- Page Content -->
       <ContentControl Grid.Column="1"
-                      Content="{Binding CurrentPage}"
-                      Margin="16">
+                      Content="{Binding CurrentPage}">
         <ContentControl.DataTemplates>
           <DataTemplate DataType="vm:StartViewModel">
             <views:StartView />
