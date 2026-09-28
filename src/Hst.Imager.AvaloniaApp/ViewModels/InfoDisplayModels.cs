@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using ReactiveUI;
 
@@ -39,6 +40,8 @@ public abstract class DetailSectionBase : ReactiveObject
     protected DetailSectionBase(bool expanded = true) => _isExpanded = expanded;
 }
 
+public record PropertyRow(string Name, string Value);
+
 // ─── Disk info ────────────────────────────────────────────────────────────────
 
 public class DiskInfoDetailSection : DetailSectionBase
@@ -48,6 +51,24 @@ public class DiskInfoDetailSection : DetailSectionBase
     public string Size { get; set; } = string.Empty;
     public bool IsSparseFile { get; set; }
     public string SparseFileSize { get; set; } = string.Empty;
+
+    public IReadOnlyList<PropertyRow> Rows
+    {
+        get
+        {
+            var rows = new List<PropertyRow>
+            {
+                new("Name", Name),
+                new("Path", Path),
+                new("Size", Size)
+            };
+            if (IsSparseFile)
+            {
+                rows.Add(new("Sparse file size", SparseFileSize));
+            }
+            return rows;
+        }
+    }
 }
 
 // ─── Geometry (MBR / GPT) ─────────────────────────────────────────────────────
@@ -60,6 +81,16 @@ public class GeometryDetailSection : DetailSectionBase
     public string Cylinders { get; set; } = string.Empty;
     public string HeadsPerCylinder { get; set; } = string.Empty;
     public string SectorsPerTrack { get; set; } = string.Empty;
+
+    public IReadOnlyList<PropertyRow> Rows =>
+    [
+        new("Size", Capacity),
+        new("Sector size", SectorSize),
+        new("Total sectors", TotalSectors),
+        new("Cylinders", Cylinders),
+        new("Heads per cyl", HeadsPerCylinder),
+        new("Sectors per track", SectorsPerTrack)
+    ];
 }
 
 // ─── MBR partitions ───────────────────────────────────────────────────────────
@@ -118,6 +149,24 @@ public class RdbInfoDetailSection : DetailSectionBase
     public string HostId { get; set; } = string.Empty;
     public string RdbBlockLo { get; set; } = string.Empty;
     public string RdbBlockHi { get; set; } = string.Empty;
+
+    public IReadOnlyList<PropertyRow> Rows =>
+    [
+        new("Product", Product),
+        new("Vendor", Vendor),
+        new("Revision", Revision),
+        new("Size", Size),
+        new("Cylinders", Cylinders),
+        new("Heads", Heads),
+        new("Sectors", Sectors),
+        new("Block size", BlockSize),
+        new("Start cylinder", StartCylinder),
+        new("End cylinder", EndCylinder),
+        new("Flags", Flags),
+        new("Host id", HostId),
+        new("RDB block lo", RdbBlockLo),
+        new("RDB block hi", RdbBlockHi)
+    ];
 }
 
 // ─── RDB file systems ─────────────────────────────────────────────────────────
