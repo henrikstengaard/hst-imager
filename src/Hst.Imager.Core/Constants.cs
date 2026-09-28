@@ -1,4 +1,4 @@
-﻿using Hst.Imager.Core.Models;
+﻿using System;
 
 namespace Hst.Imager.Core
 {
@@ -7,6 +7,11 @@ namespace Hst.Imager.Core
         public static class BiosPartitionTypes
         {
             public const byte PiStormRdb = 0x76;
+        }
+
+        public static class GuidPartitionTypes
+        {
+            public static readonly Guid PiStormRdb = new("3F82EEBC-87C9-4097-8165-89D6540557C0");
         }
 
         public static class FileSystemNames

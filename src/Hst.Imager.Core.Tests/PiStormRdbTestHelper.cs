@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using DiscUtils.Partitions;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
@@ -76,6 +77,68 @@ public static class PiStormRdbTestHelper
         } while (bytesRead != 0);
     }
     
+    public static async Task CreateGptPiStormRdbDisk(TestCommandHelper testCommandHelper, string mediaPath, long size = 0)
+    {
+        // disk sizes
+        var gptDiskSize = size > 0 ? size : 100.MB();
+        var rdbDiskSize = gptDiskSize - 20.MB();
+
+        // add gpt disk media
+        testCommandHelper.AddTestMedia(mediaPath, 0);
+
+        // add rdb disk media
+        var rdbDiskPath = $"rdb_{Guid.NewGuid()}.vhd";
+        testCommandHelper.AddTestMedia(rdbDiskPath, 0);
+
+        // calculate gpt partition start and end sectors
+        var gptPartition1StartSector = 2048;
+        var gptPartition1EndSector = gptPartition1StartSector + 16383;
+        var gptPartition2StartSector = gptPartition1EndSector + 1;
+        var gptPartition2EndSector = (gptDiskSize / 512) - 2048;
+
+        // create gpt disk with basic data partition 1 and pistorm rdb partition 2
+        var gptMediaResult = await testCommandHelper.GetWritableFileMedia(mediaPath, size: gptDiskSize, create: true);
+        using (var gptMedia = gptMediaResult.Value)
+        {
+            var disk = await MediaHelper.ResolveVirtualDisk(gptMedia);
+            var guidPartitionTable = GuidPartitionTable.Initialize(disk);
+            guidPartitionTable.Create(gptPartition1StartSector, gptPartition1EndSector,
+                GuidPartitionTypes.WindowsBasicData, 0, "");
+            guidPartitionTable.Create(gptPartition2StartSector, gptPartition2EndSector,
+                Constants.GuidPartitionTypes.PiStormRdb, 0, "");
+        }
+
+        // rdb disk
+        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, rdbDiskPath, rdbDiskSize);
+
+        // get readable media for rdb disk
+        var rdbMediaResult = await testCommandHelper.GetReadableMedia([], rdbDiskPath);
+        if (!rdbMediaResult.IsSuccess)
+        {
+            throw new Exception(rdbMediaResult.Error.Message);
+        }
+
+        // get writable media for gpt disk
+        var mediaResult = await testCommandHelper.GetWritableMedia([], mediaPath);
+        if (!mediaResult.IsSuccess)
+        {
+            throw new Exception(mediaResult.Error.Message);
+        }
+
+        // copy rdb media to gpt partition 2 creating pistorm rdb hard disk
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+
+        stream.Seek(512 * gptPartition2StartSector, SeekOrigin.Begin);
+
+        using var rdbMedia = rdbMediaResult.Value;
+
+        var rdbStream = rdbMedia.Stream;
+
+        rdbStream.Position = 0;
+        await rdbStream.CopyToAsync(stream);
+    }
+
     public static async Task WriteDataToPiStormRdbPartition(
         TestCommandHelper testCommandHelper, string mediaPath, int mbrPartitionNumber, int rdbPartitionNumber, byte[] data)
     {
