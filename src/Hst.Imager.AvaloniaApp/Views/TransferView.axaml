@@ -115,7 +115,7 @@
             <TextBlock Text="Back" />
           </StackPanel>
         </Button>
-        <Button HorizontalAlignment="Right" Command="{Binding StartTransferCommand}" Classes="primary">
+        <Button HorizontalAlignment="Right" Command="{Binding StartTransferCommand}" Classes="danger">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <ia:Icon Value="fa-exchange-alt" />
             <TextBlock Text="Start transfer" />
