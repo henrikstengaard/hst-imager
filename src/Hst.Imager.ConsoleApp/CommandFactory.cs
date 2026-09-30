@@ -267,7 +267,7 @@ namespace Hst.Imager.ConsoleApp
                 Description = "Destination start offset."
             };
 
-            var convertCommand = new Command("convert", "Convert an image file. Obsolete, works same way af transfer and convert will be removed in a future release!");
+            var convertCommand = new Command("convert", "Convert an image file. Obsolete, works same way as transfer and convert will be removed in a future release!");
             convertCommand.Add(sourceArgument);
             convertCommand.Add(destinationArgument);
             convertCommand.Add(sizeOption);
@@ -412,7 +412,7 @@ namespace Hst.Imager.ConsoleApp
         {
             var pathArgument = new Argument<string>("Path")
             {
-                Description = "Path image file."
+                Description = "Path to image file."
             };
 
             var sizeArgument = new Argument<string>("Size")
@@ -497,7 +497,7 @@ namespace Hst.Imager.ConsoleApp
 
             var sizeOption = new Option<string>("--size", ["-s"])
             {
-                Description = "Size to verify."
+                Description = "Size to compare."
             };
 
             var skipUnusedSectorsOption = new Option<bool?>("--skip-unused-sectors")
