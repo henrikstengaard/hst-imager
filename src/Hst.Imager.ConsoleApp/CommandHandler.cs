@@ -706,12 +706,12 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task FsMove(string srcPath, string destPath, UaeMetadata uaeMetadata,
-            bool forceOverwrite)
+            bool makeDirectory, bool forceOverwrite)
         {
             using var commandHelper = GetCommandHelper(useCache: true);
             var command = new FsMoveCommand(GetLogger<FsMoveCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, forceOverwrite: forceOverwrite,
-                uaeMetadata: uaeMetadata);
+                uaeMetadata: uaeMetadata, makeDirectory: makeDirectory);
             await Execute(command);
         }
 

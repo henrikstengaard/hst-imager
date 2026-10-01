@@ -670,6 +670,11 @@ Example of moving a file from a local file system to an image file Rigid Disk Bl
 hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games
 ```
 
+Example of moving a file from a local file system to an image file Rigid Disk Block partition DH0 games directory and create games directory if it doesn't exist:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games --makedir
+```
+
 Example of moving a file and overwriting an existing destination file:
 ```
 hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games --force
