@@ -13,8 +13,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
 
 public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
 {
-    [Fact]
-    public async Task When_MovingFileOnSameMedia_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingFileOnSameMedia_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -31,7 +33,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media path with src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateFile(commandHelper, mediaPath, [srcFilename]);
         
@@ -59,8 +64,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingAFileOnSameMediaAndFileDoesntExist_Then_ErrorIsReturned()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileOnSameMediaAndFileDoesntExist_Then_ErrorIsReturned(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -77,7 +84,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media path
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
         
             // arrange - create fs move command
@@ -98,8 +108,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingAFileOnSameMediaAndFileExists_Then_ErrorIsReturned()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileOnSameMediaAndFileExists_Then_ErrorIsReturned(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -116,7 +128,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media path with src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateFile(commandHelper, mediaPath, [srcFilename]);
             
@@ -141,8 +156,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_ForceAMovingFileOnSameMediaAndFileExists_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_ForceAMovingFileOnSameMediaAndFileExists_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -159,7 +176,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media path with src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateFile(commandHelper, mediaPath, [srcFilename]);
             
@@ -190,8 +210,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingAFileToADirOnSameMedia_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileToADirOnSameMedia_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -208,7 +230,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media path with src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateFile(commandHelper, mediaPath, [srcFilename]);
             
@@ -245,8 +270,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingADirFromAndToSameMedia_Then_DirIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingADirFromAndToSameMedia_Then_DirIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";    
@@ -259,7 +286,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media directory with files
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
 
@@ -299,8 +329,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingADirFromAndToSameMediaWithPattern_Then_DirIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingADirFromAndToSameMediaWithPattern_Then_DirIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";    
@@ -313,7 +345,10 @@ public class GivenFsMoveCommandWithMbrFat32Partition : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create media directory with files
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await MbrTestHelper.CreateMbrFatFormattedDisk(commandHelper, mediaPath);
             await MbrTestHelper.CreateDirectoriesAndFiles(commandHelper, mediaPath);
 

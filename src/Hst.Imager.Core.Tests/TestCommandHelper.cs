@@ -41,16 +41,7 @@ namespace Hst.Imager.Core.Tests
                 return await base.DetectDataType(path);
             }
             
-            testMedia.Stream.Seek(0, SeekOrigin.Begin);
-            var data = new byte[65536];
-            if (await testMedia.Stream.ReadAsync(data) == 0)
-            {
-                return DataType.Unknown;
-            }
-        
-            MagicBytesRegister.Instance.TryResolve(data, out var dataType);
-
-            return dataType;
+            return await DetectDataType(testMedia.Stream);
         }
 
         public override bool IsVhdValid(string path)

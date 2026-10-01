@@ -16,8 +16,10 @@ namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
 
 public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
 {
-    [Fact]
-    public async Task When_MovingAFileOnSameMedia_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileOnSameMedia_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -31,7 +33,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create formatted pfs3 disk and src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
             await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file1.txt"]);
 
@@ -58,8 +63,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_MovingAFileOnSameMediaAndFileDoesntExist_Then_ErrorIsReturned()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileOnSameMediaAndFileDoesntExist_Then_ErrorIsReturned(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -73,7 +80,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create formatted pfs3 disk and src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
 
             // arrange - create fs move command
@@ -93,8 +103,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
         }
     }
     
-    [Fact]
-    public async Task When_MovingAFileOnSameMediaAndFileExists_Then_ErrorIsReturned()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileOnSameMediaAndFileExists_Then_ErrorIsReturned(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -108,7 +120,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create formatted pfs3 disk and src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
             await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file1.txt"]);
             
@@ -132,8 +147,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
         }
     }
 
-    [Fact]
-    public async Task When_ForceMovingAFileOnSameMediaAndFileExists_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_ForceMovingAFileOnSameMediaAndFileExists_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -147,7 +164,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create formatted pfs3 disk and src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
             await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file1.txt"]);
             
@@ -177,8 +197,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
         }
     }
     
-    [Fact]
-    public async Task When_MovingAFileToADirOnSameMedia_Then_FileIsMoved()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task When_MovingAFileToADirOnSameMedia_Then_FileIsMoved(bool useTestMedia)
     {
         // arrange - create paths
         var mediaPath = $"{Guid.NewGuid()}.vhd";
@@ -192,7 +214,10 @@ public class GivenFsMoveCommandWithRdbPfs3 : FsCommandTestBase
             using var commandHelper = new TestCommandHelper();
             
             // arrange - create formatted vhd disk and src file
-            await commandHelper.AddTestMedia(mediaPath);
+            if (useTestMedia)
+            {
+                await commandHelper.AddTestMedia(mediaPath);
+            }
             await TestHelper.CreatePfs3FormattedDisk(commandHelper, mediaPath);
             await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file1.txt"]);
 

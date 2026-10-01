@@ -142,7 +142,7 @@ public static class RdbTestHelper
     public static async Task CreateDirectory(
         TestCommandHelper testCommandHelper, string mediaPath, int partitionNumber, string[] dirPathComponents)
     {
-        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, partitionNumber);
+        var (media, fileSystemVolume) = await MountFileSystemVolume(testCommandHelper, mediaPath, partitionNumber, true);
 
         foreach (var dirPathComponent in dirPathComponents)
         {

@@ -91,13 +91,24 @@ namespace Hst.Imager.Core.Commands
 
         public virtual async Task<DataType> DetectDataType(string path)
         {
+            var activeMedia = GetActiveMedia(path);
+            if (activeMedia != null)
+            {
+                return await DetectDataType(activeMedia.Stream);
+            }
+            
             if (!File.Exists(path))
             {
                 return DataType.Unknown;
             }
-            
-            await using var stream = File.OpenRead(path);
 
+            await using var stream = File.OpenRead(path);
+            
+            return await DetectDataType(stream);
+        }
+        
+        protected async Task<DataType> DetectDataType(Stream stream)
+        {
             stream.Seek(0, SeekOrigin.Begin);
             var data = new byte[65536];
             if (await stream.ReadAsync(data) == 0)
@@ -424,8 +435,8 @@ namespace Hst.Imager.Core.Commands
         {
             stream.Position = 0;
             
-            // floppy image
-            if (stream.Length == 1474560)
+            // pc floppy image: 3,5" HD, 3.5" DD, 5.25" DD
+            if (stream.Length == 1474560 || stream.Length == 737280 || stream.Length == 368640)
             {
                 return new Media(path, name, Media.MediaType.Floppy, false,
                     stream, false);
