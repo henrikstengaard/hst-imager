@@ -53,7 +53,8 @@ public class TransferViewModel : ViewModelBase
         StartTransferCommand = ReactiveCommand.CreateFromTask(StartTransferAsync,
             this.WhenAnyValue(x => x.SourcePath, x => x.DestinationPath, x => x.Progress.IsRunning,
                 (src, dst, running) => !string.IsNullOrWhiteSpace(src) && !string.IsNullOrWhiteSpace(dst) && !running));
-        BackCommand = ReactiveCommand.Create(Back);
+        ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Transfer"),
+            this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
 
         this.WhenAnyValue(x => x.SourcePath)
             .Throttle(TimeSpan.FromMilliseconds(500))
@@ -126,7 +127,7 @@ public class TransferViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartTransferCommand { get; }
-    public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -211,6 +212,4 @@ public class TransferViewModel : ViewModelBase
             _imagingService.TransferAsync(srcPath, srcStartOffset, destPath, destStartOffset, size, byteswap,
                 progress, token));
     }
-
-    private void Back() => _navigationService.NavigateTo("Start");
 }

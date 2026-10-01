@@ -49,7 +49,8 @@ public class ReadViewModel : ViewModelBase
         StartReadCommand = ReactiveCommand.CreateFromTask(StartReadAsync,
             this.WhenAnyValue(x => x.SelectedMedia, x => x.DestinationPath, x => x.Progress.IsRunning,
                 (media, dest, running) => media != null && !string.IsNullOrWhiteSpace(dest) && !running));
-        BackCommand = ReactiveCommand.Create(Back);
+        ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Read"),
+            this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
 
         _ = RefreshMediaAsync();
     }
@@ -131,7 +132,7 @@ public class ReadViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartReadCommand { get; }
-    public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -220,6 +221,4 @@ public class ReadViewModel : ViewModelBase
         await Progress.RunAsync($"Reading {description}", (progress, token) =>
             _imagingService.ReadAsync(sourcePath, destinationPath, startOffset, size, byteswap, progress, token));
     }
-
-    private void Back() => _navigationService.NavigateTo("Start");
 }

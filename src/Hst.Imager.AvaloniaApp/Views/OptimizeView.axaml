@@ -71,20 +71,20 @@
     </StackPanel>
 
     <controls:PageLayout.Actions>
-      <DockPanel>
-        <Button DockPanel.Dock="Left" Command="{Binding BackCommand}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <ia:Icon Value="fa-arrow-left" />
-            <TextBlock Text="Back" />
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
           </StackPanel>
         </Button>
-        <Button HorizontalAlignment="Right" Command="{Binding StartOptimizeCommand}" Classes="primary">
+        <Button Command="{Binding StartOptimizeCommand}" Classes="primary">
           <StackPanel Orientation="Horizontal" Spacing="6">
             <ia:Icon Value="fa-compress" />
             <TextBlock Text="Optimize image" />
           </StackPanel>
         </Button>
-      </DockPanel>
+      </StackPanel>
     </controls:PageLayout.Actions>
   </controls:PageLayout>
 </UserControl>

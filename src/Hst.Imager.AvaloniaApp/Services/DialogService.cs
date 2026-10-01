@@ -7,6 +7,8 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using Hst.Imager.AvaloniaApp.ViewModels;
+using Hst.Imager.AvaloniaApp.Views;
 
 namespace Hst.Imager.AvaloniaApp.Services;
 
@@ -108,6 +110,14 @@ public class DialogService : IDialogService
         cancelButton.Click += (_, _) => dialog.Close(false);
         okButton.Click += (_, _) => dialog.Close(true);
 
+        return await dialog.ShowDialog<bool>(_window);
+    }
+
+    public async Task<bool> ShowInitializePartitionTableDialogAsync(InitializePartitionTableViewModel viewModel)
+    {
+        if (_window == null) return false;
+
+        var dialog = new InitializePartitionTableDialog { DataContext = viewModel };
         return await dialog.ShowDialog<bool>(_window);
     }
 

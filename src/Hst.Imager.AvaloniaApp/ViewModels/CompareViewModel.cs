@@ -73,7 +73,8 @@ public class CompareViewModel : ViewModelBase
                 !string.IsNullOrWhiteSpace(EffectiveDestinationPath));
 
         StartCompareCommand = ReactiveCommand.CreateFromTask(StartCompareAsync, canStart);
-        BackCommand = ReactiveCommand.Create(Back);
+        ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Compare"),
+            this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
 
         this.WhenAnyValue(x => x.SourceType, x => x.SourcePath, x => x.SourceDisk)
             .Throttle(TimeSpan.FromMilliseconds(500))
@@ -215,7 +216,7 @@ public class CompareViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> BrowseSourceCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseDestinationCommand { get; }
     public ReactiveCommand<Unit, Unit> StartCompareCommand { get; }
-    public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -322,6 +323,4 @@ public class CompareViewModel : ViewModelBase
             _imagingService.CompareAsync(sourcePath, srcStartOffset, destinationPath, destStartOffset, size, byteswap,
                 progress, token));
     }
-
-    private void Back() => _navigationService.NavigateTo("Start");
 }

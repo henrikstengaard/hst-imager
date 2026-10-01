@@ -1,0 +1,91 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        x:Class="Hst.Imager.AvaloniaApp.Views.InitializePartitionTableDialog"
+        x:DataType="vm:InitializePartitionTableViewModel"
+        Title="Initialize partition table"
+        Width="560"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppWindowBackgroundBrush}">
+
+  <StackPanel Margin="20" Spacing="12">
+    <TextBlock Text="Initialize partition table" FontSize="18" FontWeight="SemiBold" />
+
+    <Border Classes="warning">
+      <TextBlock TextWrapping="Wrap" Text="{Binding WarningText}" />
+    </Border>
+
+    <!-- Disk or PiStorm rigid disk block to initialize -->
+    <StackPanel Spacing="4" IsVisible="{Binding HasTargetOptions}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-hdd" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Initialize" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding Targets}"
+                SelectedItem="{Binding SelectedTarget}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <StackPanel Spacing="4">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-table-columns" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Partition table" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding TableTypeOptions}"
+                SelectedItem="{Binding SelectedTableType}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <!-- Options for initializing rigid disk block -->
+    <StackPanel Spacing="8" IsVisible="{Binding IsRdbTableTypeSelected}">
+      <CheckBox IsChecked="{Binding KeepMasterBootRecord}" IsVisible="{Binding CanKeepMasterBootRecord}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Keep existing Master Boot Record and its partitions for a hybrid disk" />
+      </CheckBox>
+      <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+          <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Rigid Disk Block sector" />
+        </StackPanel>
+        <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding RdbBlockLo}"
+                       Minimum="{Binding MinRdbBlockLo}" Maximum="15" Increment="1" FormatString="0"
+                       ParsingNumberStyle="Integer" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Classes="field-help" TextWrapping="Wrap" Margin="0,4,0,0"
+                   Text="Sector 0 to 15 Rigid Disk Block is written to. Sector 0 is used by Master Boot Record, so sector 2 is used by default for disks with a Master Boot Record." />
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+          <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Rigid Disk Block size (MB)" />
+        </StackPanel>
+        <TextBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0"
+                 Text="{Binding RdbSizeText, UpdateSourceTrigger=LostFocus}" />
+        <TextBlock Grid.Row="2" Grid.Column="1" Classes="field-help" TextWrapping="Wrap" Margin="8,4,0,0"
+                   Text="{Binding RdbSizeHelpText}" />
+      </Grid>
+    </StackPanel>
+
+    <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
+            IsVisible="{Binding HasError}">
+      <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+    </Border>
+
+    <TextBlock Classes="field-help" TextWrapping="Wrap"
+               Text="Initialize is added as a pending operation, which is applied when Apply is clicked." />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
+      <Button x:Name="InitializeButton" MinWidth="80" Classes="danger" IsEnabled="{Binding CanInitialize}">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ia:Icon Value="fa-broom" />
+          <TextBlock Text="Initialize" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </StackPanel>
+</Window>

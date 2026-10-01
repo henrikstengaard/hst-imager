@@ -48,7 +48,7 @@ public class InfoViewModel : ViewModelBase
         GetInfoCommand = ReactiveCommand.CreateFromTask(GetInfoAsync,
             this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia,
                 (_, _, _) => !string.IsNullOrWhiteSpace(EffectivePath)));
-        BackCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Start"));
+        ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Info"));
     }
 
     public List<SelectOption> SourceTypeOptions { get; } = MediaOptions.SourceTypeOptions;
@@ -204,7 +204,7 @@ public class InfoViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> GetInfoCommand { get; }
-    public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
     private async Task RefreshMediaAsync()
     {

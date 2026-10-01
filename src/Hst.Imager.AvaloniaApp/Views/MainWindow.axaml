@@ -94,6 +94,9 @@
           <DataTemplate DataType="vm:FormatViewModel">
             <views:FormatView />
           </DataTemplate>
+          <DataTemplate DataType="vm:PartitionViewModel">
+            <views:PartitionView />
+          </DataTemplate>
           <DataTemplate DataType="vm:SettingsViewModel">
             <views:SettingsView />
           </DataTemplate>

@@ -31,6 +31,7 @@ public class StartViewModel : ViewModelBase
         new() { Title = "Compare", Description = "Compare image files and physical disks byte by byte.", Page = "Compare", Icon = "fa-check" },
         new() { Title = "Blank", Description = "Create a blank image file.", Page = "Blank", Icon = "fa-plus" },
         new() { Title = "Optimize", Description = "Optimize an image file size.", Page = "Optimize", Icon = "fa-compress" },
-        new() { Title = "Format", Description = "Format a physical disk or an image file.", Page = "Format", Icon = "fa-eraser" }
+        new() { Title = "Format", Description = "Format a physical disk or an image file.", Page = "Format", Icon = "fa-eraser" },
+        new() { Title = "Partition", Description = "Initialize, partition and format a physical disk or an image file.", Page = "Partition", Icon = "fa-table-columns" }
     ];
 }

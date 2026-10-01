@@ -120,6 +120,7 @@ public partial class App : Application
         services.AddTransient<BlankViewModel>();
         services.AddTransient<OptimizeViewModel>();
         services.AddTransient<FormatViewModel>();
+        services.AddTransient<PartitionViewModel>();
         services.AddTransient<SettingsViewModel>();
         services.AddTransient<AboutViewModel>();
         services.AddSingleton<MainWindowViewModel>(sp => new MainWindowViewModel(sp, startupArgs));

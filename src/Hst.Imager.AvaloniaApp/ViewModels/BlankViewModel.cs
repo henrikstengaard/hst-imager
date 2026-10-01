@@ -32,10 +32,11 @@ public class BlankViewModel : ViewModelBase
         Progress = progress;
 
         BrowseOutputCommand = ReactiveCommand.CreateFromTask(BrowseOutputAsync);
+        ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Blank"),
+            this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
         StartBlankCommand = ReactiveCommand.CreateFromTask(StartBlankAsync,
             this.WhenAnyValue(x => x.OutputPath, x => x.Size, x => x.Progress.IsRunning,
                 (path, size, running) => !string.IsNullOrEmpty(path) && size > 0 && !running));
-        BackCommand = ReactiveCommand.Create(Back);
     }
 
     public ProgressViewModel Progress { get; }
@@ -78,7 +79,7 @@ public class BlankViewModel : ViewModelBase
 
     public ReactiveCommand<Unit, Unit> BrowseOutputCommand { get; }
     public ReactiveCommand<Unit, Unit> StartBlankCommand { get; }
-    public ReactiveCommand<Unit, Unit> BackCommand { get; }
+    public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
     private long SizeInBytes => _sizeUnit switch
     {
@@ -110,6 +111,4 @@ public class BlankViewModel : ViewModelBase
         await Progress.RunAsync($"Creating {Size} {SizeUnit} blank image '{path}'", (progress, token) =>
             _imagingService.BlankAsync(path, size, compatibleSize, progress, token));
     }
-
-    private void Back() => _navigationService.NavigateTo("Start");
 }

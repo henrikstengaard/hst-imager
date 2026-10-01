@@ -29,4 +29,6 @@ public interface IImagingService
     Task FormatAsync(string path, FormatType formatType, string fileSystem, string? fileSystemPath,
         long size, long maxPartitionSize, bool useExperimental, bool kickstart31, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+
+    Task PartitionAsync(PartitionPlan plan, IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 }

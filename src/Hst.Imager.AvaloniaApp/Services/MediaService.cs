@@ -32,6 +32,31 @@ public class MediaService : IMediaService
         CancellationToken cancellationToken = default) =>
         Task.Run(() => GetMediaInfo(path, byteswap, allowNonExisting, cancellationToken), cancellationToken);
 
+    public Task<bool> IsBlankAsync(string path, bool byteswap = false, CancellationToken cancellationToken = default) =>
+        Task.Run(() => IsBlank(path, byteswap, cancellationToken), cancellationToken);
+
+    // master boot record uses sector 0, guid partition table sector 1 to 33 and rigid disk block sector 0 to 15
+    private const int PartitionTableSectors = 34;
+
+    private async Task<bool> IsBlank(string path, bool byteswap, CancellationToken cancellationToken)
+    {
+        var physicalDriveManager = CreatePhysicalDriveManager();
+        var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();
+
+        using var commandHelper = CreateCommandHelper();
+        var mediaPath = string.Concat(byteswap ? "+bs:" : string.Empty, path);
+        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaPath);
+        if (mediaResult.IsFaulted)
+            throw new ImagingException(mediaResult.Error?.Message ?? $"Failed to open '{path}'");
+
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        var bytes = new byte[(int)Math.Min(PartitionTableSectors * 512L, media.Size)];
+        stream.Position = 0;
+        var bytesRead = await stream.ReadAtLeastAsync(bytes, bytes.Length, false, cancellationToken);
+        return bytes.Take(bytesRead).All(x => x == 0);
+    }
+
     private async Task<IEnumerable<MediaInfo>> ListMedia(CancellationToken cancellationToken)
     {
         var physicalDriveManager = CreatePhysicalDriveManager();

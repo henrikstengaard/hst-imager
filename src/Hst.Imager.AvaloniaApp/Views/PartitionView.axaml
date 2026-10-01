@@ -1,0 +1,415 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.PartitionView"
+             x:DataType="vm:PartitionViewModel">
+
+  <UserControl.Styles>
+    <!-- partition table abbreviation in partition table color -->
+    <Style Selector="Border.table-badge">
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="5,1" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.table-badge TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+  </UserControl.Styles>
+
+  <controls:PageLayout Title="Partition"
+                       Description="Initialize, partition and format a physical disk or an image file.">
+    <StackPanel Spacing="8">
+      <views:ElevationBanner />
+
+      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
+        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+      </Border>
+
+      <!-- Source -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-upload" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Source" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding SourceTypeOptions}"
+                SelectedItem="{Binding SourceType}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+
+      <!-- Source: image file -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Image file" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Source: physical disk -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-hdd" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Physical disk" />
+        </StackPanel>
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
+          <Panel Grid.Column="1">
+            <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                      ItemsSource="{Binding MediaItems}" SelectedItem="{Binding SelectedMedia}"
+                      DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
+            <!-- loading indicator shown while getting physical disks -->
+            <ia:Icon Value="fa-spinner" Animation="Spin"
+                     IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+          </Panel>
+          <Button Grid.Column="2" Margin="8,0,0,0"
+                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
+                  Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+            <ia:Icon Value="fa-sync-alt" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Advanced -->
+      <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+        <Expander.Header>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-gear" />
+            <TextBlock Text="Advanced" />
+          </StackPanel>
+        </Expander.Header>
+        <StackPanel Spacing="8" Margin="0,4">
+          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
+        </StackPanel>
+      </Expander>
+
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+
+      <StackPanel Spacing="8" IsVisible="{Binding HasLayout}">
+
+        <!-- Partitions of all partition tables of disk -->
+        <TextBlock Classes="section-title" Text="Partitions" />
+        <!-- Partition tables of disk, one per line with color used in partition layout and list -->
+        <ItemsControl ItemsSource="{Binding PartitionTables}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="vm:PartitionTableSummary">
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+                <ia:Icon Value="fa-table-columns" Classes="field-icon" VerticalAlignment="Center" />
+                <Border Classes="table-badge" Background="{Binding ColorBrush}" IsVisible="{Binding HasAbbreviation}">
+                  <TextBlock Text="{Binding Abbreviation}" />
+                </Border>
+                <TextBlock Classes="field-label" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Name}" />
+                <TextBlock Classes="field-help" VerticalAlignment="Center" Text="{Binding SizeText}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Classes="warning" IsVisible="{Binding HasNoPartitionTable}">
+          <TextBlock TextWrapping="Wrap"
+                     Text="{Binding NoPartitionTableText}" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <StackPanel Grid.Column="0" Spacing="8">
+            <!-- Visual view -->
+            <controls:PartitionLayoutBar x:Name="LayoutBar" Height="96"
+                                         DiskSize="{Binding DiskSize}"
+                                         Segments="{Binding Segments}"
+                                         SelectedSegment="{Binding SelectedSegment}"
+                                         AddPartitionCommand="{Binding AddPartitionToCommand}" />
+            <TextBlock Classes="field-help" TextWrapping="Wrap"
+                       Text="Click a partition to select it or click unallocated space to add a partition. Drag edges of new partitions to resize them and drag new partitions to move them." />
+
+            <!-- List view -->
+            <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Segments}"
+                      SelectedItem="{Binding SelectedSegment}"
+                      SelectionMode="Single"
+                      IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                      GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}">
+              <DataGrid.Columns>
+                <DataGridTemplateColumn Header="Table" Width="75">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="vm:PartitionSegmentViewModel">
+                      <Border Classes="table-badge" Background="{Binding TableColorBrush}" IsVisible="{Binding HasTableType}"
+                              Margin="8,0,0,0">
+                        <TextBlock Text="{Binding TableType}" />
+                      </Border>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="" Width="28">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <DataTemplate DataType="vm:PartitionSegmentViewModel">
+                      <Border Width="14" Height="14" CornerRadius="2" Background="{Binding ColorBrush}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTemplateColumn Header="Partition" Width="2*">
+                  <DataGridTemplateColumn.CellTemplate>
+                    <!-- partitions of partition table in a partition are indented -->
+                    <DataTemplate DataType="vm:PartitionSegmentViewModel">
+                      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0">
+                        <ia:Icon Value="fa-turn-up" IsVisible="{Binding IsNested}" Classes="field-icon"
+                                 Margin="4,0,0,0" RenderTransform="rotate(90deg)" />
+                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="40" />
+                <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="*" />
+                <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" />
+                <DataGridTextColumn Header="Used" Binding="{Binding UsedText}" Width="90" />
+                <DataGridTextColumn Header="Start" Binding="{Binding StartText}" Width="100" />
+                <DataGridTextColumn Header="End" Binding="{Binding EndText}" Width="100" />
+                <!-- visibility set by view, when disk has a rigid disk block -->
+                <DataGridTextColumn Tag="cylinder" Header="Start cyl." Binding="{Binding StartCylinderText}"
+                                    Width="80" IsVisible="False" />
+                <DataGridTextColumn Tag="cylinder" Header="End cyl." Binding="{Binding EndCylinderText}"
+                                    Width="80" IsVisible="False" />
+                <DataGridTextColumn Header="Flags" Binding="{Binding Flags}" Width="90" />
+                <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
+              </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding SectorsOrCylindersText}" />
+          </StackPanel>
+
+          <!-- Actions -->
+          <StackPanel Grid.Column="1" Spacing="8" Margin="12,0,0,0" MinWidth="130">
+            <Button HorizontalAlignment="Stretch" Command="{Binding AddPartitionCommand}"
+                    ToolTip.Tip="{Binding AddPartitionText, StringFormat='{}{0} in selected unallocated space'}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <ia:Icon Value="fa-circle-plus" />
+                <TextBlock Text="Add" />
+              </StackPanel>
+            </Button>
+            <Button HorizontalAlignment="Stretch" Command="{Binding DeletePartitionCommand}"
+                    ToolTip.Tip="Delete selected partition">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <ia:Icon Value="fa-trash-can" />
+                <TextBlock Text="Delete" />
+              </StackPanel>
+            </Button>
+            <Button HorizontalAlignment="Stretch" Command="{Binding InitializeCommand}"
+                    ToolTip.Tip="Initialize new empty partition table, which erases existing partitions">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <ia:Icon Value="fa-broom" />
+                <TextBlock Text="Initialize" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </Grid>
+
+        <!-- Selected unallocated space -->
+        <Border Classes="card" IsVisible="{Binding IsUnallocatedSelected}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="field-label" FontWeight="SemiBold" Text="{Binding SelectedUnallocatedText}" />
+            <TextBlock Classes="field-help" Text="{Binding AddPartitionHint}" TextWrapping="Wrap"
+                       IsVisible="{Binding AddPartitionHint, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+        </Border>
+
+        <!-- Selected partition -->
+        <Border Classes="card" IsVisible="{Binding IsPartitionSelected}">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="field-label" FontWeight="SemiBold" Text="{Binding SelectedPartitionTitle}" />
+
+            <StackPanel Spacing="4" IsVisible="{Binding IsExistingPartitionSelected}">
+              <CheckBox Content="Format partition, which erases all data on it"
+                        IsChecked="{Binding SelectedPartition.FormatRequested, FallbackValue=False}" />
+              <TextBlock Classes="field-help" TextWrapping="Wrap"
+                         Text="Existing partitions can't be moved or resized. Delete the partition to use its space for new partitions." />
+            </StackPanel>
+
+            <controls:ResponsiveColumns MaxColumns="3" MinColumnWidth="220">
+              <!-- Regular or PiStorm partition for new master boot record partitions -->
+              <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.CanBePiStorm, FallbackValue=False}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <ia:Icon Value="fa-shapes" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Partition type" />
+                </StackPanel>
+                <ComboBox ItemsSource="{x:Static vm:PartitionEntryViewModel.PartitionTypeOptions}"
+                          SelectedItem="{Binding SelectedPartition.PartitionTypeOption, FallbackValue={x:Null}}"
+                          DisplayMemberBinding="{Binding Title}"
+                          HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <!-- File system -->
+              <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <ia:Icon Value="fa-sliders" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="File system" />
+                </StackPanel>
+                <ComboBox ItemsSource="{Binding SelectedPartition.FileSystemOptions, FallbackValue={x:Null}}"
+                          SelectedItem="{Binding SelectedPartition.FileSystemOption, FallbackValue={x:Null}}"
+                          DisplayMemberBinding="{Binding Title}"
+                          IsEnabled="{Binding SelectedPartition.CanEditFileSystem, FallbackValue=False}"
+                          PlaceholderText="{Binding SelectedPartition.ExistingFileSystem, FallbackValue=''}"
+                          HorizontalAlignment="Stretch" />
+              </StackPanel>
+
+              <!-- Device name -->
+              <StackPanel Spacing="4" IsVisible="{Binding IsRdb}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <ia:Icon Value="fa-hdd" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Device name" />
+                </StackPanel>
+                <TextBox Text="{Binding SelectedPartition.DeviceName, FallbackValue=''}"
+                         IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+              </StackPanel>
+
+              <!-- Volume name -->
+              <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+                <StackPanel Orientation="Horizontal" Spacing="5">
+                  <ia:Icon Value="fa-tag" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Volume name" />
+                </StackPanel>
+                <TextBox Text="{Binding SelectedPartition.Label, FallbackValue=''}"
+                         IsEnabled="{Binding SelectedPartition.CanEditLabel, FallbackValue=False}" />
+              </StackPanel>
+            </controls:ResponsiveColumns>
+
+            <CheckBox Content="Bootable" IsVisible="{Binding IsRdb}"
+                      IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
+                      IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+            <CheckBox Content="Active (bootable)" IsVisible="{Binding IsMbr}"
+                      IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
+                      IsEnabled="{Binding SelectedPartition.CanEditActive, FallbackValue=False}" />
+
+            <!-- Size of new partition -->
+            <StackPanel Spacing="4" IsVisible="{Binding IsNewPartitionSelected}">
+              <Grid ColumnDefinitions="*,*,*,Auto" RowDefinitions="Auto,Auto">
+                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+                  <ia:Icon Value="fa-arrow-left" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Free space preceding" />
+                </StackPanel>
+                <TextBox Grid.Row="1" Grid.Column="0" Classes="commit-on-enter"
+                         Text="{Binding EditorFreeSpacePreceding, UpdateSourceTrigger=LostFocus}" />
+
+                <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+                  <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Size" />
+                </StackPanel>
+                <TextBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" Classes="commit-on-enter"
+                         Text="{Binding EditorSize, UpdateSourceTrigger=LostFocus}" />
+
+                <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+                  <ia:Icon Value="fa-arrow-right" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Free space following" />
+                </StackPanel>
+                <TextBox Grid.Row="1" Grid.Column="2" Margin="8,0,0,0" Classes="commit-on-enter"
+                         Text="{Binding EditorFreeSpaceFollowing, UpdateSourceTrigger=LostFocus}" />
+
+                <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+                  <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+                  <TextBlock Classes="field-label" Text="Unit" />
+                </StackPanel>
+                <ComboBox Grid.Row="1" Grid.Column="3" Margin="8,0,0,0" MinWidth="90"
+                          ItemsSource="{x:Static vm:PartitionViewModel.SizeUnits}"
+                          SelectedItem="{Binding SizeUnit}" />
+              </Grid>
+              <TextBlock Classes="field-help" TextWrapping="Wrap"
+                         Text="{Binding EditorMaxSizeText, StringFormat='{}{0} Press enter or leave field to update size.'}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+
+        <!-- Amiga file systems for new rigid disk block partitions -->
+        <StackPanel Spacing="8" IsVisible="{Binding ShowAmigaFileSystems}">
+          <StackPanel Spacing="4" IsVisible="{Binding NeedsPfs3FileSystem}">
+            <CheckBox Content="Download pfs3aio from aminet.net for PFS\3 and PDS\3 partitions"
+                      IsChecked="{Binding DownloadPfs3Aio}" />
+            <StackPanel Spacing="4" IsVisible="{Binding ShowPfs3FileSystemPath}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <ia:Icon Value="fa-file" Classes="field-icon" />
+                <TextBlock Classes="field-label" Text="pfs3aio file system file or media (lha, adf, iso)" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding Pfs3FileSystemPath}" />
+                <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePfs3FileSystemPathCommand}" ToolTip.Tip="Browse">
+                  <ia:Icon Value="fa-folder-open" />
+                </Button>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Spacing="4" IsVisible="{Binding NeedsFastFileSystem}">
+            <StackPanel Orientation="Horizontal" Spacing="5">
+              <ia:Icon Value="fa-file" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="FastFileSystem file or media (lha, adf, iso) for DOS\3 and DOS\7 partitions" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBox Grid.Column="0" Text="{Binding FastFileSystemPath}" />
+              <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseFastFileSystemPathCommand}" ToolTip.Tip="Browse">
+                <ia:Icon Value="fa-folder-open" />
+              </Button>
+            </Grid>
+          </StackPanel>
+
+          <StackPanel Spacing="4" IsVisible="{Binding ShowUseExperimental}">
+            <CheckBox Content="Use PFS3 experimental partition sizes" IsChecked="{Binding UseExperimental}" />
+            <Border Classes="warning" IsVisible="{Binding UseExperimental}">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Using PFS3 experimental partition sizes might cause data loss and/or corruption." />
+            </Border>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- Pending operations -->
+        <TextBlock Classes="section-title" Text="Pending operations" />
+        <TextBlock Classes="field-help" Text="No pending operations." IsVisible="{Binding !HasPendingOperations}" />
+        <ItemsControl ItemsSource="{Binding PendingOperations}" IsVisible="{Binding HasPendingOperations}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="x:String">
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
+                <ia:Icon Value="fa-list-check" Classes="field-icon" />
+                <TextBlock Classes="field-label" Text="{Binding}" TextWrapping="Wrap" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
+                IsVisible="{Binding HasValidationErrors}">
+          <ItemsControl ItemsSource="{Binding ValidationErrors}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="x:String">
+                <TextBlock Classes="error-text" Text="{Binding}" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+      </StackPanel>
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}"
+                ToolTip.Tip="Discard pending operations and read partition tables again">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding ApplyCommand}" Classes="danger">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-check" />
+            <TextBlock Text="Apply" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

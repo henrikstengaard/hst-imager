@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.Core;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Commands.GptCommands;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PhysicalDrives;
@@ -162,6 +164,330 @@ public class ImagingService : IImagingService
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Formatting", args, stage));
         var result = await cmd.Execute(cache.Token);
         ThrowIfFaulted(result);
+    }
+
+    /// <summary>
+    /// Partition disk by initializing partition table or deleting partitions, then adding and formatting partitions.
+    /// Partitions are formatted after all partitions are added, as partition numbers can change when adding.
+    /// </summary>
+    public async Task PartitionAsync(PartitionPlan plan, IProgress<ProgressModel> progress,
+        CancellationToken cancellationToken)
+    {
+        var physicalDrives = await GetPhysicalDrivesAsync();
+        var stage = GetCacheStage(plan.Path, physicalDrives);
+        using var cache = TrackCache(progress, cancellationToken);
+        using var commandHelper = CreateCommandHelper();
+        var token = cache.Token;
+
+        var path = string.Concat(plan.Byteswap ? "+bs:" : string.Empty, plan.Path);
+
+        // PiStorm disk in master boot record partition added by preceding plan is partitioned using partition number
+        // of master boot record partition read from disk
+        if (plan.ContainerStartOffset.HasValue)
+        {
+            var mbrPartitionNumbers = await ReadPartitionNumbersAsync(commandHelper, physicalDrives, path,
+                PartitionTableType.MasterBootRecord, token);
+            if (!mbrPartitionNumbers.TryGetValue(plan.ContainerStartOffset.Value, out var mbrPartitionNumber))
+            {
+                throw new ImagingException(
+                    $"PiStorm partition at offset {plan.ContainerStartOffset.Value} not found in Master Boot Record");
+            }
+
+            var separator = plan.Path.StartsWith('/') ? "/" : "\\";
+            path = string.Concat(path, separator, "mbr", separator, mbrPartitionNumber);
+        }
+
+        var isRdb = plan.TableType == PartitionTableType.RigidDiskBlock;
+        var rdbDosTypes = isRdb
+            ? plan.AddPartitions.Select(x => GetDosType(x.FileSystem)).Distinct().ToList()
+            : [];
+
+        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + rdbDosTypes.Count +
+                    plan.AddPartitions.Count * 2 + plan.FormatPartitions.Count + 1;
+        var stepsExecuted = 0;
+
+        void ReportStep() => progress.Report(new ProgressModel
+        {
+            Title = "Partitioning",
+            Stage = stage,
+            PercentComplete = Math.Min(100, Math.Round(100d / steps * stepsExecuted))
+        });
+
+        async Task Run(CommandBase command)
+        {
+            token.ThrowIfCancellationRequested();
+            ThrowIfFaulted(await command.Execute(token));
+            stepsExecuted++;
+            ReportStep();
+        }
+
+        ReportStep();
+
+        // initialize partition table
+        if (plan.Initialize)
+        {
+            // erase partition tables for whole disk, a part of it like a PiStorm disk only has rigid disk block.
+            // keeping master boot record for a hybrid disk only erases sectors rigid disk block can be written to
+            if (plan.KeepMasterBootRecord)
+                await EraseRigidDiskBlockSectorsAsync(commandHelper, physicalDrives, path, token);
+            else if (plan.IsDiskPath)
+                await ErasePartitionTablesAsync(commandHelper, physicalDrives, path, token);
+            stepsExecuted++;
+            ReportStep();
+
+            await Run(plan.TableType switch
+            {
+                PartitionTableType.MasterBootRecord => new MbrInitCommand(
+                    _loggerFactory.CreateLogger<MbrInitCommand>(), commandHelper, physicalDrives, path),
+                PartitionTableType.GuidPartitionTable => new GptInitCommand(
+                    _loggerFactory.CreateLogger<GptInitCommand>(), commandHelper, physicalDrives, path),
+                PartitionTableType.RigidDiskBlock => new RdbInitCommand(
+                    _loggerFactory.CreateLogger<RdbInitCommand>(), commandHelper, physicalDrives, path,
+                    "HstImager", new Size(plan.RdbSize, Unit.Bytes), string.Empty, plan.RdbBlockLo),
+                _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
+            });
+        }
+
+        // delete partitions from highest number, so partition numbers to delete are not changed by deleting
+        foreach (var partitionNumber in plan.DeletePartitionNumbers.OrderByDescending(x => x))
+        {
+            await Run(plan.TableType switch
+            {
+                PartitionTableType.MasterBootRecord => new MbrPartDelCommand(
+                    _loggerFactory.CreateLogger<MbrPartDelCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber),
+                PartitionTableType.GuidPartitionTable => new GptPartDelCommand(
+                    _loggerFactory.CreateLogger<GptPartDelCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber),
+                PartitionTableType.RigidDiskBlock => new RdbPartDelCommand(
+                    _loggerFactory.CreateLogger<RdbInitCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber),
+                _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
+            });
+        }
+
+        // add file systems used by new partitions, which are not already in rigid disk block
+        if (isRdb)
+        {
+            var existingDosTypes = await ReadRdbDosTypesAsync(commandHelper, physicalDrives, path, token);
+            foreach (var dosType in rdbDosTypes)
+            {
+                if (!existingDosTypes.Contains(dosType))
+                {
+                    var isPfs3 = dosType is "PFS3" or "PDS3";
+                    var fileSystemPath = await PrepareRdbFileSystemAsync(commandHelper,
+                        isPfs3 ? plan.Pfs3FileSystemPath : plan.FastFileSystemPath,
+                        isPfs3 ? "pfs3aio" : "FastFileSystem", token);
+                    await Run(new RdbFsAddCommand(_loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper,
+                        physicalDrives, path, fileSystemPath, dosType, string.Empty, null, null));
+                }
+                else
+                {
+                    stepsExecuted++;
+                    ReportStep();
+                }
+            }
+        }
+
+        // add partitions ordered by start offset
+        foreach (var partition in plan.AddPartitions.OrderBy(x => x.StartOffset))
+        {
+            var startSector = partition.StartOffset / 512;
+            var endSector = (partition.StartOffset + partition.Size) / 512 - 1;
+            await Run(plan.TableType switch
+            {
+                PartitionTableType.MasterBootRecord => new MbrPartAddCommand(
+                    _loggerFactory.CreateLogger<MbrPartAddCommand>(), commandHelper, physicalDrives, path,
+                    partition.IsPiStorm ? nameof(MbrPartType.PiStormRdb) : GetMbrPartType(partition.FileSystem),
+                    new Size(partition.Size, Unit.Bytes), startSector,
+                    endSector, partition.Bootable),
+                PartitionTableType.GuidPartitionTable => new GptPartAddCommand(
+                    _loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper, physicalDrives, path,
+                    GetGptPartType(partition.FileSystem).ToString(), partition.Label,
+                    new Size(partition.Size, Unit.Bytes), startSector, endSector),
+                PartitionTableType.RigidDiskBlock => new RdbPartAddCommand(
+                    _loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper, physicalDrives, path,
+                    partition.DeviceName, GetDosType(partition.FileSystem), new Size(partition.Size, Unit.Bytes),
+                    null, null, null, 0x1fe00, null, false, partition.Bootable, null, 512, plan.UseExperimental,
+                    (uint)(partition.StartOffset / plan.CylinderSize)),
+                _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
+            });
+        }
+
+        // format new and existing partitions using partition numbers read from partition table after changes
+        var partitionNumbers = await ReadPartitionNumbersAsync(commandHelper, physicalDrives, path,
+            plan.TableType, token);
+        foreach (var partition in plan.AddPartitions.Concat(plan.FormatPartitions).OrderBy(x => x.StartOffset))
+        {
+            // PiStorm partitions contain a rigid disk block partitioned by another plan and are not formatted
+            if (partition.IsPiStorm)
+            {
+                stepsExecuted++;
+                ReportStep();
+                continue;
+            }
+
+            if (!partitionNumbers.TryGetValue(partition.StartOffset, out var partitionNumber))
+            {
+                throw new ImagingException(
+                    $"Partition at offset {partition.StartOffset} not found in partition table after partitioning");
+            }
+
+            await Run(plan.TableType switch
+            {
+                PartitionTableType.MasterBootRecord => new MbrPartFormatCommand(
+                    _loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber, partition.Label, GetMbrPartType(partition.FileSystem)),
+                PartitionTableType.GuidPartitionTable => new GptPartFormatCommand(
+                    _loggerFactory.CreateLogger<GptPartFormatCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber, GetGptPartType(partition.FileSystem), partition.Label),
+                PartitionTableType.RigidDiskBlock => new RdbPartFormatCommand(
+                    _loggerFactory.CreateLogger<RdbPartFormatCommand>(), commandHelper, physicalDrives, path,
+                    partitionNumber, partition.Label, false, string.Empty, string.Empty),
+                _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
+            });
+        }
+
+        if (physicalDrives.Any(x => plan.Path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase)))
+            await commandHelper.RescanPhysicalDrives();
+
+        stepsExecuted = steps;
+        ReportStep();
+    }
+
+    private static string GetMbrPartType(string fileSystem) => fileSystem switch
+    {
+        "fat32" => MbrPartType.Fat32Lba.ToString(),
+        "exfat" => MbrPartType.ExFat.ToString(),
+        "ntfs" => MbrPartType.Ntfs.ToString(),
+        _ => throw new ImagingException($"Unsupported Master Boot Record file system '{fileSystem}'")
+    };
+
+    private static GptPartType GetGptPartType(string fileSystem) => fileSystem switch
+    {
+        "fat32" => GptPartType.Fat32,
+        "exfat" => GptPartType.ExFat,
+        "ntfs" => GptPartType.Ntfs,
+        _ => throw new ImagingException($"Unsupported Guid Partition Table file system '{fileSystem}'")
+    };
+
+    private static string GetDosType(string fileSystem) => fileSystem.ToUpperInvariant();
+
+    /// <summary>
+    /// Erase existing partition tables by writing zeros to first 10MB of disk, same as format.
+    /// </summary>
+    private static async Task ErasePartitionTablesAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, CancellationToken token)
+    {
+        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
+        if (mediaResult.IsFaulted)
+            throw new ImagingException(mediaResult.Error?.Message ?? $"Failed to open '{path}'");
+
+        using var media = mediaResult.Value;
+        await using var stream = media.Stream;
+        var eraseSize = Math.Min(media.Size, 10L * 1024 * 1024) / 512 * 512;
+        using var streamCopier = new StreamCopier();
+        await streamCopier.Copy(token, new System.IO.MemoryStream(new byte[eraseSize]), stream, eraseSize, 0, 0);
+    }
+
+    /// <summary>
+    /// Erase sectors 1 to 15, which rigid disk block can be written to, keeping master boot record in sector 0.
+    /// Prevents an existing rigid disk block in another sector from being found before the new rigid disk block.
+    /// First 16 sectors are read and written as a whole to keep writes aligned for physical disks.
+    /// </summary>
+    private static async Task EraseRigidDiskBlockSectorsAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, CancellationToken token)
+    {
+        var mediaResult = await commandHelper.GetWritableMedia(physicalDrives, path);
+        if (mediaResult.IsFaulted)
+            throw new ImagingException(mediaResult.Error?.Message ?? $"Failed to open '{path}'");
+
+        using var media = mediaResult.Value;
+        await using var stream = media.Stream;
+        var sectors = new byte[16 * 512];
+        stream.Position = 0;
+        await stream.ReadExactlyAsync(sectors, token);
+        Array.Clear(sectors, 512, sectors.Length - 512);
+        stream.Position = 0;
+        await stream.WriteAsync(sectors, token);
+        await stream.FlushAsync(token);
+    }
+
+    private async Task<DiskInfo?> ReadDiskInfoAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, CancellationToken token)
+    {
+        var infoCommand = new InfoCommand(_loggerFactory.CreateLogger<InfoCommand>(), commandHelper, physicalDrives,
+            path, false);
+        DiskInfo? diskInfo = null;
+        infoCommand.DiskInfoRead += (_, args) => diskInfo = args.MediaInfo?.DiskInfo;
+        ThrowIfFaulted(await infoCommand.Execute(token));
+        return diskInfo;
+    }
+
+    private async Task<HashSet<string>> ReadRdbDosTypesAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, CancellationToken token)
+    {
+        var diskInfo = await ReadDiskInfoAsync(commandHelper, physicalDrives, path, token);
+        return (diskInfo?.RigidDiskBlock?.FileSystemHeaderBlocks ?? [])
+            .Select(x => x.DosTypeFormatted.Replace("\\", string.Empty))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Read partition numbers by start offset from partition table.
+    /// </summary>
+    private async Task<Dictionary<long, int>> ReadPartitionNumbersAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, PartitionTableType tableType,
+        CancellationToken token)
+    {
+        var diskInfo = await ReadDiskInfoAsync(commandHelper, physicalDrives, path, token);
+        var partitionTablePart = tableType switch
+        {
+            PartitionTableType.MasterBootRecord => diskInfo?.MbrPartitionTablePart,
+            PartitionTableType.GuidPartitionTable => diskInfo?.GptPartitionTablePart,
+            PartitionTableType.RigidDiskBlock => diskInfo?.RdbPartitionTablePart,
+            _ => null
+        };
+
+        var partitionNumbers = new Dictionary<long, int>();
+        foreach (var part in (partitionTablePart?.Parts ?? [])
+                 .Where(x => x.PartType == PartType.Partition && x.PartitionNumber.HasValue))
+        {
+            partitionNumbers.TryAdd(part.StartOffset, part.PartitionNumber!.Value);
+        }
+
+        return partitionNumbers;
+    }
+
+    /// <summary>
+    /// Prepare file system file for rigid disk block by downloading it, if path is an url, and finding file system
+    /// in media like lha, adf or iso.
+    /// </summary>
+    private async Task<string> PrepareRdbFileSystemAsync(ICommandHelper commandHelper, string? mediaPath,
+        string fileSystemName, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(mediaPath))
+            throw new ImagingException($"Path to media with file system '{fileSystemName}' is required");
+
+        if (mediaPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            mediaPath = await FileSystemHelper.DownloadFile(mediaPath, _appState.AppDataPath,
+                System.IO.Path.GetFileName(new Uri(mediaPath).LocalPath));
+
+        var findResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, mediaPath, fileSystemName);
+        if (findResult.IsFaulted)
+            throw new ImagingException(findResult.Error?.Message ?? $"Failed to read '{mediaPath}'");
+
+        var (name, data) = findResult.Value;
+        if (data.Length == 0)
+            throw new ImagingException($"File system '{fileSystemName}' not found in '{mediaPath}'");
+
+        var outputPath = System.IO.Path.Combine(_appState.AppDataPath, "filesystems");
+        System.IO.Directory.CreateDirectory(outputPath);
+        var fileSystemPath = System.IO.Path.Combine(outputPath,
+            string.IsNullOrWhiteSpace(name) ? fileSystemName : System.IO.Path.GetFileName(name));
+        await System.IO.File.WriteAllBytesAsync(fileSystemPath, data, token);
+
+        return fileSystemPath;
     }
 
     private async Task<List<IPhysicalDrive>> GetPhysicalDrivesAsync()
