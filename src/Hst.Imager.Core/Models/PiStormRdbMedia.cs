@@ -4,7 +4,7 @@
     using System.IO;
 
     /// <summary>
-    /// PiStorm RDB media represents a Master Boot Record partition containing a Rigid Disk Block
+    /// PiStorm RDB media represents a Master Boot Record or Guid Partition Table partition containing a Rigid Disk Block
     /// </summary>
     public class PiStormRdbMedia(
         string path,

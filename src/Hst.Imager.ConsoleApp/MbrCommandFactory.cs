@@ -167,7 +167,7 @@
 
             var fileSystemOption = new Option<string>("--file-system", ["-fs"])
             {
-                Description = "File system format partition with."
+                Description = "File system to format partition with."
             };
 
             var formatCommand = new Command("format", "Format partition.");

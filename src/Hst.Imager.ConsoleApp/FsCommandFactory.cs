@@ -201,7 +201,7 @@ public static class FsCommandFactory
 
         var skipAttributesOption = new Option<bool>("--skip-attributes", ["-sa"])
         {
-            Description = "Attributes of directories and files are not set when copied.",
+            Description = "Attributes of directories and files are not set when extracted.",
             DefaultValueFactory = (ArgumentResult _) => false
         };
 
