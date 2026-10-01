@@ -648,6 +648,16 @@ Example of moving a file from one directory to another in a local file system:
 hst.imager fs move dh0\file.txt dh0\games
 ```
 
+Example of renaming a file in a local file system:
+```
+hst.imager fs move dh0\file.txt dh0\renamed.txt
+```
+
+Example of renaming a file in an image file Rigid Disk Block partition DH0:
+```
+hst.imager fs move 16gb.img\rdb\dh0\file.txt 16gb.img\rdb\dh0\renamed.txt
+```
+
 Example of moving a file from a local file system to an image file Rigid Disk Block partition DH0:
 ```
 hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games
