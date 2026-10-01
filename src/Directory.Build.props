@@ -4,10 +4,10 @@
     <Copyright>Copyright © 2026</Copyright>
   </PropertyGroup>
   <PropertyGroup>
-    <Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
-    <FileVersion>1.6.0.0</FileVersion>
-    <PackageVersion>1.6.0</PackageVersion>
+    <Version>1.7.0</Version>
+    <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <FileVersion>1.7.0.0</FileVersion>
+    <PackageVersion>1.7.0</PackageVersion>
   </PropertyGroup>
   <PropertyGroup>
     <Authors>Henrik Nørfjand Stengaard</Authors>
