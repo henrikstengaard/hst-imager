@@ -185,7 +185,7 @@ public static class MbrTestHelper
         }
             
         var media = mediaResult.Value;
-        
+
         var disk = await MediaHelper.ResolveVirtualDisk(media);
         var biosPartitionTable = new BiosPartitionTable(disk);
             
@@ -199,13 +199,13 @@ public static class MbrTestHelper
             
         var partition = partitions[partitionNumber];
 
-        return (new DiskMedia(media, disk, null), new FatFileSystem(partition.Open()));
+        return (media, new FatFileSystem(partition.Open()));
     }
     
     public static async Task CreateDirectory(
         TestCommandHelper testCommandHelper, string mediaPath, int partitionNumber, string[] dirPathComponents)
     {
-        var (media, fileSystem) = await MountFileSystem(testCommandHelper, mediaPath, partitionNumber);
+        var (media, fileSystem) = await MountFileSystem(testCommandHelper, mediaPath, partitionNumber, true);
         
         fileSystem.CreateDirectory(string.Join("/", dirPathComponents));
         

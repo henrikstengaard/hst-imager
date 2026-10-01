@@ -1,5 +1,4 @@
 ﻿using Hst.Core;
-using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -23,6 +22,7 @@ public class DirectoryEntryIterator : IEntryIterator
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
 
+    private readonly Media media;
     private readonly Stack<Entry> nextEntries;
     private readonly string rootPath;
     private readonly string[] rootPathComponents;
@@ -31,18 +31,17 @@ public class DirectoryEntryIterator : IEntryIterator
     private Entry currentEntry;
     private bool isFirst;
     private bool initialized;
-    private readonly IAppCache appCache;
     private readonly UaeMetadataHelper uaeMetadataHelper;
 
-    public DirectoryEntryIterator(string path, bool recursive, UaeMetadata uaeMetadata, IAppCache appCache)
+    public DirectoryEntryIterator(Media media, string path, bool recursive, UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
     {
+        this.media = media;
         this.nextEntries = new Stack<Entry>();
         rootPath = PathHelper.GetFullPath(path);
         this.recursive = recursive;
         this.isFirst = true;
         this.UaeMetadata = uaeMetadata;
-        this.appCache = appCache;
-        uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        this.uaeMetadataHelper = uaeMetadataHelper;
         rootPathComponents = PathHelper.Split(rootPath);
     }
 
@@ -163,9 +162,8 @@ public class DirectoryEntryIterator : IEntryIterator
     /// </summary>
     public string[] DirPathComponents { get; private set; }
 
+    public Media Media => media;
     public AttributesMode AttributesMode => AttributesMode.Auto;
-
-    public Media Media => null;
 
     public Entry Current => currentEntry;
 
@@ -224,17 +222,53 @@ public class DirectoryEntryIterator : IEntryIterator
         return Task.FromResult<Stream>(File.OpenRead(entry.RawPath));
     }
 
-    public Task<Result> DeleteEntry(string[] fullPathComponents)
+    public async Task<Result> DeleteEntry(string[] fullPathComponents)
     {
-        var entryPath = Path.Combine(fullPathComponents);
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(UaeMetadata, fullPathComponents);
+        
+        var entryPath = uaeMetadataEntry != null && uaeMetadataEntry.UaeMetadataExists
+            ? Path.Combine(uaeMetadataEntry.NormalPathComponents)
+            : Path.Combine(fullPathComponents);
 
         if (File.Exists(entryPath))
         {
             File.Delete(entryPath);
-            return Task.FromResult(new Result());
         }
 
-        Directory.Delete(entryPath, true);
+        if (Directory.Exists(entryPath))
+        {
+            Directory.Delete(entryPath, true);
+        }
+        
+        await UaeMetadataHelper.RemoveUaeMetadata(entryPath);
+
+        return new Result();
+    }
+
+    public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)
+    {
+        var sourcePath = Path.Combine(srcFullPathComponents);
+        var destinationPath = Path.Combine(destFullPathComponents);
+
+        if (File.Exists(sourcePath))
+        {
+            if (File.Exists(destinationPath))
+            {
+                File.Delete(destinationPath);
+            }
+
+            File.Move(sourcePath, destinationPath);
+        }
+        else
+        {
+            if (Directory.Exists(destinationPath))
+            {
+                Directory.Delete(destinationPath, true);
+            }
+
+            Directory.Move(sourcePath, destinationPath);
+        }
+
         return Task.FromResult(new Result());
     }
 
@@ -404,7 +438,6 @@ public class DirectoryEntryIterator : IEntryIterator
 
     public void Dispose()
     {
-        appCache.Dispose();
     }
 
     public UaeMetadata UaeMetadata { get; set; }

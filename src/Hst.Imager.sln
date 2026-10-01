@@ -27,6 +27,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Info", "Info", "{E8B8AF9B-C
 		build.md = build.md
 		..\readme.md = ..\readme.md
 		..\release-notes.md = ..\release-notes.md
+		..\todo.md = ..\todo.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Build", "Build", "{F50E0629-60B0-4B24-AD41-C3F4F27CA364}"

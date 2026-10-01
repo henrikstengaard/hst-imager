@@ -17,13 +17,6 @@ namespace Hst.Imager.Core.Models
             this.disk = disk;
         }
 
-        public DiskMedia(Media media, VirtualDisk disk, Stream stream) 
-            : base(media.Path, media.Model, media.Type, media.IsPhysicalDrive, stream, media.Byteswap)
-        {
-            ArgumentNullException.ThrowIfNull(disk);
-            this.disk = disk;
-        }
-
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);

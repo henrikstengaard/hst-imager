@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Hst.Imager.Core.Models.FileSystems;
+using Hst.Imager.Core.UaeMetadatas;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.EntryWriterTests;
@@ -27,7 +28,7 @@ public class GivenEntryWriterInitializedWithZeroRootPathComponents
 
             // arrange - create entry writer
             var entryWriter = await EntryWriterTestHelper.CreateEntryWriter(entryWriterType, testCommandHelper, path,
-                rootPathComponents, false);
+                rootPathComponents, false, UaeMetadata.None);
 
             // arrange - initialize the writer
             var initializeResult = await entryWriter.Initialize();
