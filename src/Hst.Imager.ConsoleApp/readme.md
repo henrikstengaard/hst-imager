@@ -32,6 +32,7 @@ Hst Imager console comes with following features:
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
   - List directories and files in a file system.
   - Copy directories and files from source to destination file system.
+  - Move directories and files from source to destination file system.
   - Extract directories and files from source to destination file system.
   - Create a directory in a file system.
 - Amiga Disk File:
