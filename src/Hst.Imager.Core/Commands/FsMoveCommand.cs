@@ -24,7 +24,8 @@ public class FsMoveCommand(
     string fromPath,
     string toPath,
     bool forceOverwrite = false,
-    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb,
+    bool makeDirectory = false)
     : FsCommandBase(commandHelper, physicalDrives)
 {
     private readonly ILogger<FsMoveCommand> logger = logger;
@@ -35,7 +36,7 @@ public class FsMoveCommand(
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
 
         // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(toPath, false, false, forceOverwrite,
+        var destEntryWriterResult = await GetEntryWriter(toPath, false, makeDirectory, forceOverwrite,
             uaeMetadata, uaeMetadataHelper);
         if (destEntryWriterResult.IsFaulted)
         {

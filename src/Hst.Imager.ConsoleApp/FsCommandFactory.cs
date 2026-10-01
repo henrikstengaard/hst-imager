@@ -158,6 +158,12 @@ public static class FsCommandFactory
             DefaultValueFactory = (ArgumentResult _) => UaeMetadata.UaeFsDb
         };
 
+        var makeDirectoryOption = new Option<bool>("--makedir", ["-md"])
+        {
+            Description = "Make destination directory, if it does not exist.",
+            DefaultValueFactory = (ArgumentResult _) => false
+        };
+
         var forceOption = new Option<bool>("--force", "-f")
         {
             Description = "Force overwriting any existing files."
@@ -170,12 +176,14 @@ public static class FsCommandFactory
             var srcPath = ctx.GetValue(sourcePathArgument);
             var destPath = ctx.GetValue(destinationPathArgument);
             var uaeMetadata = ctx.GetValue(uaeMetadataOption);
+            var makeDir = ctx.GetValue(makeDirectoryOption);
             var force = ctx.GetValue(forceOption);
-            return CommandHandler.FsMove(srcPath, destPath, uaeMetadata, force);
-        });        
+            return CommandHandler.FsMove(srcPath, destPath, uaeMetadata, makeDir, force);
+        });
         command.Add(sourcePathArgument);
         command.Add(destinationPathArgument);
         command.Add(uaeMetadataOption);
+        command.Add(makeDirectoryOption);
         command.Add(forceOption);
 
         return command;
