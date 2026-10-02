@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.OptimizeView"
@@ -10,21 +11,7 @@
                        Description="Optimize an image file size.">
     <StackPanel Spacing="8">
 
-      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
-        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
-      </Border>
-
-      <!-- Image file -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-file" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Image file" />
-      </StackPanel>
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseImageCommand}" ToolTip.Tip="Browse">
-          <ia:Icon Value="fa-folder-open" />
-        </Button>
-      </Grid>
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
 
       <!-- Advanced -->
       <Expander IsExpanded="False" HorizontalAlignment="Stretch">
@@ -44,7 +31,7 @@
                     SelectedItem="{Binding SelectedSizeOption}"
                     DisplayMemberBinding="{Binding Title}"
                     PlaceholderText="None available"
-                    IsEnabled="{Binding HasMedia}"
+                    IsEnabled="{Binding Source.HasMedia}"
                     HorizontalAlignment="Stretch" />
 
           <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">
@@ -53,7 +40,7 @@
               <TextBlock Classes="field-label" Text="Size" />
             </StackPanel>
             <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
-                           IsEnabled="{Binding HasMedia}" />
+                           IsEnabled="{Binding Source.HasMedia}" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
               <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
               <TextBlock Classes="field-label" Text="Unit" />
@@ -61,11 +48,8 @@
             <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
                       ItemsSource="{x:Static vm:OptimizeViewModel.SizeUnits}"
                       SelectedItem="{Binding SizeUnit}"
-                      IsEnabled="{Binding HasMedia}" />
+                      IsEnabled="{Binding Source.HasMedia}" />
           </Grid>
-
-          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
-
         </StackPanel>
       </Expander>
     </StackPanel>

@@ -10,60 +10,7 @@
   <controls:PageLayout Title="Format"
                        Description="Format a physical disk or an image file.">
     <StackPanel Spacing="8">
-      <views:ElevationBanner />
-
-      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
-        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
-      </Border>
-
-      <!-- Source -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-upload" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Source" />
-      </StackPanel>
-      <ComboBox ItemsSource="{Binding SourceTypeOptions}"
-                SelectedItem="{Binding SourceType}"
-                DisplayMemberBinding="{Binding Title}"
-                HorizontalAlignment="Stretch" />
-
-      <!-- Source: image file -->
-      <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-file" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Source image file" />
-        </StackPanel>
-        <Grid ColumnDefinitions="*,Auto">
-          <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
-          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
-            <ia:Icon Value="fa-folder-open" />
-          </Button>
-        </Grid>
-      </StackPanel>
-
-      <!-- Source: physical disk -->
-      <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <ia:Icon Value="fa-hdd" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Source physical disk" />
-        </StackPanel>
-        <Grid ColumnDefinitions="Auto,*,Auto">
-          <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-          <Panel Grid.Column="1">
-            <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                      ItemsSource="{Binding MediaItems}" SelectedItem="{Binding SelectedMedia}"
-                      DisplayMemberBinding="{Binding Label}" HorizontalAlignment="Stretch" />
-            <!-- loading indicator shown while getting physical disks -->
-            <ia:Icon Value="fa-spinner" Animation="Spin"
-                     IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                     HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-          </Panel>
-          <Button Grid.Column="2" Margin="8,0,0,0"
-                  IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                  Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
-            <ia:Icon Value="fa-sync-alt" />
-          </Button>
-        </Grid>
-      </StackPanel>
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
 
       <!-- Format type -->
       <StackPanel Orientation="Horizontal" Spacing="5">
@@ -121,7 +68,7 @@
               <TextBlock Classes="field-label" Text="Size" />
             </StackPanel>
             <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
-                           IsEnabled="{Binding HasMedia}" />
+                           IsEnabled="{Binding Source.HasMedia}" />
             <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
               <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
               <TextBlock Classes="field-label" Text="Unit" />
@@ -129,10 +76,10 @@
             <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
                       ItemsSource="{x:Static vm:FormatViewModel.SizeUnits}"
                       SelectedItem="{Binding SizeUnit}"
-                      IsEnabled="{Binding HasMedia}" />
+                      IsEnabled="{Binding Source.HasMedia}" />
             <Button Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
                     Command="{Binding ResetSizeCommand}"
-                    IsEnabled="{Binding HasMedia}"
+                    IsEnabled="{Binding Source.HasMedia}"
                     ToolTip.Tip="Reset">
               <ia:Icon Value="fa-rotate-left" />
             </Button>
@@ -160,7 +107,6 @@
                       HorizontalAlignment="Stretch" />
           </StackPanel>
 
-          <CheckBox Content="Byteswap sectors" IsChecked="{Binding Byteswap}" />
         </StackPanel>
       </Expander>
     </StackPanel>

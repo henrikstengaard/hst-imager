@@ -9,112 +9,11 @@
 
   <controls:PageLayout Title="Write"
                        Description="Write an image file or part of to a physical disk.">
-    <StackPanel Spacing="8">
-
-      <views:ElevationBanner />
-
-      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
-              IsVisible="{Binding HasError}">
-        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
-      </Border>
-
-      <!-- Source and destination side by side, when there is room for it -->
-      <controls:ResponsiveColumns>
-        <StackPanel Spacing="8">
-          <!-- Source image file -->
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-file" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Source image file" />
-          </StackPanel>
-          <Grid ColumnDefinitions="*,Auto">
-            <TextBox Grid.Column="0" Text="{Binding SourcePath}" />
-            <Button Grid.Column="1" Margin="8,0,0,0"
-                    Command="{Binding BrowseSourceCommand}"
-                    ToolTip.Tip="Browse">
-              <ia:Icon Value="fa-folder-open" />
-            </Button>
-          </Grid>
-        </StackPanel>
-        <StackPanel Spacing="8">
-          <!-- Destination physical disk -->
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-hdd" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Destination physical disk" />
-          </StackPanel>
-          <Grid ColumnDefinitions="Auto,*,Auto">
-            <views:ElevationWarningIcon Grid.Column="0" Margin="0,0,8,0" />
-            <Panel Grid.Column="1">
-              <ComboBox IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                        ItemsSource="{Binding MediaItems}"
-                        SelectedItem="{Binding SelectedMedia}"
-                        DisplayMemberBinding="{Binding Label}"
-                        HorizontalAlignment="Stretch" />
-              <!-- loading indicator shown while getting physical disks -->
-              <ia:Icon Value="fa-spinner" Animation="Spin"
-                       IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                       HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-            </Panel>
-            <Button Grid.Column="2" Margin="8,0,0,0"
-                    IsEnabled="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsElevated, FallbackValue=False}"
-                    Command="{Binding RefreshMediaCommand}"
-                    ToolTip.Tip="Refresh">
-              <ia:Icon Value="fa-sync-alt" />
-            </Button>
-          </Grid>
-        </StackPanel>
-      </controls:ResponsiveColumns>
-
-      <!-- Advanced -->
-      <Expander IsExpanded="False" HorizontalAlignment="Stretch">
-        <Expander.Header>
-          <StackPanel Orientation="Horizontal" Spacing="6">
-            <ia:Icon Value="fa-gear" />
-            <TextBlock Text="Advanced" />
-          </StackPanel>
-        </Expander.Header>
-        <StackPanel Spacing="8" Margin="0,8">
-
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-chart-pie" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Part of destination physical disk to write to" />
-          </StackPanel>
-          <ComboBox ItemsSource="{Binding PartPath.Options}"
-                    SelectedItem="{Binding PartPath.Selected}"
-                    DisplayMemberBinding="{Binding Title}"
-                    PlaceholderText="None available"
-                    IsEnabled="{Binding HasSelectedMedia}"
-                    HorizontalAlignment="Stretch" />
-
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
-            <TextBlock Classes="field-label" Text="Start offset" />
-          </StackPanel>
-          <NumericUpDown Value="{Binding PartPath.StartOffset}" Minimum="0" Increment="512" FormatString="0"
-                         IsEnabled="{Binding PartPath.IsCustom}" />
-
-          <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">
-            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
-              <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
-              <TextBlock Classes="field-label" Text="Size" />
-            </StackPanel>
-            <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
-                           IsEnabled="{Binding PartPath.IsCustom}" />
-            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
-              <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
-              <TextBlock Classes="field-label" Text="Unit" />
-            </StackPanel>
-            <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
-                      ItemsSource="{x:Static vm:WriteViewModel.SizeUnits}"
-                      SelectedItem="{Binding SizeUnit}"
-                      IsEnabled="{Binding PartPath.IsCustom}" />
-          </Grid>
-
-          <CheckBox Content="Byteswap source sectors" IsChecked="{Binding Byteswap}" />
-
-        </StackPanel>
-      </Expander>
-
-    </StackPanel>
+    <!-- Source and destination side by side, when there is room for it -->
+    <controls:ResponsiveColumns>
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
+      <views:MediaSelectionCard DataContext="{Binding Destination}" />
+    </controls:ResponsiveColumns>
 
     <controls:PageLayout.Actions>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

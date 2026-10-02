@@ -28,12 +28,6 @@ public class PartitionViewModel : ViewModelBase
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
 
-    private ObservableCollection<MediaItemViewModel> _mediaItems = [];
-    private bool _isLoadingMedia;
-    private MediaItemViewModel? _selectedMedia;
-    private SelectOption _sourceType;
-    private string _imagePath = string.Empty;
-    private bool _byteswap;
     private MediaInfo? _media;
     private bool _isLoading;
     private string _errorMessage = string.Empty;
@@ -64,12 +58,21 @@ public class PartitionViewModel : ViewModelBase
         _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
-        _sourceType = SourceTypeOptions[0];
 
         Progress = progress;
+        Source = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
+        {
+            Title = "Disk",
+            AllowPhysicalDisk = true,
+            FileFilters =
+            [
+                new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
+                new FileFilterItem { Name = "All files", Extensions = ["*"] }
+            ],
+            ShowByteswap = true
+        });
+        Source.Committed += (_, _) => _ = LoadAsync(Source.Path, Source.Media);
 
-        RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
-        BrowsePathCommand = ReactiveCommand.CreateFromTask(BrowsePathAsync);
         BrowsePfs3FileSystemPathCommand = ReactiveCommand.CreateFromTask(async () =>
         {
             var path = await BrowseFileSystemPathAsync("Select media with pfs3aio file system");
@@ -82,77 +85,19 @@ public class PartitionViewModel : ViewModelBase
         });
         InitializeCommand = ReactiveCommand.CreateFromTask(InitializeAsync, this.WhenAnyValue(x => x.HasMedia));
         AddPartitionCommand = ReactiveCommand.Create(AddPartition, this.WhenAnyValue(x => x.CanAddPartition));
-        AddPartitionToCommand = ReactiveCommand.Create<PartitionSegmentViewModel>(AddPartitionTo);
+        AddPartitionToCommand = ReactiveCommand.Create<AddPartitionRequest>(AddPartitionTo);
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
+        EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
         ResetCommand = ReactiveCommand.CreateFromTask(ResetAsync, this.WhenAnyValue(x => x.HasMedia));
         ApplyCommand = ReactiveCommand.CreateFromTask(ApplyAsync,
             this.WhenAnyValue(x => x.CanApply, x => x.Progress.IsRunning, (canApply, running) => canApply && !running));
-
-        this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia, x => x.Byteswap)
-            .Throttle(TimeSpan.FromMilliseconds(500))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Select(_ => Observable.FromAsync(() => LoadAsync(EffectivePath)))
-            .Concat()
-            .Subscribe();
     }
 
     public ProgressViewModel Progress { get; }
 
     // ─── Source ───────────────────────────────────────────────────────────────
 
-    public List<SelectOption> SourceTypeOptions { get; } = MediaOptions.SourceTypeOptions;
-
-    public SelectOption SourceType
-    {
-        get => _sourceType;
-        set
-        {
-            if (value == null || ReferenceEquals(_sourceType, value)) return;
-            this.RaiseAndSetIfChanged(ref _sourceType, value);
-            this.RaisePropertyChanged(nameof(IsImageFile));
-            this.RaisePropertyChanged(nameof(IsPhysicalDisk));
-            if (IsPhysicalDisk && MediaItems.Count == 0)
-                _ = RefreshMediaAsync();
-        }
-    }
-
-    public bool IsImageFile => _sourceType.Value == MediaOptions.ImageFile;
-    public bool IsPhysicalDisk => !IsImageFile;
-
-    public string ImagePath
-    {
-        get => _imagePath;
-        set => this.RaiseAndSetIfChanged(ref _imagePath, value);
-    }
-
-    public ObservableCollection<MediaItemViewModel> MediaItems
-    {
-        get => _mediaItems;
-        set => this.RaiseAndSetIfChanged(ref _mediaItems, value);
-    }
-
-    public MediaItemViewModel? SelectedMedia
-    {
-        get => _selectedMedia;
-        set => this.RaiseAndSetIfChanged(ref _selectedMedia, value);
-    }
-
-    /// <summary>
-    /// Physical disks are being loaded
-    /// </summary>
-    public bool IsLoadingMedia
-    {
-        get => _isLoadingMedia;
-        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
-    }
-
-    public bool Byteswap
-    {
-        get => _byteswap;
-        set => this.RaiseAndSetIfChanged(ref _byteswap, value);
-    }
-
-    private string? EffectivePath => IsImageFile ? _imagePath : _selectedMedia?.Path;
+    public MediaSelectionViewModel Source { get; }
 
     public bool HasMedia => _media != null;
 
@@ -302,10 +247,6 @@ public class PartitionViewModel : ViewModelBase
     public bool IsRdb => _layout is { IsRdb: true };
     public bool IsMbr => _layout is { TableType: PartitionTableType.MasterBootRecord };
 
-    public string SelectedUnallocatedText => _selectedSegment is { IsUnallocated: true }
-        ? $"Unallocated space of {_selectedSegment.SizeText}{FormatContainer(_layout)}."
-        : string.Empty;
-
     public bool CanAddPartition => IsUnallocatedSelected && _layout!.CanAddPartitionTo(_selectedSegment);
 
     /// <summary>
@@ -315,9 +256,12 @@ public class PartitionViewModel : ViewModelBase
         ? $"Add {_layout.TableTypeName} partition"
         : "Add partition";
 
+    /// <summary>
+    /// Tooltip for adding partition, which shows max partitions when no more partitions can be added.
+    /// </summary>
     public string AddPartitionHint => _layout is { HasPartitionTable: true } && !_layout.CanAddPartition
         ? $"Max {_layout.MaxPartitions} partitions can be added to {FormatTableType(_layout.TableType)}."
-        : string.Empty;
+        : $"{AddPartitionText} in selected unallocated space";
 
     // ─── Size editor ──────────────────────────────────────────────────────────
 
@@ -448,53 +392,25 @@ public class PartitionViewModel : ViewModelBase
     public bool HasValidationErrors => _validationErrors.Count > 0;
     public bool CanApply => HasPendingOperations && !HasValidationErrors;
 
-    public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
-    public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowsePfs3FileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseFastFileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> InitializeCommand { get; }
     public ReactiveCommand<Unit, Unit> AddPartitionCommand { get; }
 
     /// <summary>
-    /// Add partition to unallocated space clicked in visual view.
+    /// Add partition to start, all or end of unallocated space clicked in visual view.
     /// </summary>
-    public ReactiveCommand<PartitionSegmentViewModel, Unit> AddPartitionToCommand { get; }
+    public ReactiveCommand<AddPartitionRequest, Unit> AddPartitionToCommand { get; }
     public ReactiveCommand<Unit, Unit> DeletePartitionCommand { get; }
+
+    /// <summary>
+    /// Show partition dialog to edit selected partition.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> EditPartitionCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
     public ReactiveCommand<Unit, Unit> ApplyCommand { get; }
 
     // ─── Loading ──────────────────────────────────────────────────────────────
-
-    private async Task RefreshMediaAsync()
-    {
-        try
-        {
-            IsLoadingMedia = true;
-            var medias = await _mediaService.ListMediaAsync();
-            MediaItems = new ObservableCollection<MediaItemViewModel>(medias.Select(m => new MediaItemViewModel
-                { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }));
-            if (SelectedMedia == null && MediaItems.Count > 0) SelectedMedia = MediaItems[0];
-        }
-        catch (Exception ex)
-        {
-            HasError = true;
-            ErrorMessage = ex.Message;
-        }
-        finally
-        {
-            IsLoadingMedia = false;
-        }
-    }
-
-    private async Task BrowsePathAsync()
-    {
-        var path = await _dialogService.ShowOpenFileDialogAsync("Select image file",
-        [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
-            new FileFilterItem { Name = "All files", Extensions = ["*"] }
-        ]);
-        if (path != null) ImagePath = path;
-    }
 
     private async Task<string?> BrowseFileSystemPathAsync(string title) =>
         await _dialogService.ShowOpenFileDialogAsync(title,
@@ -506,9 +422,12 @@ public class PartitionViewModel : ViewModelBase
     /// <summary>
     /// Read partition tables again discarding pending operations.
     /// </summary>
-    private Task ResetAsync() => LoadAsync(EffectivePath);
+    private Task ResetAsync() => LoadAsync(Source.Path);
 
-    private async Task LoadAsync(string? path)
+    /// <summary>
+    /// Load media info and partition tables of path. Media info loaded by source is used, when it's available.
+    /// </summary>
+    private async Task LoadAsync(string? path, MediaInfo? loadedMedia = null)
     {
         HasError = false;
         List<DiskPartitionTable> tables = [];
@@ -518,7 +437,7 @@ public class PartitionViewModel : ViewModelBase
             try
             {
                 IsLoading = true;
-                media = await _mediaService.GetMediaInfoAsync(path, Byteswap);
+                media = loadedMedia ?? await _mediaService.GetMediaInfoAsync(path, Source.Byteswap);
                 tables = await ReadPartitionTablesAsync(media);
             }
             catch (Exception ex)
@@ -535,7 +454,7 @@ public class PartitionViewModel : ViewModelBase
         }
 
         // ignore result, if path was changed while loading
-        if (path != EffectivePath) return;
+        if (path != Source.Path) return;
 
         _media = media;
         this.RaisePropertyChanged(nameof(HasMedia));
@@ -561,7 +480,7 @@ public class PartitionViewModel : ViewModelBase
             var isBlank = false;
             try
             {
-                isBlank = await _mediaService.IsBlankAsync(media.Path, Byteswap);
+                isBlank = await _mediaService.IsBlankAsync(media.Path, Source.Byteswap);
             }
             catch (Exception)
             {
@@ -591,7 +510,7 @@ public class PartitionViewModel : ViewModelBase
             MediaInfo? piStormMedia;
             try
             {
-                piStormMedia = await _mediaService.GetMediaInfoAsync(path, Byteswap);
+                piStormMedia = await _mediaService.GetMediaInfoAsync(path, Source.Byteswap);
             }
             catch (Exception ex)
             {
@@ -711,24 +630,26 @@ public class PartitionViewModel : ViewModelBase
         SetTables([new DiskPartitionTable(layout, _media.Path)], layout);
     }
 
-    private void AddPartition()
+    private void AddPartition() => AddPartition(AddPartitionPlacement.All);
+
+    private void AddPartition(AddPartitionPlacement placement)
     {
         if (_layout == null || _selectedSegment is not { IsUnallocated: true } segment)
             return;
 
-        var partition = _layout.AddPartition(segment.Start, segment.End, _useExperimental);
+        var partition = _layout.AddPartition(segment.Start, segment.End, _useExperimental, placement);
         var partitionSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, partition));
         if (partitionSegment != null)
             SetSelectedSegment(partitionSegment);
     }
 
-    private void AddPartitionTo(PartitionSegmentViewModel segment)
+    private void AddPartitionTo(AddPartitionRequest request)
     {
-        if (!segment.Layout.CanAddPartitionTo(segment))
+        if (!request.Segment.Layout.CanAddPartitionTo(request.Segment, request.Placement))
             return;
 
-        SetSelectedSegment(segment);
-        AddPartition();
+        SetSelectedSegment(request.Segment);
+        AddPartition(request.Placement);
     }
 
     private void DeletePartition()
@@ -746,6 +667,27 @@ public class PartitionViewModel : ViewModelBase
                       ?? Segments.ElementAtOrDefault(Math.Min(index, Segments.Count - 1));
         if (segment != null)
             SetSelectedSegment(segment);
+    }
+
+    /// <summary>
+    /// Edit selected partition in partition dialog. Changes are made directly to partition while editing, so state of
+    /// partition is restored, if dialog is cancelled.
+    /// </summary>
+    private async Task EditPartitionAsync()
+    {
+        if (_layout == null || _selectedPartition == null)
+            return;
+
+        var layout = _layout;
+        var partition = _selectedPartition;
+        var state = partition.GetState();
+        var sizeUnit = SizeUnit;
+
+        if (await _dialogService.ShowPartitionDialogAsync(this))
+            return;
+
+        layout.RestorePartition(partition, state);
+        SizeUnit = sizeUnit;
     }
 
     private void OnLayoutChanged(object? sender, EventArgs e)
@@ -847,7 +789,6 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(IsUnallocatedSelected));
         this.RaisePropertyChanged(nameof(IsRdb));
         this.RaisePropertyChanged(nameof(IsMbr));
-        this.RaisePropertyChanged(nameof(SelectedUnallocatedText));
         this.RaisePropertyChanged(nameof(SelectedPartitionTitle));
         this.RaisePropertyChanged(nameof(CanAddPartition));
         this.RaisePropertyChanged(nameof(AddPartitionText));
@@ -1007,7 +948,7 @@ public class PartitionViewModel : ViewModelBase
         var plan = table.Layout.CreatePlan(table.Path);
         plan.IsDiskPath = table.IsDiskPath;
         plan.ContainerStartOffset = table.IsInNewPartition ? table.Container!.Start : null;
-        plan.Byteswap = Byteswap;
+        plan.Byteswap = Source.Byteswap;
         plan.Pfs3FileSystemPath = _downloadPfs3Aio ? Pfs3AioUrl : _pfs3FileSystemPath;
         plan.FastFileSystemPath = _fastFileSystemPath;
         plan.UseExperimental = _useExperimental;
@@ -1023,7 +964,7 @@ public class PartitionViewModel : ViewModelBase
         if (plans.Count == 0)
             return;
 
-        var sourceTypeFormatted = IsImageFile ? "image file" : "physical disk";
+        var sourceTypeFormatted = Source.IsImageFile ? "image file" : "physical disk";
         var name = _media.Name ?? _media.Path;
         if (!await _dialogService.ShowConfirmDialogAsync("Partition",
                 $"Do you want to apply {_pendingOperations.Count} pending operation(s) to {sourceTypeFormatted} '{name}'? Data on initialized disk, deleted and formatted partitions will be lost."))
@@ -1038,7 +979,7 @@ public class PartitionViewModel : ViewModelBase
             }
         });
 
-        await LoadAsync(EffectivePath);
+        await LoadAsync(Source.Path);
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

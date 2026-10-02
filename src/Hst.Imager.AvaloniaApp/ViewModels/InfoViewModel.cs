@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -15,17 +15,8 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 public class InfoViewModel : ViewModelBase
 {
     private readonly IMediaService _mediaService;
-    private readonly IDialogService _dialogService;
     private readonly INavigationService _navigationService;
 
-    private ObservableCollection<MediaItemViewModel> _mediaItems = [];
-    private bool _isLoadingMedia;
-    private MediaItemViewModel? _selectedMedia;
-    private SelectOption _sourceType;
-    private string _imagePath = string.Empty;
-    private ObservableCollection<SelectOption> _piStormDiskOptions = [];
-    private SelectOption? _selectedPiStormDisk;
-    private bool _byteswap;
     private bool _showUnallocated = true;
     private bool _showHumanReadable = true;
     private MediaInfo? _mediaInfo;
@@ -39,104 +30,28 @@ public class InfoViewModel : ViewModelBase
         INavigationService navigationService)
     {
         _mediaService = mediaService;
-        _dialogService = dialogService;
         _navigationService = navigationService;
-        _sourceType = SourceTypeOptions[0];
 
-        RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
-        BrowsePathCommand = ReactiveCommand.CreateFromTask(BrowsePathAsync);
-        GetInfoCommand = ReactiveCommand.CreateFromTask(GetInfoAsync,
-            this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia,
-                (_, _, _) => !string.IsNullOrWhiteSpace(EffectivePath)));
+        // PiStorm disks in master boot record partitions can be selected to read their rigid disk block
+        Source = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
+        {
+            Title = "Disk",
+            AllowPhysicalDisk = true,
+            AllowNonExisting = true,
+            PartMode = MediaPartMode.PiStormDisk,
+            PartLabel = "PiStorm disk to read",
+            ShowByteswap = true
+        });
+        Source.Committed += (_, _) => _ = GetInfoAsync();
+
+        GetInfoCommand = ReactiveCommand.CreateFromTask(() => GetInfoAsync(reload: true),
+            this.WhenAnyValue(x => x.Source.IsSelected));
         ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Info"));
     }
 
-    public List<SelectOption> SourceTypeOptions { get; } = MediaOptions.SourceTypeOptions;
+    public MediaSelectionViewModel Source { get; }
 
-    public SelectOption SourceType
-    {
-        get => _sourceType;
-        set
-        {
-            if (value == null || ReferenceEquals(_sourceType, value)) return;
-            this.RaiseAndSetIfChanged(ref _sourceType, value);
-            this.RaisePropertyChanged(nameof(IsImageFile));
-            this.RaisePropertyChanged(nameof(IsPhysicalDisk));
-            this.RaisePropertyChanged(nameof(SourceTypeFormatted));
-            ImagePath = string.Empty;
-            ClearInfo();
-            if (IsPhysicalDisk)
-            {
-                if (MediaItems.Count == 0)
-                    _ = RefreshMediaAsync();
-                else if (SelectedMedia != null)
-                    _ = GetInfoAsync();
-            }
-        }
-    }
-
-    public bool IsImageFile => _sourceType.Value == MediaOptions.ImageFile;
-    public bool IsPhysicalDisk => !IsImageFile;
-    public string SourceTypeFormatted => IsImageFile ? "image file" : "physical disk";
-
-    public string ImagePath
-    {
-        get => _imagePath;
-        set => this.RaiseAndSetIfChanged(ref _imagePath, value);
-    }
-
-    public ObservableCollection<SelectOption> PiStormDiskOptions
-    {
-        get => _piStormDiskOptions;
-        private set
-        {
-            this.RaiseAndSetIfChanged(ref _piStormDiskOptions, value);
-            this.RaisePropertyChanged(nameof(HasPiStormDisks));
-        }
-    }
-
-    public bool HasPiStormDisks => _piStormDiskOptions.Count > 1;
-
-    public SelectOption? SelectedPiStormDisk
-    {
-        get => _selectedPiStormDisk;
-        set
-        {
-            if (value == null || ReferenceEquals(_selectedPiStormDisk, value)) return;
-            this.RaiseAndSetIfChanged(ref _selectedPiStormDisk, value);
-            _ = LoadInfoAsync(value.Value, updatePiStormDisks: false);
-        }
-    }
-
-    private string? EffectivePath => IsImageFile ? _imagePath : _selectedMedia?.Path;
-
-    public ObservableCollection<MediaItemViewModel> MediaItems
-    {
-        get => _mediaItems;
-        set => this.RaiseAndSetIfChanged(ref _mediaItems, value);
-    }
-
-    public MediaItemViewModel? SelectedMedia
-    {
-        get => _selectedMedia;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _selectedMedia, value);
-            if (value != null && IsPhysicalDisk)
-                _ = GetInfoAsync();
-        }
-    }
-
-    public bool Byteswap
-    {
-        get => _byteswap;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _byteswap, value);
-            if (_mediaInfo != null)
-                _ = GetInfoAsync();
-        }
-    }
+    public string SourceTypeFormatted => Source.IsImageFile ? "image file" : "physical disk";
 
     public bool ShowUnallocated
     {
@@ -192,98 +107,41 @@ public class InfoViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _isLoading, value);
     }
 
-    /// <summary>
-    /// Physical disks are being loaded
-    /// </summary>
-    public bool IsLoadingMedia
-    {
-        get => _isLoadingMedia;
-        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
-    }
-
-    public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
-    public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> GetInfoCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
-
-    private async Task RefreshMediaAsync()
-    {
-        try
-        {
-            IsLoadingMedia = true;
-            HasError = false;
-            var medias = await _mediaService.ListMediaAsync();
-            var items = medias.Select(m => new MediaItemViewModel
-            {
-                Path = m.Path, Name = m.Name, DiskSize = m.DiskSize,
-                IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m
-            }).ToList();
-
-            MediaItems = new ObservableCollection<MediaItemViewModel>(items);
-            if (SelectedMedia == null && items.Count > 0)
-                SelectedMedia = items[0];
-        }
-        catch (Exception ex)
-        {
-            HasError = true;
-            ErrorMessage = ex.Message;
-        }
-        finally
-        {
-            IsLoadingMedia = false;
-        }
-    }
-
-    private async Task BrowsePathAsync()
-    {
-        var path = await _dialogService.ShowOpenFileDialogAsync("Select image file",
-        [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd", "xz", "gz", "zip", "rar"] },
-            new FileFilterItem { Name = "All files", Extensions = ["*"] }
-        ]);
-        if (path != null)
-        {
-            ImagePath = path;
-            await GetInfoAsync();
-        }
-    }
 
     private void ClearInfo()
     {
         _mediaInfo = null;
         OverviewSections = [];
         DetailSections = [];
-        _selectedPiStormDisk = null;
-        PiStormDiskOptions = [];
-        this.RaisePropertyChanged(nameof(SelectedPiStormDisk));
         this.RaisePropertyChanged(nameof(HasDiskInfo));
+        this.RaisePropertyChanged(nameof(SourceTypeFormatted));
     }
 
-    private async Task GetInfoAsync()
+    /// <summary>
+    /// Show info of selected source or PiStorm disk. Media info loaded by source is used, unless reloading or
+    /// a PiStorm disk is selected.
+    /// </summary>
+    private async Task GetInfoAsync(bool reload = false)
     {
-        var path = EffectivePath;
+        ClearInfo();
+        var path = Source.ResolvedPath;
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        ClearInfo();
-        await LoadInfoAsync(path, updatePiStormDisks: true);
-    }
+        if (!reload && Source.Media != null && path == Source.Path)
+        {
+            HasError = false;
+            ShowInfo(Source.Media);
+            return;
+        }
 
-    private async Task LoadInfoAsync(string path, bool updatePiStormDisks)
-    {
         IsLoading = true;
         HasError = false;
 
         try
         {
-            var info = await _mediaService.GetMediaInfoAsync(path, Byteswap, allowNonExisting: true);
-            _mediaInfo = info;
-            this.RaisePropertyChanged(nameof(HasDiskInfo));
-
-            if (updatePiStormDisks)
-                UpdatePiStormDiskOptions(info);
-
-            if (info?.DiskInfo != null)
-                BuildSections(info.DiskInfo, _showHumanReadable, _showUnallocated);
+            ShowInfo(await _mediaService.GetMediaInfoAsync(path, Source.Byteswap, allowNonExisting: true));
         }
         catch (Exception ex)
         {
@@ -296,37 +154,13 @@ public class InfoViewModel : ViewModelBase
         }
     }
 
-    /// <summary>
-    /// Build PiStorm disk options from mbr partitions with bios type 0x76 (118).
-    /// </summary>
-    private void UpdatePiStormDiskOptions(MediaInfo? media)
+    private void ShowInfo(MediaInfo? info)
     {
-        var mbrPartitionTablePart = media?.DiskInfo?.MbrPartitionTablePart;
-        if (media == null || mbrPartitionTablePart == null)
-        {
-            PiStormDiskOptions = [];
-            return;
-        }
+        _mediaInfo = info;
+        this.RaisePropertyChanged(nameof(HasDiskInfo));
 
-        var separator = media.Path.StartsWith('/') ? "/" : "\\";
-        var options = new ObservableCollection<SelectOption>
-        {
-            new() { Title = $"Disk ({MediaOptions.FormatBytes(media.DiskSize)})", Value = media.Path }
-        };
-
-        foreach (var part in (mbrPartitionTablePart.Parts ?? [])
-                     .Where(x => x.PartType == PartType.Partition && x.BiosType == "118"))
-        {
-            options.Add(new SelectOption
-            {
-                Title = $"Partition #{part.PartitionNumber}: {MediaOptions.FormatPartType(part)} ({MediaOptions.FormatBytes(part.Size)})",
-                Value = string.Concat(media.Path, separator, "mbr", separator, part.PartitionNumber)
-            });
-        }
-
-        PiStormDiskOptions = options;
-        _selectedPiStormDisk = options[0];
-        this.RaisePropertyChanged(nameof(SelectedPiStormDisk));
+        if (info?.DiskInfo != null)
+            BuildSections(info.DiskInfo, _showHumanReadable, _showUnallocated);
     }
 
     // ─── Section building ─────────────────────────────────────────────────────

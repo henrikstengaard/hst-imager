@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
              xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
              xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.BlankView"
@@ -14,17 +15,7 @@
         <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
       </Border>
 
-      <!-- Image file -->
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-file" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Image file" />
-      </StackPanel>
-      <Grid ColumnDefinitions="*,Auto">
-        <TextBox Grid.Column="0" Text="{Binding OutputPath}" />
-        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseOutputCommand}" ToolTip.Tip="Browse">
-          <ia:Icon Value="fa-folder-open" />
-        </Button>
-      </Grid>
+      <views:MediaSelectionCard DataContext="{Binding Destination}" />
 
       <!-- Size and unit -->
       <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">

@@ -72,17 +72,10 @@ public class FormatViewModel : ViewModelBase
         new() { Title = "128 GB", Value = "137438953472" }
     ];
 
-    private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
     private readonly INavigationService _navigationService;
 
-    private ObservableCollection<MediaItemViewModel> _mediaItems = [];
-    private bool _isLoadingMedia;
-    private MediaItemViewModel? _selectedMedia;
-    private SelectOption _sourceType;
-    private string _imagePath = string.Empty;
-    private MediaInfo? _media;
     private FormatTypeOption _selectedFormatType;
     private List<SelectOption> _fileSystemOptions = BasicFileSystemOptions;
     private SelectOption _selectedFileSystem = BasicFileSystemOptions[0];
@@ -94,21 +87,29 @@ public class FormatViewModel : ViewModelBase
     private SelectOption _maxPartitionSize = Pfs3MaxPartitionSizeOptions[0];
     private bool _useExperimental;
     private bool _kickstart31;
-    private bool _byteswap;
-    private string _errorMessage = string.Empty;
-    private bool _hasError;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public FormatViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
         INavigationService navigationService, ProgressViewModel progress)
     {
-        _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
         _navigationService = navigationService;
 
         Progress = progress;
+        Source = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
+        {
+            Title = "Disk",
+            AllowPhysicalDisk = true,
+            FileFilters =
+            [
+                new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
+                new FileFilterItem { Name = "All files", Extensions = ["*"] }
+            ],
+            ShowByteswap = true
+        });
+        Source.Committed += (_, _) => ResetSize();
 
         FormatTypeOptions =
         [
@@ -118,51 +119,21 @@ public class FormatViewModel : ViewModelBase
             new FormatTypeOption { Title = "PiStorm", Value = FormatType.PiStorm }
         ];
         _selectedFormatType = FormatTypeOptions[0];
-        _sourceType = SourceTypeOptions[0];
 
-        RefreshMediaCommand = ReactiveCommand.CreateFromTask(RefreshMediaAsync);
-        BrowsePathCommand = ReactiveCommand.CreateFromTask(BrowsePathAsync);
         BrowseFileSystemPathCommand = ReactiveCommand.CreateFromTask(BrowseFileSystemPathAsync);
         ResetSizeCommand = ReactiveCommand.Create(ResetSize);
         StartFormatCommand = ReactiveCommand.CreateFromTask(StartFormatAsync,
-            this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia,
-                x => x.SelectedFormatType, x => x.FileSystemPath, x => x.Progress.IsRunning,
-                (_, _, _, _, _, running) => !running && CanFormat));
+            this.WhenAnyValue(x => x.Source.IsSelected, x => x.SelectedFormatType, x => x.FileSystemPath,
+                x => x.Progress.IsRunning, (_, _, _, running) => !running && CanFormat));
         ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Format"),
             this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
 
-        this.WhenAnyValue(x => x.SourceType, x => x.ImagePath, x => x.SelectedMedia)
-            .Throttle(TimeSpan.FromMilliseconds(500))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Select(_ => Observable.FromAsync(LoadInfoAsync))
-            .Concat()
-            .Subscribe();
-
-        _ = RefreshMediaAsync();
     }
 
     public ProgressViewModel Progress { get; }
     public List<FormatTypeOption> FormatTypeOptions { get; }
-    public List<SelectOption> SourceTypeOptions { get; } = MediaOptions.SourceTypeOptions;
 
-    public ObservableCollection<MediaItemViewModel> MediaItems { get => _mediaItems; set => this.RaiseAndSetIfChanged(ref _mediaItems, value); }
-    public MediaItemViewModel? SelectedMedia { get => _selectedMedia; set => this.RaiseAndSetIfChanged(ref _selectedMedia, value); }
-    public string ImagePath { get => _imagePath; set => this.RaiseAndSetIfChanged(ref _imagePath, value); }
-
-    public SelectOption SourceType
-    {
-        get => _sourceType;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _sourceType, value);
-            this.RaisePropertyChanged(nameof(IsImageFile));
-            this.RaisePropertyChanged(nameof(IsPhysicalDisk));
-        }
-    }
-
-    public bool IsImageFile => _sourceType.Value == MediaOptions.ImageFile;
-    public bool IsPhysicalDisk => !IsImageFile;
-    public bool HasMedia => _media != null;
+    public MediaSelectionViewModel Source { get; }
 
     public FormatTypeOption SelectedFormatType
     {
@@ -260,40 +231,13 @@ public class FormatViewModel : ViewModelBase
 
     public bool Kickstart31 { get => _kickstart31; set => this.RaiseAndSetIfChanged(ref _kickstart31, value); }
 
-    public bool Byteswap
-    {
-        get => _byteswap;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _byteswap, value);
-            if (_media != null)
-                _ = LoadInfoAsync();
-        }
-    }
-
-    public string ErrorMessage { get => _errorMessage; set => this.RaiseAndSetIfChanged(ref _errorMessage, value); }
-    public bool HasError { get => _hasError; set => this.RaiseAndSetIfChanged(ref _hasError, value); }
-
-    /// <summary>
-    /// Physical disks are being loaded
-    /// </summary>
-    public bool IsLoadingMedia
-    {
-        get => _isLoadingMedia;
-        set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
-    }
-
-    public ReactiveCommand<Unit, Unit> RefreshMediaCommand { get; }
-    public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseFileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetSizeCommand { get; }
     public ReactiveCommand<Unit, Unit> StartFormatCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
-    private string? EffectivePath => IsImageFile ? _imagePath : _selectedMedia?.Path;
-
     private bool CanFormat =>
-        !string.IsNullOrWhiteSpace(EffectivePath) &&
+        Source.IsSelected &&
         (!IsRdbFormat || !string.IsNullOrWhiteSpace(_fileSystemPath));
 
     private long SizeInBytes => _sizeUnit switch
@@ -324,60 +268,8 @@ public class FormatViewModel : ViewModelBase
 
     private void ResetSize()
     {
-        Size = _media?.DiskSize ?? 0;
+        Size = Source.Media?.DiskSize ?? 0;
         SizeUnit = "Bytes";
-    }
-
-    private async Task RefreshMediaAsync()
-    {
-        try
-        {
-            IsLoadingMedia = true;
-            var medias = await _mediaService.ListMediaAsync();
-            MediaItems = new ObservableCollection<MediaItemViewModel>(medias.Select(m => new MediaItemViewModel
-                { Path = m.Path, Name = m.Name, DiskSize = m.DiskSize, IsPhysicalDrive = m.IsPhysicalDrive, MediaInfo = m }));
-            if (SelectedMedia == null && MediaItems.Count > 0) SelectedMedia = MediaItems[0];
-        }
-        catch (Exception ex) { HasError = true; ErrorMessage = ex.Message; }
-        finally
-        {
-            IsLoadingMedia = false;
-        }
-    }
-
-    private async Task LoadInfoAsync()
-    {
-        var path = EffectivePath;
-        MediaInfo? media = null;
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            try
-            {
-                HasError = false;
-                media = await _mediaService.GetMediaInfoAsync(path, Byteswap);
-            }
-            catch (Exception ex)
-            {
-                HasError = true;
-                ErrorMessage = ex.Message;
-            }
-        }
-
-        if (path != EffectivePath) return;
-
-        _media = media;
-        this.RaisePropertyChanged(nameof(HasMedia));
-        ResetSize();
-    }
-
-    private async Task BrowsePathAsync()
-    {
-        var path = await _dialogService.ShowOpenFileDialogAsync("Select image file",
-        [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
-            new FileFilterItem { Name = "All files", Extensions = ["*"] }
-        ]);
-        if (path != null) ImagePath = path;
     }
 
     private async Task BrowseFileSystemPathAsync()
@@ -391,10 +283,10 @@ public class FormatViewModel : ViewModelBase
 
     private async Task StartFormatAsync()
     {
-        var path = EffectivePath!;
-        var sourceTypeFormatted = IsImageFile ? "image file" : "physical disk";
+        var path = Source.Path!;
+        var sourceTypeFormatted = Source.IsImageFile ? "image file" : "physical disk";
         var sizeFormatted = _size == 0 ? string.Empty : $", size {_size} {_sizeUnit}";
-        var description = $"{sourceTypeFormatted} '{_media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}";
+        var description = $"{sourceTypeFormatted} '{Source.Media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}";
         if (!await _dialogService.ShowConfirmDialogAsync("Format", $"Do you want to format {description}?"))
             return;
 
@@ -405,7 +297,7 @@ public class FormatViewModel : ViewModelBase
         var maxPartitionSize = long.Parse(_maxPartitionSize.Value, CultureInfo.InvariantCulture);
         var useExperimental = UseExperimental;
         var kickstart31 = Kickstart31;
-        var byteswap = Byteswap;
+        var byteswap = Source.Byteswap;
         await Progress.RunAsync($"Formatting {description}", (progress, token) =>
             _imagingService.FormatAsync(path, formatType, fileSystem, fileSystemPath, size, maxPartitionSize,
                 useExperimental, kickstart31, byteswap, progress, token));

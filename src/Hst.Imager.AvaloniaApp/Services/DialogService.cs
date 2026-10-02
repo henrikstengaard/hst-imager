@@ -121,6 +121,22 @@ public class DialogService : IDialogService
         return await dialog.ShowDialog<bool>(_window);
     }
 
+    public async Task<bool> ShowPartitionDialogAsync(PartitionViewModel viewModel)
+    {
+        if (_window == null) return false;
+
+        var dialog = new PartitionDialog { DataContext = viewModel };
+        return await dialog.ShowDialog<bool>(_window);
+    }
+
+    public async Task<bool> ShowMediaSelectionDialogAsync(MediaSelectionViewModel viewModel)
+    {
+        if (_window == null) return false;
+
+        var dialog = new MediaSelectionDialog { DataContext = viewModel };
+        return await dialog.ShowDialog<bool>(_window);
+    }
+
     public async Task OpenExternalAsync(string url)
     {
         if (_window == null || string.IsNullOrWhiteSpace(url)) return;

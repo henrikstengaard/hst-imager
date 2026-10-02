@@ -1,0 +1,126 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+        x:Class="Hst.Imager.AvaloniaApp.Views.PartitionDialog"
+        x:DataType="vm:PartitionViewModel"
+        Title="Partition"
+        Width="720"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppWindowBackgroundBrush}">
+
+  <!-- details of selected partition, which are edited directly as pending operations -->
+  <StackPanel Margin="20" Spacing="12">
+    <TextBlock Text="{Binding SelectedPartitionTitle}" FontSize="18" FontWeight="SemiBold" />
+
+    <StackPanel Spacing="4" IsVisible="{Binding IsExistingPartitionSelected}">
+      <CheckBox Content="Format partition, which erases all data on it"
+                IsChecked="{Binding SelectedPartition.FormatRequested, FallbackValue=False}" />
+      <TextBlock Classes="field-help" TextWrapping="Wrap"
+                 Text="Existing partitions can't be moved or resized. Delete the partition to use its space for new partitions." />
+    </StackPanel>
+
+    <controls:ResponsiveColumns MaxColumns="3" MinColumnWidth="220">
+      <!-- Regular or PiStorm partition for new master boot record partitions -->
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.CanBePiStorm, FallbackValue=False}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-shapes" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Partition type" />
+        </StackPanel>
+        <ComboBox ItemsSource="{x:Static vm:PartitionEntryViewModel.PartitionTypeOptions}"
+                  SelectedItem="{Binding SelectedPartition.PartitionTypeOption, FallbackValue={x:Null}}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
+      <!-- File system -->
+      <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-sliders" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="File system" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding SelectedPartition.FileSystemOptions, FallbackValue={x:Null}}"
+                  SelectedItem="{Binding SelectedPartition.FileSystemOption, FallbackValue={x:Null}}"
+                  DisplayMemberBinding="{Binding Title}"
+                  IsEnabled="{Binding SelectedPartition.CanEditFileSystem, FallbackValue=False}"
+                  PlaceholderText="{Binding SelectedPartition.ExistingFileSystem, FallbackValue=''}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
+      <!-- Device name -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsRdb}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-hdd" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Device name" />
+        </StackPanel>
+        <TextBox Text="{Binding SelectedPartition.DeviceName, FallbackValue=''}"
+                 IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+      </StackPanel>
+
+      <!-- Volume name -->
+      <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-tag" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Volume name" />
+        </StackPanel>
+        <TextBox Text="{Binding SelectedPartition.Label, FallbackValue=''}"
+                 IsEnabled="{Binding SelectedPartition.CanEditLabel, FallbackValue=False}" />
+      </StackPanel>
+    </controls:ResponsiveColumns>
+
+    <CheckBox Content="Bootable" IsVisible="{Binding IsRdb}"
+              IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
+              IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+    <CheckBox Content="Active (bootable)" IsVisible="{Binding IsMbr}"
+              IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
+              IsEnabled="{Binding SelectedPartition.CanEditActive, FallbackValue=False}" />
+
+    <!-- Size of new partition -->
+    <StackPanel Spacing="4" IsVisible="{Binding IsNewPartitionSelected}">
+      <Grid ColumnDefinitions="*,*,*,Auto" RowDefinitions="Auto,Auto">
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+          <ia:Icon Value="fa-arrow-left" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Free space preceding" />
+        </StackPanel>
+        <TextBox Grid.Row="1" Grid.Column="0" Classes="commit-on-enter"
+                 Text="{Binding EditorFreeSpacePreceding, UpdateSourceTrigger=LostFocus}" />
+
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+          <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Size" />
+        </StackPanel>
+        <TextBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" Classes="commit-on-enter"
+                 Text="{Binding EditorSize, UpdateSourceTrigger=LostFocus}" />
+
+        <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+          <ia:Icon Value="fa-arrow-right" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Free space following" />
+        </StackPanel>
+        <TextBox Grid.Row="1" Grid.Column="2" Margin="8,0,0,0" Classes="commit-on-enter"
+                 Text="{Binding EditorFreeSpaceFollowing, UpdateSourceTrigger=LostFocus}" />
+
+        <StackPanel Grid.Row="0" Grid.Column="3" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+          <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Unit" />
+        </StackPanel>
+        <ComboBox Grid.Row="1" Grid.Column="3" Margin="8,0,0,0" MinWidth="90"
+                  ItemsSource="{x:Static vm:PartitionViewModel.SizeUnits}"
+                  SelectedItem="{Binding SizeUnit}" />
+      </Grid>
+      <TextBlock Classes="field-help" TextWrapping="Wrap"
+                 Text="{Binding EditorMaxSizeText, StringFormat='{}{0} Press enter or leave field to update size.'}" />
+    </StackPanel>
+
+    <TextBlock Classes="field-help" TextWrapping="Wrap"
+               Text="Changes are added as pending operations when OK is clicked, which are applied when Apply is clicked." />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary" />
+    </StackPanel>
+  </StackPanel>
+</Window>

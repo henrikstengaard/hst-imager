@@ -267,6 +267,26 @@ public class PartitionEntryViewModel : ReactiveObject
 
     public bool CanEditActive => IsNew && IsMbr;
 
+    /// <summary>
+    /// Get editable state of partition, which can be restored when editing partition is cancelled.
+    /// </summary>
+    public PartitionEntryState GetState() =>
+        new(_start, _size, _fileSystem, _label, _deviceName, _bootable, _formatRequested, _isPiStorm);
+
+    /// <summary>
+    /// Restore editable state of partition except range, which is restored by partition layout.
+    /// Label is restored after format requested, as requesting format sets an empty label.
+    /// </summary>
+    internal void RestoreState(PartitionEntryState state)
+    {
+        IsPiStorm = state.IsPiStorm;
+        FormatRequested = state.FormatRequested;
+        FileSystem = state.FileSystem;
+        Label = state.Label;
+        DeviceName = state.DeviceName;
+        Bootable = state.Bootable;
+    }
+
     internal void SetRange(long start, long size)
     {
         if (_start == start && _size == size)
@@ -278,6 +298,38 @@ public class PartitionEntryViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(End));
     }
 }
+
+/// <summary>
+/// Placement of partition added to unallocated space.
+/// </summary>
+public enum AddPartitionPlacement
+{
+    /// <summary>
+    /// First third of unallocated space.
+    /// </summary>
+    Start,
+
+    /// <summary>
+    /// All of unallocated space.
+    /// </summary>
+    All,
+
+    /// <summary>
+    /// Last third of unallocated space.
+    /// </summary>
+    End
+}
+
+/// <summary>
+/// Request to add partition to unallocated space segment with placement.
+/// </summary>
+public record AddPartitionRequest(PartitionSegmentViewModel Segment, AddPartitionPlacement Placement);
+
+/// <summary>
+/// Editable state of partition.
+/// </summary>
+public record PartitionEntryState(long Start, long Size, string FileSystem, string Label, string DeviceName,
+    bool Bootable, bool FormatRequested, bool IsPiStorm);
 
 /// <summary>
 /// Area reserved by another partition table, e.g. master boot record partitions in a hybrid disk.
@@ -842,14 +894,13 @@ public class PartitionLayout
     /// <summary>
     /// Add new partition in unallocated space with default file system, name and size filling unallocated space.
     /// </summary>
-    public PartitionEntryViewModel? AddPartition(long freeStart, long freeEnd, bool useExperimental)
+    public PartitionEntryViewModel? AddPartition(long freeStart, long freeEnd, bool useExperimental,
+        AddPartitionPlacement placement = AddPartitionPlacement.All)
     {
-        if (!CanAddPartition)
+        if (!CanAddPartition || GetAddRange(freeStart, freeEnd, placement) is not { } range)
             return null;
 
-        var (start, end) = GetAddRange(freeStart, freeEnd);
-        if (end - start < MinPartitionSize)
-            return null;
+        var (start, end) = range;
 
         var entry = new PartitionEntryViewModel(TableType, true);
         if (IsRdb)
@@ -867,7 +918,13 @@ public class PartitionLayout
             entry.Bootable = TableType == PartitionTableType.MasterBootRecord && !_partitions.Any(x => x.Bootable);
         }
 
+        // partition placed at end of unallocated space keeps its end, when limited by max partition size
         var size = Math.Min(end - start, GetMaxPartitionSize(entry.FileSystem, useExperimental));
+        if (placement == AddPartitionPlacement.End && size < end - start)
+        {
+            start = AlignUp(end - size);
+            size = end - start;
+        }
         entry.SetRange(start, size);
         AddEntry(entry);
         OnChanged();
@@ -877,25 +934,41 @@ public class PartitionLayout
     /// <summary>
     /// Partition can be added to segment, if it's unallocated space with room for a partition aligned in it.
     /// </summary>
-    public bool CanAddPartitionTo(PartitionSegmentViewModel? segment)
-    {
-        if (segment is not { IsUnallocated: true } || !CanAddPartition)
-            return false;
-
-        var (start, end) = GetAddRange(segment.Start, segment.End);
-        return end - start >= MinPartitionSize;
-    }
+    public bool CanAddPartitionTo(PartitionSegmentViewModel? segment,
+        AddPartitionPlacement placement = AddPartitionPlacement.All) =>
+        CanAddPartition && HasRoomFor(segment, placement);
 
     /// <summary>
-    /// Get aligned range for adding a partition in unallocated space. End of usable space is used as is.
+    /// Unallocated space has room for a partition aligned in it with placement, regardless of max partitions.
     /// </summary>
-    private (long Start, long End) GetAddRange(long freeStart, long freeEnd)
+    public bool HasRoomFor(PartitionSegmentViewModel? segment,
+        AddPartitionPlacement placement = AddPartitionPlacement.All) =>
+        segment is { IsUnallocated: true } && HasPartitionTable &&
+        GetAddRange(segment.Start, segment.End, placement) != null;
+
+    /// <summary>
+    /// Get aligned range for adding a partition in unallocated space with placement. End of usable space is used as
+    /// is. Returns null, if there's no room for a partition.
+    /// </summary>
+    private (long Start, long End)? GetAddRange(long freeStart, long freeEnd, AddPartitionPlacement placement)
     {
         var start = AlignUp(Math.Max(freeStart, UsableStart));
         var end = Math.Min(freeEnd, UsableEnd);
         if (end < UsableEnd)
             end = AlignDown(end);
-        return (start, end);
+
+        var third = AlignUp((end - start) / 3);
+        switch (placement)
+        {
+            case AddPartitionPlacement.Start:
+                end = Math.Min(end, start + third);
+                break;
+            case AddPartitionPlacement.End:
+                start = Math.Max(start, AlignUp(end - third));
+                break;
+        }
+
+        return end - start >= MinPartitionSize ? (start, end) : null;
     }
 
     public void DeletePartition(PartitionEntryViewModel partition)
@@ -989,6 +1062,16 @@ public class PartitionLayout
         var newEnd = freeSpace <= 0 ? upper : AlignNearest(upper - freeSpace);
         newEnd = Math.Clamp(newEnd, minEnd, upper);
         SetRange(partition, partition.Start, newEnd - partition.Start);
+    }
+
+    /// <summary>
+    /// Restore state of partition, e.g. when editing partition is cancelled.
+    /// </summary>
+    public void RestorePartition(PartitionEntryViewModel partition, PartitionEntryState state)
+    {
+        if (!_partitions.Contains(partition)) return;
+        partition.RestoreState(state);
+        SetRange(partition, state.Start, state.Size);
     }
 
     /// <summary>

@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Hst.Imager.AvaloniaApp.Views;
 
-public partial class ElevationWarningIcon : UserControl
+public partial class MediaSelectionCard : UserControl
 {
-    public ElevationWarningIcon()
+    public MediaSelectionCard()
     {
         InitializeComponent();
     }

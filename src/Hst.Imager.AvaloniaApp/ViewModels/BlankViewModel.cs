@@ -1,6 +1,4 @@
-using System;
 using System.Reactive;
-using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
 using ReactiveUI;
@@ -13,7 +11,6 @@ public class BlankViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly INavigationService _navigationService;
 
-    private string _outputPath = string.Empty;
     private decimal _size = 16m;
     private string _sizeUnit = "GB";
     private bool _compatibleSize = true;
@@ -22,7 +19,7 @@ public class BlankViewModel : ViewModelBase
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
-    public BlankViewModel(IImagingService imagingService, IDialogService dialogService,
+    public BlankViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
         INavigationService navigationService, ProgressViewModel progress)
     {
         _imagingService = imagingService;
@@ -31,21 +28,29 @@ public class BlankViewModel : ViewModelBase
 
         Progress = progress;
 
-        BrowseOutputCommand = ReactiveCommand.CreateFromTask(BrowseOutputAsync);
+        Destination = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
+        {
+            Title = "Disk",
+            SaveImageFile = true,
+            BrowseTitle = "Select image file to create",
+            FileFilters =
+            [
+                new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
+                new FileFilterItem { Name = "All files", Extensions = ["*"] }
+            ],
+            LoadMedia = false
+        });
+
         ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Blank"),
             this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
         StartBlankCommand = ReactiveCommand.CreateFromTask(StartBlankAsync,
-            this.WhenAnyValue(x => x.OutputPath, x => x.Size, x => x.Progress.IsRunning,
-                (path, size, running) => !string.IsNullOrEmpty(path) && size > 0 && !running));
+            this.WhenAnyValue(x => x.Destination.IsSelected, x => x.Size, x => x.Progress.IsRunning,
+                (selected, size, running) => selected && size > 0 && !running));
     }
 
     public ProgressViewModel Progress { get; }
 
-    public string OutputPath
-    {
-        get => _outputPath;
-        set => this.RaiseAndSetIfChanged(ref _outputPath, value);
-    }
+    public MediaSelectionViewModel Destination { get; }
 
     public decimal Size
     {
@@ -77,7 +82,6 @@ public class BlankViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _hasError, value);
     }
 
-    public ReactiveCommand<Unit, Unit> BrowseOutputCommand { get; }
     public ReactiveCommand<Unit, Unit> StartBlankCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
@@ -89,23 +93,14 @@ public class BlankViewModel : ViewModelBase
         _ => (long)_size
     };
 
-    private async Task BrowseOutputAsync()
-    {
-        var path = await _dialogService.ShowSaveFileDialogAsync("Select image file to create",
-        [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
-            new FileFilterItem { Name = "All files", Extensions = ["*"] }
-        ]);
-        if (path != null) OutputPath = path;
-    }
 
     private async Task StartBlankAsync()
     {
         if (!await _dialogService.ShowConfirmDialogAsync("Blank",
-                $"Do you want to create blank image file '{OutputPath}' with size '{Size} {SizeUnit.ToUpperInvariant()}'?"))
+                $"Do you want to create blank image file '{Destination.Path}' with size '{Size} {SizeUnit.ToUpperInvariant()}'?"))
             return;
 
-        var path = OutputPath;
+        var path = Destination.Path!;
         var size = SizeInBytes;
         var compatibleSize = CompatibleSize;
         await Progress.RunAsync($"Creating {Size} {SizeUnit} blank image '{path}'", (progress, token) =>

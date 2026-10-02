@@ -55,6 +55,21 @@
           <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding FooterNavItems}"
                         ItemTemplate="{StaticResource NavItemTemplate}" />
 
+          <!-- Administrator privileges are required to access physical disks -->
+          <Button DockPanel.Dock="Bottom" Classes="nav-item" Margin="0,8,0,2"
+                  IsVisible="{Binding !IsElevated}" Command="{Binding ElevateCommand}"
+                  ToolTip.Tip="Administrator privileges are required to access physical disks. Click to restart as Administrator.">
+            <Grid ColumnDefinitions="3,Auto,*">
+              <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+                <ia:Icon Value="fa-shield-halved" FontSize="16" HorizontalAlignment="Center"
+                         Foreground="{DynamicResource AppWarningForegroundBrush}" />
+              </Panel>
+              <TextBlock Grid.Column="2" Classes="nav-label" Text="Run as Administrator"
+                         Foreground="{DynamicResource AppWarningForegroundBrush}"
+                         IsVisible="{Binding IsSidebarExpanded}" />
+            </Grid>
+          </Button>
+
           <ScrollViewer VerticalScrollBarVisibility="Auto">
             <ItemsControl ItemsSource="{Binding NavItems}"
                           ItemTemplate="{StaticResource NavItemTemplate}" />

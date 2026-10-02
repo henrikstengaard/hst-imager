@@ -21,5 +21,14 @@ public interface IDialogService
     /// Show initialize partition table dialog. Returns true, if initialize is clicked.
     /// </summary>
     Task<bool> ShowInitializePartitionTableDialogAsync(InitializePartitionTableViewModel viewModel);
+    /// <summary>
+    /// Show partition dialog with details of selected partition in partition view model. Returns true, if OK is
+    /// clicked and false, if dialog is cancelled.
+    /// </summary>
+    Task<bool> ShowPartitionDialogAsync(PartitionViewModel viewModel);
+    /// <summary>
+    /// Show media selection dialog to select source or destination media. Returns true, if OK is clicked.
+    /// </summary>
+    Task<bool> ShowMediaSelectionDialogAsync(MediaSelectionViewModel viewModel);
     Task OpenExternalAsync(string url);
 }

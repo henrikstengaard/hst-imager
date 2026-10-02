@@ -27,7 +27,6 @@
           <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#4A1A1A" />
           <SolidColorBrush x:Key="AppErrorForegroundBrush" Color="#FF6B6B" />
           <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#3A2800" />
-          <SolidColorBrush x:Key="AppWarningBannerBackgroundBrush" Color="#4A3A12" />
           <SolidColorBrush x:Key="AppWarningForegroundBrush" Color="#FFBB33" />
           <SolidColorBrush x:Key="AppSuccessForegroundBrush" Color="#33CC33" />
           <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#CC3333" />
@@ -61,7 +60,6 @@
           <SolidColorBrush x:Key="AppErrorBackgroundBrush" Color="#FDE2E2" />
           <SolidColorBrush x:Key="AppErrorForegroundBrush" Color="#B71C1C" />
           <SolidColorBrush x:Key="AppWarningBackgroundBrush" Color="#FFF4D6" />
-          <SolidColorBrush x:Key="AppWarningBannerBackgroundBrush" Color="#FFF4D6" />
           <SolidColorBrush x:Key="AppWarningForegroundBrush" Color="#8A5A00" />
           <SolidColorBrush x:Key="AppSuccessForegroundBrush" Color="#2E7D32" />
           <SolidColorBrush x:Key="AppFailureForegroundBrush" Color="#C62828" />
@@ -184,6 +182,25 @@
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="12" />
       <Setter Property="Margin" Value="0,4" />
+    </Style>
+
+    <!-- Selected source or destination media, which is clicked to change it -->
+    <Style Selector="Button.media-card">
+      <Setter Property="Background" Value="{DynamicResource AppCardBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppDividerBrush}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="12,10" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="Button.media-card:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource AppNavHoverBackgroundBrush}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource AppPrimaryBackgroundBrush}" />
+    </Style>
+    <Style Selector="Button.media-card TextBlock.placeholder">
+      <Setter Property="FontWeight" Value="Normal" />
+      <Setter Property="Foreground" Value="{DynamicResource AppMutedForegroundBrush}" />
     </Style>
 
     <Style Selector="TextBlock.field-label">

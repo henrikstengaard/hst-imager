@@ -1,9 +1,9 @@
 using System.ComponentModel;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -36,7 +36,6 @@ public partial class PartitionView : UserControl
     public PartitionView()
     {
         InitializeComponent();
-        AddHandler(KeyDownEvent, OnPreviewKeyDown, RoutingStrategies.Tunnel);
     }
 
     /// <summary>
@@ -69,18 +68,15 @@ public partial class PartitionView : UserControl
     }
 
     /// <summary>
-    /// Commit size values on enter by moving focus to partition layout, as size values are updated on lost focus.
+    /// Edit partition double clicked in list view.
     /// </summary>
-    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    private void OnPartitionsGridDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (e.Key != Key.Enter || e.Source is not Control control)
+        if (e.Source is not Control control || control.FindAncestorOfType<DataGridRow>(true) == null)
             return;
 
-        var textBox = control as TextBox ?? control.FindAncestorOfType<TextBox>();
-        if (textBox == null || !textBox.Classes.Contains("commit-on-enter"))
-            return;
-
-        LayoutBar.Focus();
-        e.Handled = true;
+        ICommand? command = _viewModel?.EditPartitionCommand;
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
     }
 }

@@ -1,9 +1,6 @@
-using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Reactive;
-using System.Reactive.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
@@ -13,57 +10,46 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 
 public class OptimizeViewModel : ViewModelBase
 {
-    private readonly IMediaService _mediaService;
     private readonly IImagingService _imagingService;
     private readonly IDialogService _dialogService;
     private readonly INavigationService _navigationService;
 
-    private string _imagePath = string.Empty;
-    private MediaInfo? _media;
     private ObservableCollection<SelectOption> _sizeOptions = [];
     private SelectOption? _selectedSizeOption;
     private decimal _size;
     private string _sizeUnit = "Bytes";
-    private bool _byteswap;
-    private string _errorMessage = string.Empty;
-    private bool _hasError;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
     public OptimizeViewModel(IMediaService mediaService, IImagingService imagingService, IDialogService dialogService,
         INavigationService navigationService, ProgressViewModel progress)
     {
-        _mediaService = mediaService;
         _imagingService = imagingService;
         _dialogService = dialogService;
         _navigationService = navigationService;
 
         Progress = progress;
+        Source = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
+        {
+            Title = "Disk",
+            FileFilters =
+            [
+                new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
+                new FileFilterItem { Name = "All files", Extensions = ["*"] }
+            ],
+            ShowByteswap = true
+        });
+        Source.Committed += (_, _) => UpdateSizeOptions(Source.Media);
 
-        BrowseImageCommand = ReactiveCommand.CreateFromTask(BrowseImageAsync);
         ResetCommand = ReactiveCommand.Create(() => _navigationService.NavigateTo("Optimize"),
             this.WhenAnyValue(x => x.Progress.IsRunning, running => !running));
         StartOptimizeCommand = ReactiveCommand.CreateFromTask(StartOptimizeAsync,
-            this.WhenAnyValue(x => x.ImagePath, x => x.HasMedia, x => x.Progress.IsRunning,
-                (path, hasMedia, running) => !string.IsNullOrWhiteSpace(path) && hasMedia && !running));
-
-        this.WhenAnyValue(x => x.ImagePath)
-            .Throttle(TimeSpan.FromMilliseconds(500))
-            .ObserveOn(RxApp.MainThreadScheduler)
-            .Select(_ => Observable.FromAsync(LoadInfoAsync))
-            .Concat()
-            .Subscribe();
+            this.WhenAnyValue(x => x.Source.IsSelected, x => x.Source.HasMedia, x => x.Progress.IsRunning,
+                (selected, hasMedia, running) => selected && hasMedia && !running));
     }
 
     public ProgressViewModel Progress { get; }
-
-    public string ImagePath
-    {
-        get => _imagePath;
-        set => this.RaiseAndSetIfChanged(ref _imagePath, value);
-    }
-
-    public bool HasMedia => _media != null;
+    public MediaSelectionViewModel Source { get; }
 
     public ObservableCollection<SelectOption> SizeOptions
     {
@@ -96,30 +82,6 @@ public class OptimizeViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
     }
 
-    public bool Byteswap
-    {
-        get => _byteswap;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _byteswap, value);
-            if (_media != null)
-                _ = LoadInfoAsync();
-        }
-    }
-
-    public string ErrorMessage
-    {
-        get => _errorMessage;
-        set => this.RaiseAndSetIfChanged(ref _errorMessage, value);
-    }
-
-    public bool HasError
-    {
-        get => _hasError;
-        set => this.RaiseAndSetIfChanged(ref _hasError, value);
-    }
-
-    public ReactiveCommand<Unit, Unit> BrowseImageCommand { get; }
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
@@ -131,29 +93,8 @@ public class OptimizeViewModel : ViewModelBase
         _ => (long)_size
     };
 
-    private async Task LoadInfoAsync()
+    private void UpdateSizeOptions(MediaInfo? media)
     {
-        var path = ImagePath;
-        MediaInfo? media = null;
-        if (!string.IsNullOrWhiteSpace(path))
-        {
-            try
-            {
-                HasError = false;
-                media = await _mediaService.GetMediaInfoAsync(path, Byteswap);
-            }
-            catch (Exception ex)
-            {
-                HasError = true;
-                ErrorMessage = ex.Message;
-            }
-        }
-
-        if (path != ImagePath) return;
-
-        _media = media;
-        this.RaisePropertyChanged(nameof(HasMedia));
-
         var options = new ObservableCollection<SelectOption>();
         if (media != null)
         {
@@ -181,26 +122,16 @@ public class OptimizeViewModel : ViewModelBase
         Value = size.ToString(CultureInfo.InvariantCulture)
     };
 
-    private async Task BrowseImageAsync()
-    {
-        var path = await _dialogService.ShowOpenFileDialogAsync("Select image file",
-        [
-            new FileFilterItem { Name = "Hard disk image files", Extensions = ["img", "hdf", "vhd"] },
-            new FileFilterItem { Name = "All files", Extensions = ["*"] }
-        ]);
-        if (path != null) ImagePath = path;
-    }
-
     private async Task StartOptimizeAsync()
     {
         var sizeFormatted = Size > 0 ? $" to size {Size} {SizeUnit}" : string.Empty;
         if (!await _dialogService.ShowConfirmDialogAsync("Optimize",
-                $"Do you want to optimize image file '{ImagePath}'{sizeFormatted}?"))
+                $"Do you want to optimize image file '{Source.Path}'{sizeFormatted}?"))
             return;
 
-        var path = ImagePath;
+        var path = Source.Path!;
         var size = SizeInBytes;
-        var byteswap = Byteswap;
+        var byteswap = Source.Byteswap;
         await Progress.RunAsync($"Optimizing image file '{path}'", (progress, token) =>
             _imagingService.OptimizeAsync(path, size, byteswap, progress, token));
     }

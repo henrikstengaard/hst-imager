@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
@@ -52,13 +53,30 @@ public class PartPathSelection : ReactiveObject
 
     public bool IsCustom => _selected?.Value == MediaOptions.CustomPartPath;
 
-    public void Update(MediaInfo? media, bool includePartitions = true)
+    public void Update(MediaInfo? media, bool includePartitions = true) =>
+        SetOptions(media == null ? [] : MediaOptions.GetPartPathOptions(media, includePartitions));
+
+    /// <summary>
+    /// Set options and select first option.
+    /// </summary>
+    public void SetOptions(IEnumerable<SelectOption> options)
     {
-        Options = media == null
-            ? []
-            : new ObservableCollection<SelectOption>(MediaOptions.GetPartPathOptions(media, includePartitions));
+        Options = new ObservableCollection<SelectOption>(options);
         _selected = null;
         Selected = _options.Count > 0 ? _options[0] : null;
+    }
+
+    /// <summary>
+    /// Copy options and selection without raising selection changed.
+    /// </summary>
+    public void CopyFrom(PartPathSelection other)
+    {
+        Options = new ObservableCollection<SelectOption>(other._options);
+        _selected = other._selected;
+        _startOffset = other._startOffset;
+        this.RaisePropertyChanged(nameof(Selected));
+        this.RaisePropertyChanged(nameof(IsCustom));
+        this.RaisePropertyChanged(nameof(StartOffset));
     }
 
     /// <summary>

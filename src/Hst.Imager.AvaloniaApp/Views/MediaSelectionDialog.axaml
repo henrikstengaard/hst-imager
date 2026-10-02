@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        x:Class="Hst.Imager.AvaloniaApp.Views.MediaSelectionDialog"
+        x:DataType="vm:MediaSelectionViewModel"
+        Title="{Binding Options.Title}"
+        Width="600"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppWindowBackgroundBrush}">
+
+  <StackPanel Margin="20" Spacing="12">
+    <TextBlock Text="{Binding Options.Title}" FontSize="18" FontWeight="SemiBold" />
+
+    <!-- Image file or physical disk -->
+    <StackPanel Spacing="4" IsVisible="{Binding HasTypeOptions}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-shapes" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Type" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding TypeOptions}"
+                SelectedItem="{Binding Type}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <!-- Image file -->
+    <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-file" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Image file" />
+      </StackPanel>
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
+        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseCommand}" ToolTip.Tip="Browse">
+          <ia:Icon Value="fa-folder-open" />
+        </Button>
+      </Grid>
+    </StackPanel>
+
+    <!-- Physical disk -->
+    <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-hdd" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Physical disk" />
+      </StackPanel>
+      <Border Classes="warning" IsVisible="{Binding ShowElevationWarning}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Physical disk selection is disabled, because administrator privileges are required to access physical disks. Use 'Run as Administrator' in the menu to enable it." />
+      </Border>
+      <Grid ColumnDefinitions="*,Auto">
+        <Panel Grid.Column="0">
+          <ComboBox IsEnabled="{Binding IsElevated}"
+                    ItemsSource="{Binding MediaItems}"
+                    SelectedItem="{Binding SelectedDisk}"
+                    DisplayMemberBinding="{Binding Label}"
+                    HorizontalAlignment="Stretch" />
+          <!-- loading indicator shown while getting physical disks -->
+          <ia:Icon Value="fa-spinner" Animation="Spin"
+                   IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+        </Panel>
+        <Button Grid.Column="1" Margin="8,0,0,0" IsEnabled="{Binding IsElevated}"
+                Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+          <ia:Icon Value="fa-sync-alt" />
+        </Button>
+      </Grid>
+    </StackPanel>
+
+    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+
+    <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
+            IsVisible="{Binding HasError}">
+      <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- Part of media -->
+    <StackPanel Spacing="4" IsVisible="{Binding ShowPart}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-chart-pie" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="{Binding Options.PartLabel}" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding PartPath.Options}"
+                SelectedItem="{Binding PartPath.Selected}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding ShowStartOffset}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Start offset" />
+      </StackPanel>
+      <NumericUpDown Value="{Binding PartPath.StartOffset}" Minimum="0" Increment="512" FormatString="0"
+                     IsEnabled="{Binding PartPath.IsCustom}" />
+    </StackPanel>
+
+    <!-- Size of custom part -->
+    <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto" IsVisible="{Binding Options.ShowSize}">
+      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+        <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Size" />
+      </StackPanel>
+      <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                     IsEnabled="{Binding IsSizeEnabled}" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+        <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Unit" />
+      </StackPanel>
+      <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                ItemsSource="{x:Static vm:MediaSelectionViewModel.SizeUnits}"
+                SelectedItem="{Binding SizeUnit}"
+                IsEnabled="{Binding IsSizeEnabled}" />
+    </Grid>
+
+    <CheckBox Content="{Binding Options.ByteswapLabel}" IsChecked="{Binding Byteswap}"
+              IsVisible="{Binding Options.ShowByteswap}" />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary" />
+    </StackPanel>
+  </StackPanel>
+</Window>

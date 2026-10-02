@@ -15,7 +15,9 @@ namespace Hst.Imager.AvaloniaApp.Controls;
 /// <summary>
 /// Visual view of partition layout similar to gparted, showing partitions and unallocated space proportional to
 /// their size. Segments are selected by clicking. New partitions are resized by dragging their edges and moved by
-/// dragging them. Hovering unallocated space shows an add icon and clicking it adds a partition.
+/// dragging them. Hovering unallocated space shows an add icon and clicking it adds a partition. Hovering first third
+/// of unallocated space adds a partition in first third, last third adds a partition in last third and center adds a
+/// partition in all unallocated space. Add icon is disabled, when partition table has max partitions.
 /// Segments of multiple partition tables are shown as one disk, where partition tables in partitions like PiStorm rigid
 /// disk blocks are shown nested in the partition containing them. A band above segments shows the area of each
 /// partition table in its color and nested partition tables have a header in their color.
@@ -45,10 +47,14 @@ public class PartitionLayoutBar : Control
     public static readonly StyledProperty<ICommand?> AddPartitionCommandProperty =
         AvaloniaProperty.Register<PartitionLayoutBar, ICommand?>(nameof(AddPartitionCommand));
 
+    public static readonly StyledProperty<ICommand?> EditPartitionCommandProperty =
+        AvaloniaProperty.Register<PartitionLayoutBar, ICommand?>(nameof(EditPartitionCommand));
+
     private DragState? _drag;
 
     // start offset of hovered unallocated space, as segments are rebuilt when layout changes
     private long? _hoverStart;
+    private AddPartitionPlacement _hoverPlacement = AddPartitionPlacement.All;
 
     static PartitionLayoutBar()
     {
@@ -84,7 +90,7 @@ public class PartitionLayoutBar : Control
     }
 
     /// <summary>
-    /// Command executed with unallocated segment clicked to add a partition to it.
+    /// Command executed with add partition request, when unallocated space is clicked to add a partition to it.
     /// </summary>
     public ICommand? AddPartitionCommand
     {
@@ -92,12 +98,66 @@ public class PartitionLayoutBar : Control
         set => SetValue(AddPartitionCommandProperty, value);
     }
 
-    private bool CanAddPartitionTo(PartitionSegmentViewModel? segment) =>
-        segment != null && AddPartitionCommand != null && segment.Layout.CanAddPartitionTo(segment);
+    /// <summary>
+    /// Command executed when a partition is double clicked to edit it.
+    /// </summary>
+    public ICommand? EditPartitionCommand
+    {
+        get => GetValue(EditPartitionCommandProperty);
+        set => SetValue(EditPartitionCommandProperty, value);
+    }
+
+    /// <summary>
+    /// Unallocated space shows add icon, when it has room for a partition. Add icon is disabled, when partition table
+    /// has max partitions.
+    /// </summary>
+    private bool ShowsAdd(PartitionSegmentViewModel? segment) =>
+        segment != null && AddPartitionCommand != null && segment.Layout.HasRoomFor(segment);
 
     private PartitionSegmentViewModel? HoveredSegment => _hoverStart == null
         ? null
-        : Segments?.FirstOrDefault(x => x.IsUnallocated && x.DiskStart == _hoverStart && CanAddPartitionTo(x));
+        : Segments?.FirstOrDefault(x => x.IsUnallocated && x.DiskStart == _hoverStart && ShowsAdd(x));
+
+    /// <summary>
+    /// Get placement of partition added by position in unallocated space. First and last third of unallocated space
+    /// adds partition in first and last third, if there is room for it.
+    /// </summary>
+    private AddPartitionPlacement GetPlacement(PartitionSegmentViewModel segment, double x)
+    {
+        var rect = GetSegmentRect(segment);
+        var fraction = rect.Width <= 0 ? 0.5 : (x - rect.Left) / rect.Width;
+        var placement = fraction < 1.0 / 3
+            ? AddPartitionPlacement.Start
+            : fraction > 2.0 / 3
+                ? AddPartitionPlacement.End
+                : AddPartitionPlacement.All;
+        return segment.Layout.HasRoomFor(segment, placement) ? placement : AddPartitionPlacement.All;
+    }
+
+    /// <summary>
+    /// Get rectangle of placement in unallocated space.
+    /// </summary>
+    private static Rect GetPlacementRect(Rect rect, AddPartitionPlacement placement) => placement switch
+    {
+        AddPartitionPlacement.Start => new Rect(rect.X, rect.Y, rect.Width / 3, rect.Height),
+        AddPartitionPlacement.End => new Rect(rect.Right - rect.Width / 3, rect.Y, rect.Width / 3, rect.Height),
+        _ => rect
+    };
+
+    private static string GetAddTooltip(PartitionSegmentViewModel segment, AddPartitionPlacement placement)
+    {
+        var layout = segment.Layout;
+        if (!layout.CanAddPartition)
+            return $"{layout.TableTypeName} only allows {layout.MaxPartitions} partitions";
+
+        var area = placement switch
+        {
+            AddPartitionPlacement.Start => "first third of unallocated space",
+            AddPartitionPlacement.End => "last third of unallocated space",
+            _ => "all unallocated space"
+        };
+        return $"Add {layout.TableTypeName} partition in {area}";
+    }
 
     private enum DragMode
     {
@@ -197,7 +257,12 @@ public class PartitionLayoutBar : Control
         // hovered unallocated space shows add icon
         var hovered = HoveredSegment;
         if (hovered != null)
-            DrawAddOverlay(context, GetSegmentRect(hovered), selectedBrush, panelBrush, textBrush);
+        {
+            var accentBrush = hovered.Layout.CanAddPartition
+                ? selectedBrush
+                : GetBrush("AppMutedForegroundBrush", Brushes.Gray);
+            DrawAddOverlay(context, hovered, GetSegmentRect(hovered), accentBrush, panelBrush, textBrush);
+        }
 
         // selected segment is drawn last, so it's on top of neighbours
         var selected = SelectedSegment;
@@ -296,24 +361,32 @@ public class PartitionLayoutBar : Control
             context.DrawText(text, new Point(rect.X + 4, rect.Y + Math.Max(0, (rect.Height - text.Height) / 2)));
     }
 
-    private void DrawAddOverlay(DrawingContext context, Rect rect, IBrush accentBrush, IBrush panelBrush,
-        IBrush textBrush)
+    /// <summary>
+    /// Draw add icon in hovered placement of unallocated space. Disabled add icon shows max partitions.
+    /// </summary>
+    private void DrawAddOverlay(DrawingContext context, PartitionSegmentViewModel segment, Rect rect,
+        IBrush accentBrush, IBrush panelBrush, IBrush textBrush)
     {
-        var inner = rect.Deflate(BorderWidth);
+        var inner = GetPlacementRect(rect.Deflate(BorderWidth), _hoverPlacement);
         if (inner.Width <= 0 || inner.Height <= 0)
             return;
 
         context.FillRectangle(panelBrush, inner);
         context.FillRectangle(new SolidColorBrush(((ISolidColorBrush)accentBrush).Color, 0.15), inner);
 
-        var label = CreateText($"Add {HoveredSegment?.Layout.TableTypeName} partition", new Typeface(FontFamily.Default), 11,
-            FontWeight.SemiBold, textBrush);
-        var showLabel = inner.Width >= label.Width + 8;
+        // longest label fitting in placement is shown
+        var layout = segment.Layout;
+        var labels = layout.CanAddPartition
+            ? new[] { $"Add {layout.TableTypeName} partition", "Add partition", "Add" }
+            : new[] { $"Max {layout.MaxPartitions} partitions", "Max" };
+        var label = labels
+            .Select(x => CreateText(x, new Typeface(FontFamily.Default), 11, FontWeight.SemiBold, textBrush))
+            .FirstOrDefault(x => inner.Width >= x.Width + 8);
 
         // circle with plus icon above label
         const double radius = 9;
         var center = new Point(inner.Center.X,
-            showLabel ? inner.Center.Y - label.Height / 2 - 1 : inner.Center.Y);
+            label != null ? inner.Center.Y - label.Height / 2 - 1 : inner.Center.Y);
         var pen = new Pen(accentBrush, 2);
         using (context.PushClip(inner))
         {
@@ -323,7 +396,7 @@ public class PartitionLayoutBar : Control
             context.DrawLine(plusPen, center + new Point(0, -4.5), center + new Point(0, 4.5));
             context.DrawRectangle(pen, inner.Deflate(1));
 
-            if (showLabel)
+            if (label != null)
                 context.DrawText(label, new Point(inner.Center.X - label.Width / 2, center.Y + radius + 2));
         }
     }
@@ -345,16 +418,29 @@ public class PartitionLayoutBar : Control
         // nested segments are hit before partition containing them
         var segments = Segments?.OrderByDescending(x => x.Depth).ToList() ?? [];
 
-        // edges of new partitions are prioritized, so small partitions can be resized
-        foreach (var segment in segments.Where(x => x.Partition is { IsNew: true }))
-        {
-            var rect = GetSegmentRect(segment);
-            var grab = Math.Min(EdgeGrabWidth, rect.Width / 3);
-            if (Math.Abs(point.X - rect.Left) <= grab)
-                return (segment, DragMode.Start);
-            if (Math.Abs(point.X - rect.Right) <= grab)
-                return (segment, DragMode.End);
-        }
+        // edges of new partitions are prioritized, so small partitions can be resized. adjacent partitions share an
+        // edge, so edge of partition containing point is used before nearest edge
+        var edge = segments
+            .Where(x => x.Partition is { IsNew: true })
+            .SelectMany(segment =>
+            {
+                var rect = GetSegmentRect(segment);
+                var grab = Math.Min(EdgeGrabWidth, rect.Width / 3);
+                var inside = point.X >= rect.Left && point.X <= rect.Right && point.Y >= rect.Top &&
+                             point.Y <= rect.Bottom;
+                return new[]
+                    {
+                        (Segment: segment, Mode: DragMode.Start, Distance: Math.Abs(point.X - rect.Left)),
+                        (Segment: segment, Mode: DragMode.End, Distance: Math.Abs(point.X - rect.Right))
+                    }
+                    .Where(x => x.Distance <= grab)
+                    .Select(x => (x.Segment, x.Mode, x.Distance, Inside: inside));
+            })
+            .OrderByDescending(x => x.Inside)
+            .ThenBy(x => x.Distance)
+            .FirstOrDefault();
+        if (edge.Segment != null)
+            return (edge.Segment, edge.Mode);
 
         foreach (var segment in segments)
         {
@@ -380,11 +466,24 @@ public class PartitionLayoutBar : Control
 
         SelectedSegment = segment;
 
-        if (CanAddPartitionTo(segment))
+        if (e.ClickCount == 2 && segment.Partition != null)
         {
-            if (AddPartitionCommand!.CanExecute(segment))
-                AddPartitionCommand.Execute(segment);
-            SetHover(null);
+            if (EditPartitionCommand?.CanExecute(null) == true)
+                EditPartitionCommand.Execute(null);
+            e.Handled = true;
+            return;
+        }
+
+        if (ShowsAdd(segment))
+        {
+            // disabled add icon only selects unallocated space
+            var request = new AddPartitionRequest(segment, GetPlacement(segment, point.Position.X));
+            if (segment.Layout.CanAddPartition && AddPartitionCommand!.CanExecute(request))
+            {
+                AddPartitionCommand.Execute(request);
+                SetHover(null, AddPartitionPlacement.All);
+            }
+
             e.Handled = true;
             return;
         }
@@ -407,15 +506,16 @@ public class PartitionLayoutBar : Control
         if (_drag == null)
         {
             var (segment, mode) = HitTest(position);
-            var canAdd = mode == null && CanAddPartitionTo(segment);
-            SetHover(canAdd ? segment!.DiskStart : null);
+            var showsAdd = mode == null && ShowsAdd(segment);
+            var placement = showsAdd ? GetPlacement(segment!, position.X) : AddPartitionPlacement.All;
+            SetHover(showsAdd ? segment!.DiskStart : null, placement);
             Cursor = mode switch
             {
                 DragMode.Start or DragMode.End => new Cursor(StandardCursorType.SizeWestEast),
                 DragMode.Move => new Cursor(StandardCursorType.SizeAll),
-                _ => canAdd ? new Cursor(StandardCursorType.Hand) : Cursor.Default
+                _ => showsAdd && segment!.Layout.CanAddPartition ? new Cursor(StandardCursorType.Hand) : Cursor.Default
             };
-            ToolTip.SetTip(this, canAdd ? $"Add {segment!.Layout.TableTypeName} partition" : null);
+            ToolTip.SetTip(this, showsAdd ? GetAddTooltip(segment!, placement) : null);
             return;
         }
 
@@ -450,14 +550,15 @@ public class PartitionLayoutBar : Control
     protected override void OnPointerExited(PointerEventArgs e)
     {
         base.OnPointerExited(e);
-        SetHover(null);
+        SetHover(null, AddPartitionPlacement.All);
     }
 
-    private void SetHover(long? start)
+    private void SetHover(long? start, AddPartitionPlacement placement)
     {
-        if (_hoverStart == start)
+        if (_hoverStart == start && _hoverPlacement == placement)
             return;
         _hoverStart = start;
+        _hoverPlacement = placement;
         InvalidateVisual();
     }
 

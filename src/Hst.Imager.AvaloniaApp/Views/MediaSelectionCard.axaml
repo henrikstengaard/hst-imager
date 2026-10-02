@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             x:Class="Hst.Imager.AvaloniaApp.Views.MediaSelectionCard"
+             x:DataType="vm:MediaSelectionViewModel">
+
+  <!-- Selected source or destination media, click to change it in media selection dialog -->
+  <StackPanel Spacing="4">
+    <TextBlock Classes="field-label" Text="{Binding Options.Title}" />
+    <Button Classes="media-card" Command="{Binding EditCommand}"
+            ToolTip.Tip="Click to change">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <ia:Icon Grid.Column="0" Value="{Binding TypeIcon}" FontSize="20" VerticalAlignment="Center"
+                 Margin="0,0,12,0" Classes="field-icon" />
+        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                     Classes.placeholder="{Binding !IsSelected}" />
+          <TextBlock Classes="field-help" Text="{Binding Details}" TextTrimming="CharacterEllipsis"
+                     IsVisible="{Binding HasDetails}" />
+          <TextBlock Classes="error-text" FontSize="12" Text="{Binding ErrorMessage}" TextTrimming="CharacterEllipsis"
+                     IsVisible="{Binding HasError}" />
+        </StackPanel>
+        <Panel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+          <ia:Icon Value="fa-spinner" Animation="Spin" IsVisible="{Binding IsLoading}" />
+          <ia:Icon Value="fa-pen-to-square" IsVisible="{Binding !IsLoading}" Classes="field-icon" />
+        </Panel>
+      </Grid>
+    </Button>
+  </StackPanel>
+</UserControl>
