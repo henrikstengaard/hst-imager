@@ -134,6 +134,11 @@ public class PartitionEntryViewModel : ReactiveObject
     public int? ExistingBiosType { get; init; }
 
     /// <summary>
+    /// Dos type of existing rigid disk block partition without backslash, e.g. PFS3.
+    /// </summary>
+    public string ExistingDosType { get; init; } = string.Empty;
+
+    /// <summary>
     /// Formatting existing master boot record partition with file system requires changing its bios type,
     /// e.g. from NTFS to FAT32.
     /// </summary>
@@ -337,14 +342,18 @@ public record PartitionEntryState(long Start, long Size, string FileSystem, stri
 public record ReservedArea(long Start, long Size, string Name, PartitionTableType TableType);
 
 /// <summary>
-/// Segment of partition layout, either a partition, unallocated space or area reserved by another partition table,
-/// shown in visual and list view. Start and size are relative to partition layout, disk start is offset by start of
-/// partition table on disk, e.g. master boot record partition with a PiStorm rigid disk block.
+/// Segment of partition layout, either a partition, unallocated space, area used by the partition table itself or area
+/// reserved by another partition table, shown in visual and list view. Start and size are relative to partition
+/// layout, disk start is offset by start of partition table on disk, e.g. master boot record partition with a PiStorm
+/// rigid disk block.
 /// </summary>
 public class PartitionSegmentViewModel
 {
+    private readonly string? _shortName;
+
     public PartitionSegmentViewModel(PartitionLayout layout, long start, long size, PartitionEntryViewModel? partition,
-        ReservedArea? reserved = null, string? unallocatedName = null, long offset = 0, int depth = 0)
+        ReservedArea? reserved = null, string? unallocatedName = null, long offset = 0, int depth = 0,
+        bool isPartitionTable = false)
     {
         Layout = layout;
         Start = start;
@@ -353,6 +362,7 @@ public class PartitionSegmentViewModel
         Depth = depth;
         Partition = partition;
         IsReserved = partition == null && reserved != null;
+        IsPartitionTable = partition == null && reserved == null && isPartitionTable;
 
         // reserved areas belong to another partition table
         var tableType = IsReserved ? reserved!.TableType : layout.TableType;
@@ -370,6 +380,16 @@ public class PartitionSegmentViewModel
             EndCylinderText = ((start + size) / layout.Alignment - 1).ToString();
         }
         SizeText = MediaOptions.FormatBytes(size);
+
+        // area used by partition table is shown in color of partition table with abbreviation used, when name
+        // doesn't fit
+        if (IsPartitionTable)
+        {
+            Name = unallocatedName ?? layout.TableTypeName;
+            _shortName = TableType;
+            Color = TableColor;
+            return;
+        }
 
         if (partition == null)
         {
@@ -407,6 +427,12 @@ public class PartitionSegmentViewModel
     public bool IsReserved { get; }
 
     /// <summary>
+    /// Area used by partition table itself before usable area, e.g. sectors of master boot record, guid partition
+    /// table or cylinders of rigid disk block, and backup guid partition table at end of disk.
+    /// </summary>
+    public bool IsPartitionTable { get; }
+
+    /// <summary>
     /// Layout of partition table nested in partition, e.g. master boot record partition with a PiStorm rigid disk
     /// block.
     /// </summary>
@@ -438,12 +464,18 @@ public class PartitionSegmentViewModel
     public string TableColor { get; }
     public IBrush TableColorBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(TableColor));
     public bool HasTableType => !string.IsNullOrEmpty(TableType);
-    public bool IsUnallocated => Partition == null && !IsReserved;
+    public bool IsUnallocated => Partition == null && !IsReserved && !IsPartitionTable;
     public long Start { get; }
     public long Size { get; }
     public long End => Start + Size;
     public string Number { get; } = string.Empty;
     public string Name { get; }
+
+    /// <summary>
+    /// Name shown in visual view, when name doesn't fit.
+    /// </summary>
+    public string ShortName => string.IsNullOrEmpty(_shortName) ? Name : _shortName;
+
     public string FileSystem { get; } = string.Empty;
     public string Color { get; }
     public IBrush ColorBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(Color));
@@ -478,6 +510,8 @@ public class PartitionLayout
     private readonly List<PartitionEntryViewModel> _partitions = [];
     private readonly List<PartitionEntryViewModel> _deletedPartitions = [];
     private readonly List<ReservedArea> _reservedAreas = [];
+    private readonly List<RdbFileSystemEntry> _fileSystems = [];
+    private readonly List<RdbFileSystemEntry> _deletedFileSystems = [];
 
     private PartitionLayout(PartitionTableType tableType, long diskSize, long usableStart, long usableEnd,
         long alignment, int maxPartitions, bool isInitialize)
@@ -526,7 +560,12 @@ public class PartitionLayout
     /// Layout has changes to apply.
     /// </summary>
     public bool HasChanges => IsInitialize || _deletedPartitions.Count > 0 ||
-                              _partitions.Any(x => x.IsNew || x.FormatRequested);
+                              _partitions.Any(x => x.IsNew || x.FormatRequested) || HasFileSystemChanges;
+
+    /// <summary>
+    /// Rigid disk block has file systems to add, import, update or delete.
+    /// </summary>
+    public bool HasFileSystemChanges => _deletedFileSystems.Count > 0 || _fileSystems.Any(x => x.IsNew || x.IsUpdated);
 
     public long DiskSize { get; }
     public long UsableStart { get; }
@@ -547,12 +586,23 @@ public class PartitionLayout
     public long Pfs3MaxPartitionSize => AlignDown(FileSystemHelper.Pfs3MaxPartitionSize);
 
     /// <summary>
-    /// Dos types of file systems present in existing rigid disk block, e.g. PFS3.
+    /// Dos types of file systems in rigid disk block after pending file system changes, e.g. PFS3.
     /// </summary>
-    public IReadOnlySet<string> ExistingDosTypes { get; private init; } = new HashSet<string>();
+    public IReadOnlySet<string> FileSystemDosTypes =>
+        _fileSystems.Select(x => x.DosType).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     public IReadOnlyList<PartitionEntryViewModel> Partitions => _partitions;
     public IReadOnlyList<PartitionEntryViewModel> DeletedPartitions => _deletedPartitions;
+
+    /// <summary>
+    /// File systems in rigid disk block, existing file systems not deleted and new file systems to add or import.
+    /// </summary>
+    public IReadOnlyList<RdbFileSystemEntry> FileSystems => _fileSystems;
+
+    /// <summary>
+    /// Existing file systems to delete from rigid disk block.
+    /// </summary>
+    public IReadOnlyList<RdbFileSystemEntry> DeletedFileSystems => _deletedFileSystems;
 
     public bool CanAddPartition => HasPartitionTable && _partitions.Count < MaxPartitions;
 
@@ -575,7 +625,7 @@ public class PartitionLayout
         IEnumerable<ReservedArea>? keptMasterBootRecordPartitions)
     {
         var size = rdbSize > 0 ? Math.Min(rdbSize, diskSize) : diskSize;
-        var layout = CreateRdbLayout(RigidDiskBlock.Create(size / 512 * 512), diskSize, true, null,
+        var layout = CreateRdbLayout(RigidDiskBlock.Create(size / 512 * 512), diskSize, true,
             keptMasterBootRecordPartitions != null, rdbBlockLo, rdbSize);
         layout._reservedAreas.AddRange(keptMasterBootRecordPartitions ?? []);
         return layout;
@@ -594,12 +644,15 @@ public class PartitionLayout
     }
 
     /// <summary>
-    /// Move new partitions from another layout of same partition table, e.g. rigid disk block in a new PiStorm
-    /// partition, which is resized. Partitions are kept, if they start in usable area and cylinders are same size.
-    /// Last partition is shrunk to fit, if usable area is smaller.
+    /// Move new partitions and file systems from another layout of same partition table, e.g. rigid disk block in a
+    /// new PiStorm partition, which is resized. Partitions are kept, if they start in usable area and cylinders are
+    /// same size. Last partition is shrunk to fit, if usable area is smaller.
     /// </summary>
     public void AdoptPartitions(PartitionLayout other)
     {
+        _fileSystems.AddRange(other._fileSystems.Where(x => x.IsNew));
+        other._fileSystems.Clear();
+
         foreach (var partition in other._partitions.ToList())
         {
             other._partitions.Remove(partition);
@@ -648,6 +701,12 @@ public class PartitionLayout
     /// Name of partition table, e.g. Rigid Disk Block.
     /// </summary>
     public string TableTypeName => FormatTableTypeName(TableType);
+
+    /// <summary>
+    /// Size of partition table. Size of rigid disk block is the cylinders it uses, other partition tables use the
+    /// whole disk.
+    /// </summary>
+    public long TableSize => IsRdb ? Math.Min(UsableEnd, DiskSize) : DiskSize;
 
     public static string FormatTableTypeName(PartitionTableType tableType) => tableType switch
     {
@@ -711,15 +770,13 @@ public class PartitionLayout
     }
 
     private static PartitionLayout CreateRdbLayout(RigidDiskBlock rigidDiskBlock, long diskSize, bool isInitialize,
-        IEnumerable<string>? existingDosTypes = null, bool keepMasterBootRecord = false, int rdbBlockLo = 0,
-        long rdbSize = 0)
+        bool keepMasterBootRecord = false, int rdbBlockLo = 0, long rdbSize = 0)
     {
         var cylinderSize = (long)rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
         return new PartitionLayout(PartitionTableType.RigidDiskBlock, diskSize,
             rigidDiskBlock.LoCylinder * cylinderSize, ((long)rigidDiskBlock.HiCylinder + 1) * cylinderSize,
             cylinderSize, 128, isInitialize)
         {
-            ExistingDosTypes = new HashSet<string>(existingDosTypes ?? [], StringComparer.OrdinalIgnoreCase),
             KeepMasterBootRecord = keepMasterBootRecord,
             RdbBlockLo = rdbBlockLo,
             RdbSize = rdbSize
@@ -758,9 +815,9 @@ public class PartitionLayout
     private static PartitionLayout FromRigidDiskBlock(RigidDiskBlock rigidDiskBlock, long diskSize,
         PartitionTablePart partitionTablePart, DiskInfo diskInfo)
     {
-        var existingDosTypes = (rigidDiskBlock.FileSystemHeaderBlocks ?? [])
-            .Select(x => x.DosTypeFormatted.Replace("\\", string.Empty));
-        var layout = CreateRdbLayout(rigidDiskBlock, diskSize, false, existingDosTypes);
+        var layout = CreateRdbLayout(rigidDiskBlock, diskSize, false);
+        layout._fileSystems.AddRange((rigidDiskBlock.FileSystemHeaderBlocks ?? [])
+            .Select((x, i) => RdbFileSystemEntry.FromHeaderBlock(x, i + 1)));
 
         // master boot record partitions after rigid disk block in hybrid disk
         foreach (var part in (diskInfo.MbrPartitionTablePart?.Parts ?? [])
@@ -777,6 +834,7 @@ public class PartitionLayout
             {
                 Number = part.PartitionNumber,
                 ExistingFileSystem = part.FileSystem ?? part.PartitionType ?? string.Empty,
+                ExistingDosType = RdbFileSystemEntry.NormalizeDosType(partitionBlock?.DosTypeFormatted ?? string.Empty),
                 UsedSize = GetUsedSize(part)
             };
             entry.SetRange(part.StartOffset, part.EndOffset - part.StartOffset + 1);
@@ -838,6 +896,12 @@ public class PartitionLayout
             return segments;
         }
 
+        // area used by partition table before usable area. master boot record in a hybrid disk is placed after rigid
+        // disk block, which shows its own area. existing partitions can start before usable area
+        var tableEnd = _partitions.Select(x => x.Start).Append(UsableStart).Min();
+        if (tableEnd > 0 && !_reservedAreas.Any(x => x.Start < UsableStart))
+            segments.Add(new PartitionSegmentViewModel(this, 0, tableEnd, null, null, null, offset, depth, true));
+
         // partitions and areas reserved by other partition tables, which can be outside usable area
         var occupied = _partitions
             .Select(x => Segment(x.Start, x.Size, x))
@@ -856,6 +920,12 @@ public class PartitionLayout
 
         if (UsableEnd - position >= MinPartitionSize)
             segments.Add(Segment(position, UsableEnd - position, null));
+
+        // backup guid partition table at end of disk after usable area
+        var backupStart = Math.Max(position, UsableEnd);
+        if (TableType == PartitionTableType.GuidPartitionTable && DiskSize > backupStart)
+            segments.Add(new PartitionSegmentViewModel(this, backupStart, DiskSize - backupStart, null, null,
+                $"{TableTypeName} (backup)", offset, depth, true));
 
         return segments;
     }
@@ -1095,8 +1165,123 @@ public class PartitionLayout
             .ToList(),
         AddPartitions = _partitions.Where(x => x.IsNew || x.RequiresTypeChange).Select(ToPlannedPartition).ToList(),
         FormatPartitions = _partitions.Where(x => x.IsExisting && x.FormatRequested && !x.RequiresTypeChange)
-            .Select(ToPlannedPartition).ToList()
+            .Select(ToPlannedPartition).ToList(),
+        UpdateFileSystems = _fileSystems.Where(x => x.IsUpdated).Select(x => new PlannedFileSystemUpdate
+        {
+            Number = x.Number!.Value,
+            DosType = x.IsDosTypeChanged ? x.DosType : null,
+            Name = x.IsNameChanged ? x.Name : null,
+            Path = x.IsDataReplaced ? x.Path : null
+        }).ToList(),
+        DeleteFileSystemNumbers = GetFileSystemsToDelete(_deletedFileSystems).Select(x => x.Number!.Value).ToList(),
+        AddFileSystems = _fileSystems.Where(x => x.IsNew).Select(x => new PlannedFileSystem
+        {
+            Path = x.Path,
+            DosType = x.DosType,
+            Name = x.Name,
+            IsImport = x.IsFromMedia,
+            Version = x.RequiresManualVersion ? (int?)x.ManualVersion : null,
+            Revision = x.RequiresManualVersion ? (int?)x.ManualRevision : null
+        }).ToList()
     };
+
+    // ─── File systems ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Set file systems of rigid disk block edited in file systems dialog.
+    /// </summary>
+    public void SetFileSystems(IEnumerable<RdbFileSystemEntry> fileSystems,
+        IEnumerable<RdbFileSystemEntry> deletedFileSystems)
+    {
+        var updatedFileSystems = fileSystems.ToList();
+        var updatedDeletedFileSystems = deletedFileSystems.Where(x => x.IsExisting).ToList();
+        _fileSystems.Clear();
+        _fileSystems.AddRange(updatedFileSystems);
+        _deletedFileSystems.Clear();
+        _deletedFileSystems.AddRange(updatedDeletedFileSystems);
+        OnChanged();
+    }
+
+    /// <summary>
+    /// Existing file systems deleted, which are not replaced by a new file system with same dos type. Adding a file
+    /// system replaces existing file system with same dos type, so file systems used by partitions can be replaced.
+    /// </summary>
+    private IEnumerable<RdbFileSystemEntry> GetFileSystemsToDelete(IEnumerable<RdbFileSystemEntry> deletedFileSystems,
+        IEnumerable<RdbFileSystemEntry>? fileSystems = null)
+    {
+        var newDosTypes = (fileSystems ?? _fileSystems).Where(x => x.IsNew).Select(x => x.DosType)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return deletedFileSystems.Where(x => x.IsExisting && !newDosTypes.Contains(x.OriginalDosType));
+    }
+
+    /// <summary>
+    /// Validate file systems of rigid disk block. File systems edited in file systems dialog are validated, if set.
+    /// </summary>
+    public List<string> ValidateFileSystems(IReadOnlyList<RdbFileSystemEntry>? fileSystems = null,
+        IReadOnlyList<RdbFileSystemEntry>? deletedFileSystems = null)
+    {
+        fileSystems ??= _fileSystems;
+        deletedFileSystems ??= _deletedFileSystems;
+        var errors = new List<string>();
+
+        foreach (var fileSystem in fileSystems.Where(x => x.IsNew || x.IsUpdated))
+        {
+            var title = FormatFileSystemTitle(fileSystem);
+            if (fileSystem.DosType.Length != 4)
+                errors.Add($"DOS type '{fileSystem.DosType}' of {title} must be 4 characters, e.g. PDS3 or DOS3");
+
+            if (fileSystem.IsFromMedia && string.IsNullOrWhiteSpace(fileSystem.Name))
+                errors.Add($"Name of {title} is required to find it in media");
+
+            if (fileSystem.IsNew && string.IsNullOrWhiteSpace(fileSystem.Path))
+                errors.Add(fileSystem.IsFromMedia
+                    ? $"Path to media is required for {title}"
+                    : $"Path to file system file is required for {title}");
+
+            if (fileSystem.HasSourceError)
+                errors.Add($"{title}: {fileSystem.SourceError}");
+
+            if (fileSystem.IsFromFile && fileSystem.Size > RdbFileSystemEntry.MaxFileSystemSize)
+                errors.Add(
+                    $"File system file of {title} is larger than max size {MediaOptions.FormatBytes(RdbFileSystemEntry.MaxFileSystemSize)}");
+
+            if (fileSystem.RequiresManualVersion &&
+                (!fileSystem.ManualVersion.HasValue || !fileSystem.ManualRevision.HasValue))
+                errors.Add($"Version and revision are required for {title}, as file system file has no version string");
+        }
+
+        foreach (var dosType in fileSystems
+                     .Where(x => x.DosType.Length > 0)
+                     .GroupBy(x => x.DosType, StringComparer.OrdinalIgnoreCase)
+                     .Where(x => x.Count() > 1)
+                     .Select(x => x.Key))
+            errors.Add(
+                $"DOS type '{dosType}' is used by more than one file system. Delete the existing file system to replace it");
+
+        // existing partitions use updated dos type of file system, when dos type of existing file system is updated
+        var updatedDosTypes = fileSystems.Where(x => x.IsDosTypeChanged)
+            .GroupBy(x => x.OriginalDosType, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(x => x.Key, x => x.First().DosType, StringComparer.OrdinalIgnoreCase);
+        var partitions = _partitions.Where(x => x.IsExisting && !string.IsNullOrEmpty(x.ExistingDosType)).ToList();
+        foreach (var fileSystem in GetFileSystemsToDelete(deletedFileSystems, fileSystems))
+        {
+            var partition = partitions.FirstOrDefault(x => string.Equals(
+                updatedDosTypes.GetValueOrDefault(x.ExistingDosType, x.ExistingDosType), fileSystem.OriginalDosType,
+                StringComparison.OrdinalIgnoreCase));
+            if (partition != null)
+                errors.Add(
+                    $"File system #{fileSystem.Number} ({fileSystem.OriginalDosType}) can't be deleted, as it's used by partition #{partition.Number} {partition.DeviceName}. Delete the partition or add a file system with DOS type {fileSystem.OriginalDosType} to replace it");
+        }
+
+        return errors.Select(x => $"{char.ToUpperInvariant(x[0])}{x[1..]}").ToList();
+    }
+
+    /// <summary>
+    /// Format file system for messages, e.g. file system #1 (PDS3) or new file system (PDS3).
+    /// </summary>
+    public static string FormatFileSystemTitle(RdbFileSystemEntry fileSystem) => fileSystem.IsExisting
+        ? $"file system #{fileSystem.Number} ({fileSystem.DosType})"
+        : $"new file system ({fileSystem.DosType})";
 
     private static PlannedPartition ToPlannedPartition(PartitionEntryViewModel partition) => new()
     {

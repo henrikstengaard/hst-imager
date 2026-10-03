@@ -27,6 +27,10 @@ public interface IDialogService
     /// </summary>
     Task<bool> ShowPartitionDialogAsync(PartitionViewModel viewModel);
     /// <summary>
+    /// Show file systems dialog to edit file systems in a rigid disk block. Returns true, if OK is clicked.
+    /// </summary>
+    Task<bool> ShowRdbFileSystemsDialogAsync(RdbFileSystemsViewModel viewModel);
+    /// <summary>
     /// Show media selection dialog to select source or destination media. Returns true, if OK is clicked.
     /// </summary>
     Task<bool> ShowMediaSelectionDialogAsync(MediaSelectionViewModel viewModel);

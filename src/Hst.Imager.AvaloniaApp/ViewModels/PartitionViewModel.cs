@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
@@ -88,6 +89,7 @@ public class PartitionViewModel : ViewModelBase
         AddPartitionToCommand = ReactiveCommand.Create<AddPartitionRequest>(AddPartitionTo);
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
+        EditFileSystemsCommand = ReactiveCommand.CreateFromTask(EditFileSystemsAsync, this.WhenAnyValue(x => x.IsRdb));
         ResetCommand = ReactiveCommand.CreateFromTask(ResetAsync, this.WhenAnyValue(x => x.HasMedia));
         ApplyCommand = ReactiveCommand.CreateFromTask(ApplyAsync,
             this.WhenAnyValue(x => x.CanApply, x => x.Progress.IsRunning, (canApply, running) => canApply && !running));
@@ -184,7 +186,7 @@ public class PartitionViewModel : ViewModelBase
             {
                 Name = x.IsDiskPath ? name : $"PiStorm {name} in {x.ContainerName}",
                 Abbreviation = PartitionLayout.GetTableTypeAbbreviation(layout.TableType),
-                SizeText = MediaOptions.FormatBytes(layout.IsRdb ? Math.Min(layout.UsableEnd, layout.DiskSize) : layout.DiskSize),
+                SizeText = MediaOptions.FormatBytes(layout.TableSize),
                 Color = PartitionLayout.GetTableTypeColor(layout.TableType)
             };
         })
@@ -407,6 +409,11 @@ public class PartitionViewModel : ViewModelBase
     /// Show partition dialog to edit selected partition.
     /// </summary>
     public ReactiveCommand<Unit, Unit> EditPartitionCommand { get; }
+
+    /// <summary>
+    /// Show file systems dialog to add, import, update, export and delete file systems in selected rigid disk block.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> EditFileSystemsCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
     public ReactiveCommand<Unit, Unit> ApplyCommand { get; }
 
@@ -557,8 +564,9 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(NoPartitionTableText));
 
         RebuildSegments();
-        var segment = Segments.FirstOrDefault(x => ReferenceEquals(x.Layout, selectLayout) && !x.IsContainer) ??
-                      Segments.FirstOrDefault(x => !x.IsContainer) ?? Segments.FirstOrDefault();
+        var segment = Segments.FirstOrDefault(x => ReferenceEquals(x.Layout, selectLayout) && !x.IsContainer &&
+                                                   !x.IsPartitionTable) ??
+                      Segments.FirstOrDefault(x => !x.IsContainer && !x.IsPartitionTable) ?? Segments.FirstOrDefault();
         if (segment != null)
             SetSelectedSegment(segment);
         UpdatePending();
@@ -690,6 +698,27 @@ public class PartitionViewModel : ViewModelBase
         SizeUnit = sizeUnit;
     }
 
+    /// <summary>
+    /// Edit file systems of selected rigid disk block in file systems dialog. File systems are edited as copies, which
+    /// are set as pending operations, when dialog is closed with OK. Existing file systems are exported from rigid
+    /// disk block on disk, which isn't available for new rigid disk blocks.
+    /// </summary>
+    private async Task EditFileSystemsAsync()
+    {
+        if (_layout is not { IsRdb: true } layout || FindTable(layout) is not { } table)
+            return;
+
+        var byteswap = Source.Byteswap;
+        Func<int, string, Task>? export = layout.IsInitialize || table.IsInNewPartition
+            ? null
+            : (number, path) => _imagingService.ExportRdbFileSystemAsync(table.Path, byteswap, number, path,
+                CancellationToken.None);
+        var dialog = new RdbFileSystemsViewModel($"File systems in {layout.TableTypeName}{FormatContainer(layout)}",
+            layout, _dialogService, _imagingService, export);
+        if (await _dialogService.ShowRdbFileSystemsDialogAsync(dialog))
+            dialog.Apply();
+    }
+
     private void OnLayoutChanged(object? sender, EventArgs e)
     {
         SyncNewPiStormTables();
@@ -768,7 +797,9 @@ public class PartitionViewModel : ViewModelBase
 
         var segment = previous.Partition != null
             ? Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, previous.Partition))
-            : Segments.FirstOrDefault(x => x.IsUnallocated && ReferenceEquals(x.Layout, previous.Layout) &&
+            : Segments.FirstOrDefault(x => x.IsUnallocated == previous.IsUnallocated &&
+                                           x.IsPartitionTable == previous.IsPartitionTable &&
+                                           ReferenceEquals(x.Layout, previous.Layout) &&
                                            x.Start < previous.End && x.End > previous.Start);
         if (segment != null)
             SetSelectedSegment(segment);
@@ -834,7 +865,7 @@ public class PartitionViewModel : ViewModelBase
     private IEnumerable<string> GetMissingDosTypes() => RdbLayouts
         .SelectMany(layout => layout.Partitions.Where(x => x.IsNew)
             .Select(x => x.FileSystem.ToUpperInvariant())
-            .Where(x => !layout.ExistingDosTypes.Contains(x)))
+            .Where(x => !layout.FileSystemDosTypes.Contains(x)))
         .Distinct();
 
     private void UpdatePending()
@@ -891,6 +922,39 @@ public class PartitionViewModel : ViewModelBase
         foreach (var partition in layout.Partitions.Where(x => x.IsExisting && x.FormatRequested))
             operations.Add(
                 $"Format {layout.TableTypeName} partition #{partition.Number}{FormatDeviceName(partition)} with {partition.FileSystemDisplay} named '{partition.Label}'{(partition.RequiresTypeChange ? " and change partition type" : string.Empty)}{location}");
+
+        AddFileSystemOperations(layout, location, operations);
+    }
+
+    /// <summary>
+    /// Add operations for file systems in rigid disk block in order they are applied.
+    /// </summary>
+    private static void AddFileSystemOperations(PartitionLayout layout, string location, List<string> operations)
+    {
+        foreach (var fileSystem in layout.FileSystems.Where(x => x.IsUpdated))
+        {
+            var changes = new List<string>();
+            if (fileSystem.IsDosTypeChanged)
+                changes.Add($"DOS type to {fileSystem.DosType}, which also changes DOS type of partitions using it");
+            if (fileSystem.IsNameChanged)
+                changes.Add($"name to '{fileSystem.Name}'");
+            if (fileSystem.IsDataReplaced)
+                changes.Add($"data with file '{fileSystem.Path}'");
+            operations.Add(
+                $"Update {layout.TableTypeName} file system #{fileSystem.Number} ({fileSystem.OriginalDosType}) {string.Join(", ", changes)}{location}");
+        }
+
+        var newDosTypes = layout.FileSystems.Where(x => x.IsNew).Select(x => x.DosType)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var fileSystem in layout.DeletedFileSystems)
+            operations.Add(newDosTypes.Contains(fileSystem.OriginalDosType)
+                ? $"Replace {layout.TableTypeName} file system #{fileSystem.Number} ({fileSystem.OriginalDosType}) '{fileSystem.OriginalName}' with new file system{location}"
+                : $"Delete {layout.TableTypeName} file system #{fileSystem.Number} ({fileSystem.OriginalDosType}) '{fileSystem.OriginalName}'{location}");
+
+        foreach (var fileSystem in layout.FileSystems.Where(x => x.IsNew))
+            operations.Add(fileSystem.IsFromMedia
+                ? $"Import file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from '{fileSystem.Path}' to {layout.TableTypeName}{location}"
+                : $"Add file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from file '{fileSystem.Path}' to {layout.TableTypeName}{location}");
     }
 
     private void Validate(DiskPartitionTable table, List<string> errors)
@@ -916,6 +980,8 @@ public class PartitionViewModel : ViewModelBase
 
             return;
         }
+
+        errors.AddRange(layout.ValidateFileSystems().Select(x => $"{x}{location}"));
 
         foreach (var partition in layout.Partitions.Where(x => x.IsNew))
         {

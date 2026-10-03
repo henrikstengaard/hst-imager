@@ -283,6 +283,8 @@ public class PartitionLayoutBar : Control
 
         var typeface = new Typeface(FontFamily.Default);
         var name = CreateText(segment.Name, typeface, 12, FontWeight.SemiBold, textBrush);
+        if (name.Width + 8 > rect.Width && segment.ShortName != segment.Name)
+            name = CreateText(segment.ShortName, typeface, 12, FontWeight.SemiBold, textBrush);
         var details = CreateText(
             string.IsNullOrEmpty(segment.FileSystem) ? segment.SizeText : $"{segment.FileSystem}, {segment.SizeText}",
             typeface, 11, FontWeight.Normal, textBrush);
@@ -301,7 +303,8 @@ public class PartitionLayoutBar : Control
     /// <summary>
     /// Draw band above segments with area of each partition table on disk in its color and named by it, so it's
     /// visible which partitions belong to which partition table, e.g. rigid disk block and master boot record of a
-    /// hybrid disk. Area of partition table spans its partitions and unallocated space.
+    /// hybrid disk. Area of partition table spans its partitions and unallocated space. Name is followed by size of
+    /// partition table, when it fits.
     /// </summary>
     private void DrawTableBand(DrawingContext context, IEnumerable<PartitionSegmentViewModel> segments)
     {
@@ -317,7 +320,7 @@ public class PartitionLayoutBar : Control
             var rect = new Rect(x0, 0, x1 - x0, TableBandHeight - 2);
             context.FillRectangle(new SolidColorBrush(Color.Parse(PartitionLayout.GetTableTypeColor(layout.TableType))),
                 rect);
-            DrawTableName(context, layout, rect);
+            DrawTableName(context, layout, rect, $", {MediaOptions.FormatBytes(layout.TableSize)}");
         }
     }
 

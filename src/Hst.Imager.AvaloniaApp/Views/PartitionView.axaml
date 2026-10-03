@@ -89,7 +89,11 @@
             </ToggleButton>
             <Button Classes="icon" Command="{Binding InitializeCommand}"
                     ToolTip.Tip="Initialize new empty partition table, which erases existing partitions">
-              <ia:Icon Value="fa-broom" />
+              <ia:Icon Value="fa-table-columns" />
+            </Button>
+            <Button Classes="icon" Command="{Binding EditFileSystemsCommand}"
+                    ToolTip.Tip="File systems in selected Rigid Disk Block">
+              <ia:Icon Value="fa-puzzle-piece" />
             </Button>
           </StackPanel>
 

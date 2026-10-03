@@ -31,4 +31,15 @@ public interface IImagingService
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 
     Task PartitionAsync(PartitionPlan plan, IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Export file system with number from rigid disk block at path to output path.
+    /// </summary>
+    Task ExportRdbFileSystemAsync(string path, bool byteswap, int fileSystemNumber, string outputPath,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Find file system with name in media like lha, adf or iso. Returns null, if file system is not found.
+    /// </summary>
+    Task<RdbFileSystemInfo?> FindRdbFileSystemAsync(string mediaPath, string fileSystemName);
 }

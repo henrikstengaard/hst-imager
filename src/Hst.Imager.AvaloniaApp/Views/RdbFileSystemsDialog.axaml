@@ -1,0 +1,154 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+        x:Class="Hst.Imager.AvaloniaApp.Views.RdbFileSystemsDialog"
+        x:DataType="vm:RdbFileSystemsViewModel"
+        Title="File systems"
+        Width="760"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppWindowBackgroundBrush}">
+
+  <Window.Styles>
+    <!-- icon only action buttons with tooltip, also shown when disabled -->
+    <Style Selector="Button.icon">
+      <Setter Property="Width" Value="36" />
+      <Setter Property="Height" Value="36" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="ToolTip.ShowOnDisabled" Value="True" />
+    </Style>
+  </Window.Styles>
+
+  <!-- file systems in rigid disk block, which are added as pending operations when OK is clicked -->
+  <StackPanel Margin="20" Spacing="12">
+    <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+    <!-- Actions -->
+    <StackPanel Orientation="Horizontal" Spacing="4">
+      <Button Classes="icon" Command="{Binding AddFromFileCommand}"
+              ToolTip.Tip="Add file system from a file system file">
+        <ia:Icon Value="fa-circle-plus" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ImportFromMediaCommand}"
+              ToolTip.Tip="Import file system from media (lha, adf, iso, hdf)">
+        <ia:Icon Value="fa-file-import" />
+      </Button>
+      <Button Classes="icon" Command="{Binding ExportCommand}"
+              ToolTip.Tip="{Binding ExportHint}">
+        <ia:Icon Value="fa-file-export" />
+      </Button>
+      <Button Classes="icon" Command="{Binding DeleteCommand}"
+              ToolTip.Tip="Delete selected file system">
+        <ia:Icon Value="fa-trash-can" />
+      </Button>
+    </StackPanel>
+
+    <!-- List of file systems -->
+    <DataGrid ItemsSource="{Binding FileSystems}"
+              SelectedItem="{Binding SelectedFileSystem}"
+              SelectionMode="Single" Height="180"
+              IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+              GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}">
+      <DataGrid.Columns>
+        <DataGridTextColumn Header="#" Binding="{Binding NumberText}" Width="40" />
+        <DataGridTextColumn Header="DOS type" Binding="{Binding DosType}" Width="90" />
+        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
+        <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="80" />
+        <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" />
+        <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="*" />
+        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="80" />
+      </DataGrid.Columns>
+    </DataGrid>
+    <TextBlock Classes="field-help" Text="No file systems in Rigid Disk Block."
+               IsVisible="{Binding !HasFileSystems}" />
+
+    <!-- Selected file system -->
+    <StackPanel Spacing="8" IsVisible="{Binding IsFileSystemSelected}">
+      <controls:ResponsiveColumns MaxColumns="2" MinColumnWidth="220">
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-sliders" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="DOS type" />
+          </StackPanel>
+          <TextBox Text="{Binding SelectedFileSystem.DosType, FallbackValue='', UpdateSourceTrigger=LostFocus}"
+                   Classes="commit-on-enter" Watermark="e.g. PDS3, PFS3, DOS3" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-tag" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="{Binding NameLabel}" />
+          </StackPanel>
+          <TextBox Text="{Binding SelectedFileSystem.Name, FallbackValue='', UpdateSourceTrigger=LostFocus}"
+                   Classes="commit-on-enter" />
+        </StackPanel>
+      </controls:ResponsiveColumns>
+
+      <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="{Binding PathLabel}" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Classes="commit-on-enter"
+                   Text="{Binding SelectedFileSystem.Path, FallbackValue='', UpdateSourceTrigger=LostFocus}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowsePathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+        <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding PathHelp}" />
+      </StackPanel>
+
+      <!-- Version of file system file without version string -->
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedFileSystem.RequiresManualVersion, FallbackValue=False}">
+        <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
+          <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+            <ia:Icon Value="fa-code-branch" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Version" />
+          </StackPanel>
+          <NumericUpDown Grid.Row="1" Grid.Column="0" Minimum="0" Maximum="65535" Increment="1" FormatString="0"
+                         Value="{Binding SelectedFileSystem.ManualVersion, FallbackValue={x:Null}}" />
+          <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+            <ia:Icon Value="fa-code-branch" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Revision" />
+          </StackPanel>
+          <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" Minimum="0" Maximum="65535" Increment="1"
+                         FormatString="0"
+                         Value="{Binding SelectedFileSystem.ManualRevision, FallbackValue={x:Null}}" />
+        </Grid>
+        <TextBlock Classes="field-help" TextWrapping="Wrap"
+                   Text="File system file has no version string. Version and revision must be set manually." />
+      </StackPanel>
+    </StackPanel>
+
+    <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
+            IsVisible="{Binding HasValidationErrors}">
+      <ItemsControl ItemsSource="{Binding ValidationErrors}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="x:String">
+            <TextBlock Classes="error-text" Text="{Binding}" TextWrapping="Wrap" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <!-- Result of exporting file system -->
+    <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding Message}"
+               IsVisible="{Binding HasMessage}" Classes.error-text="{Binding IsMessageError}" />
+
+    <TextBlock Classes="field-help" TextWrapping="Wrap"
+               Text="Changes are added as pending operations when OK is clicked, which are applied when Apply is clicked. Exporting a file system writes it to a file immediately." />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary"
+              IsEnabled="{Binding !HasValidationErrors}" />
+    </StackPanel>
+  </StackPanel>
+</Window>

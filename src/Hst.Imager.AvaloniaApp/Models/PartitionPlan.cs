@@ -83,8 +83,77 @@ public class PartitionPlan
 
     public bool UseExperimental { get; set; }
 
+    /// <summary>
+    /// Existing file systems in rigid disk block to update.
+    /// </summary>
+    public List<PlannedFileSystemUpdate> UpdateFileSystems { get; set; } = [];
+
+    /// <summary>
+    /// Numbers of existing file systems in rigid disk block to delete.
+    /// </summary>
+    public List<int> DeleteFileSystemNumbers { get; set; } = [];
+
+    /// <summary>
+    /// New file systems to add to or import to rigid disk block.
+    /// </summary>
+    public List<PlannedFileSystem> AddFileSystems { get; set; } = [];
+
     public bool HasChanges => Initialize || DeletePartitionNumbers.Count > 0 || AddPartitions.Count > 0 ||
-                              FormatPartitions.Count > 0;
+                              FormatPartitions.Count > 0 || UpdateFileSystems.Count > 0 ||
+                              DeleteFileSystemNumbers.Count > 0 || AddFileSystems.Count > 0;
+}
+
+/// <summary>
+/// Update of existing file system in rigid disk block. Properties not set are not changed.
+/// </summary>
+public class PlannedFileSystemUpdate
+{
+    public int Number { get; set; }
+
+    /// <summary>
+    /// Dos type, e.g. PDS3. Dos type of partitions using file system is also updated.
+    /// </summary>
+    public string? DosType { get; set; }
+
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Path to file system file to replace data of file system with.
+    /// </summary>
+    public string? Path { get; set; }
+}
+
+/// <summary>
+/// New file system added from a file system file or imported from media like lha, adf or iso.
+/// </summary>
+public class PlannedFileSystem
+{
+    /// <summary>
+    /// Path to file system file or path or url to media to import file system from.
+    /// </summary>
+    public string Path { get; set; } = string.Empty;
+
+    public string DosType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Name of file system, which is also used to find file system in media.
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// File system is imported from media instead of added from a file system file.
+    /// </summary>
+    public bool IsImport { get; set; }
+
+    /// <summary>
+    /// Version of file system added from a file system file without a version string.
+    /// </summary>
+    public int? Version { get; set; }
+
+    /// <summary>
+    /// Revision of file system added from a file system file without a version string.
+    /// </summary>
+    public int? Revision { get; set; }
 }
 
 public class PlannedPartition

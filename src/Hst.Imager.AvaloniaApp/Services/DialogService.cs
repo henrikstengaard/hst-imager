@@ -129,6 +129,14 @@ public class DialogService : IDialogService
         return await dialog.ShowDialog<bool>(_window);
     }
 
+    public async Task<bool> ShowRdbFileSystemsDialogAsync(RdbFileSystemsViewModel viewModel)
+    {
+        if (_window == null) return false;
+
+        var dialog = new RdbFileSystemsDialog { DataContext = viewModel };
+        return await dialog.ShowDialog<bool>(_window);
+    }
+
     public async Task<bool> ShowMediaSelectionDialogAsync(MediaSelectionViewModel viewModel)
     {
         if (_window == null) return false;

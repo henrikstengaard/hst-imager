@@ -202,7 +202,8 @@ public class ImagingService : IImagingService
             ? plan.AddPartitions.Select(x => GetDosType(x.FileSystem)).Distinct().ToList()
             : [];
 
-        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + rdbDosTypes.Count +
+        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + plan.UpdateFileSystems.Count +
+                    plan.DeleteFileSystemNumbers.Count + plan.AddFileSystems.Count * 2 + rdbDosTypes.Count +
                     plan.AddPartitions.Count * 2 + plan.FormatPartitions.Count + 1;
         var stepsExecuted = 0;
 
@@ -264,6 +265,45 @@ public class ImagingService : IImagingService
                     partitionNumber),
                 _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
             });
+        }
+
+        // update existing file systems by number before deleting file systems changes their numbers
+        foreach (var update in plan.UpdateFileSystems.OrderBy(x => x.Number))
+        {
+            await Run(new RdbFsUpdateCommand(_loggerFactory.CreateLogger<RdbFsUpdateCommand>(), commandHelper,
+                physicalDrives, path, update.Number, update.DosType ?? string.Empty, update.Name ?? string.Empty,
+                update.Path ?? string.Empty));
+        }
+
+        // delete file systems from highest number, so file system numbers to delete are not changed by deleting
+        foreach (var fileSystemNumber in plan.DeleteFileSystemNumbers.OrderByDescending(x => x))
+        {
+            await Run(new RdbFsDelCommand(_loggerFactory.CreateLogger<RdbFsDelCommand>(), commandHelper,
+                physicalDrives, path, fileSystemNumber));
+        }
+
+        // add and import file systems, which replace existing file systems with same dos type. name is set after
+        // adding, as file system name is set to name of file or name found in media when added
+        foreach (var fileSystem in plan.AddFileSystems)
+        {
+            if (fileSystem.IsImport)
+            {
+                await ThrowIfFileSystemNotInMediaAsync(commandHelper, fileSystem.Path, fileSystem.Name);
+                await Run(new RdbFsImportCommand(_loggerFactory.CreateLogger<RdbFsImportCommand>(), commandHelper,
+                    physicalDrives, path, fileSystem.Path, fileSystem.DosType, fileSystem.Name,
+                    _appState.AppDataPath));
+            }
+            else
+            {
+                await Run(new RdbFsAddCommand(_loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper,
+                    physicalDrives, path, fileSystem.Path, fileSystem.DosType, fileSystem.Name, fileSystem.Version,
+                    fileSystem.Revision));
+            }
+
+            var fileSystemNumber = await ReadRdbFileSystemNumberAsync(commandHelper, physicalDrives, path,
+                fileSystem.DosType, token);
+            await Run(new RdbFsUpdateCommand(_loggerFactory.CreateLogger<RdbFsUpdateCommand>(), commandHelper,
+                physicalDrives, path, fileSystemNumber, string.Empty, fileSystem.Name, string.Empty));
         }
 
         // add file systems used by new partitions, which are not already in rigid disk block
@@ -353,6 +393,63 @@ public class ImagingService : IImagingService
 
         stepsExecuted = steps;
         ReportStep();
+    }
+
+    public async Task ExportRdbFileSystemAsync(string path, bool byteswap, int fileSystemNumber, string outputPath,
+        CancellationToken cancellationToken)
+    {
+        var physicalDrives = await GetPhysicalDrivesAsync();
+        using var commandHelper = CreateCommandHelper();
+        ThrowIfFaulted(await new RdbFsExportCommand(_loggerFactory.CreateLogger<RdbFsExportCommand>(), commandHelper,
+                physicalDrives, string.Concat(byteswap ? "+bs:" : string.Empty, path), fileSystemNumber, outputPath)
+            .Execute(cancellationToken));
+    }
+
+    public async Task<RdbFileSystemInfo?> FindRdbFileSystemAsync(string mediaPath, string fileSystemName)
+    {
+        using var commandHelper = CreateCommandHelper();
+        var findResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, mediaPath, fileSystemName);
+        if (findResult.IsFaulted)
+            throw new ImagingException(findResult.Error?.Message ?? $"Failed to read '{mediaPath}'");
+
+        var (name, data) = findResult.Value;
+        if (data.Length == 0)
+            return null;
+
+        var version = Hst.Amiga.VersionStrings.VersionStringReader.Read(data);
+        return new RdbFileSystemInfo(name, data.Length, ViewModels.RdbFileSystemEntry.FormatVersion(version));
+    }
+
+    /// <summary>
+    /// Throw, if file system is not found in media. Import command adds an empty file system, if it's not found.
+    /// Media from urls are downloaded by import command and not checked.
+    /// </summary>
+    private static async Task ThrowIfFileSystemNotInMediaAsync(ICommandHelper commandHelper, string mediaPath,
+        string fileSystemName)
+    {
+        if (mediaPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var findResult = await AmigaFileSystemHelper.FindFileSystemInMedia(commandHelper, mediaPath, fileSystemName);
+        if (findResult.IsFaulted)
+            throw new ImagingException(findResult.Error?.Message ?? $"Failed to read '{mediaPath}'");
+        if (findResult.Value.Item2.Length == 0)
+            throw new ImagingException($"File system '{fileSystemName}' not found in '{mediaPath}'");
+    }
+
+    /// <summary>
+    /// Read number of file system with dos type in rigid disk block.
+    /// </summary>
+    private async Task<int> ReadRdbFileSystemNumberAsync(ICommandHelper commandHelper,
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, string dosType, CancellationToken token)
+    {
+        var diskInfo = await ReadDiskInfoAsync(commandHelper, physicalDrives, path, token);
+        var fileSystems = (diskInfo?.RigidDiskBlock?.FileSystemHeaderBlocks ?? []).ToList();
+        var index = fileSystems.FindIndex(x => string.Equals(x.DosTypeFormatted.Replace("\\", string.Empty),
+            dosType, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+            throw new ImagingException($"File system with DOS type '{dosType}' not found in Rigid Disk Block after adding it");
+        return index + 1;
     }
 
     private static string GetMbrPartType(string fileSystem) => fileSystem switch
