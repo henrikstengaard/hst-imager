@@ -44,24 +44,6 @@
 
       <StackPanel Spacing="8" IsVisible="{Binding HasLayout}">
 
-        <!-- Partitions of all partition tables of disk -->
-        <TextBlock Classes="section-title" Text="Partitions" />
-        <!-- Partition tables of disk, one per line with color used in partition layout and list -->
-        <ItemsControl ItemsSource="{Binding PartitionTables}">
-          <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="vm:PartitionTableSummary">
-              <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,2">
-                <ia:Icon Value="fa-table-columns" Classes="field-icon" VerticalAlignment="Center" />
-                <Border Classes="table-badge" Background="{Binding ColorBrush}" IsVisible="{Binding HasAbbreviation}">
-                  <TextBlock Text="{Binding Abbreviation}" />
-                </Border>
-                <TextBlock Classes="field-label" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Name}" />
-                <TextBlock Classes="field-help" VerticalAlignment="Center" Text="{Binding SizeText}" />
-              </StackPanel>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-
         <Border Classes="warning" IsVisible="{Binding HasNoPartitionTable}">
           <TextBlock TextWrapping="Wrap"
                      Text="{Binding NoPartitionTableText}" />
@@ -141,6 +123,8 @@
                       <ia:Icon Value="fa-turn-up" IsVisible="{Binding IsNested}" Classes="field-icon"
                                Margin="4,0,0,0" RenderTransform="rotate(90deg)" />
                       <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                      <ia:Icon Value="{Binding StatusIcon}" IsVisible="{Binding HasStatus}"
+                               VerticalAlignment="Center" ToolTip.Tip="{Binding Status}" />
                     </StackPanel>
                   </DataTemplate>
                 </DataGridTemplateColumn.CellTemplate>
@@ -148,7 +132,6 @@
               <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="40" />
               <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="*" />
               <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" />
-              <DataGridTextColumn Header="Used" Binding="{Binding UsedText}" Width="90" />
               <DataGridTextColumn Header="Start" Binding="{Binding StartText}" Width="100" />
               <DataGridTextColumn Header="End" Binding="{Binding EndText}" Width="100" />
               <!-- visibility set by view, when disk has a rigid disk block -->
@@ -157,7 +140,6 @@
               <DataGridTextColumn Tag="cylinder" Header="End cyl." Binding="{Binding EndCylinderText}"
                                   Width="80" IsVisible="False" />
               <DataGridTextColumn Header="Flags" Binding="{Binding Flags}" Width="90" />
-              <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90" />
             </DataGrid.Columns>
           </DataGrid>
           <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding SectorsOrCylindersText}" />

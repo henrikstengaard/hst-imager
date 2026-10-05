@@ -396,6 +396,7 @@ public class PartitionSegmentViewModel
             Name = reserved?.Name ?? unallocatedName ?? "Unallocated";
             Color = IsReserved ? "#6060FF" : "#8A8A8A";
             Status = IsReserved ? "Reserved" : string.Empty;
+            StatusIcon = IsReserved ? "fa-lock" : string.Empty;
             return;
         }
 
@@ -416,6 +417,7 @@ public class PartitionSegmentViewModel
             : string.Empty;
         Flags = partition.Bootable ? layout.IsRdb ? "bootable" : "active" : string.Empty;
         Status = partition.IsNew ? "New" : partition.FormatRequested ? "Format" : string.Empty;
+        StatusIcon = partition.IsNew ? "fa-circle-plus" : partition.FormatRequested ? "fa-eraser" : string.Empty;
     }
 
     /// <summary>
@@ -487,6 +489,13 @@ public class PartitionSegmentViewModel
     public string EndCylinderText { get; } = string.Empty;
     public string Flags { get; } = string.Empty;
     public string Status { get; } = string.Empty;
+
+    /// <summary>
+    /// Icon shown next to name for status, e.g. new or formatted partition.
+    /// </summary>
+    public string StatusIcon { get; } = string.Empty;
+
+    public bool HasStatus => !string.IsNullOrEmpty(StatusIcon);
 }
 
 /// <summary>

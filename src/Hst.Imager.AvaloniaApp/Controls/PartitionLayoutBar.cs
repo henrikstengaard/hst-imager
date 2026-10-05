@@ -9,6 +9,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Hst.Imager.AvaloniaApp.ViewModels;
+using Projektanker.Icons.Avalonia;
 
 namespace Hst.Imager.AvaloniaApp.Controls;
 
@@ -49,6 +50,8 @@ public class PartitionLayoutBar : Control
 
     public static readonly StyledProperty<ICommand?> EditPartitionCommandProperty =
         AvaloniaProperty.Register<PartitionLayoutBar, ICommand?>(nameof(EditPartitionCommand));
+
+    private static readonly Dictionary<(string Icon, double Size), Geometry?> IconGeometries = new();
 
     private DragState? _drag;
 
@@ -292,9 +295,22 @@ public class PartitionLayoutBar : Control
         var totalHeight = name.Height + details.Height;
         var y = rect.Y + Math.Max(0, (rect.Height - totalHeight) / 2);
 
+        // status icon is shown after name, e.g. new or formatted partition
+        const double iconSize = 11;
+        const double iconSpacing = 4;
+        var statusIcon = segment.HasStatus ? GetIconGeometry(segment.StatusIcon, iconSize) : null;
+        var nameWidth = name.Width + (statusIcon != null ? iconSpacing + iconSize : 0);
+
         using (context.PushClip(rect))
         {
-            context.DrawText(name, new Point(rect.X + Math.Max(4, (rect.Width - name.Width) / 2), y));
+            var nameX = rect.X + Math.Max(4, (rect.Width - nameWidth) / 2);
+            context.DrawText(name, new Point(nameX, y));
+            if (statusIcon != null)
+            {
+                var iconOffset = new Point(nameX + name.Width + iconSpacing, y + (name.Height - iconSize) / 2);
+                using (context.PushTransform(Matrix.CreateTranslation(iconOffset)))
+                    context.DrawGeometry(textBrush, null, statusIcon);
+            }
             context.DrawText(details,
                 new Point(rect.X + Math.Max(4, (rect.Width - details.Width) / 2), y + name.Height));
         }
@@ -402,6 +418,33 @@ public class PartitionLayoutBar : Control
             if (label != null)
                 context.DrawText(label, new Point(inner.Center.X - label.Width / 2, center.Y + radius + 2));
         }
+    }
+
+    /// <summary>
+    /// Get geometry of icon scaled to fit size, centered in a square of size at origin.
+    /// </summary>
+    private static Geometry? GetIconGeometry(string icon, double size)
+    {
+        var key = (icon, size);
+        if (IconGeometries.TryGetValue(key, out var cached))
+            return cached;
+
+        Geometry? geometry = null;
+        var model = IconProvider.Current.GetIcon(icon);
+        var path = model.Path.ToString();
+        if (!string.IsNullOrEmpty(path) && model.ViewBox.Width > 0 && model.ViewBox.Height > 0)
+        {
+            var viewBox = model.ViewBox;
+            var scale = size / Math.Max(viewBox.Width, viewBox.Height);
+            geometry = Geometry.Parse(path);
+            geometry.Transform = new MatrixTransform(
+                Matrix.CreateTranslation(-viewBox.X, -viewBox.Y) *
+                Matrix.CreateScale(scale, scale) *
+                Matrix.CreateTranslation((size - viewBox.Width * scale) / 2, (size - viewBox.Height * scale) / 2));
+        }
+
+        IconGeometries[key] = geometry;
+        return geometry;
     }
 
     private static FormattedText CreateText(string text, Typeface typeface, double size, FontWeight weight,
