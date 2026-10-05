@@ -116,11 +116,11 @@
     </StackPanel>
 
     <TextBlock Classes="field-help" TextWrapping="Wrap"
-               Text="Changes are added as pending operations when OK is clicked, which are applied when Apply is clicked." />
+               Text="{Binding PartitionDialogHelpText}" />
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
-      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="{Binding PartitionDialogOkText}" Classes="primary" />
     </StackPanel>
   </StackPanel>
 </Window>

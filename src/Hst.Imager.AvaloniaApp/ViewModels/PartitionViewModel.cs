@@ -44,6 +44,7 @@ public class PartitionViewModel : ViewModelBase
     private PartitionSegmentViewModel? _selectedSegment;
     private PartitionEntryViewModel? _selectedPartition;
     private string _sizeUnit = SizeUnits[0];
+    private bool _isAddingPartition;
 
     private bool _downloadPfs3Aio = true;
     private string _pfs3FileSystemPath = string.Empty;
@@ -85,8 +86,8 @@ public class PartitionViewModel : ViewModelBase
             if (path != null) FastFileSystemPath = path;
         });
         InitializeCommand = ReactiveCommand.CreateFromTask(InitializeAsync, this.WhenAnyValue(x => x.HasMedia));
-        AddPartitionCommand = ReactiveCommand.Create(AddPartition, this.WhenAnyValue(x => x.CanAddPartition));
-        AddPartitionToCommand = ReactiveCommand.Create<AddPartitionRequest>(AddPartitionTo);
+        AddPartitionCommand = ReactiveCommand.CreateFromTask(AddPartitionAsync, this.WhenAnyValue(x => x.CanAddPartition));
+        AddPartitionToCommand = ReactiveCommand.CreateFromTask<AddPartitionRequest>(AddPartitionToAsync);
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditFileSystemsCommand = ReactiveCommand.CreateFromTask(EditFileSystemsAsync, this.WhenAnyValue(x => x.IsRdb));
@@ -264,6 +265,26 @@ public class PartitionViewModel : ViewModelBase
     public string AddPartitionHint => _layout is { HasPartitionTable: true } && !_layout.CanAddPartition
         ? $"Max {_layout.MaxPartitions} partitions can be added to {FormatTableType(_layout.TableType)}."
         : $"{AddPartitionText} in selected unallocated space";
+
+    /// <summary>
+    /// Partition dialog is shown for a partition being added, which is removed again, if dialog is cancelled.
+    /// </summary>
+    public bool IsAddingPartition
+    {
+        get => _isAddingPartition;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _isAddingPartition, value);
+            this.RaisePropertyChanged(nameof(PartitionDialogOkText));
+            this.RaisePropertyChanged(nameof(PartitionDialogHelpText));
+        }
+    }
+
+    public string PartitionDialogOkText => _isAddingPartition ? "Add" : "OK";
+
+    public string PartitionDialogHelpText => _isAddingPartition
+        ? "Partition is added as a pending operation when Add is clicked, which is applied when Apply is clicked."
+        : "Changes are added as pending operations when OK is clicked, which are applied when Apply is clicked.";
 
     // ─── Size editor ──────────────────────────────────────────────────────────
 
@@ -638,26 +659,56 @@ public class PartitionViewModel : ViewModelBase
         SetTables([new DiskPartitionTable(layout, _media.Path)], layout);
     }
 
-    private void AddPartition() => AddPartition(AddPartitionPlacement.All);
+    private Task AddPartitionAsync() => AddPartitionAsync(AddPartitionPlacement.All);
 
-    private void AddPartition(AddPartitionPlacement placement)
+    /// <summary>
+    /// Add partition in selected unallocated space and show partition dialog to change partition type, file system,
+    /// names and size before adding it. Partition is removed again and unallocated space is selected, if dialog is
+    /// cancelled.
+    /// </summary>
+    private async Task AddPartitionAsync(AddPartitionPlacement placement)
     {
         if (_layout == null || _selectedSegment is not { IsUnallocated: true } segment)
             return;
 
-        var partition = _layout.AddPartition(segment.Start, segment.End, _useExperimental, placement);
+        var layout = _layout;
+        var partition = layout.AddPartition(segment.Start, segment.End, _useExperimental, placement);
         var partitionSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, partition));
-        if (partitionSegment != null)
-            SetSelectedSegment(partitionSegment);
+        if (partition == null || partitionSegment == null)
+            return;
+
+        SetSelectedSegment(partitionSegment);
+
+        var sizeUnit = SizeUnit;
+        bool added;
+        try
+        {
+            IsAddingPartition = true;
+            added = await _dialogService.ShowPartitionDialogAsync(this);
+        }
+        finally
+        {
+            IsAddingPartition = false;
+        }
+
+        if (added)
+            return;
+
+        layout.DeletePartition(partition);
+        SizeUnit = sizeUnit;
+        var unallocated = Segments.FirstOrDefault(x => x.IsUnallocated && ReferenceEquals(x.Layout, layout) &&
+                                                       x.Start <= segment.Start && x.End >= segment.End);
+        if (unallocated != null)
+            SetSelectedSegment(unallocated);
     }
 
-    private void AddPartitionTo(AddPartitionRequest request)
+    private async Task AddPartitionToAsync(AddPartitionRequest request)
     {
         if (!request.Segment.Layout.CanAddPartitionTo(request.Segment, request.Placement))
             return;
 
         SetSelectedSegment(request.Segment);
-        AddPartition(request.Placement);
+        await AddPartitionAsync(request.Placement);
     }
 
     private void DeletePartition()
