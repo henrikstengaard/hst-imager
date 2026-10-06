@@ -145,7 +145,6 @@ public class RdbFileSystemEntry : ReactiveObject
         set
         {
             this.RaiseAndSetIfChanged(ref _path, value);
-            this.RaisePropertyChanged(nameof(SourceText));
             RaiseStatusChanged();
         }
     }
@@ -223,26 +222,6 @@ public class RdbFileSystemEntry : ReactiveObject
     public bool IsUpdated => IsDosTypeChanged || IsNameChanged || IsDataReplaced;
 
     public string NumberText => Number?.ToString() ?? string.Empty;
-
-    public string StatusText => Source switch
-    {
-        RdbFileSystemSource.File => "Add",
-        RdbFileSystemSource.Media => "Import",
-        RdbFileSystemSource.Clone => "Clone",
-        _ => IsUpdated ? "Update" : string.Empty
-    };
-
-    /// <summary>
-    /// File or media file system is added or imported from, file replacing data of existing file system or existing
-    /// file system cloned.
-    /// </summary>
-    public string SourceText => IsClone
-        ? $"File system #{CloneNumber}"
-        : string.IsNullOrWhiteSpace(_path)
-            ? string.Empty
-            : IsUrl(_path)
-                ? _path
-                : System.IO.Path.GetFileName(_path);
 
     /// <summary>
     /// Create file system entry for existing file system in rigid disk block.
@@ -342,6 +321,5 @@ public class RdbFileSystemEntry : ReactiveObject
     private void RaiseStatusChanged()
     {
         this.RaisePropertyChanged(nameof(IsUpdated));
-        this.RaisePropertyChanged(nameof(StatusText));
     }
 }

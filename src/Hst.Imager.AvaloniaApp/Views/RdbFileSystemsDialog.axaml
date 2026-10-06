@@ -62,11 +62,9 @@
       <DataGrid.Columns>
         <DataGridTextColumn Header="#" Binding="{Binding NumberText}" Width="40" />
         <DataGridTextColumn Header="DOS type" Binding="{Binding DosType}" Width="90" />
-        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="2*" />
+        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*" />
         <DataGridTextColumn Header="Version" Binding="{Binding Version}" Width="80" />
         <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" />
-        <DataGridTextColumn Header="Source" Binding="{Binding SourceText}" Width="*" />
-        <DataGridTextColumn Header="Status" Binding="{Binding StatusText}" Width="80" />
       </DataGrid.Columns>
     </DataGrid>
     <TextBlock Classes="field-help" Text="No file systems in Rigid Disk Block."
