@@ -314,7 +314,15 @@ public class ImagingService : IImagingService
             {
                 if (!existingDosTypes.Contains(dosType))
                 {
+                    // pfs3aio and fast file system are added from media, other file systems must be added or
+                    // imported to rigid disk block by plan
                     var isPfs3 = dosType is "PFS3" or "PDS3";
+                    if (!isPfs3 && !ViewModels.PartitionFileSystems.IsFastFileSystem(dosType))
+                    {
+                        throw new ImagingException(
+                            $"File system with DOS type '{dosType}' not found in Rigid Disk Block. Import a file system with DOS type '{dosType}'");
+                    }
+
                     var fileSystemPath = await PrepareRdbFileSystemAsync(commandHelper,
                         isPfs3 ? plan.Pfs3FileSystemPath : plan.FastFileSystemPath,
                         isPfs3 ? "pfs3aio" : "FastFileSystem", token);
@@ -338,12 +346,18 @@ public class ImagingService : IImagingService
             {
                 PartitionTableType.MasterBootRecord => new MbrPartAddCommand(
                     _loggerFactory.CreateLogger<MbrPartAddCommand>(), commandHelper, physicalDrives, path,
-                    partition.IsPiStorm ? nameof(MbrPartType.PiStormRdb) : GetMbrPartType(partition.FileSystem),
+                    partition.IsPiStorm
+                        ? nameof(MbrPartType.PiStormRdb)
+                        : string.IsNullOrWhiteSpace(partition.PartitionType)
+                            ? GetMbrPartType(partition.FileSystem)
+                            : partition.PartitionType,
                     new Size(partition.Size, Unit.Bytes), startSector,
                     endSector, partition.Bootable),
                 PartitionTableType.GuidPartitionTable => new GptPartAddCommand(
                     _loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper, physicalDrives, path,
-                    GetGptPartType(partition.FileSystem).ToString(), partition.Label,
+                    string.IsNullOrWhiteSpace(partition.PartitionType)
+                        ? GetGptPartType(partition.FileSystem).ToString()
+                        : partition.PartitionType, partition.Label,
                     new Size(partition.Size, Unit.Bytes), startSector, endSector),
                 PartitionTableType.RigidDiskBlock => new RdbPartAddCommand(
                     _loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper, physicalDrives, path,
@@ -359,8 +373,9 @@ public class ImagingService : IImagingService
             plan.TableType, token);
         foreach (var partition in plan.AddPartitions.Concat(plan.FormatPartitions).OrderBy(x => x.StartOffset))
         {
-            // PiStorm partitions contain a rigid disk block partitioned by another plan and are not formatted
-            if (partition.IsPiStorm)
+            // PiStorm partitions contain a rigid disk block partitioned by another plan and are not formatted.
+            // partitions with partition types without a supported file system are only added
+            if (partition.IsPiStorm || !partition.Format)
             {
                 stepsExecuted++;
                 ReportStep();

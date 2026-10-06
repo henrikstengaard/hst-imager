@@ -46,6 +46,9 @@ public class PartitionViewModel : ViewModelBase
     private string _sizeUnit = SizeUnits[0];
     private bool _isAddingPartition;
 
+    // file systems imported for partition in partition dialog, which are removed again, if dialog is cancelled
+    private readonly List<RdbFileSystemEntry> _dialogFileSystems = [];
+
     private bool _downloadPfs3Aio = true;
     private string _pfs3FileSystemPath = string.Empty;
     private string _fastFileSystemPath = string.Empty;
@@ -91,6 +94,12 @@ public class PartitionViewModel : ViewModelBase
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditFileSystemsCommand = ReactiveCommand.CreateFromTask(EditFileSystemsAsync, this.WhenAnyValue(x => x.IsRdb));
+        ImportFileSystemFromMediaCommand = ReactiveCommand.CreateFromTask(() => ImportFileSystemAsync(true),
+            this.WhenAnyValue(x => x.CanImportFileSystem));
+        AddFileSystemFromFileCommand = ReactiveCommand.CreateFromTask(() => ImportFileSystemAsync(false),
+            this.WhenAnyValue(x => x.CanImportFileSystem));
+        RemoveImportedFileSystemCommand = ReactiveCommand.Create(RemoveImportedFileSystem,
+            this.WhenAnyValue(x => x.IsImportedFileSystemSelected));
         ResetCommand = ReactiveCommand.CreateFromTask(ResetAsync, this.WhenAnyValue(x => x.HasMedia));
         ApplyCommand = ReactiveCommand.CreateFromTask(ApplyAsync,
             this.WhenAnyValue(x => x.CanApply, x => x.Progress.IsRunning, (canApply, running) => canApply && !running));
@@ -286,6 +295,73 @@ public class PartitionViewModel : ViewModelBase
         ? "Partition is added as a pending operation when Add is clicked, which is applied when Apply is clicked."
         : "Changes are added as pending operations when OK is clicked, which are applied when Apply is clicked.";
 
+    // ─── Rigid disk block file system of partition ────────────────────────────
+
+    /// <summary>
+    /// File system is shown in partition dialog for new rigid disk block partitions.
+    /// </summary>
+    public bool ShowRdbFileSystem => _selectedPartition is { IsNew: true, IsRdb: true };
+
+    /// <summary>
+    /// File system in rigid disk block with dos type of selected new rigid disk block partition.
+    /// </summary>
+    public RdbFileSystemEntry? SelectedPartitionFileSystem => ShowRdbFileSystem
+        ? _layout?.FindFileSystem(_selectedPartition!.PartitionType)
+        : null;
+
+    /// <summary>
+    /// File system of selected partition is imported in partition dialog, which can be removed again.
+    /// </summary>
+    public bool IsImportedFileSystemSelected =>
+        SelectedPartitionFileSystem is { } fileSystem && _dialogFileSystems.Contains(fileSystem);
+
+    /// <summary>
+    /// Name of file system imported in partition dialog from media is used to find it in media.
+    /// </summary>
+    public bool IsImportedFileSystemFromMedia => IsImportedFileSystemSelected && SelectedPartitionFileSystem!.IsFromMedia;
+
+    /// <summary>
+    /// File system can be imported for selected partition, when rigid disk block doesn't have a file system with
+    /// dos type of partition.
+    /// </summary>
+    public bool CanImportFileSystem => ShowRdbFileSystem && SelectedPartitionFileSystem == null &&
+                                       !_selectedPartition!.HasPartitionTypeError;
+
+    /// <summary>
+    /// Rigid disk block doesn't have a file system with dos type of selected partition, which isn't added
+    /// automatically like pfs3aio and FastFileSystem.
+    /// </summary>
+    public bool IsRdbFileSystemMissing => CanImportFileSystem &&
+                                          !PartitionFileSystems.IsPfs3(_selectedPartition!.FileSystem) &&
+                                          !PartitionFileSystems.IsFastFileSystem(_selectedPartition.FileSystem);
+
+    public string RdbFileSystemText
+    {
+        get
+        {
+            if (!ShowRdbFileSystem || _selectedPartition!.HasPartitionTypeError)
+                return string.Empty;
+
+            var dosType = PartitionFileSystems.FormatDosType(_selectedPartition.PartitionType);
+            if (SelectedPartitionFileSystem is { } fileSystem)
+                return fileSystem.Source switch
+                {
+                    RdbFileSystemSource.Existing =>
+                        $"Partition uses file system {PartitionLayout.FormatFileSystemName(fileSystem)} with DOS type {dosType}.",
+                    RdbFileSystemSource.Media =>
+                        $"File system with DOS type {dosType} is imported from media '{fileSystem.Path}' to Rigid Disk Block, when applied.",
+                    _ =>
+                        $"File system with DOS type {dosType} is added from file '{fileSystem.Path}' to Rigid Disk Block, when applied."
+                };
+
+            if (PartitionFileSystems.IsPfs3(_selectedPartition.FileSystem))
+                return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. pfs3aio is added as set in Amiga file systems below partition layout, when applied. Import a file system to use another file system.";
+            if (PartitionFileSystems.IsFastFileSystem(_selectedPartition.FileSystem))
+                return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. FastFileSystem is added from media set in Amiga file systems below partition layout, when applied. Import a file system to use another file system.";
+            return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. Import a file system from media like lha, adf or iso or add it from a file system file.";
+        }
+    }
+
     // ─── Size editor ──────────────────────────────────────────────────────────
 
     public string SizeUnit
@@ -349,7 +425,7 @@ public class PartitionViewModel : ViewModelBase
     // ─── Amiga file systems ───────────────────────────────────────────────────
 
     public bool NeedsPfs3FileSystem => GetMissingDosTypes().Any(x => x is "PFS3" or "PDS3");
-    public bool NeedsFastFileSystem => GetMissingDosTypes().Any(x => x is "DOS3" or "DOS7");
+    public bool NeedsFastFileSystem => GetMissingDosTypes().Any(PartitionFileSystems.IsFastFileSystem);
     public bool ShowPfs3FileSystemPath => NeedsPfs3FileSystem && !_downloadPfs3Aio;
     public bool ShowAmigaFileSystems => RdbLayouts.Any();
     public bool ShowUseExperimental => RdbLayouts.Any(layout =>
@@ -435,6 +511,21 @@ public class PartitionViewModel : ViewModelBase
     /// Show file systems dialog to add, import, update, export and delete file systems in selected rigid disk block.
     /// </summary>
     public ReactiveCommand<Unit, Unit> EditFileSystemsCommand { get; }
+
+    /// <summary>
+    /// Import file system with dos type of selected partition from media in partition dialog.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> ImportFileSystemFromMediaCommand { get; }
+
+    /// <summary>
+    /// Add file system with dos type of selected partition from a file system file in partition dialog.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> AddFileSystemFromFileCommand { get; }
+
+    /// <summary>
+    /// Remove file system imported in partition dialog.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> RemoveImportedFileSystemCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
     public ReactiveCommand<Unit, Unit> ApplyCommand { get; }
 
@@ -684,7 +775,7 @@ public class PartitionViewModel : ViewModelBase
         try
         {
             IsAddingPartition = true;
-            added = await _dialogService.ShowPartitionDialogAsync(this);
+            added = await ShowPartitionDialogAsync(layout, partition);
         }
         finally
         {
@@ -742,12 +833,93 @@ public class PartitionViewModel : ViewModelBase
         var state = partition.GetState();
         var sizeUnit = SizeUnit;
 
-        if (await _dialogService.ShowPartitionDialogAsync(this))
+        if (await ShowPartitionDialogAsync(layout, partition))
             return;
 
         layout.RestorePartition(partition, state);
         SizeUnit = sizeUnit;
     }
+
+    /// <summary>
+    /// Show partition dialog for partition. File systems imported in dialog are removed again, if dialog is cancelled
+    /// or they aren't used by partition, when dialog is closed. Returns true, if OK or Add is clicked.
+    /// </summary>
+    private async Task<bool> ShowPartitionDialogAsync(PartitionLayout layout, PartitionEntryViewModel partition)
+    {
+        if (partition is { IsNew: true, IsRdb: true })
+            partition.PartitionTypeOptions = layout.GetDosTypeOptions();
+
+        _dialogFileSystems.Clear();
+        bool ok;
+        try
+        {
+            ok = await _dialogService.ShowPartitionDialogAsync(this);
+        }
+        finally
+        {
+            var unused = _dialogFileSystems.Where(x => !string.Equals(x.DosType, partition.PartitionType,
+                StringComparison.OrdinalIgnoreCase)).ToList();
+            _dialogFileSystems.Clear();
+            foreach (var fileSystem in unused)
+                layout.RemoveFileSystem(fileSystem);
+        }
+
+        return ok;
+    }
+
+    /// <summary>
+    /// Import file system with dos type of selected new rigid disk block partition from media or add it from a file
+    /// system file. File system is added to rigid disk block as a pending operation.
+    /// </summary>
+    private async Task ImportFileSystemAsync(bool fromMedia)
+    {
+        if (_layout is not { IsRdb: true } layout || _selectedPartition is not { IsNew: true } partition)
+            return;
+
+        var path = fromMedia
+            ? await _dialogService.ShowOpenFileDialogAsync("Select media with file system",
+            [
+                new FileFilterItem { Name = "Media files", Extensions = ["lha", "adf", "iso", "hdf", "img"] },
+                new FileFilterItem { Name = "All files", Extensions = ["*"] }
+            ])
+            : await _dialogService.ShowOpenFileDialogAsync("Select file system file",
+                [new FileFilterItem { Name = "All files", Extensions = ["*"] }]);
+        if (path == null || layout.FindFileSystem(partition.PartitionType) != null)
+            return;
+
+        var fileSystem = new RdbFileSystemEntry(fromMedia ? RdbFileSystemSource.Media : RdbFileSystemSource.File)
+        {
+            DosType = partition.PartitionType,
+            Name = fromMedia ? GuessFileSystemName(partition.FileSystem) : System.IO.Path.GetFileName(path),
+            Path = path
+        };
+        fileSystem.PropertyChanged += (_, _) => UpdatePending();
+        _dialogFileSystems.Add(fileSystem);
+        layout.AddFileSystem(fileSystem);
+        partition.PartitionTypeOptions = layout.GetDosTypeOptions();
+    }
+
+    private void RemoveImportedFileSystem()
+    {
+        if (_layout == null || _selectedPartition == null || SelectedPartitionFileSystem is not { } fileSystem ||
+            !_dialogFileSystems.Remove(fileSystem))
+            return;
+
+        _layout.RemoveFileSystem(fileSystem);
+        _selectedPartition.PartitionTypeOptions = _layout.GetDosTypeOptions();
+    }
+
+    /// <summary>
+    /// Guess name of file system to find in media by dos type, e.g. pfs3aio for PDS3.
+    /// </summary>
+    private static string GuessFileSystemName(string fileSystem) =>
+        PartitionFileSystems.IsPfs3(fileSystem)
+            ? "pfs3aio"
+            : PartitionFileSystems.IsFastFileSystem(fileSystem)
+                ? "FastFileSystem"
+                : fileSystem.StartsWith("sfs", StringComparison.OrdinalIgnoreCase)
+                    ? "SmartFilesystem"
+                    : string.Empty;
 
     /// <summary>
     /// Edit file systems of selected rigid disk block in file systems dialog. File systems are edited as copies, which
@@ -876,6 +1048,18 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(AddPartitionText));
         this.RaisePropertyChanged(nameof(AddPartitionHint));
         RaiseEditorChanged();
+        RaiseFileSystemChanged();
+    }
+
+    private void RaiseFileSystemChanged()
+    {
+        this.RaisePropertyChanged(nameof(ShowRdbFileSystem));
+        this.RaisePropertyChanged(nameof(SelectedPartitionFileSystem));
+        this.RaisePropertyChanged(nameof(IsImportedFileSystemSelected));
+        this.RaisePropertyChanged(nameof(IsImportedFileSystemFromMedia));
+        this.RaisePropertyChanged(nameof(CanImportFileSystem));
+        this.RaisePropertyChanged(nameof(IsRdbFileSystemMissing));
+        this.RaisePropertyChanged(nameof(RdbFileSystemText));
     }
 
     private void RaiseEditorChanged()
@@ -934,7 +1118,7 @@ public class PartitionViewModel : ViewModelBase
             errors.Add("Path to media with pfs3aio file system is required for PFS\\3 and PDS\\3 partitions");
 
         if (NeedsFastFileSystem && string.IsNullOrWhiteSpace(_fastFileSystemPath))
-            errors.Add("Path to media with FastFileSystem is required for DOS\\3 and DOS\\7 partitions");
+            errors.Add("Path to media with FastFileSystem is required for DOS\\0 to DOS\\7 partitions");
 
         PendingOperations = new ObservableCollection<string>(operations);
         ValidationErrors = new ObservableCollection<string>(errors);
@@ -949,6 +1133,7 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(AddPartitionHint));
         this.RaisePropertyChanged(nameof(AddPartitionText));
         RaiseEditorChanged();
+        RaiseFileSystemChanged();
     }
 
     private static void AddOperations(DiskPartitionTable table, List<string> operations)
@@ -966,9 +1151,19 @@ public class PartitionViewModel : ViewModelBase
                 $"Delete {layout.TableTypeName} partition #{partition.Number}{FormatDeviceName(partition)} ({partition.ExistingFileSystem}, {MediaOptions.FormatBytes(partition.Size)}){location}");
 
         foreach (var partition in layout.Partitions.Where(x => x.IsNew))
+        {
+            var type = layout.IsRdb
+                ? $"DOS type {PartitionFileSystems.FormatDosType(partition.PartitionType)}"
+                : $"partition type {PartitionTypes.GetTitle(layout.TableType, partition.PartitionType)}";
+            var format = !partition.IsFormattable
+                ? " not formatted"
+                : layout.IsRdb
+                    ? $" formatted named '{partition.Label}'"
+                    : $" formatted with {PartitionFileSystems.GetTitle(partition.FileSystem)} named '{partition.Label}'";
             operations.Add(partition.IsPiStorm
                 ? $"Add {layout.TableTypeName} PiStorm partition of {MediaOptions.FormatBytes(partition.Size)}"
-                : $"Add {layout.TableTypeName} partition{FormatDeviceName(partition)} of {MediaOptions.FormatBytes(partition.Size)} formatted with {PartitionFileSystems.GetTitle(partition.FileSystem)} named '{partition.Label}'{location}");
+                : $"Add {layout.TableTypeName} partition{FormatDeviceName(partition)} of {MediaOptions.FormatBytes(partition.Size)} with {type}{format}{location}");
+        }
 
         foreach (var partition in layout.Partitions.Where(x => x.IsExisting && x.FormatRequested))
             operations.Add(
@@ -1012,7 +1207,10 @@ public class PartitionViewModel : ViewModelBase
     {
         var layout = table.Layout;
         var location = table.IsDiskPath ? string.Empty : $" in {table.ContainerName}";
-        var editedPartitions = layout.Partitions.Where(x => (x.IsNew && !x.IsPiStorm) || x.FormatRequested).ToList();
+        var editedPartitions = layout.Partitions.Where(x => (x.IsNew && x.IsFormattable) || x.FormatRequested).ToList();
+
+        foreach (var partition in layout.Partitions.Where(x => x.PartitionTypeError != null))
+            errors.Add($"{partition.PartitionTypeError}{location}");
 
         if (!layout.IsRdb)
         {
@@ -1033,6 +1231,14 @@ public class PartitionViewModel : ViewModelBase
         }
 
         errors.AddRange(layout.ValidateFileSystems().Select(x => $"{x}{location}"));
+
+        // pfs3aio and FastFileSystem are added automatically, other file systems must be imported
+        foreach (var partition in layout.Partitions.Where(x => x.IsNew && x.PartitionTypeError == null &&
+                                                              !PartitionFileSystems.IsPfs3(x.FileSystem) &&
+                                                              !PartitionFileSystems.IsFastFileSystem(x.FileSystem) &&
+                                                              layout.FindFileSystem(x.PartitionType) == null))
+            errors.Add(
+                $"File system with DOS type {PartitionFileSystems.FormatDosType(partition.PartitionType)} is required for partition {partition.DeviceName}. Import it in partition dialog or file systems dialog{location}");
 
         foreach (var partition in layout.Partitions.Where(x => x.IsNew))
         {

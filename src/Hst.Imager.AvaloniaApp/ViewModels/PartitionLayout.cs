@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
 using Avalonia.Media;
 using Hst.Amiga.RigidDiskBlocks;
@@ -16,12 +17,23 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 /// </summary>
 public static class PartitionFileSystems
 {
+    /// <summary>
+    /// File system value for new master boot record and guid partitions, which are added without being formatted.
+    /// </summary>
+    public const string None = "none";
+
     public static readonly List<SelectOption> BasicOptions =
     [
         new() { Title = "FAT32", Value = "fat32" },
         new() { Title = "exFAT", Value = "exfat" },
         new() { Title = "NTFS", Value = "ntfs" }
     ];
+
+    /// <summary>
+    /// File systems for new master boot record and guid partitions, which can also be added without formatting.
+    /// </summary>
+    public static readonly List<SelectOption> NewBasicOptions =
+        [..BasicOptions, new() { Title = "None (not formatted)", Value = None }];
 
     public static readonly List<SelectOption> RdbOptions =
     [
@@ -31,20 +43,25 @@ public static class PartitionFileSystems
         new() { Title = "DOS\\7 (long filename)", Value = "dos7" }
     ];
 
-    public static List<SelectOption> GetOptions(PartitionTableType tableType) =>
-        tableType == PartitionTableType.RigidDiskBlock ? RdbOptions : BasicOptions;
+    public static List<SelectOption> GetOptions(PartitionTableType tableType, bool isNew) =>
+        tableType == PartitionTableType.RigidDiskBlock ? RdbOptions : isNew ? NewBasicOptions : BasicOptions;
 
     public static string GetTitle(string fileSystem) => fileSystem switch
     {
         "fat32" => "FAT32",
         "exfat" => "exFAT",
         "ntfs" => "NTFS",
-        "pds3" => "PDS\\3",
-        "pfs3" => "PFS\\3",
-        "dos3" => "DOS\\3",
-        "dos7" => "DOS\\7",
-        _ => fileSystem
+        None => "Not formatted",
+        _ => FormatDosType(fileSystem)
     };
+
+    /// <summary>
+    /// Format dos type with backslash before its number, e.g. PFS\3 for pfs3. Other values are returned as is.
+    /// </summary>
+    public static string FormatDosType(string dosType) =>
+        dosType.Length == 4 && char.IsDigit(dosType[3])
+            ? $"{dosType[..3].ToUpperInvariant()}\\{dosType[3]}"
+            : dosType;
 
     public static bool IsPfs3(string fileSystem) => fileSystem is "pfs3" or "pds3";
 
@@ -53,7 +70,18 @@ public static class PartitionFileSystems
     /// </summary>
     public static int GetMbrBiosType(string fileSystem) => fileSystem == "fat32" ? 0xc : 0x7;
 
-    public static bool IsFastFileSystem(string fileSystem) => fileSystem is "dos3" or "dos7";
+    /// <summary>
+    /// Fast file system is used by dos types DOS\0 to DOS\7.
+    /// </summary>
+    public static bool IsFastFileSystem(string fileSystem) =>
+        fileSystem.Length == 4 && fileSystem.StartsWith("dos", StringComparison.OrdinalIgnoreCase) &&
+        fileSystem[3] is >= '0' and <= '7';
+
+    /// <summary>
+    /// Rigid disk block partitions can be formatted with fast file system and pfs3.
+    /// </summary>
+    public static bool IsRdbFormattable(string fileSystem) =>
+        IsPfs3(fileSystem.ToLowerInvariant()) || IsFastFileSystem(fileSystem);
 
     /// <summary>
     /// Get color for file system similar to colors used by gparted.
@@ -75,7 +103,172 @@ public static class PartitionFileSystems
             return "#9B6BD6";
         if (normalized.Contains("dos"))
             return "#C77DD9";
+        if (normalized.Contains("sfs"))
+            return "#D9C21A";
         return "#7A8FA6";
+    }
+}
+
+/// <summary>
+/// Partition type of new partition, which is a bios type for master boot record, a guid for guid partition table and
+/// a dos type for rigid disk block.
+/// </summary>
+public class PartitionTypeOption : SelectOption
+{
+    /// <summary>
+    /// Value of option to enter partition type manually.
+    /// </summary>
+    public const string CustomValue = "custom";
+
+    /// <summary>
+    /// File systems partitions of type can be formatted with. Empty, if partitions of type aren't formatted.
+    /// </summary>
+    public IReadOnlyList<string> FileSystems { get; init; } = [];
+
+    public bool IsCustom => Value == CustomValue;
+}
+
+/// <summary>
+/// Common partition types of new partitions, which can be selected or entered manually.
+/// </summary>
+public static class PartitionTypes
+{
+    public const int PiStormBiosType = 0x76;
+
+    private static readonly string[] Fat32 = ["fat32"];
+    private static readonly string[] BasicData = ["fat32", "exfat", "ntfs"];
+
+    public static readonly List<PartitionTypeOption> MbrOptions =
+    [
+        new() { Title = "FAT32 LBA (0x0C)", Value = "0x0c", FileSystems = Fat32 },
+        new() { Title = "FAT32 CHS (0x0B)", Value = "0x0b", FileSystems = Fat32 },
+        new() { Title = "NTFS / exFAT (0x07)", Value = "0x07", FileSystems = ["ntfs", "exfat"] },
+        new() { Title = "FAT16 LBA (0x0E)", Value = "0x0e" },
+        new() { Title = "FAT16 (0x06)", Value = "0x06" },
+        new() { Title = "EFI System (0xEF)", Value = "0xef", FileSystems = Fat32 },
+        new() { Title = "Linux (0x83)", Value = "0x83" },
+        new() { Title = "Linux swap (0x82)", Value = "0x82" },
+        new() { Title = "Linux LVM (0x8E)", Value = "0x8e" },
+        new() { Title = "PiStorm Rigid Disk Block (0x76)", Value = "0x76" },
+        new() { Title = "Non-file system data (0xDA)", Value = "0xda" },
+        new() { Title = "Enter bios type manually", Value = PartitionTypeOption.CustomValue }
+    ];
+
+    public static readonly List<PartitionTypeOption> GptOptions =
+    [
+        new() { Title = "Microsoft basic data", Value = "ebd0a0a2-b9e5-4433-87c0-68b6b72699c7", FileSystems = BasicData },
+        new() { Title = "EFI System", Value = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b", FileSystems = Fat32 },
+        new() { Title = "Microsoft reserved", Value = "e3c9e316-0b5c-4db8-817d-f92df00215ae" },
+        new() { Title = "Windows recovery", Value = "de94bba4-06d1-4d40-a16a-bfd50179d6ac", FileSystems = ["ntfs"] },
+        new() { Title = "Linux file system", Value = "0fc63daf-8483-4772-8e79-3d69d8477de4" },
+        new() { Title = "Linux root (x86-64)", Value = "4f68bce3-e8cd-4db1-96e7-fbcaf984b709" },
+        new() { Title = "Linux swap", Value = "0657fd6d-a4ab-43c4-84e5-0933c84b4f4f" },
+        new() { Title = "Linux LVM", Value = "e6d6d379-f507-44c2-a23c-238f2a3df928" },
+        new() { Title = "Apple HFS+", Value = "48465300-0000-11aa-aa11-00306543ecac" },
+        new() { Title = "Apple APFS", Value = "7c3457ef-0000-11aa-aa11-00306543ecac" },
+        new() { Title = "Enter partition type guid manually", Value = PartitionTypeOption.CustomValue }
+    ];
+
+    public static readonly List<PartitionTypeOption> RdbOptions =
+    [
+        new() { Title = "PDS\\3 (pfs3aio direct scsi)", Value = "PDS3" },
+        new() { Title = "PFS\\3 (pfs3aio)", Value = "PFS3" },
+        new() { Title = "DOS\\3 (FFS international)", Value = "DOS3" },
+        new() { Title = "DOS\\7 (FFS long filenames)", Value = "DOS7" },
+        new() { Title = "DOS\\0 (OFS)", Value = "DOS0" },
+        new() { Title = "DOS\\1 (FFS)", Value = "DOS1" },
+        new() { Title = "DOS\\2 (OFS international)", Value = "DOS2" },
+        new() { Title = "DOS\\4 (OFS dircache)", Value = "DOS4" },
+        new() { Title = "DOS\\5 (FFS dircache)", Value = "DOS5" },
+        new() { Title = "DOS\\6 (OFS long filenames)", Value = "DOS6" },
+        new() { Title = "SFS\\0 (SmartFileSystem)", Value = "SFS0" },
+        new() { Title = "SFS\\2 (SmartFileSystem large partitions)", Value = "SFS2" },
+        new() { Title = "Enter DOS type manually", Value = PartitionTypeOption.CustomValue }
+    ];
+
+    public static List<PartitionTypeOption> GetOptions(PartitionTableType tableType) => tableType switch
+    {
+        PartitionTableType.MasterBootRecord => MbrOptions,
+        PartitionTableType.GuidPartitionTable => GptOptions,
+        PartitionTableType.RigidDiskBlock => RdbOptions,
+        _ => []
+    };
+
+    /// <summary>
+    /// Default partition type of new partition with file system, e.g. FAT32 LBA (0x0C) for FAT32 in master boot
+    /// record.
+    /// </summary>
+    public static string GetDefault(PartitionTableType tableType, string fileSystem) => tableType switch
+    {
+        PartitionTableType.MasterBootRecord => $"0x{PartitionFileSystems.GetMbrBiosType(fileSystem):x2}",
+        PartitionTableType.GuidPartitionTable => GptOptions[0].Value,
+        _ => fileSystem.ToUpperInvariant()
+    };
+
+    /// <summary>
+    /// Parse bios type in hex with or without 0x prefix, e.g. 0x0c, 0c or c.
+    /// </summary>
+    public static bool TryParseBiosType(string value, out int biosType)
+    {
+        biosType = 0;
+        var hex = value.Trim();
+        if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+            hex = hex[2..];
+        return hex.Length is > 0 and <= 2 && int.TryParse(hex, NumberStyles.HexNumber,
+            CultureInfo.InvariantCulture, out biosType);
+    }
+
+    /// <summary>
+    /// Normalize partition type to format used by partition commands, e.g. 0x0c for bios type, guid in lowercase
+    /// and dos type in uppercase without backslash.
+    /// </summary>
+    public static string Normalize(PartitionTableType tableType, string value) => tableType switch
+    {
+        PartitionTableType.MasterBootRecord when TryParseBiosType(value, out var biosType) => $"0x{biosType:x2}",
+        PartitionTableType.GuidPartitionTable when Guid.TryParse(value, out var guid) => guid.ToString("D"),
+        PartitionTableType.RigidDiskBlock => RdbFileSystemEntry.NormalizeDosType(value),
+        _ => value.Trim()
+    };
+
+    /// <summary>
+    /// Validate partition type of new partition. Returns error or null, if partition type is valid.
+    /// </summary>
+    public static string? Validate(PartitionTableType tableType, string value) => tableType switch
+    {
+        PartitionTableType.MasterBootRecord when string.IsNullOrWhiteSpace(value) =>
+            "Bios type is required, e.g. 0x0C",
+        PartitionTableType.GuidPartitionTable when string.IsNullOrWhiteSpace(value) =>
+            "Partition type guid is required, e.g. ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
+        PartitionTableType.RigidDiskBlock when string.IsNullOrWhiteSpace(value) =>
+            "DOS type is required, e.g. PDS3 or DOS3",
+        PartitionTableType.MasterBootRecord => !TryParseBiosType(value, out var biosType) || biosType == 0
+            ? $"Bios type '{value}' must be a hex value between 0x01 and 0xFF, e.g. 0x0C"
+            : biosType is 0x05 or 0x0f
+                ? $"Bios type '{value}' is an extended partition, which isn't supported"
+                : null,
+        PartitionTableType.GuidPartitionTable => Guid.TryParse(value, out var guid) && guid != Guid.Empty
+            ? null
+            : $"Partition type '{value}' must be a guid, e.g. ebd0a0a2-b9e5-4433-87c0-68b6b72699c7",
+        PartitionTableType.RigidDiskBlock => RdbFileSystemEntry.NormalizeDosType(value).Length == 4
+            ? null
+            : $"DOS type '{value}' must be 4 characters, e.g. PDS3 or DOS3",
+        _ => null
+    };
+
+    /// <summary>
+    /// Format partition type for pending operations, e.g. FAT32 LBA (0x0C), Microsoft basic data (guid) or the
+    /// partition type itself, if it's not a common partition type.
+    /// </summary>
+    public static string GetTitle(PartitionTableType tableType, string value)
+    {
+        var option = GetOptions(tableType).FirstOrDefault(x =>
+            !x.IsCustom && string.Equals(x.Value, value, StringComparison.OrdinalIgnoreCase));
+        return tableType switch
+        {
+            PartitionTableType.GuidPartitionTable => option == null ? value : $"{option.Title} ({value})",
+            PartitionTableType.RigidDiskBlock => PartitionFileSystems.FormatDosType(value),
+            _ => option?.Title ?? value
+        };
     }
 }
 
@@ -87,27 +280,21 @@ public class PartitionEntryViewModel : ReactiveObject
     private long _start;
     private long _size;
     private string _fileSystem = string.Empty;
+    private string _partitionType = string.Empty;
+    private bool _isCustomPartitionType;
+    private string _customPartitionTypeText = string.Empty;
     private string _label = string.Empty;
     private string _deviceName = string.Empty;
     private bool _bootable;
     private bool _formatRequested;
-    private bool _isPiStorm;
-
-    /// <summary>
-    /// Partition types of new master boot record partitions, a regular partition formatted with a file system or a
-    /// PiStorm partition containing a rigid disk block.
-    /// </summary>
-    public static readonly List<SelectOption> PartitionTypeOptions =
-    [
-        new() { Title = "Regular partition", Value = "regular" },
-        new() { Title = "PiStorm partition with Rigid Disk Block", Value = "pistorm" }
-    ];
+    private List<PartitionTypeOption> _partitionTypeOptions;
 
     public PartitionEntryViewModel(PartitionTableType tableType, bool isNew)
     {
         TableType = tableType;
         IsNew = isNew;
-        FileSystemOptions = PartitionFileSystems.GetOptions(tableType);
+        FileSystemOptions = PartitionFileSystems.GetOptions(tableType, isNew);
+        _partitionTypeOptions = PartitionTypes.GetOptions(tableType);
     }
 
     public PartitionTableType TableType { get; }
@@ -151,6 +338,9 @@ public class PartitionEntryViewModel : ReactiveObject
     public long Size => _size;
     public long End => _start + _size;
 
+    /// <summary>
+    /// File system partition is formatted with. Dos type in lowercase for rigid disk block partitions, e.g. pds3.
+    /// </summary>
     public string FileSystem
     {
         get => _fileSystem;
@@ -158,60 +348,177 @@ public class PartitionEntryViewModel : ReactiveObject
         {
             this.RaiseAndSetIfChanged(ref _fileSystem, value);
             this.RaisePropertyChanged(nameof(FileSystemOption));
-            this.RaisePropertyChanged(nameof(FileSystemDisplay));
+            if (IsRdb)
+            {
+                this.RaisePropertyChanged(nameof(PartitionType));
+                this.RaisePropertyChanged(nameof(PartitionTypeOption));
+                this.RaisePropertyChanged(nameof(CustomPartitionType));
+            }
+            RaiseTypeChanged();
         }
     }
 
+    /// <summary>
+    /// File system selected in partition dialog. Partition type of new master boot record and guid partition is
+    /// changed to default partition type of file system, if selected partition type doesn't support file system.
+    /// </summary>
     public SelectOption? FileSystemOption
     {
         get => FileSystemOptions.FirstOrDefault(x => x.Value == _fileSystem);
         set
         {
-            if (value != null)
-                FileSystem = value.Value;
+            if (value == null || value.Value == _fileSystem)
+                return;
+            FileSystem = value.Value;
+            if (!IsNew || IsRdb || _isCustomPartitionType || value.Value == PartitionFileSystems.None)
+                return;
+            var option = _partitionTypeOptions.FirstOrDefault(x => !x.IsCustom && x.Value == _partitionType);
+            if (option == null || !option.FileSystems.Contains(value.Value))
+                PartitionType = PartitionTypes.GetDefault(TableType, value.Value);
         }
     }
 
     /// <summary>
-    /// File system displayed, which is the new file system for new or formatted partitions.
+    /// Partition type of new partition, which is bios type for master boot record, e.g. 0x0c, guid for guid partition
+    /// table and dos type for rigid disk block, e.g. PDS3. Dos type is file system of rigid disk block partitions.
     /// </summary>
-    public string FileSystemDisplay => _isPiStorm
-        ? "PiStorm RDB"
-        : IsNew || (_formatRequested && !IsRdb)
-            ? PartitionFileSystems.GetTitle(_fileSystem)
-            : ExistingFileSystem;
-
-    /// <summary>
-    /// New master boot record partition can be switched between a regular and a PiStorm partition.
-    /// </summary>
-    public bool CanBePiStorm => IsNew && IsMbr;
-
-    /// <summary>
-    /// New master boot record partition is a PiStorm partition containing a rigid disk block, which isn't formatted.
-    /// </summary>
-    public bool IsPiStorm
+    public string PartitionType
     {
-        get => _isPiStorm;
+        get => IsRdb ? _fileSystem.ToUpperInvariant() : _partitionType;
         set
         {
-            if (!CanBePiStorm) return;
-            this.RaiseAndSetIfChanged(ref _isPiStorm, value);
+            if (IsRdb)
+            {
+                FileSystem = value.ToLowerInvariant();
+                return;
+            }
+
+            this.RaiseAndSetIfChanged(ref _partitionType, value);
             this.RaisePropertyChanged(nameof(PartitionTypeOption));
-            this.RaisePropertyChanged(nameof(CanEditFileSystem));
-            this.RaisePropertyChanged(nameof(CanEditLabel));
-            this.RaisePropertyChanged(nameof(FileSystemDisplay));
+            this.RaisePropertyChanged(nameof(CustomPartitionType));
+            RaiseTypeChanged();
         }
     }
 
-    public SelectOption PartitionTypeOption
+    /// <summary>
+    /// Common partition types to select. Rigid disk block partitions also list dos types of file systems in rigid
+    /// disk block.
+    /// </summary>
+    public List<PartitionTypeOption> PartitionTypeOptions
     {
-        get => PartitionTypeOptions[_isPiStorm ? 1 : 0];
+        get => _partitionTypeOptions;
         set
         {
-            if (value != null)
-                IsPiStorm = value.Value == "pistorm";
+            this.RaiseAndSetIfChanged(ref _partitionTypeOptions, value);
+            this.RaisePropertyChanged(nameof(PartitionTypeOption));
         }
     }
+
+    /// <summary>
+    /// Partition type selected in partition dialog. File system of new master boot record and guid partition is
+    /// changed to first file system supported by partition type or none, if partition type isn't formatted.
+    /// </summary>
+    public PartitionTypeOption? PartitionTypeOption
+    {
+        get => _isCustomPartitionType
+            ? _partitionTypeOptions.FirstOrDefault(x => x.IsCustom)
+            : _partitionTypeOptions.FirstOrDefault(x => !x.IsCustom && string.Equals(x.Value, PartitionType,
+                  StringComparison.OrdinalIgnoreCase))
+              ?? _partitionTypeOptions.FirstOrDefault(x => x.IsCustom);
+        set
+        {
+            if (value == null)
+                return;
+
+            // partition type is kept, when switching to enter it manually
+            if (value.IsCustom && !_isCustomPartitionType)
+                _customPartitionTypeText = PartitionType;
+            IsCustomPartitionType = value.IsCustom;
+            if (value.IsCustom)
+            {
+                this.RaisePropertyChanged();
+                this.RaisePropertyChanged(nameof(CustomPartitionType));
+                return;
+            }
+
+            PartitionType = value.Value;
+            if (!IsRdb && !value.FileSystems.Contains(_fileSystem))
+                FileSystem = value.FileSystems.FirstOrDefault() ?? PartitionFileSystems.None;
+        }
+    }
+
+    /// <summary>
+    /// Partition type is entered manually instead of selected from common partition types.
+    /// </summary>
+    public bool IsCustomPartitionType
+    {
+        get => _isCustomPartitionType;
+        private set => this.RaiseAndSetIfChanged(ref _isCustomPartitionType, value);
+    }
+
+    /// <summary>
+    /// Partition type entered manually. Text is kept as entered, so it isn't changed while typing, and partition
+    /// type is set to normalized value, when it's valid.
+    /// </summary>
+    public string CustomPartitionType
+    {
+        get => _isCustomPartitionType ? _customPartitionTypeText : PartitionType;
+        set
+        {
+            _customPartitionTypeText = value;
+            PartitionType = PartitionTypes.Validate(TableType, value) == null
+                ? PartitionTypes.Normalize(TableType, value)
+                : value.Trim();
+        }
+    }
+
+    public string PartitionTypeLabel => IsRdb ? "DOS type" : "Partition type";
+
+    public string CustomPartitionTypeLabel => TableType switch
+    {
+        PartitionTableType.MasterBootRecord => "Bios type (hex)",
+        PartitionTableType.GuidPartitionTable => "Partition type guid",
+        _ => "DOS type (4 characters)"
+    };
+
+    /// <summary>
+    /// Error for invalid partition type of new partition or null, if it's valid.
+    /// </summary>
+    public string? PartitionTypeError => IsNew ? PartitionTypes.Validate(TableType, PartitionType) : null;
+
+    public bool HasPartitionTypeError => PartitionTypeError != null;
+
+    /// <summary>
+    /// File system displayed, which is the new file system for new or formatted partitions and partition type for new
+    /// partitions, which aren't formatted.
+    /// </summary>
+    public string FileSystemDisplay => IsPiStorm
+        ? "PiStorm RDB"
+        : IsNew && !IsFormattable
+            ? PartitionTypes.GetTitle(TableType, PartitionType)
+            : IsNew || (_formatRequested && !IsRdb)
+                ? PartitionFileSystems.GetTitle(_fileSystem)
+                : ExistingFileSystem;
+
+    /// <summary>
+    /// Partition type can be selected for new partitions.
+    /// </summary>
+    public bool CanEditPartitionType => IsNew;
+
+    /// <summary>
+    /// New master boot record partition with bios type 0x76 is a PiStorm partition containing a rigid disk block,
+    /// which isn't formatted.
+    /// </summary>
+    public bool IsPiStorm => IsNew && IsMbr && PartitionTypes.TryParseBiosType(_partitionType, out var biosType) &&
+                             biosType == PartitionTypes.PiStormBiosType;
+
+    /// <summary>
+    /// New partition is formatted with a file system. Rigid disk block partitions can only be formatted with fast file
+    /// system and pfs3, master boot record and guid partitions are formatted, unless no file system is selected.
+    /// </summary>
+    public bool IsFormattable => IsRdb
+        ? PartitionFileSystems.IsRdbFormattable(_fileSystem)
+        : !IsPiStorm && _fileSystem != PartitionFileSystems.None;
 
     /// <summary>
     /// Volume name.
@@ -258,12 +565,19 @@ public class PartitionEntryViewModel : ReactiveObject
     }
 
     /// <summary>
-    /// File system can be changed for new partitions and formatted master boot record and guid partitions.
-    /// Formatting rigid disk block partitions uses dos type of the partition.
+    /// File system can be changed for new and formatted master boot record and guid partitions. File system of new
+    /// rigid disk block partitions is their dos type and formatting rigid disk block partitions uses dos type of the
+    /// partition.
     /// </summary>
-    public bool CanEditFileSystem => (IsNew && !_isPiStorm) || (_formatRequested && !IsRdb);
+    public bool CanEditFileSystem => !IsRdb && ((IsNew && !IsPiStorm) || _formatRequested);
 
-    public bool CanEditLabel => (IsNew && !_isPiStorm) || _formatRequested;
+    /// <summary>
+    /// File system is shown for master boot record and guid partitions, except PiStorm partitions, and for existing
+    /// rigid disk block partitions. Dos type is shown as partition type for new rigid disk block partitions.
+    /// </summary>
+    public bool ShowFileSystem => !IsPiStorm && !(IsNew && IsRdb);
+
+    public bool CanEditLabel => (IsNew && IsFormattable) || _formatRequested;
 
     /// <summary>
     /// Device name and bootable are set when rigid disk block partition is added.
@@ -276,7 +590,8 @@ public class PartitionEntryViewModel : ReactiveObject
     /// Get editable state of partition, which can be restored when editing partition is cancelled.
     /// </summary>
     public PartitionEntryState GetState() =>
-        new(_start, _size, _fileSystem, _label, _deviceName, _bootable, _formatRequested, _isPiStorm);
+        new(_start, _size, _fileSystem, _partitionType, _isCustomPartitionType, _label, _deviceName, _bootable,
+            _formatRequested);
 
     /// <summary>
     /// Restore editable state of partition except range, which is restored by partition layout.
@@ -284,9 +599,13 @@ public class PartitionEntryViewModel : ReactiveObject
     /// </summary>
     internal void RestoreState(PartitionEntryState state)
     {
-        IsPiStorm = state.IsPiStorm;
         FormatRequested = state.FormatRequested;
         FileSystem = state.FileSystem;
+        IsCustomPartitionType = state.IsCustomPartitionType;
+        if (!IsRdb)
+            PartitionType = state.PartitionType;
+        _customPartitionTypeText = PartitionType;
+        this.RaisePropertyChanged(nameof(CustomPartitionType));
         Label = state.Label;
         DeviceName = state.DeviceName;
         Bootable = state.Bootable;
@@ -301,6 +620,18 @@ public class PartitionEntryViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(Start));
         this.RaisePropertyChanged(nameof(Size));
         this.RaisePropertyChanged(nameof(End));
+    }
+
+    private void RaiseTypeChanged()
+    {
+        this.RaisePropertyChanged(nameof(IsPiStorm));
+        this.RaisePropertyChanged(nameof(IsFormattable));
+        this.RaisePropertyChanged(nameof(PartitionTypeError));
+        this.RaisePropertyChanged(nameof(HasPartitionTypeError));
+        this.RaisePropertyChanged(nameof(CanEditFileSystem));
+        this.RaisePropertyChanged(nameof(ShowFileSystem));
+        this.RaisePropertyChanged(nameof(CanEditLabel));
+        this.RaisePropertyChanged(nameof(FileSystemDisplay));
     }
 }
 
@@ -333,8 +664,8 @@ public record AddPartitionRequest(PartitionSegmentViewModel Segment, AddPartitio
 /// <summary>
 /// Editable state of partition.
 /// </summary>
-public record PartitionEntryState(long Start, long Size, string FileSystem, string Label, string DeviceName,
-    bool Bootable, bool FormatRequested, bool IsPiStorm);
+public record PartitionEntryState(long Start, long Size, string FileSystem, string PartitionType,
+    bool IsCustomPartitionType, string Label, string DeviceName, bool Bootable, bool FormatRequested);
 
 /// <summary>
 /// Area reserved by another partition table, e.g. master boot record partitions in a hybrid disk.
@@ -409,9 +740,13 @@ public class PartitionSegmentViewModel
                 ? partition.Label
                 : partition.IsPiStorm
                     ? "PiStorm"
-                    : $"Partition #{partition.Number}";
+                    : partition.IsNew
+                        ? "New partition"
+                        : $"Partition #{partition.Number}";
         FileSystem = partition.FileSystemDisplay;
-        Color = PartitionFileSystems.GetColor(partition.CanEditFileSystem ? partition.FileSystem : partition.ExistingFileSystem);
+        Color = PartitionFileSystems.GetColor(partition.IsNew || (partition.FormatRequested && !partition.IsRdb)
+            ? partition.FileSystem
+            : partition.ExistingFileSystem);
         UsedText = partition.UsedSize.HasValue && !partition.FormatRequested
             ? MediaOptions.FormatBytes(partition.UsedSize.Value)
             : string.Empty;
@@ -984,6 +1319,7 @@ public class PartitionLayout
         var entry = new PartitionEntryViewModel(TableType, true);
         if (IsRdb)
         {
+            entry.PartitionTypeOptions = GetDosTypeOptions();
             var isFirst = _partitions.Count == 0;
             entry.FileSystem = PartitionFileSystems.RdbOptions[0].Value;
             entry.DeviceName = GetNextDeviceName();
@@ -993,6 +1329,7 @@ public class PartitionLayout
         else
         {
             entry.FileSystem = PartitionFileSystems.BasicOptions[0].Value;
+            entry.PartitionType = PartitionTypes.GetDefault(TableType, entry.FileSystem);
             entry.Label = "Empty";
             entry.Bootable = TableType == PartitionTableType.MasterBootRecord && !_partitions.Any(x => x.Bootable);
         }
@@ -1212,6 +1549,69 @@ public class PartitionLayout
     }
 
     /// <summary>
+    /// Get file system in rigid disk block with dos type, e.g. PDS3. Returns null, if rigid disk block doesn't have a
+    /// file system with dos type.
+    /// </summary>
+    public RdbFileSystemEntry? FindFileSystem(string dosType) => _fileSystems.FirstOrDefault(x =>
+        string.Equals(x.DosType, dosType, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Add new file system to rigid disk block, e.g. imported for a new partition in partition dialog.
+    /// </summary>
+    public void AddFileSystem(RdbFileSystemEntry fileSystem)
+    {
+        _fileSystems.Add(fileSystem);
+        OnChanged();
+    }
+
+    /// <summary>
+    /// Remove new file system from rigid disk block, which hasn't been added yet.
+    /// </summary>
+    public void RemoveFileSystem(RdbFileSystemEntry fileSystem)
+    {
+        if (fileSystem.IsNew && _fileSystems.Remove(fileSystem))
+            OnChanged();
+    }
+
+    /// <summary>
+    /// Dos types for new rigid disk block partitions, which are common dos types and dos types of file systems in
+    /// rigid disk block. Dos types with a file system in rigid disk block show its name.
+    /// </summary>
+    public List<PartitionTypeOption> GetDosTypeOptions()
+    {
+        var common = PartitionTypes.RdbOptions.Where(x => !x.IsCustom).Select(x =>
+        {
+            var fileSystem = FindFileSystem(x.Value);
+            return fileSystem == null
+                ? x
+                : new PartitionTypeOption { Title = $"{x.Title}, {FormatFileSystemName(fileSystem)}", Value = x.Value };
+        });
+        var other = _fileSystems
+            .Where(x => x.DosType.Length == 4 &&
+                        PartitionTypes.RdbOptions.All(o => !string.Equals(o.Value, x.DosType,
+                            StringComparison.OrdinalIgnoreCase)))
+            .GroupBy(x => x.DosType.ToUpperInvariant())
+            .Select(x => new PartitionTypeOption
+            {
+                Title = $"{PartitionFileSystems.FormatDosType(x.Key)}, {FormatFileSystemName(x.First())}",
+                Value = x.Key
+            });
+        return common.Concat(other).Append(PartitionTypes.RdbOptions.Last()).ToList();
+    }
+
+    /// <summary>
+    /// Format name of file system with version and whether it's new, e.g. pfs3aio 19.2 in Rigid Disk Block.
+    /// </summary>
+    public static string FormatFileSystemName(RdbFileSystemEntry fileSystem)
+    {
+        var name = string.IsNullOrWhiteSpace(fileSystem.Name) ? "file system" : fileSystem.Name;
+        var version = string.IsNullOrWhiteSpace(fileSystem.Version) ? string.Empty : $" {fileSystem.Version}";
+        return fileSystem.IsExisting
+            ? $"{name}{version} in Rigid Disk Block"
+            : $"{name}{version} (new)";
+    }
+
+    /// <summary>
     /// Existing file systems deleted, which are not replaced by a new file system with same dos type. Adding a file
     /// system replaces existing file system with same dos type, so file systems used by partitions can be replaced.
     /// </summary>
@@ -1300,7 +1700,9 @@ public class PartitionLayout
         Label = partition.Label,
         DeviceName = partition.DeviceName,
         Bootable = partition.Bootable,
-        IsPiStorm = partition.IsPiStorm
+        IsPiStorm = partition.IsPiStorm,
+        PartitionType = partition.IsNew && !partition.IsRdb ? partition.PartitionType : string.Empty,
+        Format = partition.IsNew ? partition.IsFormattable : partition.FormatRequested
     };
 
     private void SetRange(PartitionEntryViewModel partition, long start, long size)

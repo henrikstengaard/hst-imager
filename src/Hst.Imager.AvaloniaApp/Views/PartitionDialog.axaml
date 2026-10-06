@@ -25,20 +25,32 @@
     </StackPanel>
 
     <controls:ResponsiveColumns MaxColumns="3" MinColumnWidth="220">
-      <!-- Regular or PiStorm partition for new master boot record partitions -->
-      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.CanBePiStorm, FallbackValue=False}">
+      <!-- Partition type of new partition: bios type, partition type guid or dos type -->
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.CanEditPartitionType, FallbackValue=False}">
         <StackPanel Orientation="Horizontal" Spacing="5">
           <ia:Icon Value="fa-shapes" Classes="field-icon" />
-          <TextBlock Classes="field-label" Text="Partition type" />
+          <TextBlock Classes="field-label" Text="{Binding SelectedPartition.PartitionTypeLabel, FallbackValue=''}" />
         </StackPanel>
-        <ComboBox ItemsSource="{x:Static vm:PartitionEntryViewModel.PartitionTypeOptions}"
+        <ComboBox ItemsSource="{Binding SelectedPartition.PartitionTypeOptions, FallbackValue={x:Null}}"
                   SelectedItem="{Binding SelectedPartition.PartitionTypeOption, FallbackValue={x:Null}}"
                   DisplayMemberBinding="{Binding Title}"
                   HorizontalAlignment="Stretch" />
       </StackPanel>
 
+      <!-- Partition type entered manually -->
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.IsCustomPartitionType, FallbackValue=False}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-keyboard" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="{Binding SelectedPartition.CustomPartitionTypeLabel, FallbackValue=''}" />
+        </StackPanel>
+        <TextBox
+                 Text="{Binding SelectedPartition.CustomPartitionType, FallbackValue='', UpdateSourceTrigger=PropertyChanged}" />
+      </StackPanel>
+    </controls:ResponsiveColumns>
+
+    <controls:ResponsiveColumns MaxColumns="3" MinColumnWidth="220">
       <!-- File system -->
-      <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.ShowFileSystem, FallbackValue=True}">
         <StackPanel Orientation="Horizontal" Spacing="5">
           <ia:Icon Value="fa-sliders" Classes="field-icon" />
           <TextBlock Classes="field-label" Text="File system" />
@@ -62,7 +74,7 @@
       </StackPanel>
 
       <!-- Volume name -->
-      <StackPanel Spacing="4" IsVisible="{Binding !SelectedPartition.IsPiStorm, FallbackValue=True}">
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.CanEditLabel, FallbackValue=True}">
         <StackPanel Orientation="Horizontal" Spacing="5">
           <ia:Icon Value="fa-tag" Classes="field-icon" />
           <TextBlock Classes="field-label" Text="Volume name" />
@@ -71,6 +83,50 @@
                  IsEnabled="{Binding SelectedPartition.CanEditLabel, FallbackValue=False}" />
       </StackPanel>
     </controls:ResponsiveColumns>
+
+    <TextBlock Classes="error-text" TextWrapping="Wrap"
+               IsVisible="{Binding SelectedPartition.HasPartitionTypeError, FallbackValue=False}"
+               Text="{Binding SelectedPartition.PartitionTypeError, FallbackValue=''}" />
+
+    <!-- File system in rigid disk block used by new rigid disk block partition, which can be imported -->
+    <StackPanel Spacing="6" IsVisible="{Binding ShowRdbFileSystem}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-puzzle-piece" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="File system in Rigid Disk Block" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <ia:Icon Value="fa-triangle-exclamation" IsVisible="{Binding IsRdbFileSystemMissing}"
+                 Foreground="{DynamicResource AppWarningForegroundBrush}" VerticalAlignment="Top" Margin="0,2,0,0" />
+        <TextBlock Classes="field-help" TextWrapping="Wrap" MaxWidth="640" Text="{Binding RdbFileSystemText}" />
+      </StackPanel>
+      <StackPanel Spacing="4" IsVisible="{Binding IsImportedFileSystemFromMedia}">
+        <TextBlock Classes="field-label" Text="Name of file system to find in media" />
+        <TextBox Text="{Binding SelectedPartitionFileSystem.Name, FallbackValue=''}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Command="{Binding ImportFileSystemFromMediaCommand}" IsVisible="{Binding CanImportFileSystem}"
+                ToolTip.Tip="Import file system with DOS type of partition from media like lha, adf or iso">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-file-import" />
+            <TextBlock Text="Import from media" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding AddFileSystemFromFileCommand}" IsVisible="{Binding CanImportFileSystem}"
+                ToolTip.Tip="Add file system with DOS type of partition from a file system file">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-file" />
+            <TextBlock Text="Add from file" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding RemoveImportedFileSystemCommand}" IsVisible="{Binding IsImportedFileSystemSelected}"
+                ToolTip.Tip="Remove file system imported for partition">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-trash" />
+            <TextBlock Text="Remove file system" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </StackPanel>
 
     <CheckBox Content="Bootable" IsVisible="{Binding IsRdb}"
               IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
@@ -120,7 +176,8 @@
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
-      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="{Binding PartitionDialogOkText}" Classes="primary" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="{Binding PartitionDialogOkText}" Classes="primary"
+              IsEnabled="{Binding !SelectedPartition.HasPartitionTypeError, FallbackValue=True}" />
     </StackPanel>
   </StackPanel>
 </Window>

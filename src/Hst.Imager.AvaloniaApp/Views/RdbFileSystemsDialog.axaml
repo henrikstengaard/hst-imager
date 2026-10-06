@@ -76,8 +76,11 @@
             <ia:Icon Value="fa-sliders" Classes="field-icon" />
             <TextBlock Classes="field-label" Text="DOS type" />
           </StackPanel>
-          <TextBox Text="{Binding SelectedFileSystem.DosType, FallbackValue='', UpdateSourceTrigger=LostFocus}"
-                   Classes="commit-on-enter" Watermark="e.g. PDS3, PFS3, DOS3" />
+          <TextBox Text="{Binding SelectedFileSystem.DosTypeText, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   Watermark="e.g. PDS3, PFS3, DOS3" />
+          <TextBlock Classes="error-text" TextWrapping="Wrap"
+                     IsVisible="{Binding SelectedFileSystem.HasDosTypeError, FallbackValue=False}"
+                     Text="{Binding SelectedFileSystem.DosTypeError, FallbackValue=''}" />
         </StackPanel>
 
         <StackPanel Spacing="4">

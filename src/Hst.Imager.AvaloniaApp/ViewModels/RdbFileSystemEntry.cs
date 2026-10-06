@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using Hst.Amiga.RigidDiskBlocks;
 using Hst.Amiga.VersionStrings;
+using Hst.Imager.Core.Commands;
 using ReactiveUI;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
@@ -39,6 +40,7 @@ public class RdbFileSystemEntry : ReactiveObject
     public const long MaxFileSystemSize = 512 * 1024;
 
     private string _dosType = string.Empty;
+    private string _dosTypeText = string.Empty;
     private string _name = string.Empty;
     private string _path = string.Empty;
     private string _version = string.Empty;
@@ -82,10 +84,31 @@ public class RdbFileSystemEntry : ReactiveObject
         get => _dosType;
         set
         {
-            this.RaiseAndSetIfChanged(ref _dosType, NormalizeDosType(value));
-            RaiseStatusChanged();
+            _dosTypeText = value;
+            SetDosType(value);
         }
     }
+
+    /// <summary>
+    /// Dos type entered in file systems dialog. Text is kept as entered, so it isn't changed while typing, and dos
+    /// type is set to normalized value.
+    /// </summary>
+    public string DosTypeText
+    {
+        get => _dosTypeText;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _dosTypeText, value);
+            SetDosType(value);
+        }
+    }
+
+    /// <summary>
+    /// Error for invalid dos type entered or null, if it's valid.
+    /// </summary>
+    public string? DosTypeError => PartitionTypes.Validate(PartitionTableType.RigidDiskBlock, _dosTypeText);
+
+    public bool HasDosTypeError => DosTypeError != null;
 
     /// <summary>
     /// Name of file system. Name of file system imported from media is also used to find file system in media.
@@ -271,6 +294,15 @@ public class RdbFileSystemEntry : ReactiveObject
     }
 
     public static bool IsUrl(string path) => path.StartsWith("http", StringComparison.OrdinalIgnoreCase);
+
+    private void SetDosType(string value)
+    {
+        this.RaiseAndSetIfChanged(ref _dosType, NormalizeDosType(value), nameof(DosType));
+        this.RaisePropertyChanged(nameof(DosTypeText));
+        this.RaisePropertyChanged(nameof(DosTypeError));
+        this.RaisePropertyChanged(nameof(HasDosTypeError));
+        RaiseStatusChanged();
+    }
 
     private void RaiseStatusChanged()
     {

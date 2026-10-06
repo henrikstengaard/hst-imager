@@ -183,6 +183,18 @@ public class PlannedPartition
     public bool Bootable { get; set; }
 
     /// <summary>
+    /// Partition type of new partition, bios type for master boot record, e.g. 0x0c, and guid for guid partition
+    /// table. Default partition type of file system is used, if empty.
+    /// </summary>
+    public string PartitionType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Partition is formatted with file system after it's added. New partitions with a partition type, which isn't
+    /// formatted, like a Linux partition or a SmartFileSystem partition, are only added.
+    /// </summary>
+    public bool Format { get; set; } = true;
+
+    /// <summary>
     /// Master boot record partition is a PiStorm partition with bios type 0x76 containing a rigid disk block,
     /// which is not formatted.
     /// </summary>
