@@ -91,6 +91,8 @@ public class PartitionViewModel : ViewModelBase
         InitializeCommand = ReactiveCommand.CreateFromTask(InitializeAsync, this.WhenAnyValue(x => x.HasMedia));
         AddPartitionCommand = ReactiveCommand.CreateFromTask(AddPartitionAsync, this.WhenAnyValue(x => x.CanAddPartition));
         AddPartitionToCommand = ReactiveCommand.CreateFromTask<AddPartitionRequest>(AddPartitionToAsync);
+        ClonePartitionCommand = ReactiveCommand.CreateFromTask(ClonePartitionAsync,
+            this.WhenAnyValue(x => x.CanClonePartition));
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditFileSystemsCommand = ReactiveCommand.CreateFromTask(EditFileSystemsAsync, this.WhenAnyValue(x => x.IsRdb));
@@ -276,6 +278,28 @@ public class PartitionViewModel : ViewModelBase
         : $"{AddPartitionText} in selected unallocated space";
 
     /// <summary>
+    /// Selected partition can be cloned to unallocated space with room for it.
+    /// </summary>
+    public bool CanClonePartition => _layout != null && _layout.CanClonePartition(_selectedPartition);
+
+    /// <summary>
+    /// Tooltip for cloning partition, which shows why selected partition can't be cloned.
+    /// </summary>
+    public string ClonePartitionHint
+    {
+        get
+        {
+            if (_layout == null || _selectedPartition is not { } partition)
+                return "Clone selected partition to a new partition with same partition type, file system and size";
+            if (!_layout.CanAddPartition)
+                return $"Max {_layout.MaxPartitions} partitions can be added to {FormatTableType(_layout.TableType)}.";
+            return CanClonePartition
+                ? "Clone selected partition to a new partition with same partition type, file system and size. Data isn't copied"
+                : $"Unallocated space of {MediaOptions.FormatBytes(partition.Size)} is required to clone selected partition.";
+        }
+    }
+
+    /// <summary>
     /// Partition dialog is shown for a partition being added, which is removed again, if dialog is cancelled.
     /// </summary>
     public bool IsAddingPartition
@@ -350,6 +374,8 @@ public class PartitionViewModel : ViewModelBase
                         $"Partition uses file system {PartitionLayout.FormatFileSystemName(fileSystem)} with DOS type {dosType}.",
                     RdbFileSystemSource.Media =>
                         $"File system with DOS type {dosType} is imported from media '{fileSystem.Path}' to Rigid Disk Block, when applied.",
+                    RdbFileSystemSource.Clone =>
+                        $"File system with DOS type {dosType} is cloned from file system #{fileSystem.CloneNumber} in Rigid Disk Block, when applied.",
                     _ =>
                         $"File system with DOS type {dosType} is added from file '{fileSystem.Path}' to Rigid Disk Block, when applied."
                 };
@@ -500,6 +526,11 @@ public class PartitionViewModel : ViewModelBase
     /// Add partition to start, all or end of unallocated space clicked in visual view.
     /// </summary>
     public ReactiveCommand<AddPartitionRequest, Unit> AddPartitionToCommand { get; }
+
+    /// <summary>
+    /// Clone selected partition to a new partition with same partition type, file system and size.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> ClonePartitionCommand { get; }
     public ReactiveCommand<Unit, Unit> DeletePartitionCommand { get; }
 
     /// <summary>
@@ -768,7 +799,45 @@ public class PartitionViewModel : ViewModelBase
         if (partition == null || partitionSegment == null)
             return;
 
-        SetSelectedSegment(partitionSegment);
+        if (await ShowNewPartitionDialogAsync(layout, partition, partitionSegment))
+            return;
+
+        var unallocated = Segments.FirstOrDefault(x => x.IsUnallocated && ReferenceEquals(x.Layout, layout) &&
+                                                       x.Start <= segment.Start && x.End >= segment.End);
+        if (unallocated != null)
+            SetSelectedSegment(unallocated);
+    }
+
+    /// <summary>
+    /// Clone selected partition to a new partition with same partition type, file system and size in unallocated space
+    /// and show partition dialog to change it before adding it. Only layout details are cloned, not data. Clone is
+    /// removed again and partition cloned is selected, if dialog is cancelled.
+    /// </summary>
+    private async Task ClonePartitionAsync()
+    {
+        if (_layout == null || _selectedSegment is not { Partition: { } source } sourceSegment)
+            return;
+
+        var layout = _layout;
+        var clone = layout.ClonePartition(source);
+        var cloneSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, clone));
+        if (clone == null || cloneSegment == null)
+            return;
+
+        if (await ShowNewPartitionDialogAsync(layout, clone, cloneSegment))
+            return;
+
+        SetSelectedSegment(Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, source)) ?? sourceSegment);
+    }
+
+    /// <summary>
+    /// Select new partition and show partition dialog for it. Partition is deleted again, if dialog is cancelled.
+    /// Returns true, if Add is clicked.
+    /// </summary>
+    private async Task<bool> ShowNewPartitionDialogAsync(PartitionLayout layout, PartitionEntryViewModel partition,
+        PartitionSegmentViewModel segment)
+    {
+        SetSelectedSegment(segment);
 
         var sizeUnit = SizeUnit;
         bool added;
@@ -783,14 +852,11 @@ public class PartitionViewModel : ViewModelBase
         }
 
         if (added)
-            return;
+            return true;
 
         layout.DeletePartition(partition);
         SizeUnit = sizeUnit;
-        var unallocated = Segments.FirstOrDefault(x => x.IsUnallocated && ReferenceEquals(x.Layout, layout) &&
-                                                       x.Start <= segment.Start && x.End >= segment.End);
-        if (unallocated != null)
-            SetSelectedSegment(unallocated);
+        return false;
     }
 
     private async Task AddPartitionToAsync(AddPartitionRequest request)
@@ -1047,6 +1113,8 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(CanAddPartition));
         this.RaisePropertyChanged(nameof(AddPartitionText));
         this.RaisePropertyChanged(nameof(AddPartitionHint));
+        this.RaisePropertyChanged(nameof(CanClonePartition));
+        this.RaisePropertyChanged(nameof(ClonePartitionHint));
         RaiseEditorChanged();
         RaiseFileSystemChanged();
     }
@@ -1132,6 +1200,8 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(CanAddPartition));
         this.RaisePropertyChanged(nameof(AddPartitionHint));
         this.RaisePropertyChanged(nameof(AddPartitionText));
+        this.RaisePropertyChanged(nameof(CanClonePartition));
+        this.RaisePropertyChanged(nameof(ClonePartitionHint));
         RaiseEditorChanged();
         RaiseFileSystemChanged();
     }
@@ -1198,9 +1268,15 @@ public class PartitionViewModel : ViewModelBase
                 : $"Delete {layout.TableTypeName} file system #{fileSystem.Number} ({fileSystem.OriginalDosType}) '{fileSystem.OriginalName}'{location}");
 
         foreach (var fileSystem in layout.FileSystems.Where(x => x.IsNew))
-            operations.Add(fileSystem.IsFromMedia
-                ? $"Import file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from '{fileSystem.Path}' to {layout.TableTypeName}{location}"
-                : $"Add file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from file '{fileSystem.Path}' to {layout.TableTypeName}{location}");
+            operations.Add(fileSystem.Source switch
+            {
+                RdbFileSystemSource.Media =>
+                    $"Import file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from '{fileSystem.Path}' to {layout.TableTypeName}{location}",
+                RdbFileSystemSource.Clone =>
+                    $"Clone {layout.TableTypeName} file system #{fileSystem.CloneNumber} to file system '{fileSystem.Name}' with DOS type {fileSystem.DosType}{location}",
+                _ =>
+                    $"Add file system '{fileSystem.Name}' with DOS type {fileSystem.DosType} from file '{fileSystem.Path}' to {layout.TableTypeName}{location}"
+            });
     }
 
     private void Validate(DiskPartitionTable table, List<string> errors)

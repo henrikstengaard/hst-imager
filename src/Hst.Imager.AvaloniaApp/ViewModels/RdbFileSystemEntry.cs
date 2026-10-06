@@ -25,7 +25,13 @@ public enum RdbFileSystemSource
     /// <summary>
     /// New file system imported from media like lha, adf or iso (rdb fs import).
     /// </summary>
-    Media
+    Media,
+
+    /// <summary>
+    /// New file system cloned from existing file system in rigid disk block, which is exported and added as a new
+    /// file system (rdb fs export and rdb fs add).
+    /// </summary>
+    Clone
 }
 
 /// <summary>
@@ -60,11 +66,17 @@ public class RdbFileSystemEntry : ReactiveObject
     public bool IsNew => !IsExisting;
     public bool IsFromFile => Source == RdbFileSystemSource.File;
     public bool IsFromMedia => Source == RdbFileSystemSource.Media;
+    public bool IsClone => Source == RdbFileSystemSource.Clone;
 
     /// <summary>
     /// File system number of existing file system in rigid disk block.
     /// </summary>
     public int? Number { get; init; }
+
+    /// <summary>
+    /// Number of existing file system in rigid disk block, which data of cloned file system is copied from.
+    /// </summary>
+    public int? CloneNumber { get; init; }
 
     /// <summary>
     /// Dos type of existing file system read from disk, e.g. PFS3.
@@ -216,17 +228,21 @@ public class RdbFileSystemEntry : ReactiveObject
     {
         RdbFileSystemSource.File => "Add",
         RdbFileSystemSource.Media => "Import",
+        RdbFileSystemSource.Clone => "Clone",
         _ => IsUpdated ? "Update" : string.Empty
     };
 
     /// <summary>
-    /// File or media file system is added or imported from or file replacing data of existing file system.
+    /// File or media file system is added or imported from, file replacing data of existing file system or existing
+    /// file system cloned.
     /// </summary>
-    public string SourceText => string.IsNullOrWhiteSpace(_path)
-        ? string.Empty
-        : IsUrl(_path)
-            ? _path
-            : System.IO.Path.GetFileName(_path);
+    public string SourceText => IsClone
+        ? $"File system #{CloneNumber}"
+        : string.IsNullOrWhiteSpace(_path)
+            ? string.Empty
+            : IsUrl(_path)
+                ? _path
+                : System.IO.Path.GetFileName(_path);
 
     /// <summary>
     /// Create file system entry for existing file system in rigid disk block.
@@ -250,11 +266,30 @@ public class RdbFileSystemEntry : ReactiveObject
     public RdbFileSystemEntry Clone() => new(Source)
     {
         Number = Number,
+        CloneNumber = CloneNumber,
         OriginalDosType = OriginalDosType,
         OriginalName = OriginalName,
         DosType = _dosType,
         Name = _name,
         Path = _path,
+        Version = _version,
+        Size = _size,
+        HasVersionString = _hasVersionString,
+        ManualVersion = _manualVersion,
+        ManualRevision = _manualRevision,
+        SourceError = _sourceError
+    };
+
+    /// <summary>
+    /// Create new file system with data of file system. Existing file systems are cloned from rigid disk block, new
+    /// file systems are added from same file or imported from same media.
+    /// </summary>
+    public RdbFileSystemEntry CreateClone() => new(IsExisting ? RdbFileSystemSource.Clone : Source)
+    {
+        CloneNumber = IsExisting ? Number : CloneNumber,
+        DosType = _dosType,
+        Name = _name,
+        Path = IsExisting ? string.Empty : _path,
         Version = _version,
         Size = _size,
         HasVersionString = _hasVersionString,

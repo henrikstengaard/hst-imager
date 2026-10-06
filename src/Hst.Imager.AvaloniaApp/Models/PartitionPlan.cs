@@ -146,12 +146,18 @@ public class PlannedFileSystem
     public bool IsImport { get; set; }
 
     /// <summary>
-    /// Version of file system added from a file system file without a version string.
+    /// Number of existing file system in rigid disk block to clone. File system is exported before file systems are
+    /// updated or deleted and added from exported file.
+    /// </summary>
+    public int? CloneNumber { get; set; }
+
+    /// <summary>
+    /// Version of file system added from a file system file without a version string or of file system cloned.
     /// </summary>
     public int? Version { get; set; }
 
     /// <summary>
-    /// Revision of file system added from a file system file without a version string.
+    /// Revision of file system added from a file system file without a version string or of file system cloned.
     /// </summary>
     public int? Revision { get; set; }
 }

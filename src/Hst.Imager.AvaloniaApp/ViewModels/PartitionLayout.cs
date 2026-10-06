@@ -326,6 +326,12 @@ public class PartitionEntryViewModel : ReactiveObject
     public string ExistingDosType { get; init; } = string.Empty;
 
     /// <summary>
+    /// Partition type of existing partition in format used for new partitions, e.g. 0x0c for master boot record,
+    /// guid for guid partition table and dos type for rigid disk block.
+    /// </summary>
+    public string ExistingPartitionType { get; init; } = string.Empty;
+
+    /// <summary>
     /// Formatting existing master boot record partition with file system requires changing its bios type,
     /// e.g. from NTFS to FAT32.
     /// </summary>
@@ -1140,12 +1146,16 @@ public class PartitionLayout
             layout._reservedAreas.Add(new ReservedArea(0, rdbSize, "Rigid Disk Block", PartitionTableType.RigidDiskBlock));
         foreach (var part in (partitionTablePart.Parts ?? []).Where(x => x.PartType == PartType.Partition))
         {
+            var existingBiosType = int.TryParse(part.BiosType, out var biosType) ? biosType : (int?)null;
             var entry = new PartitionEntryViewModel(tableType, false)
             {
                 Number = part.PartitionNumber,
                 ExistingFileSystem = FormatExistingFileSystem(part),
                 UsedSize = GetUsedSize(part),
-                ExistingBiosType = int.TryParse(part.BiosType, out var biosType) ? biosType : null
+                ExistingBiosType = existingBiosType,
+                ExistingPartitionType = tableType == PartitionTableType.MasterBootRecord
+                    ? existingBiosType.HasValue ? $"0x{existingBiosType.Value:x2}" : string.Empty
+                    : PartitionTypes.Normalize(tableType, part.GuidType ?? string.Empty)
             };
             entry.SetRange(part.StartOffset, part.EndOffset - part.StartOffset + 1);
             entry.FileSystem = GuessFileSystem(part);
@@ -1174,11 +1184,13 @@ public class PartitionLayout
             var partitionBlock = part.PartitionNumber is > 0 && part.PartitionNumber <= partitionBlocks.Count
                 ? partitionBlocks[part.PartitionNumber.Value - 1]
                 : null;
+            var dosType = RdbFileSystemEntry.NormalizeDosType(partitionBlock?.DosTypeFormatted ?? string.Empty);
             var entry = new PartitionEntryViewModel(PartitionTableType.RigidDiskBlock, false)
             {
                 Number = part.PartitionNumber,
                 ExistingFileSystem = part.FileSystem ?? part.PartitionType ?? string.Empty,
-                ExistingDosType = RdbFileSystemEntry.NormalizeDosType(partitionBlock?.DosTypeFormatted ?? string.Empty),
+                ExistingDosType = dosType,
+                ExistingPartitionType = dosType,
                 UsedSize = GetUsedSize(part)
             };
             entry.SetRange(part.StartOffset, part.EndOffset - part.StartOffset + 1);
@@ -1346,6 +1358,61 @@ public class PartitionLayout
         OnChanged();
         return entry;
     }
+
+    /// <summary>
+    /// Add new partition with partition type, file system, size and flags of a partition in first unallocated space
+    /// with room for it, preferring unallocated space after partition. Only layout details are cloned, not data, so
+    /// new partition is added and formatted like other new partitions.
+    /// </summary>
+    public PartitionEntryViewModel? ClonePartition(PartitionEntryViewModel source)
+    {
+        if (!CanClonePartition(source) || FindCloneStart(source) is not { } start)
+            return null;
+
+        var partitionType = source.IsNew ? source.PartitionType : source.ExistingPartitionType;
+        if (string.IsNullOrWhiteSpace(partitionType))
+            partitionType = PartitionTypes.GetDefault(TableType, source.FileSystem);
+
+        var entry = new PartitionEntryViewModel(TableType, true);
+        if (IsRdb)
+        {
+            entry.PartitionTypeOptions = GetDosTypeOptions();
+            entry.FileSystem = partitionType.ToLowerInvariant();
+            entry.DeviceName = GetNextDeviceName();
+            entry.Label = GetNextWorkLabel();
+            entry.Bootable = source.Bootable;
+        }
+        else
+        {
+            entry.FileSystem = source.FileSystem;
+            entry.PartitionType = partitionType;
+
+            // file system of existing partition is guessed, so partition types without a supported file system, e.g.
+            // a linux partition, aren't formatted
+            var option = entry.PartitionTypeOptions.FirstOrDefault(x => !x.IsCustom && string.Equals(x.Value,
+                partitionType, StringComparison.OrdinalIgnoreCase));
+            if (source.IsExisting && (option == null || !option.FileSystems.Contains(entry.FileSystem)))
+                entry.FileSystem = option?.FileSystems.FirstOrDefault() ?? PartitionFileSystems.None;
+            entry.Label = string.IsNullOrWhiteSpace(source.Label) ? "Empty" : source.Label;
+        }
+
+        entry.SetRange(start, source.Size);
+        AddEntry(entry);
+        OnChanged();
+        return entry;
+    }
+
+    /// <summary>
+    /// Partition can be cloned, if unallocated space has room for a partition of same size.
+    /// </summary>
+    public bool CanClonePartition(PartitionEntryViewModel? source) =>
+        CanAddPartition && source != null && _partitions.Contains(source) && FindCloneStart(source) != null;
+
+    private long? FindCloneStart(PartitionEntryViewModel source) => BuildSegments()
+        .Where(x => x.IsUnallocated)
+        .OrderBy(x => x.Start >= source.End ? 0 : 1)
+        .Select(x => GetAddRange(x.Start, x.End, AddPartitionPlacement.All))
+        .FirstOrDefault(x => x is { } range && range.End - range.Start >= source.Size)?.Start;
 
     /// <summary>
     /// Partition can be added to segment, if it's unallocated space with room for a partition aligned in it.
@@ -1526,10 +1593,23 @@ public class PartitionLayout
             DosType = x.DosType,
             Name = x.Name,
             IsImport = x.IsFromMedia,
-            Version = x.RequiresManualVersion ? (int?)x.ManualVersion : null,
-            Revision = x.RequiresManualVersion ? (int?)x.ManualRevision : null
+            CloneNumber = x.IsClone ? x.CloneNumber : null,
+            Version = x.RequiresManualVersion ? (int?)x.ManualVersion : x.IsClone ? ParseVersion(x.Version).Version : null,
+            Revision = x.RequiresManualVersion ? (int?)x.ManualRevision : x.IsClone ? ParseVersion(x.Version).Revision : null
         }).ToList()
     };
+
+    /// <summary>
+    /// Parse version and revision of file system, e.g. 19.2. Version of cloned file system is used, if exported file
+    /// system data doesn't have a version string.
+    /// </summary>
+    private static (int? Version, int? Revision) ParseVersion(string version)
+    {
+        var parts = version.Split('.');
+        return parts.Length == 2 && int.TryParse(parts[0], out var major) && int.TryParse(parts[1], out var minor)
+            ? (major, minor)
+            : (null, null);
+    }
 
     // ─── File systems ─────────────────────────────────────────────────────────
 
@@ -1642,7 +1722,7 @@ public class PartitionLayout
             if (fileSystem.IsFromMedia && string.IsNullOrWhiteSpace(fileSystem.Name))
                 errors.Add($"Name of {title} is required to find it in media");
 
-            if (fileSystem.IsNew && string.IsNullOrWhiteSpace(fileSystem.Path))
+            if (fileSystem.IsNew && !fileSystem.IsClone && string.IsNullOrWhiteSpace(fileSystem.Path))
                 errors.Add(fileSystem.IsFromMedia
                     ? $"Path to media is required for {title}"
                     : $"Path to file system file is required for {title}");
@@ -1665,7 +1745,7 @@ public class PartitionLayout
                      .Where(x => x.Count() > 1)
                      .Select(x => x.Key))
             errors.Add(
-                $"DOS type '{dosType}' is used by more than one file system. Delete the existing file system to replace it");
+                $"DOS type '{dosType}' is used by more than one file system. Change DOS type of a file system or delete the existing file system to replace it");
 
         // existing partitions use updated dos type of file system, when dos type of existing file system is updated
         var updatedDosTypes = fileSystems.Where(x => x.IsDosTypeChanged)

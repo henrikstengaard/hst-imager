@@ -201,9 +201,11 @@ public class ImagingService : IImagingService
         var rdbDosTypes = isRdb
             ? plan.AddPartitions.Select(x => GetDosType(x.FileSystem)).Distinct().ToList()
             : [];
+        var cloneFileSystems = plan.AddFileSystems.Where(x => x.CloneNumber.HasValue).ToList();
 
         var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + plan.UpdateFileSystems.Count +
                     plan.DeleteFileSystemNumbers.Count + plan.AddFileSystems.Count * 2 + rdbDosTypes.Count +
+                    cloneFileSystems.Count +
                     plan.AddPartitions.Count * 2 + plan.FormatPartitions.Count + 1;
         var stepsExecuted = 0;
 
@@ -267,6 +269,19 @@ public class ImagingService : IImagingService
             });
         }
 
+        // export file systems to clone before existing file systems are updated or deleted, which changes their
+        // numbers and data. cloned file systems are added from exported files
+        var cloneFileSystemPaths = new Dictionary<PlannedFileSystem, string>();
+        foreach (var fileSystem in cloneFileSystems)
+        {
+            var outputPath = System.IO.Path.Combine(_appState.AppDataPath, "filesystems");
+            System.IO.Directory.CreateDirectory(outputPath);
+            var fileSystemPath = System.IO.Path.Combine(outputPath, $"clone-{Guid.NewGuid():N}");
+            await Run(new RdbFsExportCommand(_loggerFactory.CreateLogger<RdbFsExportCommand>(), commandHelper,
+                physicalDrives, path, fileSystem.CloneNumber!.Value, fileSystemPath));
+            cloneFileSystemPaths[fileSystem] = fileSystemPath;
+        }
+
         // update existing file systems by number before deleting file systems changes their numbers
         foreach (var update in plan.UpdateFileSystems.OrderBy(x => x.Number))
         {
@@ -292,6 +307,19 @@ public class ImagingService : IImagingService
                 await Run(new RdbFsImportCommand(_loggerFactory.CreateLogger<RdbFsImportCommand>(), commandHelper,
                     physicalDrives, path, fileSystem.Path, fileSystem.DosType, fileSystem.Name,
                     _appState.AppDataPath));
+            }
+            else if (cloneFileSystemPaths.TryGetValue(fileSystem, out var clonePath))
+            {
+                try
+                {
+                    await Run(new RdbFsAddCommand(_loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper,
+                        physicalDrives, path, clonePath, fileSystem.DosType, fileSystem.Name, fileSystem.Version,
+                        fileSystem.Revision));
+                }
+                finally
+                {
+                    System.IO.File.Delete(clonePath);
+                }
             }
             else
             {

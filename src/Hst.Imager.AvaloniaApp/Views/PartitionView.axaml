@@ -56,6 +56,10 @@
                     ToolTip.Tip="{Binding AddPartitionHint}">
               <ia:Icon Value="fa-circle-plus" />
             </Button>
+            <Button Classes="icon" Command="{Binding ClonePartitionCommand}"
+                    ToolTip.Tip="{Binding ClonePartitionHint}">
+              <ia:Icon Value="fa-clone" />
+            </Button>
             <Button Classes="icon" Command="{Binding DeletePartitionCommand}"
                     ToolTip.Tip="Delete selected partition">
               <ia:Icon Value="fa-trash-can" />

@@ -14,7 +14,7 @@ using Unit = System.Reactive.Unit;
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
 /// <summary>
-/// File systems dialog to add, import, update, export and delete file systems in a rigid disk block. File systems
+/// File systems dialog to add, import, clone, update, export and delete file systems in a rigid disk block. File systems
 /// are edited as copies, which are set as pending operations of rigid disk block layout, when OK is clicked.
 /// Exporting a file system reads it from disk, so only existing file systems can be exported.
 /// </summary>
@@ -64,6 +64,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
         var isSelected = this.WhenAnyValue(x => x.SelectedFileSystem).Select(x => x != null);
         AddFromFileCommand = ReactiveCommand.CreateFromTask(AddFromFileAsync);
         ImportFromMediaCommand = ReactiveCommand.CreateFromTask(ImportFromMediaAsync);
+        CloneCommand = ReactiveCommand.Create(Clone, isSelected);
         ExportCommand = ReactiveCommand.CreateFromTask(ExportAsync, this.WhenAnyValue(x => x.CanExport));
         DeleteCommand = ReactiveCommand.Create(Delete, isSelected);
         BrowsePathCommand = ReactiveCommand.CreateFromTask(BrowsePathAsync, isSelected);
@@ -82,6 +83,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
             this.RaiseAndSetIfChanged(ref _selectedFileSystem, value);
             this.RaisePropertyChanged(nameof(IsFileSystemSelected));
             this.RaisePropertyChanged(nameof(CanExport));
+            this.RaisePropertyChanged(nameof(ShowPath));
             this.RaisePropertyChanged(nameof(PathLabel));
             this.RaisePropertyChanged(nameof(NameLabel));
             this.RaisePropertyChanged(nameof(PathHelp));
@@ -104,6 +106,12 @@ public class RdbFileSystemsViewModel : ViewModelBase
         ? "Name of file system to find in media"
         : "Name";
 
+    /// <summary>
+    /// Path is shown for file systems added from a file, imported from media or existing file systems, which data can
+    /// be replaced. Cloned file systems use data of file system cloned.
+    /// </summary>
+    public bool ShowPath => _selectedFileSystem is { IsClone: false };
+
     public string PathLabel => _selectedFileSystem?.Source switch
     {
         RdbFileSystemSource.File => "File system file",
@@ -117,6 +125,8 @@ public class RdbFileSystemsViewModel : ViewModelBase
             "File system is added to Rigid Disk Block and replaces an existing file system with same DOS type.",
         RdbFileSystemSource.Media =>
             "File system with highest version matching name is imported from media and replaces an existing file system with same DOS type.",
+        RdbFileSystemSource.Clone =>
+            "File system is cloned from existing file system before file systems are updated or deleted. Change DOS type, as it must be unique.",
         _ =>
             "Changing DOS type also changes DOS type of partitions using the file system. Leave file empty to keep file system data."
     };
@@ -156,6 +166,11 @@ public class RdbFileSystemsViewModel : ViewModelBase
 
     public ReactiveCommand<Unit, Unit> AddFromFileCommand { get; }
     public ReactiveCommand<Unit, Unit> ImportFromMediaCommand { get; }
+
+    /// <summary>
+    /// Clone selected file system to a new file system with same data, which needs another dos type.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> CloneCommand { get; }
     public ReactiveCommand<Unit, Unit> ExportCommand { get; }
     public ReactiveCommand<Unit, Unit> DeleteCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowsePathCommand { get; }
@@ -205,6 +220,12 @@ public class RdbFileSystemsViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(HasFileSystems));
         SelectedFileSystem = fileSystem;
         Validate();
+    }
+
+    private void Clone()
+    {
+        if (_selectedFileSystem is { } fileSystem)
+            AddFileSystem(fileSystem.CreateClone());
     }
 
     private void Delete()

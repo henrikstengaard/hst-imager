@@ -39,6 +39,10 @@
               ToolTip.Tip="Import file system from media (lha, adf, iso, hdf)">
         <ia:Icon Value="fa-file-import" />
       </Button>
+      <Button Classes="icon" Command="{Binding CloneCommand}"
+              ToolTip.Tip="Clone selected file system to a new file system with another DOS type">
+        <ia:Icon Value="fa-clone" />
+      </Button>
       <Button Classes="icon" Command="{Binding ExportCommand}"
               ToolTip.Tip="{Binding ExportHint}">
         <ia:Icon Value="fa-file-export" />
@@ -93,7 +97,7 @@
         </StackPanel>
       </controls:ResponsiveColumns>
 
-      <StackPanel Spacing="4">
+      <StackPanel Spacing="4" IsVisible="{Binding ShowPath}">
         <StackPanel Orientation="Horizontal" Spacing="5">
           <ia:Icon Value="fa-file" Classes="field-icon" />
           <TextBlock Classes="field-label" Text="{Binding PathLabel}" />
@@ -105,8 +109,8 @@
             <ia:Icon Value="fa-folder-open" />
           </Button>
         </Grid>
-        <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding PathHelp}" />
       </StackPanel>
+      <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding PathHelp}" />
 
       <!-- Version of file system file without version string -->
       <StackPanel Spacing="4" IsVisible="{Binding SelectedFileSystem.RequiresManualVersion, FallbackValue=False}">
