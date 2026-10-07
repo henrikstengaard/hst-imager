@@ -356,7 +356,7 @@ export default function Format() {
                 id="confirm-format"
                 open={openConfirm}
                 title="Format"
-                description={`Do you want to format ${sourceTypeFormatted} '${isNil(media) ? path : media.name}' with '${formatTypeOption.title}' format type, '${fileSystemOption.title}' file system${sizeFormatted}?`}
+                description={`Do you want to format ${sourceTypeFormatted} '${isNil(media) ? path : media.name}' with '${formatTypeOption.title}' format type, '${fileSystemOption.title}' file system${sizeFormatted}?${(fileSystem === 'pds3' || fileSystem === 'pfs3') && downloadPfs3Aio ? ` This will download pfs3aio from '${pfs3AioUrl}'.` : ''}`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
