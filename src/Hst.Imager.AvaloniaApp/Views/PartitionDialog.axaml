@@ -128,9 +128,100 @@
       </StackPanel>
     </StackPanel>
 
-    <CheckBox Content="Bootable" IsVisible="{Binding IsRdb}"
-              IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
-              IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+    <!-- Rigid disk block partition properties stored in partition block -->
+    <StackPanel Spacing="8" IsVisible="{Binding IsRdb}">
+      <StackPanel Orientation="Horizontal" Spacing="16">
+        <CheckBox Content="Bootable"
+                  IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
+                  IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+        <CheckBox Content="No mount"
+                  ToolTip.Tip="Partition is not mounted on boot"
+                  IsChecked="{Binding SelectedPartition.NoMount, FallbackValue=False}"
+                  IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+      </StackPanel>
+
+      <controls:ResponsiveColumns MaxColumns="4" MinColumnWidth="150">
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-arrow-up-1-9" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Boot priority" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Boot priority of bootable partition from -128 to 127. Highest priority boots first"
+                   Text="{Binding SelectedPartition.BootPriority, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-layer-group" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Buffers" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Number of buffers used by file system"
+                   Text="{Binding SelectedPartition.Buffers, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-right-left" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Max transfer" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Max bytes transferred at a time as hex value, e.g. 0x1FE00, or number"
+                   Text="{Binding SelectedPartition.MaxTransfer, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-memory" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Mask" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Address mask of memory to transfer to as hex value, e.g. 0x7FFFFFFE, or number"
+                   Text="{Binding SelectedPartition.Mask, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbProperties, FallbackValue=False}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-cube" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Block size" />
+          </StackPanel>
+          <ComboBox ItemsSource="{x:Static vm:PartitionEntryViewModel.FileSystemBlockSizes}"
+                    SelectedItem="{Binding SelectedPartition.FileSystemBlockSize, FallbackValue={x:Null}}"
+                    IsEnabled="{Binding SelectedPartition.CanEditRdbFileSystemProperties, FallbackValue=False}"
+                    ToolTip.Tip="Block size of file system in bytes"
+                    HorizontalAlignment="Stretch" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-backward-step" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Reserved" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Blocks reserved at start of partition"
+                   Text="{Binding SelectedPartition.Reserved, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbFileSystemProperties, FallbackValue=False}" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-forward-step" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Pre alloc" />
+          </StackPanel>
+          <TextBox ToolTip.Tip="Blocks reserved at end of partition"
+                   Text="{Binding SelectedPartition.PreAlloc, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
+                   IsEnabled="{Binding SelectedPartition.CanEditRdbFileSystemProperties, FallbackValue=False}" />
+        </StackPanel>
+      </controls:ResponsiveColumns>
+
+      <TextBlock Classes="field-help" TextWrapping="Wrap"
+                 IsVisible="{Binding !SelectedPartition.CanEditRdbFileSystemProperties, FallbackValue=False}"
+                 Text="Block size, reserved and pre alloc can only be changed, when partition is formatted." />
+
+      <TextBlock Classes="error-text" TextWrapping="Wrap"
+                 IsVisible="{Binding SelectedPartition.HasRdbPropertiesError, FallbackValue=False}"
+                 Text="{Binding SelectedPartition.RdbPropertiesError, FallbackValue=''}" />
+    </StackPanel>
     <CheckBox Content="Active (bootable)" IsVisible="{Binding IsMbr}"
               IsChecked="{Binding SelectedPartition.Bootable, FallbackValue=False}"
               IsEnabled="{Binding SelectedPartition.CanEditActive, FallbackValue=False}" />
@@ -177,7 +268,7 @@
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
       <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="{Binding PartitionDialogOkText}" Classes="primary"
-              IsEnabled="{Binding !SelectedPartition.HasPartitionTypeError, FallbackValue=True}" />
+              IsEnabled="{Binding !SelectedPartition.HasError, FallbackValue=True}" />
     </StackPanel>
   </StackPanel>
 </Window>

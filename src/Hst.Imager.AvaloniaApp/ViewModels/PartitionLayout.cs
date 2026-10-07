@@ -288,6 +288,7 @@ public class PartitionEntryViewModel : ReactiveObject
     private bool _bootable;
     private bool _formatRequested;
     private List<PartitionTypeOption> _partitionTypeOptions;
+    private RdbPropertiesText _rdb = RdbPropertiesText.From(RdbPartitionProperties.Default);
 
     public PartitionEntryViewModel(PartitionTableType tableType, bool isNew)
     {
@@ -330,6 +331,21 @@ public class PartitionEntryViewModel : ReactiveObject
     /// guid for guid partition table and dos type for rigid disk block.
     /// </summary>
     public string ExistingPartitionType { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Device name of existing rigid disk block partition read from disk.
+    /// </summary>
+    public string ExistingDeviceName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Bootable of existing rigid disk block partition read from disk.
+    /// </summary>
+    public bool ExistingBootable { get; init; }
+
+    /// <summary>
+    /// Properties of existing rigid disk block partition read from disk.
+    /// </summary>
+    public RdbPartitionProperties? ExistingRdbProperties { get; init; }
 
     /// <summary>
     /// Formatting existing master boot record partition with file system requires changing its bios type,
@@ -567,7 +583,171 @@ public class PartitionEntryViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(CanEditFileSystem));
             this.RaisePropertyChanged(nameof(CanEditLabel));
             this.RaisePropertyChanged(nameof(FileSystemDisplay));
+            this.RaisePropertyChanged(nameof(CanEditRdbFileSystemProperties));
+
+            // file system properties of existing partition can only be changed, when it's formatted
+            if (!value && ExistingRdbProperties is { } existing)
+            {
+                FileSystemBlockSize = existing.FileSystemBlockSize;
+                Reserved = existing.Reserved.ToString();
+                PreAlloc = existing.PreAlloc.ToString();
+            }
         }
+    }
+
+    // ─── Rigid disk block properties ──────────────────────────────────────────
+
+    /// <summary>
+    /// File system block sizes, which can be selected for rigid disk block partitions.
+    /// </summary>
+    public static IReadOnlyList<int> FileSystemBlockSizes { get; } = [512, 1024, 2048, 4096, 8192, 16384, 32768];
+
+    /// <summary>
+    /// Number of buffers used by file system.
+    /// </summary>
+    public string Buffers
+    {
+        get => _rdb.Buffers;
+        set => SetRdb(_rdb with { Buffers = value });
+    }
+
+    /// <summary>
+    /// Max transfer in bytes as hex, e.g. 0x1FE00, or integer value.
+    /// </summary>
+    public string MaxTransfer
+    {
+        get => _rdb.MaxTransfer;
+        set => SetRdb(_rdb with { MaxTransfer = value });
+    }
+
+    /// <summary>
+    /// Address mask as hex, e.g. 0x7FFFFFFE, or integer value.
+    /// </summary>
+    public string Mask
+    {
+        get => _rdb.Mask;
+        set => SetRdb(_rdb with { Mask = value });
+    }
+
+    public string BootPriority
+    {
+        get => _rdb.BootPriority;
+        set => SetRdb(_rdb with { BootPriority = value });
+    }
+
+    public bool NoMount
+    {
+        get => _rdb.NoMount;
+        set => SetRdb(_rdb with { NoMount = value });
+    }
+
+    /// <summary>
+    /// Blocks reserved at start of partition.
+    /// </summary>
+    public string Reserved
+    {
+        get => _rdb.Reserved;
+        set => SetRdb(_rdb with { Reserved = value });
+    }
+
+    /// <summary>
+    /// Blocks reserved at end of partition.
+    /// </summary>
+    public string PreAlloc
+    {
+        get => _rdb.PreAlloc;
+        set => SetRdb(_rdb with { PreAlloc = value });
+    }
+
+    public int FileSystemBlockSize
+    {
+        get => _rdb.FileSystemBlockSize;
+        set => SetRdb(_rdb with { FileSystemBlockSize = value });
+    }
+
+    /// <summary>
+    /// Properties of rigid disk block partition or null, if a property entered is invalid.
+    /// </summary>
+    public RdbPartitionProperties? RdbProperties => _rdb.Parse();
+
+    /// <summary>
+    /// Error for invalid rigid disk block property or null, if they are valid.
+    /// </summary>
+    public string? RdbPropertiesError => IsRdb ? _rdb.Validate() : null;
+
+    public bool HasRdbPropertiesError => RdbPropertiesError != null;
+
+    /// <summary>
+    /// Partition has errors preventing partition dialog from being closed with OK.
+    /// </summary>
+    public bool HasError => HasPartitionTypeError || HasRdbPropertiesError;
+
+    /// <summary>
+    /// Existing rigid disk block partition has changed device name, bootable or properties. File system properties
+    /// block size, reserved and pre alloc are only changed, when partition is formatted.
+    /// </summary>
+    public bool HasRdbChanges => GetRdbUpdate() != null;
+
+    /// <summary>
+    /// Get update of existing rigid disk block partition with changed properties only or null, if partition isn't
+    /// changed.
+    /// </summary>
+    public PlannedPartitionUpdate? GetRdbUpdate()
+    {
+        if (!IsRdb || IsNew || Number == null || ExistingRdbProperties is not { } existing ||
+            RdbProperties is not { } properties)
+            return null;
+
+        var update = new PlannedPartitionUpdate
+        {
+            Number = Number.Value,
+            DeviceName = !string.Equals(_deviceName, ExistingDeviceName, StringComparison.OrdinalIgnoreCase)
+                ? _deviceName
+                : null,
+            Bootable = _bootable != ExistingBootable ? _bootable : null,
+            BootPriority = properties.BootPriority != existing.BootPriority ? properties.BootPriority : null,
+            NoMount = properties.NoMount != existing.NoMount ? properties.NoMount : null,
+            Buffers = properties.Buffers != existing.Buffers ? properties.Buffers : null,
+            MaxTransfer = properties.MaxTransfer != existing.MaxTransfer ? properties.MaxTransfer : null,
+            Mask = properties.Mask != existing.Mask ? properties.Mask : null,
+            Reserved = _formatRequested && properties.Reserved != existing.Reserved ? properties.Reserved : null,
+            PreAlloc = _formatRequested && properties.PreAlloc != existing.PreAlloc ? properties.PreAlloc : null,
+            FileSystemBlockSize = _formatRequested && properties.FileSystemBlockSize != existing.FileSystemBlockSize
+                ? properties.FileSystemBlockSize
+                : null
+        };
+
+        return update is
+        {
+            DeviceName: null, Bootable: null, BootPriority: null, NoMount: null, Buffers: null, MaxTransfer: null,
+            Mask: null, Reserved: null, PreAlloc: null, FileSystemBlockSize: null
+        }
+            ? null
+            : update;
+    }
+
+    /// <summary>
+    /// Set rigid disk block properties, e.g. read from partition block of existing partition.
+    /// </summary>
+    public void SetRdbProperties(RdbPartitionProperties properties) => SetRdb(RdbPropertiesText.From(properties));
+
+    private void SetRdb(RdbPropertiesText rdb)
+    {
+        if (rdb == _rdb)
+            return;
+        _rdb = rdb;
+        this.RaisePropertyChanged(nameof(Buffers));
+        this.RaisePropertyChanged(nameof(MaxTransfer));
+        this.RaisePropertyChanged(nameof(Mask));
+        this.RaisePropertyChanged(nameof(BootPriority));
+        this.RaisePropertyChanged(nameof(NoMount));
+        this.RaisePropertyChanged(nameof(Reserved));
+        this.RaisePropertyChanged(nameof(PreAlloc));
+        this.RaisePropertyChanged(nameof(FileSystemBlockSize));
+        this.RaisePropertyChanged(nameof(RdbProperties));
+        this.RaisePropertyChanged(nameof(RdbPropertiesError));
+        this.RaisePropertyChanged(nameof(HasRdbPropertiesError));
+        this.RaisePropertyChanged(nameof(HasError));
     }
 
     /// <summary>
@@ -586,9 +766,16 @@ public class PartitionEntryViewModel : ReactiveObject
     public bool CanEditLabel => (IsNew && IsFormattable) || _formatRequested;
 
     /// <summary>
-    /// Device name and bootable are set when rigid disk block partition is added.
+    /// Device name, bootable and properties not affecting file system can be changed for new and existing rigid disk
+    /// block partitions.
     /// </summary>
-    public bool CanEditRdbProperties => IsNew && IsRdb;
+    public bool CanEditRdbProperties => IsRdb;
+
+    /// <summary>
+    /// File system block size, reserved and pre alloc blocks can be changed for new rigid disk block partitions and
+    /// existing partitions, which are formatted.
+    /// </summary>
+    public bool CanEditRdbFileSystemProperties => IsRdb && (IsNew || _formatRequested);
 
     public bool CanEditActive => IsNew && IsMbr;
 
@@ -597,7 +784,7 @@ public class PartitionEntryViewModel : ReactiveObject
     /// </summary>
     public PartitionEntryState GetState() =>
         new(_start, _size, _fileSystem, _partitionType, _isCustomPartitionType, _label, _deviceName, _bootable,
-            _formatRequested);
+            _formatRequested, _rdb);
 
     /// <summary>
     /// Restore editable state of partition except range, which is restored by partition layout.
@@ -615,6 +802,7 @@ public class PartitionEntryViewModel : ReactiveObject
         Label = state.Label;
         DeviceName = state.DeviceName;
         Bootable = state.Bootable;
+        SetRdb(state.Rdb);
     }
 
     internal void SetRange(long start, long size)
@@ -634,6 +822,7 @@ public class PartitionEntryViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(IsFormattable));
         this.RaisePropertyChanged(nameof(PartitionTypeError));
         this.RaisePropertyChanged(nameof(HasPartitionTypeError));
+        this.RaisePropertyChanged(nameof(HasError));
         this.RaisePropertyChanged(nameof(CanEditFileSystem));
         this.RaisePropertyChanged(nameof(ShowFileSystem));
         this.RaisePropertyChanged(nameof(CanEditLabel));
@@ -671,7 +860,63 @@ public record AddPartitionRequest(PartitionSegmentViewModel Segment, AddPartitio
 /// Editable state of partition.
 /// </summary>
 public record PartitionEntryState(long Start, long Size, string FileSystem, string PartitionType,
-    bool IsCustomPartitionType, string Label, string DeviceName, bool Bootable, bool FormatRequested);
+    bool IsCustomPartitionType, string Label, string DeviceName, bool Bootable, bool FormatRequested,
+    RdbPropertiesText Rdb);
+
+/// <summary>
+/// Rigid disk block partition properties as entered in partition dialog, which are parsed and validated.
+/// Max transfer and mask are hex, e.g. 0x1FE00, or integer values.
+/// </summary>
+public record RdbPropertiesText(string Buffers, string MaxTransfer, string Mask, string BootPriority, bool NoMount,
+    string Reserved, string PreAlloc, int FileSystemBlockSize)
+{
+    public static RdbPropertiesText From(RdbPartitionProperties properties) => new(
+        properties.Buffers.ToString(), $"0x{properties.MaxTransfer:X}", $"0x{properties.Mask:X}",
+        properties.BootPriority.ToString(), properties.NoMount, properties.Reserved.ToString(),
+        properties.PreAlloc.ToString(), properties.FileSystemBlockSize);
+
+    public RdbPartitionProperties? Parse() => Validate() == null
+        ? new RdbPartitionProperties(ParseUInt(Buffers)!.Value, ParseUInt(MaxTransfer)!.Value, ParseUInt(Mask)!.Value,
+            int.Parse(BootPriority.Trim()), NoMount, ParseUInt(Reserved)!.Value, ParseUInt(PreAlloc)!.Value,
+            FileSystemBlockSize)
+        : null;
+
+    /// <summary>
+    /// Validate properties and return error for first invalid property or null, if they are valid.
+    /// </summary>
+    public string? Validate()
+    {
+        if (ParseUInt(Buffers) is not > 0)
+            return "Buffers must be a number larger than 0";
+        if (ParseUInt(MaxTransfer) is not > 0)
+            return "Max transfer must be a hex value, e.g. 0x1FE00, or a number larger than 0";
+        if (ParseUInt(Mask) is not > 0)
+            return "Mask must be a hex value, e.g. 0x7FFFFFFE, or a number larger than 0";
+        if (!int.TryParse(BootPriority.Trim(), out var bootPriority) || bootPriority is < -128 or > 127)
+            return "Boot priority must be a number between -128 and 127";
+        if (ParseUInt(Reserved) == null)
+            return "Reserved blocks must be a number";
+        if (ParseUInt(PreAlloc) == null)
+            return "Pre alloc blocks must be a number";
+        if (FileSystemBlockSize < 512 || FileSystemBlockSize % 512 != 0)
+            return "File system block size must be dividable by 512";
+        return null;
+    }
+
+    /// <summary>
+    /// Parse hex value prefixed with 0x or $ or integer value.
+    /// </summary>
+    private static uint? ParseUInt(string value)
+    {
+        value = value.Trim();
+        if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase) || value.StartsWith('$'))
+            return uint.TryParse(value[(value[0] == '$' ? 1 : 2)..], NumberStyles.HexNumber,
+                null, out var hex)
+                ? hex
+                : null;
+        return uint.TryParse(value, out var integer) ? integer : null;
+    }
+}
 
 /// <summary>
 /// Area reserved by another partition table, e.g. master boot record partitions in a hybrid disk.
@@ -910,7 +1155,8 @@ public class PartitionLayout
     /// Layout has changes to apply.
     /// </summary>
     public bool HasChanges => IsInitialize || _deletedPartitions.Count > 0 ||
-                              _partitions.Any(x => x.IsNew || x.FormatRequested) || HasFileSystemChanges;
+                              _partitions.Any(x => x.IsNew || x.FormatRequested || x.HasRdbChanges) ||
+                              HasFileSystemChanges;
 
     /// <summary>
     /// Rigid disk block has file systems to add, import, update or delete.
@@ -1191,17 +1437,27 @@ public class PartitionLayout
                 ExistingFileSystem = part.FileSystem ?? part.PartitionType ?? string.Empty,
                 ExistingDosType = dosType,
                 ExistingPartitionType = dosType,
+                ExistingDeviceName = partitionBlock?.DriveName ?? string.Empty,
+                ExistingBootable = partitionBlock?.Bootable ?? false,
+                ExistingRdbProperties = partitionBlock == null ? null : GetRdbProperties(partitionBlock),
                 UsedSize = GetUsedSize(part)
             };
             entry.SetRange(part.StartOffset, part.EndOffset - part.StartOffset + 1);
-            entry.DeviceName = partitionBlock?.DriveName ?? string.Empty;
-            entry.Bootable = partitionBlock?.Bootable ?? false;
+            entry.DeviceName = entry.ExistingDeviceName;
+            entry.Bootable = entry.ExistingBootable;
+            if (entry.ExistingRdbProperties != null)
+                entry.SetRdbProperties(entry.ExistingRdbProperties);
             entry.Label = entry.DeviceName.StartsWith("DH0", StringComparison.OrdinalIgnoreCase) ? "Workbench" : "Work";
             layout.AddEntry(entry);
         }
 
         return layout;
     }
+
+    private static RdbPartitionProperties GetRdbProperties(PartitionBlock partitionBlock) => new(
+        partitionBlock.NumBuffer, partitionBlock.MaxTransfer, partitionBlock.Mask, partitionBlock.BootPriority,
+        partitionBlock.NoMount, partitionBlock.Reserved, partitionBlock.PreAlloc,
+        (int)partitionBlock.FileSystemBlockSize);
 
     private static string FormatExistingFileSystem(PartInfo part) =>
         string.IsNullOrWhiteSpace(part.FileSystem) || part.FileSystem == part.PartitionType
@@ -1381,6 +1637,8 @@ public class PartitionLayout
             entry.DeviceName = GetNextDeviceName();
             entry.Label = GetNextWorkLabel();
             entry.Bootable = source.Bootable;
+            if (source.RdbProperties is { } properties)
+                entry.SetRdbProperties(properties);
         }
         else
         {
@@ -1579,6 +1837,7 @@ public class PartitionLayout
         AddPartitions = _partitions.Where(x => x.IsNew || x.RequiresTypeChange).Select(ToPlannedPartition).ToList(),
         FormatPartitions = _partitions.Where(x => x.IsExisting && x.FormatRequested && !x.RequiresTypeChange)
             .Select(ToPlannedPartition).ToList(),
+        UpdatePartitions = _partitions.Select(x => x.GetRdbUpdate()).OfType<PlannedPartitionUpdate>().ToList(),
         UpdateFileSystems = _fileSystems.Where(x => x.IsUpdated).Select(x => new PlannedFileSystemUpdate
         {
             Number = x.Number!.Value,
@@ -1782,7 +2041,8 @@ public class PartitionLayout
         Bootable = partition.Bootable,
         IsPiStorm = partition.IsPiStorm,
         PartitionType = partition.IsNew && !partition.IsRdb ? partition.PartitionType : string.Empty,
-        Format = partition.IsNew ? partition.IsFormattable : partition.FormatRequested
+        Format = partition.IsNew ? partition.IsFormattable : partition.FormatRequested,
+        RdbProperties = partition.RdbProperties ?? RdbPartitionProperties.Default
     };
 
     private void SetRange(PartitionEntryViewModel partition, long start, long size)

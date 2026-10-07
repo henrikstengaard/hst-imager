@@ -203,7 +203,8 @@ public class ImagingService : IImagingService
             : [];
         var cloneFileSystems = plan.AddFileSystems.Where(x => x.CloneNumber.HasValue).ToList();
 
-        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + plan.UpdateFileSystems.Count +
+        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + plan.UpdatePartitions.Count +
+                    plan.UpdateFileSystems.Count +
                     plan.DeleteFileSystemNumbers.Count + plan.AddFileSystems.Count * 2 + rdbDosTypes.Count +
                     cloneFileSystems.Count +
                     plan.AddPartitions.Count * 2 + plan.FormatPartitions.Count + 1;
@@ -267,6 +268,17 @@ public class ImagingService : IImagingService
                     partitionNumber),
                 _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
             });
+        }
+
+        // update existing rigid disk block partitions using partition numbers after deleting partitions, which
+        // decrease numbers of partitions after them. updated before formatting to format with new block size
+        foreach (var update in plan.UpdatePartitions.OrderBy(x => x.Number))
+        {
+            var partitionNumber = update.Number - plan.DeletePartitionNumbers.Count(x => x < update.Number);
+            await Run(new RdbPartUpdateCommand(_loggerFactory.CreateLogger<RdbPartUpdateCommand>(), commandHelper,
+                physicalDrives, path, partitionNumber, update.DeviceName ?? string.Empty, string.Empty,
+                (int?)update.Reserved, (int?)update.PreAlloc, (int?)update.Buffers, update.MaxTransfer, update.Mask,
+                update.NoMount, update.Bootable, update.BootPriority, update.FileSystemBlockSize));
         }
 
         // export file systems to clone before existing file systems are updated or deleted, which changes their
@@ -390,7 +402,10 @@ public class ImagingService : IImagingService
                 PartitionTableType.RigidDiskBlock => new RdbPartAddCommand(
                     _loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper, physicalDrives, path,
                     partition.DeviceName, GetDosType(partition.FileSystem), new Size(partition.Size, Unit.Bytes),
-                    null, null, null, 0x1fe00, null, false, partition.Bootable, null, 512, plan.UseExperimental,
+                    partition.RdbProperties.Reserved, partition.RdbProperties.PreAlloc,
+                    partition.RdbProperties.Buffers, partition.RdbProperties.MaxTransfer, partition.RdbProperties.Mask,
+                    partition.RdbProperties.NoMount, partition.Bootable, partition.RdbProperties.BootPriority,
+                    partition.RdbProperties.FileSystemBlockSize, plan.UseExperimental,
                     (uint)(partition.StartOffset / plan.CylinderSize)),
                 _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
             });

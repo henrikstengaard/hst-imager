@@ -72,6 +72,11 @@ public class PartitionPlan
     public List<PlannedPartition> FormatPartitions { get; set; } = [];
 
     /// <summary>
+    /// Existing rigid disk block partitions to update properties of, e.g. device name, buffers or max transfer.
+    /// </summary>
+    public List<PlannedPartitionUpdate> UpdatePartitions { get; set; } = [];
+
+    /// <summary>
     /// Path or url to media with pfs3aio file system for PFS\3 and PDS\3 partitions in rigid disk block.
     /// </summary>
     public string? Pfs3FileSystemPath { get; set; }
@@ -99,7 +104,7 @@ public class PartitionPlan
     public List<PlannedFileSystem> AddFileSystems { get; set; } = [];
 
     public bool HasChanges => Initialize || DeletePartitionNumbers.Count > 0 || AddPartitions.Count > 0 ||
-                              FormatPartitions.Count > 0 || UpdateFileSystems.Count > 0 ||
+                              FormatPartitions.Count > 0 || UpdatePartitions.Count > 0 || UpdateFileSystems.Count > 0 ||
                               DeleteFileSystemNumbers.Count > 0 || AddFileSystems.Count > 0;
 }
 
@@ -205,4 +210,51 @@ public class PlannedPartition
     /// which is not formatted.
     /// </summary>
     public bool IsPiStorm { get; set; }
+
+    /// <summary>
+    /// Properties of new rigid disk block partitions, e.g. buffers, max transfer and file system block size.
+    /// </summary>
+    public RdbPartitionProperties RdbProperties { get; set; } = RdbPartitionProperties.Default;
+}
+
+/// <summary>
+/// Update of existing rigid disk block partition. Properties not set are not changed.
+/// </summary>
+public class PlannedPartitionUpdate
+{
+    /// <summary>
+    /// Number of partition before partitions are deleted.
+    /// </summary>
+    public int Number { get; set; }
+
+    public string? DeviceName { get; set; }
+    public bool? Bootable { get; set; }
+    public int? BootPriority { get; set; }
+    public bool? NoMount { get; set; }
+    public uint? Buffers { get; set; }
+    public uint? MaxTransfer { get; set; }
+    public uint? Mask { get; set; }
+    public uint? Reserved { get; set; }
+    public uint? PreAlloc { get; set; }
+    public int? FileSystemBlockSize { get; set; }
+}
+
+/// <summary>
+/// Properties of rigid disk block partition stored in its partition block.
+/// </summary>
+/// <param name="Buffers">Number of buffers used by file system.</param>
+/// <param name="MaxTransfer">Max number of bytes transferred by device at a time.</param>
+/// <param name="Mask">Address mask of memory device can transfer to with dma.</param>
+/// <param name="BootPriority">Boot priority of bootable partitions.</param>
+/// <param name="NoMount">Partition isn't mounted on boot.</param>
+/// <param name="Reserved">Blocks reserved at start of partition.</param>
+/// <param name="PreAlloc">Blocks reserved at end of partition.</param>
+/// <param name="FileSystemBlockSize">Block size of file system in bytes.</param>
+public record RdbPartitionProperties(uint Buffers, uint MaxTransfer, uint Mask, int BootPriority, bool NoMount,
+    uint Reserved, uint PreAlloc, int FileSystemBlockSize)
+{
+    /// <summary>
+    /// Default properties of new partitions, same as partition block defaults.
+    /// </summary>
+    public static readonly RdbPartitionProperties Default = new(30, 0x1fe00, 0x7ffffffe, 0, false, 2, 0, 512);
 }

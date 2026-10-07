@@ -1220,6 +1220,13 @@ public class PartitionViewModel : ViewModelBase
             operations.Add(
                 $"Delete {layout.TableTypeName} partition #{partition.Number}{FormatDeviceName(partition)} ({partition.ExistingFileSystem}, {MediaOptions.FormatBytes(partition.Size)}){location}");
 
+        foreach (var partition in layout.Partitions)
+        {
+            if (partition.GetRdbUpdate() is { } update)
+                operations.Add(
+                    $"Update {layout.TableTypeName} partition #{partition.Number} {partition.ExistingDeviceName} {string.Join(", ", FormatRdbUpdate(update))}{location}");
+        }
+
         foreach (var partition in layout.Partitions.Where(x => x.IsNew))
         {
             var type = layout.IsRdb
@@ -1240,6 +1247,33 @@ public class PartitionViewModel : ViewModelBase
                 $"Format {layout.TableTypeName} partition #{partition.Number}{FormatDeviceName(partition)} with {partition.FileSystemDisplay} named '{partition.Label}'{(partition.RequiresTypeChange ? " and change partition type" : string.Empty)}{location}");
 
         AddFileSystemOperations(layout, location, operations);
+    }
+
+    /// <summary>
+    /// Format changes of rigid disk block partition update, e.g. "buffers to 50".
+    /// </summary>
+    private static IEnumerable<string> FormatRdbUpdate(PlannedPartitionUpdate update)
+    {
+        if (update.DeviceName != null)
+            yield return $"device name to {update.DeviceName}";
+        if (update.Bootable.HasValue)
+            yield return update.Bootable.Value ? "bootable" : "not bootable";
+        if (update.BootPriority.HasValue)
+            yield return $"boot priority to {update.BootPriority}";
+        if (update.NoMount.HasValue)
+            yield return update.NoMount.Value ? "no mount" : "mount";
+        if (update.Buffers.HasValue)
+            yield return $"buffers to {update.Buffers}";
+        if (update.MaxTransfer.HasValue)
+            yield return $"max transfer to 0x{update.MaxTransfer:X}";
+        if (update.Mask.HasValue)
+            yield return $"mask to 0x{update.Mask:X}";
+        if (update.Reserved.HasValue)
+            yield return $"reserved blocks to {update.Reserved}";
+        if (update.PreAlloc.HasValue)
+            yield return $"pre alloc blocks to {update.PreAlloc}";
+        if (update.FileSystemBlockSize.HasValue)
+            yield return $"file system block size to {update.FileSystemBlockSize}";
     }
 
     /// <summary>
@@ -1316,7 +1350,24 @@ public class PartitionViewModel : ViewModelBase
             errors.Add(
                 $"File system with DOS type {PartitionFileSystems.FormatDosType(partition.PartitionType)} is required for partition {partition.DeviceName}. Import it in partition dialog or file systems dialog{location}");
 
-        foreach (var partition in layout.Partitions.Where(x => x.IsNew))
+        foreach (var partition in layout.Partitions.Where(x => x.RdbPropertiesError != null))
+            errors.Add(
+                $"{partition.RdbPropertiesError} for partition {partition.DeviceName}{location}");
+
+        // existing partitions are renamed one at a time, so a partition can't be renamed to device name of another
+        // existing partition, which is renamed too
+        foreach (var partition in layout.Partitions.Where(x => x.GetRdbUpdate() is { DeviceName: not null }))
+        {
+            var other = layout.Partitions.FirstOrDefault(x => !ReferenceEquals(x, partition) &&
+                                                              x.GetRdbUpdate() is { DeviceName: not null } &&
+                                                              string.Equals(x.ExistingDeviceName, partition.DeviceName,
+                                                                  StringComparison.OrdinalIgnoreCase));
+            if (other != null)
+                errors.Add(
+                    $"Partition #{partition.Number} can't be renamed to device name '{partition.DeviceName}' used by partition #{other.Number}, before partition #{other.Number} is renamed. Apply renaming partition #{other.Number} first{location}");
+        }
+
+        foreach (var partition in layout.Partitions.Where(x => x.IsNew || x.GetRdbUpdate() is { DeviceName: not null }))
         {
             if (string.IsNullOrWhiteSpace(partition.DeviceName))
                 errors.Add($"Device name is required for all partitions{location}");
