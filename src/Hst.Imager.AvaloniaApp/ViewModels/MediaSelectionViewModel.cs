@@ -228,7 +228,11 @@ public class MediaSelectionViewModel : ViewModelBase
     public bool IsLoadingMedia
     {
         get => _isLoadingMedia;
-        private set => this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
+            this.RaisePropertyChanged(nameof(CanConfirm));
+        }
     }
 
     // ─── Media ────────────────────────────────────────────────────────────────
@@ -263,8 +267,31 @@ public class MediaSelectionViewModel : ViewModelBase
     public bool IsLoading
     {
         get => _isLoading;
-        private set => this.RaiseAndSetIfChanged(ref _isLoading, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _isLoading, value);
+            this.RaisePropertyChanged(nameof(CanConfirm));
+        }
     }
+
+    /// <summary>
+    /// Load of media info is requested, but not completed yet.
+    /// </summary>
+    private bool IsStale
+    {
+        get => _isStale;
+        set
+        {
+            if (_isStale == value) return;
+            _isStale = value;
+            this.RaisePropertyChanged(nameof(CanConfirm));
+        }
+    }
+
+    /// <summary>
+    /// Media selection can be confirmed, when physical disks and media info are not being loaded.
+    /// </summary>
+    public bool CanConfirm => !_isLoadingMedia && !_isLoading && !_isStale;
 
     // ─── Part ─────────────────────────────────────────────────────────────────
 
@@ -440,6 +467,9 @@ public class MediaSelectionViewModel : ViewModelBase
         copy.CopyFrom(this);
         if (copy.IsPhysicalDisk && copy.MediaItems.Count == 0)
             _ = copy.RefreshMediaAsync();
+        else if (copy._isStale)
+            // load media info in copy, otherwise dialog can't be confirmed
+            copy.RequestLoad();
 
         if (!await _dialogService.ShowMediaSelectionDialogAsync(copy))
             return;
@@ -484,6 +514,7 @@ public class MediaSelectionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(Byteswap));
         this.RaisePropertyChanged(nameof(ErrorMessage));
         this.RaisePropertyChanged(nameof(HasError));
+        this.RaisePropertyChanged(nameof(CanConfirm));
         RaiseTypeChanged();
         RaisePartChanged();
     }
@@ -524,7 +555,7 @@ public class MediaSelectionViewModel : ViewModelBase
     private void RequestLoad()
     {
         if (!Options.LoadMedia) return;
-        _isStale = true;
+        IsStale = true;
         _loadRequests.OnNext(Unit.Default);
     }
 
@@ -595,7 +626,7 @@ public class MediaSelectionViewModel : ViewModelBase
         // ignore result, if selection was changed while loading
         if (path != Path || byteswap != _byteswap) return;
 
-        _isStale = false;
+        IsStale = false;
         Media = media;
         UpdatePartOptions(media);
     }

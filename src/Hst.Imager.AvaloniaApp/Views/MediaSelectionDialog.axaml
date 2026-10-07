@@ -70,7 +70,10 @@
       </Grid>
     </StackPanel>
 
-    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
+    <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding IsLoading}">
+      <TextBlock Grid.Column="0" Text="Reading disk info..." VerticalAlignment="Center" Margin="0,0,8,0" />
+      <ProgressBar Grid.Column="1" IsIndeterminate="True" Height="4" VerticalAlignment="Center" />
+    </Grid>
 
     <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
             IsVisible="{Binding HasError}">
@@ -122,7 +125,8 @@
 
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
-      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK" Classes="primary"
+              IsEnabled="{Binding CanConfirm}" />
     </StackPanel>
   </StackPanel>
 </Window>
