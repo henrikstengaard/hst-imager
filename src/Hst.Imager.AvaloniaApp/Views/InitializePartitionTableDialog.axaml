@@ -82,7 +82,7 @@
       <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
       <Button x:Name="InitializeButton" MinWidth="80" Classes="danger" IsEnabled="{Binding CanInitialize}">
         <StackPanel Orientation="Horizontal" Spacing="6">
-          <ia:Icon Value="fa-broom" />
+          <ia:Icon Value="fa-table-columns" />
           <TextBlock Text="Initialize" />
         </StackPanel>
       </Button>
