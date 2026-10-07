@@ -210,13 +210,10 @@ public class PartitionViewModel : ViewModelBase
         {
             var layouts = ActiveTables.Select(x => x.Layout).Where(x => x.HasPartitionTable).ToList();
             var rdbLayouts = layouts.Where(x => x.IsRdb).ToList();
+            var start = DiskPartitionTables.FormatSectorsOrCylinders(layouts);
             if (rdbLayouts.Count == 0)
-                return "Start and end in sectors of 512 bytes from start of disk. New partitions are aligned to 1 MB.";
+                return $"{start} New partitions are aligned to 1 MB.";
 
-            var cylinders = rdbLayouts.Select(x => x.Alignment).Distinct().Count() == 1
-                ? $"cylinders of {MediaOptions.FormatBytes(rdbLayouts[0].Alignment)}"
-                : "cylinders";
-            var start = $"Start and end in sectors of 512 bytes from start of disk. Start and end cylinder of Rigid Disk Block partitions in {cylinders} from start of Rigid Disk Block.";
             return rdbLayouts.Count == layouts.Count
                 ? $"{start} New partitions are aligned to cylinders."
                 : $"{start} New partitions are aligned to 1 MB and to cylinders for Rigid Disk Block partitions.";
@@ -613,76 +610,14 @@ public class PartitionViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Read partition tables of disk and PiStorm disks in master boot record partitions with bios type 0x76 (118).
-    /// PiStorm disks are read from their master boot record partition.
+    /// Read partition tables of disk and PiStorm disks in master boot record partitions.
     /// </summary>
-    private async Task<List<DiskPartitionTable>> ReadPartitionTablesAsync(MediaInfo? media)
-    {
-        if (media == null)
-            return [];
-
-        var diskInfo = media.DiskInfo;
-        var tableTypes = PartitionLayout.GetPartitionTableTypes(diskInfo);
-
-        // disk without partition tables is uninitialized, if first sectors only contain zeroes
-        if (tableTypes.Count == 0)
+    private Task<List<DiskPartitionTable>> ReadPartitionTablesAsync(MediaInfo? media) =>
+        DiskPartitionTables.ReadAsync(_mediaService, media, Source.Byteswap, error =>
         {
-            var isBlank = false;
-            try
-            {
-                isBlank = await _mediaService.IsBlankAsync(media.Path, Source.Byteswap);
-            }
-            catch (Exception)
-            {
-                // shown as no partition table, if first sectors can't be read
-            }
-
-            return [new DiskPartitionTable(PartitionLayout.CreateEmpty(media.DiskSize, isBlank), media.Path)];
-        }
-
-        var tables = tableTypes
-            .Select(x => new DiskPartitionTable(PartitionLayout.FromMediaInfo(media, x), media.Path))
-            .ToList();
-
-        var mbrLayout = tables.FirstOrDefault(x => x.Layout.TableType == PartitionTableType.MasterBootRecord)?.Layout;
-        if (mbrLayout == null)
-            return tables;
-
-        var separator = media.Path.StartsWith('/') ? "/" : "\\";
-        foreach (var part in (diskInfo?.MbrPartitionTablePart?.Parts ?? [])
-                 .Where(x => x.PartType == PartType.Partition && x.BiosType == "118"))
-        {
-            var container = mbrLayout.Partitions.FirstOrDefault(x => x.Number == part.PartitionNumber);
-            if (container == null)
-                continue;
-
-            var path = string.Concat(media.Path, separator, "mbr", separator, part.PartitionNumber);
-            MediaInfo? piStormMedia;
-            try
-            {
-                piStormMedia = await _mediaService.GetMediaInfoAsync(path, Source.Byteswap);
-            }
-            catch (Exception ex)
-            {
-                // disk is still partitioned without PiStorm disk, which can't be read
-                HasError = true;
-                ErrorMessage = $"Failed to read PiStorm Rigid Disk Block in Master Boot Record partition #{part.PartitionNumber}: {ex.Message}";
-                continue;
-            }
-
-            if (piStormMedia == null)
-                continue;
-
-            tables.Add(new DiskPartitionTable(
-                PartitionLayout.FromMediaInfo(piStormMedia, PartitionTableType.RigidDiskBlock), path)
-            {
-                Container = container,
-                ContainerLayout = mbrLayout
-            });
-        }
-
-        return tables;
-    }
+            HasError = true;
+            ErrorMessage = error;
+        });
 
     /// <summary>
     /// Set partition tables edited and select first segment of layout.
@@ -1060,21 +995,7 @@ public class PartitionViewModel : ViewModelBase
     private void RebuildSegments()
     {
         var previous = _selectedSegment;
-        var segments = new List<PartitionSegmentViewModel>();
-        foreach (var table in ActiveTables.Where(x => x.IsDiskPath))
-            segments.AddRange(table.Layout.BuildSegments().Where(x => !x.IsReserved));
-
-        foreach (var table in ActiveTables.Where(x => !x.IsDiskPath))
-        {
-            var container = segments.FirstOrDefault(x => ReferenceEquals(x.Partition, table.Container));
-            if (container == null)
-                continue;
-            container.NestedLayout = table.Layout;
-            segments.AddRange(table.Layout.BuildSegments(table.Offset, 1).Where(x => !x.IsReserved));
-        }
-
-        Segments = new ObservableCollection<PartitionSegmentViewModel>(
-            segments.OrderBy(x => x.DiskStart).ThenBy(x => x.Depth));
+        Segments = new ObservableCollection<PartitionSegmentViewModel>(DiskPartitionTables.BuildSegments(ActiveTables));
 
         PartitionTables = BuildPartitionTableSummaries();
         this.RaisePropertyChanged(nameof(SectorsOrCylindersText));

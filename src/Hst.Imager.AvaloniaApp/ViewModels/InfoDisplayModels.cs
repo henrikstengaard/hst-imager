@@ -4,33 +4,7 @@ using ReactiveUI;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
-// ─── Overview tab ────────────────────────────────────────────────────────────
-
-public class PartOverviewRow
-{
-    public string Color { get; set; } = "#808080";
-    public string TypeDisplay { get; set; } = string.Empty;
-    public string FileSystem { get; set; } = string.Empty;
-    public string Number { get; set; } = string.Empty;
-    public string Size { get; set; } = string.Empty;
-    public string StartOffset { get; set; } = string.Empty;
-    public string EndOffset { get; set; } = string.Empty;
-    public string StartSecOrCyl { get; set; } = string.Empty;
-    public string EndSecOrCyl { get; set; } = string.Empty;
-}
-
-public class OverviewSectionViewModel : ReactiveObject
-{
-    private bool _isExpanded = true;
-    public bool IsExpanded { get => _isExpanded; set => this.RaiseAndSetIfChanged(ref _isExpanded, value); }
-    public string Title { get; set; } = string.Empty;
-    public bool IsRdb { get; set; }
-    public string StartLabel => IsRdb ? "Start Cyl" : "Start Sec";
-    public string EndLabel => IsRdb ? "End Cyl" : "End Sec";
-    public ObservableCollection<PartOverviewRow> Parts { get; set; } = [];
-}
-
-// ─── Details tab base ────────────────────────────────────────────────────────
+// ─── Details base ────────────────────────────────────────────────────────
 
 public abstract class DetailSectionBase : ReactiveObject
 {

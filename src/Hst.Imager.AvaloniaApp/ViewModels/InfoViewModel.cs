@@ -17,11 +17,13 @@ public class InfoViewModel : ViewModelBase
     private readonly IMediaService _mediaService;
     private readonly INavigationService _navigationService;
 
-    private bool _showUnallocated = true;
-    private bool _showHumanReadable = true;
     private MediaInfo? _mediaInfo;
-    private ObservableCollection<OverviewSectionViewModel> _overviewSections = [];
+    private List<DiskPartitionTable> _tables = [];
+    private ObservableCollection<PartitionSegmentViewModel> _segments = [];
+    private PartitionSegmentViewModel? _selectedSegment;
     private ObservableCollection<DetailSectionBase> _detailSections = [];
+    private bool _showHumanReadable = true;
+    private bool _isDetailsExpanded;
     private string _errorMessage = string.Empty;
     private bool _hasError;
     private bool _isLoading;
@@ -53,15 +55,28 @@ public class InfoViewModel : ViewModelBase
 
     public string SourceTypeFormatted => Source.IsImageFile ? "image file" : "physical disk";
 
-    public bool ShowUnallocated
+    /// <summary>
+    /// Segments of partition tables shown in partition layout bar and list same as partition view.
+    /// </summary>
+    public ObservableCollection<PartitionSegmentViewModel> Segments
     {
-        get => _showUnallocated;
-        set
-        {
-            this.RaiseAndSetIfChanged(ref _showUnallocated, value);
-            if (_mediaInfo?.DiskInfo != null)
-                BuildSections(_mediaInfo.DiskInfo, _showHumanReadable, value);
-        }
+        get => _segments;
+        set => this.RaiseAndSetIfChanged(ref _segments, value);
+    }
+
+    public PartitionSegmentViewModel? SelectedSegment
+    {
+        get => _selectedSegment;
+        set => this.RaiseAndSetIfChanged(ref _selectedSegment, value);
+    }
+
+    /// <summary>
+    /// Details of disk and partition tables read from disk shown in expandable details panel.
+    /// </summary>
+    public ObservableCollection<DetailSectionBase> DetailSections
+    {
+        get => _detailSections;
+        set => this.RaiseAndSetIfChanged(ref _detailSections, value);
     }
 
     public bool ShowHumanReadable
@@ -70,24 +85,27 @@ public class InfoViewModel : ViewModelBase
         set
         {
             this.RaiseAndSetIfChanged(ref _showHumanReadable, value);
-            if (_mediaInfo?.DiskInfo != null)
-                BuildSections(_mediaInfo.DiskInfo, value, _showUnallocated);
+            BuildDetailSections();
         }
     }
 
-    public ObservableCollection<OverviewSectionViewModel> OverviewSections
+    public bool IsDetailsExpanded
     {
-        get => _overviewSections;
-        set => this.RaiseAndSetIfChanged(ref _overviewSections, value);
+        get => _isDetailsExpanded;
+        set => this.RaiseAndSetIfChanged(ref _isDetailsExpanded, value);
     }
 
-    public ObservableCollection<DetailSectionBase> DetailSections
-    {
-        get => _detailSections;
-        set => this.RaiseAndSetIfChanged(ref _detailSections, value);
-    }
+    public long DiskSize => _mediaInfo?.DiskSize ?? 0;
 
     public bool HasDiskInfo => _mediaInfo?.DiskInfo != null;
+
+    /// <summary>
+    /// Start and end cylinder columns are shown, when disk has a rigid disk block or PiStorm rigid disk block.
+    /// </summary>
+    public bool ShowCylinders => _tables.Any(x => x.Layout.IsRdb);
+
+    public string SectorsOrCylindersText =>
+        DiskPartitionTables.FormatSectorsOrCylinders(_tables.Select(x => x.Layout));
 
     public string ErrorMessage
     {
@@ -110,12 +128,19 @@ public class InfoViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> GetInfoCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
-    private void ClearInfo()
+    private void ClearInfo() => SetInfo(null, []);
+
+    private void SetInfo(MediaInfo? info, List<DiskPartitionTable> tables)
     {
-        _mediaInfo = null;
-        OverviewSections = [];
-        DetailSections = [];
+        _mediaInfo = info;
+        _tables = tables;
+        Segments = new ObservableCollection<PartitionSegmentViewModel>(DiskPartitionTables.BuildSegments(tables));
+        SelectedSegment = null;
+        BuildDetailSections();
+        this.RaisePropertyChanged(nameof(DiskSize));
         this.RaisePropertyChanged(nameof(HasDiskInfo));
+        this.RaisePropertyChanged(nameof(ShowCylinders));
+        this.RaisePropertyChanged(nameof(SectorsOrCylindersText));
         this.RaisePropertyChanged(nameof(SourceTypeFormatted));
     }
 
@@ -129,19 +154,15 @@ public class InfoViewModel : ViewModelBase
         var path = Source.ResolvedPath;
         if (string.IsNullOrWhiteSpace(path)) return;
 
-        if (!reload && Source.Media != null && path == Source.Path)
-        {
-            HasError = false;
-            ShowInfo(Source.Media);
-            return;
-        }
-
         IsLoading = true;
         HasError = false;
 
         try
         {
-            ShowInfo(await _mediaService.GetMediaInfoAsync(path, Source.Byteswap, allowNonExisting: true));
+            var media = !reload && Source.Media != null && path == Source.Path
+                ? Source.Media
+                : await _mediaService.GetMediaInfoAsync(path, Source.Byteswap, allowNonExisting: true);
+            await ShowInfoAsync(media, path);
         }
         catch (Exception ex)
         {
@@ -154,90 +175,64 @@ public class InfoViewModel : ViewModelBase
         }
     }
 
-    private void ShowInfo(MediaInfo? info)
+    private async Task ShowInfoAsync(MediaInfo? info, string path)
     {
-        _mediaInfo = info;
-        this.RaisePropertyChanged(nameof(HasDiskInfo));
+        var tables = info?.DiskInfo != null
+            ? await DiskPartitionTables.ReadAsync(_mediaService, info, Source.Byteswap, error =>
+            {
+                HasError = true;
+                ErrorMessage = error;
+            })
+            : [];
 
-        if (info?.DiskInfo != null)
-            BuildSections(info.DiskInfo, _showHumanReadable, _showUnallocated);
+        // ignore result, if path was changed while loading
+        if (path != Source.ResolvedPath) return;
+
+        SetInfo(info, tables);
     }
 
-    // ─── Section building ─────────────────────────────────────────────────────
+    // ─── Details ──────────────────────────────────────────────────────────────
 
-    private void BuildSections(DiskInfo diskInfo, bool humanReadable, bool showUnallocated)
+    private void BuildDetailSections()
     {
-        var overviewSections = new ObservableCollection<OverviewSectionViewModel>();
-        var detailSections = new ObservableCollection<DetailSectionBase>();
-
-        // Disk overview
-        if (diskInfo.DiskParts != null)
+        var diskInfo = _mediaInfo?.DiskInfo;
+        if (diskInfo == null)
         {
-            var sec = new OverviewSectionViewModel
-            {
-                Title = $"Disk: {diskInfo.Name}, {FormatSize(diskInfo.Size, humanReadable)}{SparseLabel(diskInfo, humanReadable)}",
-                IsRdb = false
-            };
-            foreach (var p in diskInfo.DiskParts.Where(p => showUnallocated || p.PartType != PartType.Unallocated))
-                sec.Parts.Add(ToPartOverviewRow(p, isRdb: false, humanReadable));
-            overviewSections.Add(sec);
+            DetailSections = [];
+            return;
         }
 
-        // Disk info details
-        detailSections.Add(new DiskInfoDetailSection
+        var humanReadable = _showHumanReadable;
+        var detailSections = new ObservableCollection<DetailSectionBase>
         {
-            Title = $"Disk: {diskInfo.Name}, {FormatSize(diskInfo.Size, humanReadable)}",
-            Name = diskInfo.Name ?? string.Empty,
-            Path = diskInfo.Path ?? string.Empty,
-            Size = FormatSize(diskInfo.Size, humanReadable),
-            IsSparseFile = diskInfo.IsSparseFile,
-            SparseFileSize = diskInfo.IsSparseFile ? FormatSize(diskInfo.SparseFileSize, humanReadable) : string.Empty
-        });
+            new DiskInfoDetailSection
+            {
+                Title = $"Disk: {diskInfo.Name}, {FormatSize(diskInfo.Size, humanReadable)}",
+                Name = diskInfo.Name ?? string.Empty,
+                Path = diskInfo.Path ?? string.Empty,
+                Size = FormatSize(diskInfo.Size, humanReadable),
+                IsSparseFile = diskInfo.IsSparseFile,
+                SparseFileSize = diskInfo.IsSparseFile ? FormatSize(diskInfo.SparseFileSize, humanReadable) : string.Empty
+            }
+        };
 
-        // GPT
         if (diskInfo.GptPartitionTablePart != null)
-            AddGptSections(diskInfo.GptPartitionTablePart, overviewSections, detailSections, humanReadable, showUnallocated);
+            AddGptSections(diskInfo.GptPartitionTablePart, detailSections, humanReadable);
 
-        // MBR
         if (diskInfo.MbrPartitionTablePart != null)
-            AddMbrSections(diskInfo.MbrPartitionTablePart, overviewSections, detailSections, humanReadable, showUnallocated);
+            AddMbrSections(diskInfo.MbrPartitionTablePart, detailSections, humanReadable);
 
-        // RDB overview (parts from PartitionTablePart)
-        if (diskInfo.RdbPartitionTablePart != null)
-        {
-            var sec = new OverviewSectionViewModel
-            {
-                Title = $"Rigid Disk Block: {FormatSize(diskInfo.RdbPartitionTablePart.Size, humanReadable)}",
-                IsRdb = true
-            };
-            foreach (var p in (diskInfo.RdbPartitionTablePart.Parts ?? []).Where(p => showUnallocated || p.PartType != PartType.Unallocated))
-                sec.Parts.Add(ToPartOverviewRow(p, isRdb: true, humanReadable));
-            overviewSections.Add(sec);
-        }
-
-        // RDB details (from raw RigidDiskBlock)
         if (diskInfo.RigidDiskBlock != null)
             AddRdbDetailSections(diskInfo.RigidDiskBlock, detailSections, humanReadable);
 
-        OverviewSections = overviewSections;
         DetailSections = detailSections;
     }
 
     private static void AddGptSections(
         PartitionTablePart gpt,
-        ObservableCollection<OverviewSectionViewModel> overviewSections,
         ObservableCollection<DetailSectionBase> detailSections,
-        bool humanReadable, bool showUnallocated)
+        bool humanReadable)
     {
-        var sec = new OverviewSectionViewModel
-        {
-            Title = $"Guid Partition Table: {FormatSize(gpt.Size, humanReadable)}",
-            IsRdb = false
-        };
-        foreach (var p in (gpt.Parts ?? []).Where(p => showUnallocated || p.PartType != PartType.Unallocated))
-            sec.Parts.Add(ToPartOverviewRow(p, isRdb: false, humanReadable));
-        overviewSections.Add(sec);
-
         if (gpt.DiskGeometry != null)
             detailSections.Add(ToGeometrySection("Guid Partition Table: Geometry", gpt.DiskGeometry, humanReadable));
 
@@ -262,19 +257,9 @@ public class InfoViewModel : ViewModelBase
 
     private static void AddMbrSections(
         PartitionTablePart mbr,
-        ObservableCollection<OverviewSectionViewModel> overviewSections,
         ObservableCollection<DetailSectionBase> detailSections,
-        bool humanReadable, bool showUnallocated)
+        bool humanReadable)
     {
-        var sec = new OverviewSectionViewModel
-        {
-            Title = $"Master Boot Record: {FormatSize(mbr.Size, humanReadable)}",
-            IsRdb = false
-        };
-        foreach (var p in (mbr.Parts ?? []).Where(p => showUnallocated || p.PartType != PartType.Unallocated))
-            sec.Parts.Add(ToPartOverviewRow(p, isRdb: false, humanReadable));
-        overviewSections.Add(sec);
-
         if (mbr.DiskGeometry != null)
             detailSections.Add(ToGeometrySection("Master Boot Record: Geometry", mbr.DiskGeometry, humanReadable));
 
@@ -398,41 +383,6 @@ public class InfoViewModel : ViewModelBase
             SectorsPerTrack = geom.SectorsPerTrack.ToString()
         };
 
-    private static PartOverviewRow ToPartOverviewRow(PartInfo part, bool isRdb, bool humanReadable) =>
-        new()
-        {
-            Color = PartColor(part.PartType),
-            TypeDisplay = part.PartType == PartType.PartitionTable
-                ? FormatPartitionTableType(part.PartitionTableType)
-                : part.PartitionType ?? string.Empty,
-            FileSystem = part.FileSystem ?? string.Empty,
-            Number = part.PartitionNumber?.ToString() ?? string.Empty,
-            Size = FormatSize(part.Size, humanReadable),
-            StartOffset = part.StartOffset.ToString(),
-            EndOffset = part.EndOffset.ToString(),
-            StartSecOrCyl = isRdb ? part.StartCylinder.ToString() : part.StartSector.ToString(),
-            EndSecOrCyl = isRdb ? part.EndCylinder.ToString() : part.EndSector.ToString()
-        };
-
     private static string FormatSize(long bytes, bool humanReadable) =>
         humanReadable ? ByteSize.FromBytes(bytes).Humanize("#.#") : bytes.ToString();
-
-    private static string SparseLabel(DiskInfo diskInfo, bool humanReadable) =>
-        diskInfo.IsSparseFile ? $" / {FormatSize(diskInfo.SparseFileSize, humanReadable)} (sparse)" : string.Empty;
-
-    private static string PartColor(PartType partType) => partType switch
-    {
-        PartType.PartitionTable => "#6060ff",
-        PartType.Partition => "#50ff50",
-        PartType.Unallocated => "#808080",
-        _ => "#ffff00"
-    };
-
-    private static string FormatPartitionTableType(PartitionTableType type) => type switch
-    {
-        PartitionTableType.GuidPartitionTable => "Guid Partition Table",
-        PartitionTableType.MasterBootRecord => "Master Boot Record",
-        PartitionTableType.RigidDiskBlock => "Rigid Disk Block",
-        _ => string.Empty
-    };
 }
