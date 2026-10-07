@@ -38,6 +38,14 @@ See [Hst Imager Gui](src/Hst.Imager.GuiApp#hst-imager-gui) page for installation
 
 See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for installation and usage of Hst Imager Console.
 
+## Code signing policy
+
+Hst Imager uses [SignPath](https://about.signpath.io) for signing Windows releases.
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+See [Code signing policy](code-signing-policy.md) for team roles and privacy policy.
+
 ## Features
 
 Hst Imager Gui comes with following features:

@@ -40,7 +40,7 @@ namespace Hst.Imager.Core.Commands
         private const long WorkbenchPartitionSize = 1073741824; // [Math]::Pow(2, 30)
         private const long PiStormBootPartitionSize = 1073741824; // [Math]::Pow(2, 30)
 
-        private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+        public const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
 
         /// <summary>
         /// Format command.
@@ -131,12 +131,13 @@ namespace Hst.Imager.Core.Commands
                 return new Result(new Error($"Max {(useExperimental ? "experimental " : "")}partition size must be equal or less than {maxRdbPartitionSize} bytes"));
             }
 
-            // set file system path to pfs3aio url, if pfs3 or pds3 file system and file system path is not set
+            // file system path is required for pfs3 or pds3 file system. pfs3aio is not downloaded
+            // automatically, so the user must explicitly provide a path or the pfs3aio url to download it
             if (IsRdbOrPiStorm &&
                 (rdbFileSystem == FormatRdbFileSystem.Pfs3 || rdbFileSystem == FormatRdbFileSystem.Pds3) &&
                 string.IsNullOrWhiteSpace(fileSystemPath))
             {
-                fileSystemPath = Pfs3AioLhaUrl;
+                return new Result(new Error($"File system path required for file system '{rdbFileSystem.ToString().ToUpper()}'. Use path to pfs3aio file or url '{Pfs3AioLhaUrl}' to download it"));
             }
 
             if (IsRdbOrPiStorm &&
