@@ -4,6 +4,17 @@ Free code signing provided by [SignPath.io](https://about.signpath.io), certific
 
 Windows releases of Hst Imager are signed using SignPath. Only release binaries built from the source code in this repository by the GitHub Actions build pipeline are signed.
 
+## Scope
+
+SignPath is used to sign the following Windows releases of Hst Imager:
+
+- Hst Imager Console for Windows x64, x86 and arm64 (zip files containing `hst.imager.exe`).
+- Hst Imager Gui setup installer for Windows x64 and arm64.
+- Hst Imager Gui portable executable for Windows x64 and arm64.
+- Hst Imager Gui for Windows x64 and arm64 (zip files).
+
+Releases for macOS and Linux are not signed using SignPath.
+
 ## Team roles
 
 - Committers and reviewers: [Contributors](https://github.com/henrikstengaard/hst-imager/graphs/contributors)
