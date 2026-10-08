@@ -155,22 +155,30 @@ public class InitializePartitionTableViewModel : ViewModelBase
         : _selectedTarget.DiskSize;
 
     /// <summary>
+    /// Selected size of rigid disk block. Defaults to max size.
+    /// </summary>
+    private long SelectedRdbSize => _rdbSize == 0 ? MaxRdbSize : _rdbSize;
+
+    /// <summary>
     /// Size of rigid disk block in MB.
     /// </summary>
     public string RdbSizeText
     {
-        get => ((decimal)(_rdbSize == 0 ? MaxRdbSize : Math.Min(_rdbSize, MaxRdbSize)) / (1024 * 1024))
-            .ToString("0.##", CultureInfo.CurrentCulture);
+        get => ((decimal)SelectedRdbSize / (1024 * 1024)).ToString("0.##", CultureInfo.CurrentCulture);
         set
         {
             if ((decimal.TryParse(value, NumberStyles.Number, CultureInfo.CurrentCulture, out var number) ||
                  decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out number)) && number >= 0)
             {
+                // size larger than max is kept, when keeping master boot record to show error for missing space
                 var bytes = (long)(number * 1024 * 1024);
-                _rdbSize = bytes >= MaxRdbSize ? 0 : Math.Max(bytes, MinRdbSize);
+                _rdbSize = bytes == MaxRdbSize || (bytes > MaxRdbSize && !IsKeepingMasterBootRecord)
+                    ? 0
+                    : Math.Max(bytes, Math.Min(MinRdbSize, MaxRdbSize));
             }
 
             this.RaisePropertyChanged();
+            RaiseErrorChanged();
         }
     }
 
@@ -195,9 +203,17 @@ public class InitializePartitionTableViewModel : ViewModelBase
             ? "Initializing Rigid Disk Block keeps Master Boot Record and its partitions to create a hybrid disk. Existing Rigid Disk Block and its partitions are erased."
             : "Initializing erases all partition tables and partitions on the disk.";
 
-    public string ErrorMessage => IsKeepingMasterBootRecord && MaxRdbSize < MinRdbSize
-        ? $"Rigid Disk Block requires minimum {MediaOptions.FormatBytes(MinRdbSize)} before first Master Boot Record partition, but there's only {MediaOptions.FormatBytes(MaxRdbSize)}. Delete Master Boot Record partitions at start of disk first."
-        : string.Empty;
+    /// <summary>
+    /// Rigid disk block only requires free space for selected size before first master boot record partition, when
+    /// keeping master boot record.
+    /// </summary>
+    public string ErrorMessage => !IsKeepingMasterBootRecord
+        ? string.Empty
+        : MaxRdbSize <= 0
+            ? "There's no free space for Rigid Disk Block before first Master Boot Record partition. Delete Master Boot Record partitions at start of disk first."
+            : SelectedRdbSize > MaxRdbSize
+                ? $"Rigid Disk Block of {MediaOptions.FormatBytes(SelectedRdbSize)} requires {MediaOptions.FormatBytes(SelectedRdbSize)} free space before first Master Boot Record partition, but there's only {MediaOptions.FormatBytes(MaxRdbSize)}. Reduce Rigid Disk Block size or delete Master Boot Record partitions at start of disk first."
+                : string.Empty;
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
@@ -225,6 +241,11 @@ public class InitializePartitionTableViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(RdbSizeText));
         this.RaisePropertyChanged(nameof(RdbSizeHelpText));
         this.RaisePropertyChanged(nameof(WarningText));
+        RaiseErrorChanged();
+    }
+
+    private void RaiseErrorChanged()
+    {
         this.RaisePropertyChanged(nameof(ErrorMessage));
         this.RaisePropertyChanged(nameof(HasError));
         this.RaisePropertyChanged(nameof(CanInitialize));
