@@ -702,7 +702,7 @@ public class PartitionViewModel : ViewModelBase
         {
             var rdbLayout = PartitionLayout.CreateNewRdb(_media.DiskSize, dialog.RdbSize, rdbBlockLo,
                 mbrLayout.GetPartitionAreas().ToList());
-            mbrLayout.ReserveRigidDiskBlock(dialog.RdbSize);
+            mbrLayout.ReserveRigidDiskBlock(dialog.RdbSize, rdbBlockLo);
             SetTables(new[] { new DiskPartitionTable(rdbLayout, _media.Path) }
                 .Concat(_tables.Where(x => ReferenceEquals(x.Layout, mbrLayout) || !x.IsDiskPath))
                 .ToList(), rdbLayout);

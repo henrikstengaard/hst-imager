@@ -1051,7 +1051,10 @@ public class PartitionSegmentViewModel
     /// </summary>
     public string TableColor { get; }
     public IBrush TableColorBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(TableColor));
-    public bool HasTableType => !string.IsNullOrEmpty(TableType);
+    /// <summary>
+    /// Partition table is shown for partitions, reserved areas and partition tables, not for unallocated space.
+    /// </summary>
+    public bool HasTableType => !string.IsNullOrEmpty(TableType) && !IsUnallocated;
     public bool IsUnallocated => Partition == null && !IsReserved && !IsPartitionTable;
     public long Start { get; }
     public long Size { get; }
@@ -1152,6 +1155,12 @@ public class PartitionLayout
     public long RdbSize { get; private init; }
 
     /// <summary>
+    /// Start of area used by partition table itself. Rigid disk block in a hybrid disk starts at its rdb block lo
+    /// sector after master boot record in sector 0. Otherwise 0.
+    /// </summary>
+    public long TableStart { get; private init; }
+
+    /// <summary>
     /// Layout has changes to apply.
     /// </summary>
     public bool HasChanges => IsInitialize || _deletedPartitions.Count > 0 ||
@@ -1221,21 +1230,24 @@ public class PartitionLayout
         IEnumerable<ReservedArea>? keptMasterBootRecordPartitions)
     {
         var size = rdbSize > 0 ? Math.Min(rdbSize, diskSize) : diskSize;
+        var keepMasterBootRecord = keptMasterBootRecordPartitions != null;
         var layout = CreateRdbLayout(RigidDiskBlock.Create(size / 512 * 512), diskSize, true,
-            keptMasterBootRecordPartitions != null, rdbBlockLo, rdbSize);
+            keepMasterBootRecord, rdbBlockLo, rdbSize, keepMasterBootRecord ? rdbBlockLo * 512L : 0);
         layout._reservedAreas.AddRange(keptMasterBootRecordPartitions ?? []);
         return layout;
     }
 
     /// <summary>
-    /// Reserve area used by rigid disk block initialized keeping master boot record for a hybrid disk, so master boot
-    /// record partitions are added after rigid disk block. Replaces rigid disk block area reserved before.
+    /// Reserve area used by rigid disk block initialized at sector rdb block lo keeping master boot record for a hybrid
+    /// disk, so master boot record partitions are added after rigid disk block. Replaces rigid disk block area reserved
+    /// before.
     /// </summary>
-    public void ReserveRigidDiskBlock(long rdbSize)
+    public void ReserveRigidDiskBlock(long rdbSize, int rdbBlockLo)
     {
+        var rdbStart = rdbBlockLo * 512L;
         _reservedAreas.RemoveAll(x => x.TableType == PartitionTableType.RigidDiskBlock);
-        _reservedAreas.Add(new ReservedArea(0, AlignUp(rdbSize + RdbMbrGap, MiB), "Rigid Disk Block",
-            PartitionTableType.RigidDiskBlock));
+        _reservedAreas.Add(new ReservedArea(rdbStart, AlignUp(rdbSize + RdbMbrGap, MiB) - rdbStart,
+            "Rigid Disk Block", PartitionTableType.RigidDiskBlock));
         OnChanged();
     }
 
@@ -1366,7 +1378,7 @@ public class PartitionLayout
     }
 
     private static PartitionLayout CreateRdbLayout(RigidDiskBlock rigidDiskBlock, long diskSize, bool isInitialize,
-        bool keepMasterBootRecord = false, int rdbBlockLo = 0, long rdbSize = 0)
+        bool keepMasterBootRecord = false, int rdbBlockLo = 0, long rdbSize = 0, long tableStart = 0)
     {
         var cylinderSize = (long)rigidDiskBlock.Heads * rigidDiskBlock.Sectors * rigidDiskBlock.BlockSize;
         return new PartitionLayout(PartitionTableType.RigidDiskBlock, diskSize,
@@ -1375,7 +1387,8 @@ public class PartitionLayout
         {
             KeepMasterBootRecord = keepMasterBootRecord,
             RdbBlockLo = rdbBlockLo,
-            RdbSize = rdbSize
+            RdbSize = rdbSize,
+            TableStart = tableStart
         };
     }
 
@@ -1389,7 +1402,11 @@ public class PartitionLayout
         var layout = CreateBasicLayout(tableType, diskSize, false,
             rdbSize > 0 ? AlignUp(rdbSize + RdbMbrGap, MiB) : MiB);
         if (rdbSize > 0)
-            layout._reservedAreas.Add(new ReservedArea(0, rdbSize, "Rigid Disk Block", PartitionTableType.RigidDiskBlock));
+        {
+            var rdbStart = Math.Min(diskInfo.RigidDiskBlock!.RdbBlockLo * 512L, rdbSize);
+            layout._reservedAreas.Add(new ReservedArea(rdbStart, rdbSize - rdbStart, "Rigid Disk Block",
+                PartitionTableType.RigidDiskBlock));
+        }
         foreach (var part in (partitionTablePart.Parts ?? []).Where(x => x.PartType == PartType.Partition))
         {
             var existingBiosType = int.TryParse(part.BiosType, out var biosType) ? biosType : (int?)null;
@@ -1415,7 +1432,9 @@ public class PartitionLayout
     private static PartitionLayout FromRigidDiskBlock(RigidDiskBlock rigidDiskBlock, long diskSize,
         PartitionTablePart partitionTablePart, DiskInfo diskInfo)
     {
-        var layout = CreateRdbLayout(rigidDiskBlock, diskSize, false);
+        // rigid disk block in hybrid disk starts after master boot record in sector 0
+        var layout = CreateRdbLayout(rigidDiskBlock, diskSize, false,
+            tableStart: diskInfo.MbrPartitionTablePart != null ? rigidDiskBlock.RdbBlockLo * 512L : 0);
         layout._fileSystems.AddRange((rigidDiskBlock.FileSystemHeaderBlocks ?? [])
             .Select((x, i) => RdbFileSystemEntry.FromHeaderBlock(x, i + 1)));
 
@@ -1508,11 +1527,15 @@ public class PartitionLayout
             return segments;
         }
 
-        // area used by partition table before usable area. master boot record in a hybrid disk is placed after rigid
-        // disk block, which shows its own area. existing partitions can start before usable area
-        var tableEnd = _partitions.Select(x => x.Start).Append(UsableStart).Min();
-        if (tableEnd > 0 && !_reservedAreas.Any(x => x.Start < UsableStart))
-            segments.Add(new PartitionSegmentViewModel(this, 0, tableEnd, null, null, null, offset, depth, true));
+        // area used by partition table before usable area. master boot record in a hybrid disk only uses sectors before
+        // rigid disk block, which shows its own area. existing partitions can start before usable area
+        var tableEnd = _partitions.Select(x => x.Start)
+            .Concat(_reservedAreas.Select(x => x.Start).Where(x => x < UsableStart))
+            .Append(UsableStart)
+            .Min();
+        if (tableEnd > TableStart)
+            segments.Add(new PartitionSegmentViewModel(this, TableStart, tableEnd - TableStart, null, null, null,
+                offset, depth, true));
 
         // partitions and areas reserved by other partition tables, which can be outside usable area
         var occupied = _partitions

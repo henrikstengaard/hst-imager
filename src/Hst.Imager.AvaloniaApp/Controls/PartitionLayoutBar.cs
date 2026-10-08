@@ -320,14 +320,22 @@ public class PartitionLayoutBar : Control
     /// Draw band above segments with area of each partition table on disk in its color and named by it, so it's
     /// visible which partitions belong to which partition table, e.g. rigid disk block and master boot record of a
     /// hybrid disk. Area of partition table spans its partitions and unallocated space. Name is followed by size of
-    /// partition table, when it fits.
+    /// partition table, when it fits. Area used by partition table before another partition table, e.g. master boot
+    /// record in sector 0 before rigid disk block of a hybrid disk, is left out, so bands don't overlap.
     /// </summary>
     private void DrawTableBand(DrawingContext context, IEnumerable<PartitionSegmentViewModel> segments)
     {
-        var tables = segments
+        var groups = segments
             .Where(x => x.Depth == 0 && x.Layout.HasPartitionTable)
             .GroupBy(x => x.Layout)
-            .Select(x => (Layout: x.Key, Start: x.Min(s => s.DiskStart), End: x.Max(s => s.DiskEnd)));
+            .ToList();
+        var tableStarts = groups.Select(x => x.Min(s => s.DiskStart)).ToList();
+        var tables = groups
+            .Select(x => x.Where(s => !s.IsPartitionTable ||
+                                      !tableStarts.Any(start => start > s.DiskStart && start >= s.DiskEnd))
+                .DefaultIfEmpty(x.First())
+                .ToList())
+            .Select(x => (x[0].Layout, Start: x.Min(s => s.DiskStart), End: x.Max(s => s.DiskEnd)));
 
         foreach (var (layout, start, end) in tables)
         {
