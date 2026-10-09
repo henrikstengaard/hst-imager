@@ -228,6 +228,8 @@ public class PartitionLayoutBar : Control
 
             if (segment.Partition == null)
             {
+                // panel background below tinted inner, so border in segment color is visible
+                context.FillRectangle(panelBrush, inner);
                 context.FillRectangle(new SolidColorBrush(color, 0.35), inner);
             }
             else
