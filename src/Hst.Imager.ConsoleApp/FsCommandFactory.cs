@@ -14,6 +14,7 @@ public static class FsCommandFactory
 
         command.Add(CreateFsDir());
         command.Add(CreateFsCopy());
+        command.Add(CreateFsMove());
         command.Add(CreateFsExtract());
         command.Add(CreateFsMkDir());
         command.Add(CreateFsDelete());
@@ -139,6 +140,55 @@ public static class FsCommandFactory
         return command;
     }
 
+    private static Command CreateFsMove()
+    {
+        var sourcePathArgument = new Argument<string>("SourcePath")
+        {
+            Description = "Path to source physical drive, image file or directory."
+        };
+
+        var destinationPathArgument = new Argument<string>("DestinationPath")
+        {
+            Description = "Path to destination physical drive, image file or directory."
+        };
+
+        var uaeMetadataOption = new Option<UaeMetadata>("--uaemetadata", "-uae")
+        {
+            Description = "Type of UAE metadata to read and write.",
+            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.UaeFsDb
+        };
+
+        var makeDirectoryOption = new Option<bool>("--makedir", ["-md"])
+        {
+            Description = "Make destination directory, if it does not exist.",
+            DefaultValueFactory = (ArgumentResult _) => false
+        };
+
+        var forceOption = new Option<bool>("--force", "-f")
+        {
+            Description = "Force overwriting any existing files."
+        };
+
+        var command = new Command("move", "Move a file or subdirectory from source to destination.");
+        command.Aliases.Add("mv");
+        command.SetAction((ParseResult ctx) =>
+        {
+            var srcPath = ctx.GetValue(sourcePathArgument);
+            var destPath = ctx.GetValue(destinationPathArgument);
+            var uaeMetadata = ctx.GetValue(uaeMetadataOption);
+            var makeDir = ctx.GetValue(makeDirectoryOption);
+            var force = ctx.GetValue(forceOption);
+            return CommandHandler.FsMove(srcPath, destPath, uaeMetadata, makeDir, force);
+        });
+        command.Add(sourcePathArgument);
+        command.Add(destinationPathArgument);
+        command.Add(uaeMetadataOption);
+        command.Add(makeDirectoryOption);
+        command.Add(forceOption);
+
+        return command;
+    }    
+    
     private static Command CreateFsExtract()
     {
         var sourcePathArgument = new Argument<string>("SourcePath")
@@ -159,7 +209,7 @@ public static class FsCommandFactory
 
         var skipAttributesOption = new Option<bool>("--skip-attributes", ["-sa"])
         {
-            Description = "Attributes of directories and files are not set when copied.",
+            Description = "Attributes of directories and files are not set when extracted.",
             DefaultValueFactory = (ArgumentResult _) => false
         };
 

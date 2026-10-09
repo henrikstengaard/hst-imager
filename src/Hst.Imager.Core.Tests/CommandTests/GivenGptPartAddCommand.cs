@@ -146,4 +146,46 @@ public class GivenGptPartAddCommand : FsCommandTestBase
         Assert.NotNull(partInfo);
         Assert.Equal(GuidPartitionTypes.WindowsBasicData.ToString(), partInfo.GuidType);
     }
+
+    [Fact]
+    public async Task When_AddGptPartitionWithStartSectorAfterExistingPartition_Then_PartitionIsAddedWithRemainingDiskSize()
+    {
+        // arrange - path, size and test command helper
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var testCommandHelper = new TestCommandHelper();
+        var size = 100.MB();
+
+        // arrange - create img media
+        testCommandHelper.AddTestMedia(imgPath, size);
+
+        // arrange - create gpt
+        await CreateGptDisk(testCommandHelper, imgPath, size);
+
+        // arrange - add gpt partition 1 from sector 2048 to 22527 (10mb)
+        var gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, "fat32", "UNITTEST1", new Size(), 2048, 22527);
+        var result = await gptPartAddCommand.Execute(CancellationToken.None);
+        Assert.True(result.IsSuccess);
+
+        // act - add gpt partition 2 from sector 22528 of remaining disk size,
+        // which is after unallocated space before partition 1
+        gptPartAddCommand = new GptPartAddCommand(new NullLogger<GptPartAddCommand>(), testCommandHelper,
+            new List<IPhysicalDrive>(), imgPath, "fat32", "UNITTEST2", new Size(), 22528, null);
+        result = await gptPartAddCommand.Execute(CancellationToken.None);
+        Assert.True(result.IsSuccess);
+
+        // assert - read disk info
+        var mediaResult = await testCommandHelper.GetReadableMedia(new List<IPhysicalDrive>(), imgPath);
+        Assert.True(mediaResult.IsSuccess);
+        using var media = mediaResult.Value;
+        var diskInfo = await testCommandHelper.ReadDiskInfo(media);
+        Assert.NotNull(diskInfo?.GptPartitionTablePart);
+
+        // assert - gpt partition 2 starts at sector 22528 and uses remaining disk size
+        var partInfo = diskInfo.GptPartitionTablePart.Parts.FirstOrDefault(x =>
+            x.PartType == PartType.Partition && x.PartitionNumber == 2);
+        Assert.NotNull(partInfo);
+        Assert.Equal(22528, partInfo.StartSector);
+        Assert.True(partInfo.Size > 85.MB());
+    }
 }

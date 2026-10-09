@@ -10,7 +10,7 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 
 /// <summary>
 /// Target to initialize partition table for, either the disk or a PiStorm rigid disk block in a master boot record
-/// partition.
+/// or guid partition table partition.
 /// </summary>
 public class InitializeTarget
 {

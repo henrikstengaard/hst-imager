@@ -95,7 +95,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
             Assert.NotNull(result.Error);
-            Assert.IsType<FileExistsError>(result.Error);
+            Assert.IsType<PathExistsError>(result.Error);
         }
         finally
         {
@@ -193,7 +193,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
             Assert.NotNull(result.Error);
-            Assert.IsType<FileExistsError>(result.Error);
+            Assert.IsType<PathExistsError>(result.Error);
         }
         finally
         {
@@ -296,7 +296,7 @@ public class GivenFsCopyCommandCopyingSingleFileFromAndToSameLocalDirectory : Fs
             Assert.False(result.IsSuccess);
             Assert.True(result.IsFaulted);
             Assert.NotNull(result.Error);
-            Assert.IsType<FileExistsError>(result.Error);
+            Assert.IsType<PathExistsError>(result.Error);
         }
         finally
         {

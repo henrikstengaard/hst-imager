@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Hst.Core;
 using Hst.Imager.Core.Extensions;
 using Hst.Imager.Core.MagicBytes;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.Core.Helpers
 {
@@ -76,7 +77,7 @@ namespace Hst.Imager.Core.Helpers
         /// <param name="media">Media used to get pistorm rdb from.</param>
         /// <param name="fileSystemPath">File system path used to get pistorm rdb from.</param>
         /// <param name="directorySeparatorChar"></param>
-        /// <returns>PiStormRdb media result with PiStormRdb media, if master boot record partition type is 0x76. Otherwise media is returned.</returns>
+        /// <returns>PiStormRdb media result with PiStormRdb media, if master boot record partition type is 0x76 or guid partition table partition type is 3F82EEBC-87C9-4097-8165-89D6540557C0. Otherwise media is returned.</returns>
         public static PiStormRdbMediaResult GetPiStormRdbMedia(Media media, string fileSystemPath,
             string directorySeparatorChar)
         {
@@ -90,55 +91,54 @@ namespace Hst.Imager.Core.Helpers
                 };
             }
 
+            var noPiStormRdbMediaResult = new PiStormRdbMediaResult
+            {
+                HasPiStormRdb = false,
+                Media = media,
+                FileSystemPath = fileSystemPath
+            };
+
             var parts = (fileSystemPath ?? string.Empty).Split(new[] { directorySeparatorChar }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (parts.Length < 2 || !parts[0].Equals("mbr", StringComparison.OrdinalIgnoreCase))
+            if (parts.Length < 2 || !int.TryParse(parts[1], out var partitionNumber) || partitionNumber < 1)
             {
-                return new PiStormRdbMediaResult
-                {
-                    HasPiStormRdb = false,
-                    Media = media,
-                    FileSystemPath = fileSystemPath
-                };
+                return noPiStormRdbMediaResult;
             }
 
-            if (!int.TryParse(parts[1], out var partitionNumber))
+            var partitionTable = parts[0].ToLowerInvariant();
+            if (partitionTable != "mbr" && partitionTable != "gpt")
             {
-                return new PiStormRdbMediaResult
-                {
-                    HasPiStormRdb = false,
-                    Media = media,
-                    FileSystemPath = fileSystemPath
-                };
+                return noPiStormRdbMediaResult;
             }
 
             using var disk = new DiscUtils.Raw.Disk(media.Stream, Ownership.None);
 
-            BiosPartitionTable biosPartitionTable;
+            DiscUtils.Partitions.PartitionTable diskPartitionTable;
             try
             {
-                biosPartitionTable = new BiosPartitionTable(disk);
+                diskPartitionTable = partitionTable == "gpt"
+                    ? new GuidPartitionTable(disk)
+                    : new BiosPartitionTable(disk);
             }
             catch (Exception)
             {
-                return new PiStormRdbMediaResult
-                {
-                    HasPiStormRdb = false,
-                    Media = media,
-                    FileSystemPath = fileSystemPath
-                };
+                return noPiStormRdbMediaResult;
             }
 
-            var partitionInfo = biosPartitionTable.Partitions[partitionNumber - 1];
-
-            if (partitionInfo.BiosType != Constants.BiosPartitionTypes.PiStormRdb)
+            if (partitionNumber > diskPartitionTable.Partitions.Count)
             {
-                return new PiStormRdbMediaResult
-                {
-                    HasPiStormRdb = false,
-                    Media = media,
-                    FileSystemPath = fileSystemPath
-                };
+                return noPiStormRdbMediaResult;
+            }
+
+            var partitionInfo = diskPartitionTable.Partitions[partitionNumber - 1];
+
+            var isPiStormRdb = partitionTable == "gpt"
+                ? partitionInfo.GuidType == Constants.GuidPartitionTypes.PiStormRdb
+                : partitionInfo.BiosType == Constants.BiosPartitionTypes.PiStormRdb;
+
+            if (!isPiStormRdb)
+            {
+                return noPiStormRdbMediaResult;
             }
 
             var partitionOffset = partitionInfo.FirstSector * disk.SectorSize;
@@ -157,7 +157,7 @@ namespace Hst.Imager.Core.Helpers
             };
         }
 
-        private static Media CreatePiStormRdbMedia(Media media, string piStormRdbMediaPath, int mbrPartitionNumber,
+        private static Media CreatePiStormRdbMedia(Media media, string piStormRdbMediaPath, int partitionNumber,
             Stream stream)
         {
             var type = media.Type == Media.MediaType.CompressedRaw || media.Type == Media.MediaType.CompressedVhd
@@ -166,8 +166,8 @@ namespace Hst.Imager.Core.Helpers
 
             return new PiStormRdbMedia(
                 Path.Combine(media.Path, piStormRdbMediaPath), 
-                mbrPartitionNumber,
-                string.Concat("Partition #", mbrPartitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
+                partitionNumber,
+                string.Concat("Partition #", partitionNumber, ", ", Constants.FileSystemNames.PiStormRdb),
                 type,
                 false,
                 stream, 
@@ -289,7 +289,43 @@ namespace Hst.Imager.Core.Helpers
         
         public static bool IsVhd(string path) => path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
 
+        public static async Task<LocalDirectoryMedia> CreateLocalDirectoryMediaFromPath(string path,
+            UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
+        {
+            var fullPath = PathHelper.GetFullPath(path);
         
+            var pathComponents = PathHelper.Split(fullPath);
+        
+            if (pathComponents.Length == 0)
+            {
+                throw new ArgumentException($"Invalid path '{path}'");
+            }
+        
+            var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(
+                uaeMetadata, pathComponents);
+            var hasUaeMetadata = uaeMetadataEntry is { UaeMetadataExists: true };
+
+            var localDirectoryPathComponents = hasUaeMetadata ? uaeMetadataEntry.NormalPathComponents : pathComponents;
+
+            var localDirectoryPath = string.Empty;
+            for(var i = 1; i <= localDirectoryPathComponents.Length; i++)
+            {
+                var dirPath = Path.Combine(localDirectoryPathComponents.Take(i).ToArray());
+                if (!Directory.Exists(dirPath))
+                {
+                    break;
+                }
+                localDirectoryPath = dirPath;
+            }
+        
+            if (string.IsNullOrEmpty(localDirectoryPath))
+            {
+                throw new ArgumentException($"Invalid path '{path}' results in no existing local directory path");
+            }
+        
+            return new LocalDirectoryMedia(localDirectoryPath, hasUaeMetadata
+                ? uaeMetadataEntry.UaePathComponents[^1] : pathComponents[^1]);
+        }
     }
 
     public class PiStormRdbMediaResult

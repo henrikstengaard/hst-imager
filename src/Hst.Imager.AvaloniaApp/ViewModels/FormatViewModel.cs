@@ -22,7 +22,7 @@ public class FormatTypeOption
 
 public class FormatViewModel : ViewModelBase
 {
-    private const string Pfs3AioUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+    private const string Pfs3AioUrl = FormatCommand.Pfs3AioLhaUrl;
 
     private static readonly List<SelectOption> BasicFileSystemOptions =
     [
@@ -116,7 +116,8 @@ public class FormatViewModel : ViewModelBase
             new FormatTypeOption { Title = "Master Boot Record", Value = FormatType.Mbr },
             new FormatTypeOption { Title = "Guid Partition Table", Value = FormatType.Gpt },
             new FormatTypeOption { Title = "Rigid Disk Block", Value = FormatType.Rdb },
-            new FormatTypeOption { Title = "PiStorm", Value = FormatType.PiStorm }
+            new FormatTypeOption { Title = "PiStorm (Master Boot Record)", Value = FormatType.PiStormMbr },
+            new FormatTypeOption { Title = "PiStorm (Guid Partition Table)", Value = FormatType.PiStormGpt }
         ];
         _selectedFormatType = FormatTypeOptions[0];
 
@@ -161,7 +162,8 @@ public class FormatViewModel : ViewModelBase
         }
     }
 
-    public bool IsRdbFormat => _selectedFormatType.Value is FormatType.Rdb or FormatType.PiStorm;
+    public bool IsRdbFormat => _selectedFormatType.Value is FormatType.Rdb or FormatType.PiStorm or FormatType.PiStormMbr
+        or FormatType.PiStormGpt;
 
     public List<SelectOption> FileSystemOptions
     {
@@ -287,7 +289,10 @@ public class FormatViewModel : ViewModelBase
         var sourceTypeFormatted = Source.IsImageFile ? "image file" : "physical disk";
         var sizeFormatted = _size == 0 ? string.Empty : $", size {_size} {_sizeUnit}";
         var description = $"{sourceTypeFormatted} '{Source.Media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}";
-        if (!await _dialogService.ShowConfirmDialogAsync("Format", $"Do you want to format {description}?"))
+        var downloadFormatted = IsRdbFormat && IsPfs3FileSystem && _downloadPfs3Aio
+            ? $" This will download pfs3aio from '{Pfs3AioUrl}'."
+            : string.Empty;
+        if (!await _dialogService.ShowConfirmDialogAsync("Format", $"Do you want to format {description}?{downloadFormatted}"))
             return;
 
         var formatType = _selectedFormatType.Value;

@@ -220,7 +220,7 @@
 
             var fileSystemPathArgument = new Argument<string>("FileSystemPath")
             {
-                Description = "Path to file system to add."
+                Description = "Path to physical drive or image file to import file systems from (supports .adf)."
             };
 
             var dosTypeOption = new Option<string>("--dos-type", ["-dt"])
@@ -259,7 +259,7 @@
 
             var fileSystemNumber = new Argument<int>("FileSystemNumber")
             {
-                Description = "File system number to delete."
+                Description = "File system number to export."
             };
 
             var fileSystemPathArgument = new Argument<string>("FileSystemPath")
@@ -291,7 +291,7 @@
 
             var fileSystemNumber = new Argument<int>("FileSystemNumber")
             {
-                Description = "File system number to delete."
+                Description = "File system number to update."
             };
 
             var dosTypeArgument = new Option<string>("--dos-type", ["-dt"])
@@ -777,12 +777,12 @@
         {
             var sourcePathArgument = new Argument<string>("SourcePath")
             {
-                Description = "Path to source physical drive or image file."
+                Description = "Path to physical drive or image file."
             };
 
             var partitionNumber = new Argument<int>("PartitionNumber")
             {
-                Description = "Partition number to export."
+                Description = "Partition number to kill."
             };
 
             var hexBootBytesArgument = new Argument<string>("HexBootBytes")

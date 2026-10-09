@@ -38,6 +38,9 @@ public class FsDirCommand(
 
     public override async Task<Result> Execute(CancellationToken token)
     {
+        using var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
         OnDebugMessage($"Opening '{path}' as readable");
 
         var listMediaEntriesResult = await ListMediaEntries();
@@ -53,7 +56,7 @@ public class FsDirCommand(
         
         // get directory entry iterator and list entries if successful
         var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
-            new MemoryAppCache());
+            uaeMetadataHelper);
         if (directoryEntryIteratorResult.IsFaulted)
         {
             return new Result(directoryEntryIteratorResult.Error);

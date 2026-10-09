@@ -154,7 +154,7 @@ public static class GptCommandFactory
 
         var partitionNumberArgument = new Argument<int>("PartitionNumber")
         {
-            Description = "Partition number to delete."
+            Description = "Partition number to format."
         };
 
         var typeArgument = new Argument<GptPartType>("Type")

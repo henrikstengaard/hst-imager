@@ -32,6 +32,7 @@ Hst Imager console comes with following features:
   - Supports local files and directories, image files, physical drives or Amiga Disk File .adf as destination.
   - List directories and files in a file system.
   - Copy directories and files from source to destination file system.
+  - Move directories and files from source to destination file system.
   - Extract directories and files from source to destination file system.
   - Create a directory in a file system.
 - Amiga Disk File:
@@ -184,7 +185,7 @@ Example of adding a PiStorm partition of remaining space to Master Boot Record i
 hst.imager mbr part add 16gb.img pistormrdb *
 ```
 
-File system commands and Rigid Disk Block commands also supports PiStorm by adding `mbr` and partition number to physical disk or image paths.
+File system commands and Rigid Disk Block commands also supports PiStorm by adding `mbr` or `gpt` and partition number to physical disk or image paths. Guid Partition Table partitions are PiStorm RDB, if partition type is `3F82EEBC-87C9-4097-8165-89D6540557C0`.
 
 Example of listing of files and directories in 16GB img image Master Boot Record partition 2 with PiStorm Rigid Disk Block partition DH0:
 ```
@@ -379,7 +380,9 @@ File system path for formatting Rigid Disk Block supports .lha, .iso, .adf and f
 - If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
 - If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
 
-For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
+For PiStorm RDB, format type `pistorm` or `pistormmbr` initializes the disk with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
+
+For PiStorm RDB with format type `pistormgpt`, the disk is initialized with Guid Partition Table, one partition of size 1GB is added for boot and a second partition is added with type `3F82EEBC-87C9-4097-8165-89D6540557C0` formatted same way as Rigid Disk Block is formatted described above.
 
 Example of displaying usage for formatting physical drive or image file:
 ```
@@ -424,6 +427,11 @@ hst.imager format \disk2 rdb dos7 --file-system-path AmigaOS3.2CD.iso
 Example of formatting Windows physical drive disk 2 for PiStorm with a 1GB FAT32 formatted boot partition and a PiStorm RDB partition (0x76) formatted with Rigid Disk Block using PFS\3 file system (direct scsi):
 ```
 hst.imager format \disk2 pistorm pds3
+```
+
+Example of formatting Windows physical drive disk 2 for PiStorm with Guid Partition Table, a 1GB FAT32 formatted boot partition and a PiStorm RDB partition (3F82EEBC-87C9-4097-8165-89D6540557C0) formatted with Rigid Disk Block using PFS\3 file system (direct scsi):
+```
+hst.imager format \disk2 pistormgpt pds3
 ```
 
 ### Compare physical drive and image file
@@ -631,6 +639,50 @@ hst.imager fs copy dh0 16gb.img\rdb\dh0 --recursive --uaemetadata=UaeMetafile
 Example of copying files and subdirectories recursively from 16GB img image file Rigid Disk Block partition DH0 to directory DH0 and write UAE metafile used by FS-UAE Amiga emulator:
 ```
 hst.imager fs copy 16gb.img\rdb\dh0 dh0 --recursive --uaemetadata=UaeMetafile
+```
+
+### Move directories and files from source to destination file system
+
+Moves a file or subdirectory from the source path to the destination path. Moving between paths on the same media renames or relocates the entry. Moving between different media copies the entry and removes it from the source.
+
+Example of displaying usage for moving a file or subdirectory:
+```
+hst.imager fs move
+```
+
+Example of moving a file from one directory to another in a local file system:
+```
+hst.imager fs move dh0\file.txt dh0\games
+```
+
+Example of renaming a file in a local file system:
+```
+hst.imager fs move dh0\file.txt dh0\renamed.txt
+```
+
+Example of renaming a file in an image file Rigid Disk Block partition DH0:
+```
+hst.imager fs move 16gb.img\rdb\dh0\file.txt 16gb.img\rdb\dh0\renamed.txt
+```
+
+Example of moving a file from a local file system to an image file Rigid Disk Block partition DH0:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games
+```
+
+Example of moving a file from a local file system to an image file Rigid Disk Block partition DH0 games directory and create games directory if it doesn't exist:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games --makedir
+```
+
+Example of moving a file and overwriting an existing destination file:
+```
+hst.imager fs move dh0\file.txt 16gb.img\rdb\dh0\games --force
+```
+
+Example of moving a file and reading or writing UAE metadata used by FS-UAE Amiga emulator:
+```
+hst.imager fs move 16gb.img\rdb\dh0\file.info dh0 --uaemetadata=UaeMetafile
 ```
 
 ### Extract directories and files from source to destination file system

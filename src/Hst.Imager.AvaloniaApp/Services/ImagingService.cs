@@ -181,20 +181,26 @@ public class ImagingService : IImagingService
 
         var path = string.Concat(plan.Byteswap ? "+bs:" : string.Empty, plan.Path);
 
-        // PiStorm disk in master boot record partition added by preceding plan is partitioned using partition number
-        // of master boot record partition read from disk
+        // PiStorm disk in master boot record or guid partition table partition added by preceding plan is
+        // partitioned using partition number of partition read from disk
         if (plan.ContainerStartOffset.HasValue)
         {
-            var mbrPartitionNumbers = await ReadPartitionNumbersAsync(commandHelper, physicalDrives, path,
-                PartitionTableType.MasterBootRecord, token);
-            if (!mbrPartitionNumbers.TryGetValue(plan.ContainerStartOffset.Value, out var mbrPartitionNumber))
+            var containerTableType = plan.ContainerTableType == PartitionTableType.GuidPartitionTable
+                ? PartitionTableType.GuidPartitionTable
+                : PartitionTableType.MasterBootRecord;
+            var containerPartitionNumbers = await ReadPartitionNumbersAsync(commandHelper, physicalDrives, path,
+                containerTableType, token);
+            if (!containerPartitionNumbers.TryGetValue(plan.ContainerStartOffset.Value,
+                    out var containerPartitionNumber))
             {
                 throw new ImagingException(
-                    $"PiStorm partition at offset {plan.ContainerStartOffset.Value} not found in Master Boot Record");
+                    $"PiStorm partition at offset {plan.ContainerStartOffset.Value} not found in {(containerTableType == PartitionTableType.GuidPartitionTable ? "Guid Partition Table" : "Master Boot Record")}");
             }
 
             var separator = plan.Path.StartsWith('/') ? "/" : "\\";
-            path = string.Concat(path, separator, "mbr", separator, mbrPartitionNumber);
+            path = string.Concat(path, separator,
+                containerTableType == PartitionTableType.GuidPartitionTable ? "gpt" : "mbr", separator,
+                containerPartitionNumber);
         }
 
         var isRdb = plan.TableType == PartitionTableType.RigidDiskBlock;
@@ -406,9 +412,12 @@ public class ImagingService : IImagingService
                     endSector, partition.Bootable),
                 PartitionTableType.GuidPartitionTable => new GptPartAddCommand(
                     _loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper, physicalDrives, path,
-                    string.IsNullOrWhiteSpace(partition.PartitionType)
-                        ? GetGptPartType(partition.FileSystem).ToString()
-                        : partition.PartitionType, partition.Label,
+                    partition.IsPiStorm
+                        ? Core.Constants.GuidPartitionTypes.PiStormRdb.ToString()
+                        : string.IsNullOrWhiteSpace(partition.PartitionType)
+                            ? GetGptPartType(partition.FileSystem).ToString()
+                            : partition.PartitionType,
+                    partition.IsPiStorm ? Core.Constants.FileSystemNames.PiStormRdb : partition.Label,
                     new Size(partition.Size, Unit.Bytes), startSector, endSector),
                 PartitionTableType.RigidDiskBlock => new RdbPartAddCommand(
                     _loggerFactory.CreateLogger<RdbPartAddCommand>(), commandHelper, physicalDrives, path,

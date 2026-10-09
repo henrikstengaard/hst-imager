@@ -25,7 +25,10 @@ public class FsDelCommand(
 {
     public override async Task<Result> Execute(CancellationToken token)
     {
-        var entryIteratorResult = await GetEntryIterator(path);
+        using var appCache = new MemoryAppCache();
+        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+
+        var entryIteratorResult = await GetEntryIterator(path, uaeMetadataHelper);
         if (entryIteratorResult.IsFaulted)
         {
             return new Result(entryIteratorResult.Error);
@@ -119,7 +122,7 @@ public class FsDelCommand(
         return new Result();
     }
     
-    private async Task<Result<IEntryIterator>> GetEntryIterator(string path)
+    private async Task<Result<IEntryIterator>> GetEntryIterator(string path, UaeMetadataHelper uaeMetadataHelper)
     {
         // resolve media path
         var mediaResult = commandHelper.ResolveMedia(path);
@@ -133,7 +136,7 @@ public class FsDelCommand(
             }
 
             var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
-                new MemoryAppCache());
+                uaeMetadataHelper);
             if (directoryEntryIteratorResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(directoryEntryIteratorResult.Error);
@@ -150,7 +153,7 @@ public class FsDelCommand(
             (Directory.Exists(path) || File.Exists(path)))
         {
             var entryIteratorResult = await GetDirectoryEntryIterator(path, true, uaeMetadata,
-                new MemoryAppCache());
+                uaeMetadataHelper);
             if (entryIteratorResult.IsFaulted)
             {
                 return new Result<IEntryIterator>(entryIteratorResult.Error);

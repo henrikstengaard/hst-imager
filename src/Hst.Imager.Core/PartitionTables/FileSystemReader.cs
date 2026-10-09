@@ -24,7 +24,8 @@ public static class FileSystemReader
             };
         }
 
-        if (partitionInfo.BiosType == Constants.BiosPartitionTypes.PiStormRdb)
+        if (partitionInfo.BiosType == Constants.BiosPartitionTypes.PiStormRdb ||
+            partitionInfo.GuidType == Constants.GuidPartitionTypes.PiStormRdb)
         {
             return new Models.FileSystems.FileSystemInfo
             {

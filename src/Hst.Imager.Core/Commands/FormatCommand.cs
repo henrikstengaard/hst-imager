@@ -40,7 +40,7 @@ namespace Hst.Imager.Core.Commands
         private const long WorkbenchPartitionSize = 1073741824; // [Math]::Pow(2, 30)
         private const long PiStormBootPartitionSize = 1073741824; // [Math]::Pow(2, 30)
 
-        private const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+        public const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
 
         /// <summary>
         /// Format command.
@@ -80,6 +80,10 @@ namespace Hst.Imager.Core.Commands
             this.kickstart31 = kickstart31;
         }
 
+        private bool IsPiStorm => formatType is FormatType.PiStorm or FormatType.PiStormMbr or FormatType.PiStormGpt;
+
+        private bool IsRdbOrPiStorm => formatType == FormatType.Rdb || IsPiStorm;
+
         public override async Task<Result> Execute(CancellationToken token)
         {
             var gptFileSystem = FormatGptFileSystem.Fat32;
@@ -95,13 +99,13 @@ namespace Hst.Imager.Core.Commands
             }
 
             var rdbFileSystem = FormatRdbFileSystem.Pds3;
-            if (formatType is FormatType.Rdb or FormatType.PiStorm &&
+            if (IsRdbOrPiStorm &&
                 !Enum.TryParse(fileSystem, true, out rdbFileSystem))
             {
                 return new Result(new Error($"Unsupported Rigid Disk Block file system '{fileSystem}'"));
             }
 
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+            if (IsRdbOrPiStorm &&
                     (rdbFileSystem == FormatRdbFileSystem.Dos3 || rdbFileSystem == FormatRdbFileSystem.Dos7))
             {
                 if (string.IsNullOrWhiteSpace(fileSystemPath))
@@ -121,21 +125,22 @@ namespace Hst.Imager.Core.Commands
             }
             
             var maxRdbPartitionSize = useExperimental ? MaxRdbExperimentalSize : MaxRdbSize;
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+            if (IsRdbOrPiStorm &&
                 maxPartitionSize.Value > maxRdbPartitionSize)
             {
                 return new Result(new Error($"Max {(useExperimental ? "experimental " : "")}partition size must be equal or less than {maxRdbPartitionSize} bytes"));
             }
 
-            // set file system path to pfs3aio url, if pfs3 or pds3 file system and file system path is not set
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+            // file system path is required for pfs3 or pds3 file system. pfs3aio is not downloaded
+            // automatically, so the user must explicitly provide a path or the pfs3aio url to download it
+            if (IsRdbOrPiStorm &&
                 (rdbFileSystem == FormatRdbFileSystem.Pfs3 || rdbFileSystem == FormatRdbFileSystem.Pds3) &&
                 string.IsNullOrWhiteSpace(fileSystemPath))
             {
-                fileSystemPath = Pfs3AioLhaUrl;
+                return new Result(new Error($"File system path required for file system '{rdbFileSystem.ToString().ToUpper()}'. Use path to pfs3aio file or url '{Pfs3AioLhaUrl}' to download it"));
             }
 
-            if ((formatType == FormatType.Rdb || formatType == FormatType.PiStorm) &&
+            if (IsRdbOrPiStorm &&
                 fileSystemPath.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
                 OnInformationMessage($"Downloading file system from url '{fileSystemPath}'");
@@ -167,7 +172,7 @@ namespace Hst.Imager.Core.Commands
 
                 OnDebugMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
 
-                if (formatType == FormatType.PiStorm && diskSize < 2.GB())
+                if (IsPiStorm && diskSize < 2.GB())
                 {
                     return new Result(new Error($"Formatting PiStorm requires disk size of minimum 2GB and disk size is '{diskSize.FormatBytes()}' ({diskSize} bytes)"));
                 }
@@ -201,7 +206,11 @@ namespace Hst.Imager.Core.Commands
                     formatResult = await FormatRdbDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, path, 0, token);
                     break;
                 case FormatType.PiStorm:
-                    formatResult = await FormatPiStormDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, token);
+                case FormatType.PiStormMbr:
+                    formatResult = await FormatPiStormMbrDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, token);
+                    break;
+                case FormatType.PiStormGpt:
+                    formatResult = await FormatPiStormGptDisk(diskSize, maxRdbPartitionSize, rdbFileSystem, token);
                     break;
                 default:
                     formatResult = new Result(new Error($"Unsupported format type '{formatType}'"));
@@ -228,6 +237,8 @@ namespace Hst.Imager.Core.Commands
                     return 3;
                 case FormatType.Rdb:
                 case FormatType.PiStorm:
+                case FormatType.PiStormMbr:
+                case FormatType.PiStormGpt:
                     var formatSize = diskSize.ResolveSize(size).ToSectorSize();
 
                     // 2 commands: rdb init command and rdb fs add command
@@ -240,8 +251,8 @@ namespace Hst.Imager.Core.Commands
                         return Convert.ToInt32(formatRdbCommands);
                     }
 
-                    // 2 commands: mbr part add command and mbr part format command for pistorm boot.
-                    // 1 command for each 128gb: mbr part add command for each pistorm rdb disk
+                    // 2 commands: mbr/gpt part add command and mbr/gpt part format command for pistorm boot.
+                    // 1 command for each 128gb: mbr/gpt part add command for each pistorm rdb disk
                     var formatPiStormRdbCommands = 2 + (Math.Ceiling((double)formatSize / 128.GB()) * (formatRdbCommands + 1));
 
                     return Convert.ToInt32(formatPiStormRdbCommands);
@@ -626,7 +637,7 @@ namespace Hst.Imager.Core.Commands
             return new Result<int>(partitionNumber);
         }
 
-        private async Task<Result> FormatPiStormDisk(long diskSize, long maxRdbPartitionSize,
+        private async Task<Result> FormatPiStormMbrDisk(long diskSize, long maxRdbPartitionSize,
             FormatRdbFileSystem formatRdbFileSystem, CancellationToken cancellationToken)
         {
             var mbrInitCommand = new MbrInitCommand(loggerFactory.CreateLogger<MbrInitCommand>(), commandHelper, physicalDrives, path);
@@ -725,6 +736,90 @@ namespace Hst.Imager.Core.Commands
             }
 
             return new Result();
+        }
+
+        private async Task<Result> FormatPiStormGptDisk(long diskSize, long maxRdbPartitionSize,
+            FormatRdbFileSystem formatRdbFileSystem, CancellationToken cancellationToken)
+        {
+            var gptInitCommand = new GptInitCommand(loggerFactory.CreateLogger<GptInitCommand>(), commandHelper, physicalDrives, path);
+            AddMessageEvents(gptInitCommand);
+
+            var gptInitResult = await gptInitCommand.Execute(cancellationToken);
+            if (gptInitResult.IsFaulted)
+            {
+                return new Result(gptInitResult.Error);
+            }
+
+            var formatSize = diskSize.ResolveSize(size).ToSectorSize();
+
+            // last sector is limited by format size and backup guid partition table at end of disk,
+            // which gpt part add command reserves last 100 sectors for
+            var lastSector = Math.Min(formatSize / 512 - 1, diskSize / 512 - 100);
+
+            long startSector = 2048;
+            long endSector = PiStormBootPartitionSize / 512;
+
+            // add pistorm boot partition
+            var gptPartAddCommand = new GptPartAddCommand(loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper,
+                physicalDrives, path, GptPartType.Fat32.ToString(), "Boot", new Size(), startSector, endSector);
+            AddMessageEvents(gptPartAddCommand);
+
+            var gptPartAddResult = await gptPartAddCommand.Execute(cancellationToken);
+            if (gptPartAddResult.IsFaulted)
+            {
+                return new Result(gptPartAddResult.Error);
+            }
+
+            UpdateCommandsExecuted(1);
+
+            // format pistorm boot partition
+            var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(),
+                commandHelper, physicalDrives, path, 1, GptPartType.Fat32, "Empty");
+            AddMessageEvents(gptPartFormatCommand);
+
+            var gptPartFormatResult = await gptPartFormatCommand.Execute(cancellationToken);
+            if (gptPartFormatResult.IsFaulted)
+            {
+                return new Result(gptPartFormatResult.Error);
+            }
+
+            UpdateCommandsExecuted(1);
+
+            // use experimental should allow big pistorm disk sizes and custom ones.
+            var piStormDiskSize = useExperimental ? MaxRdbExperimentalSize : MaxRdbSize;
+
+            startSector = endSector + 1;
+            endSector = startSector + (piStormDiskSize / 512);
+
+            if (endSector > lastSector)
+            {
+                endSector = lastSector;
+            }
+
+            var gptPartitionSize = (endSector - startSector + 1) * 512;
+
+            // add pistorm rdb partition
+            gptPartAddCommand = new GptPartAddCommand(loggerFactory.CreateLogger<GptPartAddCommand>(), commandHelper,
+                physicalDrives, path, Core.Constants.GuidPartitionTypes.PiStormRdb.ToString(),
+                Core.Constants.FileSystemNames.PiStormRdb, new Size(), startSector, endSector);
+            AddMessageEvents(gptPartAddCommand);
+
+            gptPartAddResult = await gptPartAddCommand.Execute(cancellationToken);
+            if (gptPartAddResult.IsFaulted)
+            {
+                return new Result(gptPartAddResult.Error);
+            }
+
+            UpdateCommandsExecuted(1);
+
+            // format pistorm gpt partition
+            var piStormRdbPath = Path.Combine(path, "gpt", "2");
+            var formatRdbDiskResult = await FormatRdbDisk(gptPartitionSize, maxRdbPartitionSize, formatRdbFileSystem,
+                piStormRdbPath, 0, cancellationToken);
+
+            return formatRdbDiskResult.IsFaulted
+                ? new Result(formatRdbDiskResult.Error)
+                : new Result();
         }
 
         private void UpdateCommandsExecuted(int commands)

@@ -57,8 +57,11 @@ const formatTypeOptions = [{
     title: "Rigid Disk Block",
     value: "rdb"
 }, {
-    title: "PiStorm",
+    title: "PiStorm (Master Boot Record)",
     value: "pistorm"
+}, {
+    title: "PiStorm (Guid Partition Table)",
+    value: "pistormgpt"
 }];
 
 const basicFileSystemOptions = [{
@@ -353,7 +356,7 @@ export default function Format() {
                 id="confirm-format"
                 open={openConfirm}
                 title="Format"
-                description={`Do you want to format ${sourceTypeFormatted} '${isNil(media) ? path : media.name}' with '${formatTypeOption.title}' format type, '${fileSystemOption.title}' file system${sizeFormatted}?`}
+                description={`Do you want to format ${sourceTypeFormatted} '${isNil(media) ? path : media.name}' with '${formatTypeOption.title}' format type, '${fileSystemOption.title}' file system${sizeFormatted}?${(fileSystem === 'pds3' || fileSystem === 'pfs3') && downloadPfs3Aio ? ` This will download pfs3aio from '${pfs3AioUrl}'.` : ''}`}
                 onClose={async (confirmed) => await handleConfirm(confirmed)}
             />
             <Title
@@ -474,6 +477,7 @@ export default function Format() {
                                     break;
                                 case 'rdb':
                                 case 'pistorm':
+                                case 'pistormgpt':
                                     setFileSystemOptions(rdbFileSystemOptions)
                                     setFileSystem(rdbFileSystemOptions[0].value)
                                     setDownloadPfs3Aio(true)
@@ -510,7 +514,7 @@ export default function Format() {
                     />
                 </Grid>
             </Grid>
-            {(formatType === 'rdb' || formatType === 'pistorm') && (
+            {(formatType === 'rdb' || formatType === 'pistorm' || formatType === 'pistormgpt') && (
                 <React.Fragment>
                     {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
                         <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>
@@ -608,7 +612,7 @@ export default function Format() {
                                 </Stack>
                             </Grid>
                         </Grid>
-                        {(formatType === 'rdb' || formatType === 'pistorm') && (
+                        {(formatType === 'rdb' || formatType === 'pistorm' || formatType === 'pistormgpt') && (
                             <React.Fragment>
                                 {(fileSystem === 'pds3' || fileSystem === 'pfs3') && (
                                     <Grid container spacing={0} direction="row" sx={{ mt: 0 }}>

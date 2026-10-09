@@ -15,6 +15,8 @@ public interface IEntryWriter : IDisposable
     Media Media { get; }
     string MediaPath { get; }
     string FileSystemPath { get; }
+    public string[] PathComponents { get; }
+    public string[] DirPathComponents { get; }
 
     /// <summary>
     /// Initialize the entry writer verifying the root path components exist.
@@ -45,6 +47,16 @@ public interface IEntryWriter : IDisposable
     /// <param name="singleFile"></param>
     /// <returns></returns>
     Task<Result> CreateFile(Entry entry, string[] entryPathComponents, Stream stream, bool skipAttributes, bool singleFile);
+
+    /// <summary>
+    /// Move entry to new path components.
+    /// The source entry path components are resolved by the entry writer defining the dest entry path components being moved to,
+    /// </summary>
+    /// <param name="entry">Entry to move</param>
+    /// <param name="srcEntryPathComponents">Source entry path components</param>
+    /// <param name="singleFile">Indicates if the entry is a single file</param>
+    /// <returns>Success result if the entry was moved successfully, otherwise an error result</returns>
+    Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool singleFile);
     
     /// <summary>
     /// Flush changes to stream

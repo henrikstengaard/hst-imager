@@ -374,13 +374,50 @@ namespace Hst.Imager.ConsoleApp
             string fileSystemPath, string size, string maxPartitionSize, bool useExperimental,
             bool kickstart31)
         {
+            if (IsPfs3Format(formatType, fileSystem) && string.IsNullOrWhiteSpace(fileSystemPath))
+            {
+                fileSystemPath = GetPfs3AioPath();
+            }
+
             using var commandHelper = GetCommandHelper();
-            await Execute(new FormatCommand(GetLogger<FormatCommand>(), 
+            await Execute(new FormatCommand(GetLogger<FormatCommand>(),
                 ServiceProvider.GetService<ILoggerFactory>(),
                 commandHelper, await GetPhysicalDrives(), path,
                 formatType, fileSystem, fileSystemPath,
                 AppState.Instance.AppPath, ParseSize(size), ParseSize(maxPartitionSize), useExperimental,
                 kickstart31));
+        }
+
+        private static bool IsPfs3Format(FormatType formatType, string fileSystem) =>
+            (formatType is FormatType.Rdb or FormatType.PiStorm or FormatType.PiStormMbr or FormatType.PiStormGpt) &&
+            (string.Equals(fileSystem, "pfs3", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(fileSystem, "pds3", StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Get path to pfs3aio file. Uses previously downloaded pfs3aio file, if it exists.
+        /// Otherwise the user is asked before downloading pfs3aio from aminet.net.
+        /// </summary>
+        /// <returns>Path or url to pfs3aio file, null if user declined download.</returns>
+        private static string GetPfs3AioPath()
+        {
+            var pfs3AioPath = Path.Combine(AppState.Instance.AppPath, Path.GetFileName(FormatCommand.Pfs3AioLhaUrl));
+            if (File.Exists(pfs3AioPath))
+            {
+                return pfs3AioPath;
+            }
+
+            if (Console.IsInputRedirected)
+            {
+                return null;
+            }
+
+            Console.Write($"PFS3 file system requires pfs3aio. Download pfs3aio from '{FormatCommand.Pfs3AioLhaUrl}'? [y/N] ");
+            var answer = Console.ReadLine();
+
+            return string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase)
+                ? FormatCommand.Pfs3AioLhaUrl
+                : null;
         }
 
         public static async Task GptInfo(string path, bool showUnallocated)
@@ -701,6 +738,16 @@ namespace Hst.Imager.ConsoleApp
             var command = new FsCopyCommand(GetLogger<FsCopyCommand>(), commandHelper,
                 await GetPhysicalDrives(), srcPath, destPath, recursive, skipAttributes, quiet, uaeMetadata: uaeMetadata,
                 makeDirectory: makeDirectory, forceOverwrite: forceOverwrite);
+            await Execute(command);
+        }
+
+        public static async Task FsMove(string srcPath, string destPath, UaeMetadata uaeMetadata,
+            bool makeDirectory, bool forceOverwrite)
+        {
+            using var commandHelper = GetCommandHelper(useCache: true);
+            var command = new FsMoveCommand(GetLogger<FsMoveCommand>(), commandHelper,
+                await GetPhysicalDrives(), srcPath, destPath, forceOverwrite: forceOverwrite,
+                uaeMetadata: uaeMetadata, makeDirectory: makeDirectory);
             await Execute(command);
         }
 

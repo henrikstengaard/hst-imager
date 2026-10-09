@@ -532,6 +532,43 @@ jobs:
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
+        # code signing windows artifacts with signpath.
+        # skipped until code signing certificate is ready and repository variable SIGNPATH_ENABLED is set to 'true'.
+        # requires repository variable SIGNPATH_ORGANIZATION_ID and secret SIGNPATH_API_TOKEN.
+      - name: Upload unsigned Windows artifacts
+        id: upload_unsigned_windows_artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: hst-imager.windows-unsigned
+          path: |
+            hst-imager.console.win-x64.zip
+            hst-imager.console.win-x86.zip
+            hst-imager.console.win-arm64.zip
+            hst-imager.gui.win-x64-setup.exe
+            hst-imager.gui.win-arm64-setup.exe
+            hst-imager.gui.win-x64-portable.zip
+            hst-imager.gui.win-arm64-portable.zip
+          retention-days: 3
+        if: vars.SIGNPATH_ENABLED == 'true'
+
+      - name: Sign Windows artifacts with SignPath
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: hst-imager
+          signing-policy-slug: release-signing
+          github-artifact-id: ${{ steps.upload_unsigned_windows_artifacts.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+        if: vars.SIGNPATH_ENABLED == 'true'
+
+      - name: Replace Windows artifacts with signed artifacts
+        shell: pwsh
+        run: |
+          Get-ChildItem -Path signed -Recurse -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination . -Force }
+        if: vars.SIGNPATH_ENABLED == 'true'
+
       - name: Version artifacts
         shell: pwsh
         run: |

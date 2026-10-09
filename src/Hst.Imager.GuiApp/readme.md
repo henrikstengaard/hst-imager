@@ -115,4 +115,6 @@ File system path for formatting Rigid Disk Block supports .lha, .iso, .adf and f
 If an .adf or .lha file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .adf or .lha file.
 If an .iso file is set as file system path, then Hst Imager will use the highest version of any file system files found in the .iso including file system files from any .adf file found within the .iso file. 
 
-For PiStorm RDB, the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
+For PiStorm RDB (Master Boot Record), the disk is initialized with Master Boot Record, one partition of size 1GB is added for boot and a second partition is added with type `0x76` formatted same way as Rigid Disk Block is formatted described above.
+
+For PiStorm RDB (Guid Partition Table), the disk is initialized with Guid Partition Table, one partition of size 1GB is added for boot and a second partition is added with type `3F82EEBC-87C9-4097-8165-89D6540557C0` formatted same way as Rigid Disk Block is formatted described above.

@@ -9,7 +9,7 @@ namespace Hst.Imager.AvaloniaApp.Models;
 public class PartitionPlan
 {
     /// <summary>
-    /// Path to disk or PiStorm disk (mbr partition with rigid disk block) to partition.
+    /// Path to disk or PiStorm disk (mbr or gpt partition with rigid disk block) to partition.
     /// </summary>
     public string Path { get; set; } = string.Empty;
 
@@ -21,10 +21,16 @@ public class PartitionPlan
     public bool Byteswap { get; set; }
 
     /// <summary>
-    /// Start offset of master boot record partition added by a preceding plan, which contains PiStorm disk to
-    /// partition. Path is the disk and partition number of master boot record partition is read, when plan is applied.
+    /// Start offset of master boot record or guid partition table partition added by a preceding plan, which contains
+    /// PiStorm disk to partition. Path is the disk and partition number of partition is read from partition table of
+    /// container table type, when plan is applied.
     /// </summary>
     public long? ContainerStartOffset { get; set; }
+
+    /// <summary>
+    /// Partition table type of partition containing PiStorm disk to partition, e.g. master boot record. None for disk.
+    /// </summary>
+    public PartitionTableType ContainerTableType { get; set; }
 
     public PartitionTableType TableType { get; set; }
 
@@ -225,8 +231,9 @@ public class PlannedPartition
     public bool Format { get; set; } = true;
 
     /// <summary>
-    /// Master boot record partition is a PiStorm partition with bios type 0x76 containing a rigid disk block,
-    /// which is not formatted.
+    /// Master boot record partition with bios type 0x76 or guid partition table partition with partition type guid
+    /// 3F82EEBC-87C9-4097-8165-89D6540557C0 is a PiStorm partition containing a rigid disk block, which is not
+    /// formatted.
     /// </summary>
     public bool IsPiStorm { get; set; }
 

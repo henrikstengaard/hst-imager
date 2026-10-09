@@ -16,19 +16,10 @@ using Entry = Models.FileSystems.Entry;
 /// <summary>
 /// File system entry writer.
 /// </summary>
-/// <param name="media">Media mounted.</param>
-/// <param name="partitionTableType">Partition table type mounted.</param>
-/// <param name="partitionNumber">Partition number mounted.</param>
-/// <param name="fileSystem">File system mounted to write entries.</param>
-/// <param name="rootPathComponents">Root path components.</param>
-/// <param name="recursive">Recursive creating directories and files.</param>
-/// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
-/// <param name="forceOverwrite">Force overwriting any existing files.</param>
-public class FileSystemEntryWriter(Media media, PartitionTableType partitionTableType, int partitionNumber,
-    IFileSystem fileSystem, string[] rootPathComponents, bool recursive, bool createDirectory, bool forceOverwrite) : IEntryWriter
+public class FileSystemEntryWriter : IEntryWriter
 {
     private readonly byte[] buffer = new byte[4096];
-    private readonly IMediaPath mediaPath = PathComponents.MediaPath.GenericMediaPath;
+    private readonly IMediaPath mediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
     private bool disposed;
     private readonly HashSet<string> dirPathsCreated = new();
 
@@ -40,13 +31,47 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
     private bool lastPathComponentExist = true;
     private Models.FileSystems.EntryType lastPathComponentEntryType = Models.FileSystems.EntryType.Dir;
     private bool isInitialized = false;
+    private readonly Media _media;
+    private readonly PartitionTableType _partitionTableType;
+    private readonly int _partitionNumber;
+    private readonly IFileSystem _fileSystem;
+    private readonly string[] _rootPathComponents;
+    private readonly bool _recursive;
+    private readonly bool _createDirectory;
+    private readonly bool _forceOverwrite;
 
-    public Media Media => media;
-    public string MediaPath => media.Path;
-    public PartitionTableType PartitionTableType => partitionTableType;
-    public int PartitionNumber => partitionNumber;
+    /// <summary>
+    /// File system entry writer.
+    /// </summary>
+    /// <param name="media">Media mounted.</param>
+    /// <param name="partitionTableType">Partition table type mounted.</param>
+    /// <param name="partitionNumber">Partition number mounted.</param>
+    /// <param name="fileSystem">File system mounted to write entries.</param>
+    /// <param name="rootPathComponents">Root path components.</param>
+    /// <param name="recursive">Recursive creating directories and files.</param>
+    /// <param name="createDirectory">Create directory for root path components, if it doesn't exist.</param>
+    /// <param name="forceOverwrite">Force overwriting any existing files.</param>
+    public FileSystemEntryWriter(Media media, PartitionTableType partitionTableType, int partitionNumber,
+        IFileSystem fileSystem, string[] rootPathComponents, bool recursive, bool createDirectory, bool forceOverwrite)
+    {
+        _media = media;
+        _partitionTableType = partitionTableType;
+        _partitionNumber = partitionNumber;
+        _fileSystem = fileSystem;
+        _rootPathComponents = rootPathComponents;
+        _recursive = recursive;
+        _createDirectory = createDirectory;
+        _forceOverwrite = forceOverwrite;
+    }
+
+    public Media Media => _media;
+    public string MediaPath => _media.Path;
+    public PartitionTableType PartitionTableType => _partitionTableType;
+    public int PartitionNumber => _partitionNumber;
     public string FileSystemPath => string.Empty;
     public UaeMetadata UaeMetadata { get; set; }
+    public string[] PathComponents => _rootPathComponents;
+    public string[] DirPathComponents => dirPathComponents;
 
     private void Dispose(bool disposing)
     {
@@ -57,12 +82,13 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
 
         if (disposing)
         {
-            if (fileSystem is IDisposable disposable)
+            if (_fileSystem is IDisposable disposable)
             {
                 disposable.Dispose();
             }
-            media.Stream.Flush();
-            media.Dispose();
+            
+            _media.Stream?.Flush();
+            _media.Dispose();
         }
 
         disposed = true;
@@ -76,15 +102,15 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
             
         lastPathComponentExist = true;
 
-        for (var i = 0; i < rootPathComponents.Length; i++)
+        for (var i = 0; i < _rootPathComponents.Length; i++)
         {
-            var dirPath = mediaPath.Join(exisingPathComponents.Concat([rootPathComponents[i]]).ToArray());
+            var dirPath = mediaPath.Join(exisingPathComponents.Concat([_rootPathComponents[i]]).ToArray());
 
-            var fileSystemInfo = fileSystem.GetFileSystemInfo(dirPath);
+            var fileSystemInfo = _fileSystem.GetFileSystemInfo(dirPath);
             
-            var nextDirPath = string.Join("/", rootPathComponents.Take(i + 1));
+            var nextDirPath = string.Join("/", _rootPathComponents.Take(i + 1));
 
-            if (!fileSystemInfo.Exists && fileSystemInfo is DiscFileInfo && i < rootPathComponents.Length - 1)
+            if (!fileSystemInfo.Exists && fileSystemInfo is DiscFileInfo && i < _rootPathComponents.Length - 1)
             {
                 return Task.FromResult(new Result(new PathNotFoundError(
                     $"Path '{nextDirPath}' is a file and not a directory", nextDirPath)));
@@ -92,9 +118,9 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
             
             if (!fileSystemInfo.Exists)
             {
-                if (!createDirectory)
+                if (!_createDirectory)
                 {
-                    if (i != rootPathComponents.Length - 1)
+                    if (i != _rootPathComponents.Length - 1)
                     {
                         return Task.FromResult(new Result(new PathNotFoundError(
                             $"Path not found '{nextDirPath}'", nextDirPath)));
@@ -105,28 +131,28 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
                     break;
                 }
                 
-                fileSystem.CreateDirectory(dirPath);
+                _fileSystem.CreateDirectory(dirPath);
             }
             else
             {
-                if (i == rootPathComponents.Length - 1)
+                if (i == _rootPathComponents.Length - 1)
                 {
-                    lastPathComponentEntryType = fileSystem.DirectoryExists(fileSystemInfo.FullName)
+                    lastPathComponentEntryType = _fileSystem.DirectoryExists(fileSystemInfo.FullName)
                         ? Models.FileSystems.EntryType.Dir : Models.FileSystems.EntryType.File;
 
-                    if (!fileSystem.DirectoryExists(fileSystemInfo.FullName))
+                    if (!_fileSystem.DirectoryExists(fileSystemInfo.FullName))
                     {
                         break;
                     }
                 }
             }
             
-            exisingPathComponents.Add(rootPathComponents[i]);
+            exisingPathComponents.Add(_rootPathComponents[i]);
         }
 
-        if (recursive && !lastPathComponentExist)
+        if (_recursive && !lastPathComponentExist)
         {
-            var path = string.Join("/", rootPathComponents);
+            var path = string.Join("/", _rootPathComponents);
             return Task.FromResult(new Result(new PathNotFoundError($"Path '{path}' not found. Directory must exist when using recursive!", path)));
         }
 
@@ -146,17 +172,17 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         }
         
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, _rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         if (fullPathComponents.Length == 0)
         {
             return Task.FromResult(new Result());
         }
         
-        var requiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : rootPathComponents;
+        var requiredPathComponentsToExist = isSingleFileEntry ? dirPathComponents : _rootPathComponents;
 
         var path = mediaPath.Join(requiredPathComponentsToExist);
-        if (!fileSystem.Exists(path))
+        if (!_fileSystem.Exists(path))
         {
             return Task.FromResult(new Result(new PathNotFoundError($"Path not found '{path}'", path)));
         }
@@ -177,12 +203,12 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
 
             var path = mediaPath.Join(pathComponents.Take(i).ToArray());
 
-            if (fileSystem.FileExists(path))
+            if (_fileSystem.FileExists(path))
             {
                 return new Result(new Error($"Create directory path '{path}' failed. Path already exists as a file!"));
             }
             
-            fileSystem.CreateDirectory(path);
+            _fileSystem.CreateDirectory(path);
 
             dirPathsCreated.Add(dirPath);
         }
@@ -199,16 +225,16 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         }
 
         var fullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, entryPathComponents,
-            lastPathComponentEntryType, rootPathComponents, lastPathComponentExist, isSingleFileEntry);
+            lastPathComponentEntryType, _rootPathComponents, lastPathComponentExist, isSingleFileEntry);
 
         var fullPath = mediaPath.Join(fullPathComponents);
 
-        if (!forceOverwrite && fileSystem.FileExists(fullPath))
+        if (!_forceOverwrite && _fileSystem.FileExists(fullPath))
         {
             return new Result(new FileExistsError($"File already exists '{fullPath}'"));
         }
 
-        await using var entryStream = fileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);
+        await using var entryStream = _fileSystem.OpenFile(fullPath, FileMode.OpenOrCreate);
         int bytesRead;
         do
         {
@@ -217,6 +243,52 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         } while (bytesRead != 0);
         
         return new Result();
+    }
+
+    public Task<Result> MoveEntry(Entry entry, string[] srcEntryPathComponents, bool singleFile)
+    {
+        if (!isInitialized)
+        {
+            return Task.FromResult(new Result(new Error("FileSystemEntryWriter is not initialized.")));
+        }
+
+        var destFullPathComponents = PathComponentHelper.GetFullPathComponents(entry.Type, srcEntryPathComponents,
+            lastPathComponentEntryType, _rootPathComponents, lastPathComponentExist, singleFile);
+
+        var srcEntryPath = mediaPath.Join(entry.FullPathComponents);
+        var destEntryPath = mediaPath.Join(destFullPathComponents);
+
+        if (string.IsNullOrEmpty(destEntryPath))
+        {
+            return Task.FromResult(new Result(new Error("Destination path is null or empty.")));
+        }
+
+        if (!_fileSystem.Exists(srcEntryPath))
+        {
+            return Task.FromResult(new Result(new PathNotFoundError($"Source path '{srcEntryPath}' not found", srcEntryPath)));
+        }
+        
+        var destEntryExists = _fileSystem.Exists(destEntryPath);
+        if (!_forceOverwrite && destEntryExists)
+        {
+            return Task.FromResult(new Result(new PathExistsError($"Destination path '{destEntryPath}' already exists")));
+        }
+        
+        if (entry.Type == Models.FileSystems.EntryType.Dir)
+        {
+            _fileSystem.MoveDirectory(srcEntryPath, destEntryPath);
+        }
+        else
+        {
+            if (destEntryExists && _forceOverwrite)
+            {
+                _fileSystem.DeleteFile(destEntryPath);
+            }
+
+            _fileSystem.MoveFile(srcEntryPath, destEntryPath);
+        }
+        
+        return Task.FromResult(new Result());
     }
 
     public Task Flush()
@@ -236,12 +308,12 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
 
     public IEntryIterator CreateEntryIterator(string[] rootPathComponents, bool recursive)
     {
-        return new FileSystemEntryIterator(media, partitionTableType, partitionNumber, fileSystem, rootPathComponents,
+        return new FileSystemEntryIterator(_media, _partitionTableType, _partitionNumber, _fileSystem, rootPathComponents,
             recursive);
     }
 
     private bool IsSameMediaAndPartition(IEntryIterator entryIterator) =>
-        entryIterator.Media != null && media.Equals(entryIterator.Media) &&
+        entryIterator.Media != null && _media.Equals(entryIterator.Media) &&
         entryIterator.PartitionTableType == PartitionTableType &&
         entryIterator.PartitionNumber == PartitionNumber;
 
@@ -264,7 +336,7 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
             return false;
         }
         
-        var lastPathComponent = rootPathComponents.Length > 0 ? rootPathComponents[^1] : string.Empty;
+        var lastPathComponent = _rootPathComponents.Length > 0 ? _rootPathComponents[^1] : string.Empty;
 
         // return true, if last writer path component is empty or if last writer path component exist and
         // is same as last iterator path component
@@ -282,7 +354,7 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
         }
 
         // return false, if not recursive
-        if (!recursive && entryIterator.IsSingleFileEntryNext)
+        if (!_recursive && entryIterator.IsSingleFileEntryNext)
         {
             return false;
         }
@@ -297,7 +369,7 @@ public class FileSystemEntryWriter(Media media, PartitionTableType partitionTabl
                                               (entryIterator.DirPathComponents.Length == 0 || entryIterator.DirPathComponents.SequenceEqual(sameDirPathComponents));
         
         // return true, if writer has same or more path components and it's recursive
-        return hasSameAndMoreDirPathComponents && recursive;
+        return hasSameAndMoreDirPathComponents && _recursive;
     }
 
     public bool SupportsUaeMetadata => false;

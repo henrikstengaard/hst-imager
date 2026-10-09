@@ -142,8 +142,9 @@ public class PartitionViewModel : ViewModelBase
     private IEnumerable<DiskPartitionTable> ActiveTables => _tables.Where(x => x.IsActive);
 
     /// <summary>
-    /// Partition tables in order changes are applied. Partition tables in master boot record partitions are applied
-    /// first, as partition numbers in their paths can change by changes to master boot record. Master boot record is
+    /// Partition tables in order changes are applied. Partition tables in master boot record and guid partition table
+    /// partitions are applied first, as partition numbers in their paths can change by changes to master boot record
+    /// or guid partition table. Master boot record is
     /// applied before rigid disk block, as rigid disk block initialized for a hybrid disk keeps master boot record and
     /// rigid disk block expanded can use space of deleted master boot record partitions. Rigid disk block shrunk is
     /// applied before master boot record, so master boot record partitions can be added in space freed.
@@ -184,7 +185,8 @@ public class PartitionViewModel : ViewModelBase
 
     /// <summary>
     /// Build partition tables in order they are placed on disk. Rigid disk block is placed before master boot record
-    /// partitions in a hybrid disk and PiStorm rigid disk blocks are in master boot record partitions.
+    /// partitions in a hybrid disk and PiStorm rigid disk blocks are in master boot record or guid partition table
+    /// partitions.
     /// Size of rigid disk block is the cylinders it uses, other partition tables use the whole disk.
     /// </summary>
     private List<PartitionTableSummary> BuildPartitionTableSummaries() => ActiveTables
@@ -635,7 +637,7 @@ public class PartitionViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Read partition tables of disk and PiStorm disks in master boot record partitions.
+    /// Read partition tables of disk and PiStorm disks in master boot record and guid partition table partitions.
     /// </summary>
     private Task<List<DiskPartitionTable>> ReadPartitionTablesAsync(MediaInfo? media) =>
         DiskPartitionTables.ReadAsync(_mediaService, media, Source.Byteswap, error =>
@@ -730,7 +732,8 @@ public class PartitionViewModel : ViewModelBase
                 mbrLayout.GetPartitionAreas().ToList());
             mbrLayout.ReserveRigidDiskBlock(dialog.RdbSize, rdbBlockLo);
             SetTables(new[] { new DiskPartitionTable(rdbLayout, _media.Path) }
-                .Concat(_tables.Where(x => ReferenceEquals(x.Layout, mbrLayout) || !x.IsDiskPath))
+                .Concat(_tables.Where(x => ReferenceEquals(x.Layout, mbrLayout) ||
+                                           ReferenceEquals(x.ContainerLayout, mbrLayout)))
                 .ToList(), rdbLayout);
             return;
         }
@@ -1013,13 +1016,13 @@ public class PartitionViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Add new rigid disk block for new master boot record partitions switched to PiStorm partitions and initialize
-    /// rigid disk block again with new partitions kept, when PiStorm partition is resized. Rigid disk blocks of
+    /// Add new rigid disk block for new master boot record and guid partition table partitions switched to PiStorm
+    /// partitions and initialize rigid disk block again with new partitions kept, when PiStorm partition is resized. Rigid disk blocks of
     /// partitions switched back to regular partitions are kept inactive, so switching again restores them.
     /// </summary>
     private void SyncNewPiStormTables()
     {
-        if (_media == null || MasterBootRecordTable?.Layout is not { } mbrLayout)
+        if (_media == null)
             return;
 
         for (var i = 0; i < _tables.Count; i++)
@@ -1036,16 +1039,24 @@ public class PartitionViewModel : ViewModelBase
             _tables[i] = table with { Layout = layout };
         }
 
-        foreach (var partition in mbrLayout.Partitions.Where(x => x.IsPiStorm &&
-                                                                  _tables.All(t => !ReferenceEquals(t.Container, x))))
+        var containerLayouts = _tables
+            .Where(x => x.IsDiskPath && x.Layout.TableType is PartitionTableType.MasterBootRecord
+                or PartitionTableType.GuidPartitionTable)
+            .Select(x => x.Layout)
+            .ToList();
+        foreach (var containerLayout in containerLayouts)
         {
-            var layout = PartitionLayout.CreateNewRdb(partition.Size, 0, 0, null);
-            layout.Changed += OnLayoutChanged;
-            _tables.Add(new DiskPartitionTable(layout, _media.Path)
+            foreach (var partition in containerLayout.Partitions.Where(x => x.IsPiStorm &&
+                         _tables.All(t => !ReferenceEquals(t.Container, x))))
             {
-                Container = partition,
-                ContainerLayout = mbrLayout
-            });
+                var layout = PartitionLayout.CreateNewRdb(partition.Size, 0, 0, null);
+                layout.Changed += OnLayoutChanged;
+                _tables.Add(new DiskPartitionTable(layout, _media.Path)
+                {
+                    Container = partition,
+                    ContainerLayout = containerLayout
+                });
+            }
         }
     }
 
@@ -1397,6 +1408,7 @@ public class PartitionViewModel : ViewModelBase
         var plan = table.Layout.CreatePlan(table.Path);
         plan.IsDiskPath = table.IsDiskPath;
         plan.ContainerStartOffset = table.IsInNewPartition ? table.Container!.Start : null;
+        plan.ContainerTableType = table.ContainerTableType;
         plan.Byteswap = Source.Byteswap;
         plan.Pfs3FileSystemPath = _downloadPfs3Aio ? Pfs3AioUrl : _pfs3FileSystemPath;
         plan.FastFileSystemPath = _fastFileSystemPath;

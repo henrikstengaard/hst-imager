@@ -731,7 +731,8 @@ public class MediaSelectionViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Build PiStorm disk options from mbr partitions with bios type 0x76 (118).
+    /// Build PiStorm disk options from master boot record partitions with bios type 0x76 (118) and guid partition
+    /// table partitions with partition type guid 3F82EEBC-87C9-4097-8165-89D6540557C0.
     /// </summary>
     private static List<SelectOption> GetPiStormDiskOptions(MediaInfo media)
     {
@@ -740,18 +741,17 @@ public class MediaSelectionViewModel : ViewModelBase
             new() { Title = $"Disk ({MediaOptions.FormatBytes(media.DiskSize)})", Value = media.Path }
         };
 
-        var mbrPartitionTablePart = media.DiskInfo?.MbrPartitionTablePart;
-        if (mbrPartitionTablePart == null)
-            return options;
+        foreach (var tableType in new[] { PartitionTableType.MasterBootRecord, PartitionTableType.GuidPartitionTable })
+        {
+            var tableName = PartitionLayout.GetTableTypeAbbreviation(tableType);
+            options.AddRange(DiskPartitionTables.GetPiStormParts(media, tableType)
+                .Select(part => new SelectOption
+                {
+                    Title = $"{tableName} partition #{part.PartitionNumber}: {MediaOptions.FormatPartType(part)} ({MediaOptions.FormatBytes(part.Size)})",
+                    Value = DiskPartitionTables.GetPiStormPath(media.Path, tableType, part.PartitionNumber!.Value)
+                }));
+        }
 
-        var separator = media.Path.StartsWith('/') ? "/" : "\\";
-        options.AddRange((mbrPartitionTablePart.Parts ?? [])
-            .Where(x => x.PartType == PartType.Partition && x.BiosType == "118")
-            .Select(part => new SelectOption
-            {
-                Title = $"Partition #{part.PartitionNumber}: {MediaOptions.FormatPartType(part)} ({MediaOptions.FormatBytes(part.Size)})",
-                Value = string.Concat(media.Path, separator, "mbr", separator, part.PartitionNumber)
-            }));
         return options;
     }
 }

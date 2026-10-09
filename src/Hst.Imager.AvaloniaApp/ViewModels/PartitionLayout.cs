@@ -135,6 +135,11 @@ public static class PartitionTypes
 {
     public const int PiStormBiosType = 0x76;
 
+    /// <summary>
+    /// Partition type guid of PiStorm guid partition containing a rigid disk block.
+    /// </summary>
+    public static readonly string PiStormGuidType = Core.Constants.GuidPartitionTypes.PiStormRdb.ToString("D");
+
     private static readonly string[] Fat32 = ["fat32"];
     private static readonly string[] BasicData = ["fat32", "exfat", "ntfs"];
 
@@ -166,6 +171,7 @@ public static class PartitionTypes
         new() { Title = "Linux LVM", Value = "e6d6d379-f507-44c2-a23c-238f2a3df928" },
         new() { Title = "Apple HFS+", Value = "48465300-0000-11aa-aa11-00306543ecac" },
         new() { Title = "Apple APFS", Value = "7c3457ef-0000-11aa-aa11-00306543ecac" },
+        new() { Title = "PiStorm Rigid Disk Block", Value = PiStormGuidType },
         new() { Title = "Enter partition type guid manually", Value = PartitionTypeOption.CustomValue }
     ];
 
@@ -204,6 +210,31 @@ public static class PartitionTypes
         PartitionTableType.GuidPartitionTable => GptOptions[0].Value,
         _ => fileSystem.ToUpperInvariant()
     };
+
+    /// <summary>
+    /// Partition type is a PiStorm partition containing a rigid disk block, which is bios type 0x76 in master boot
+    /// record and partition type guid 3F82EEBC-87C9-4097-8165-89D6540557C0 in guid partition table.
+    /// </summary>
+    public static bool IsPiStorm(PartitionTableType tableType, string? value) => tableType switch
+    {
+        PartitionTableType.MasterBootRecord => TryParseBiosType(value ?? string.Empty, out var biosType) &&
+                                               biosType == PiStormBiosType,
+        PartitionTableType.GuidPartitionTable => Guid.TryParse(value, out var guid) &&
+                                                 guid == Core.Constants.GuidPartitionTypes.PiStormRdb,
+        _ => false
+    };
+
+    /// <summary>
+    /// Part of master boot record or guid partition table is a PiStorm partition containing a rigid disk block.
+    /// Bios type of master boot record parts is decimal, e.g. 118 for 0x76.
+    /// </summary>
+    public static bool IsPiStorm(PartitionTableType tableType, PartInfo part) =>
+        part.PartType == PartType.Partition && tableType switch
+        {
+            PartitionTableType.MasterBootRecord => part.BiosType == PiStormBiosType.ToString(CultureInfo.InvariantCulture),
+            PartitionTableType.GuidPartitionTable => IsPiStorm(tableType, part.GuidType),
+            _ => false
+        };
 
     /// <summary>
     /// Parse bios type in hex with or without 0x prefix, e.g. 0x0c, 0c or c.
@@ -528,11 +559,11 @@ public class PartitionEntryViewModel : ReactiveObject
     public bool CanEditPartitionType => IsNew;
 
     /// <summary>
-    /// New master boot record partition with bios type 0x76 is a PiStorm partition containing a rigid disk block,
-    /// which isn't formatted.
+    /// New master boot record partition with bios type 0x76 or guid partition with partition type guid
+    /// 3F82EEBC-87C9-4097-8165-89D6540557C0 is a PiStorm partition containing a rigid disk block, which isn't
+    /// formatted.
     /// </summary>
-    public bool IsPiStorm => IsNew && IsMbr && PartitionTypes.TryParseBiosType(_partitionType, out var biosType) &&
-                             biosType == PartitionTypes.PiStormBiosType;
+    public bool IsPiStorm => IsNew && PartitionTypes.IsPiStorm(TableType, _partitionType);
 
     /// <summary>
     /// New partition is formatted with a file system. Rigid disk block partitions can only be formatted with fast file
@@ -2240,17 +2271,18 @@ public class PartitionLayout
 /// <summary>
 /// Partition table of disk being partitioned. Disks can have multiple partition tables, which are edited as one,
 /// like hybrid disks with a rigid disk block and a master boot record or PiStorm disks with rigid disk blocks in
-/// master boot record partitions.
+/// master boot record or guid partition table partitions.
 /// </summary>
 public record DiskPartitionTable(PartitionLayout Layout, string Path)
 {
     /// <summary>
-    /// Master boot record partition partition table is in, e.g. PiStorm rigid disk block. Null for disk.
+    /// Master boot record or guid partition table partition partition table is in, e.g. PiStorm rigid disk block.
+    /// Null for disk.
     /// </summary>
     public PartitionEntryViewModel? Container { get; init; }
 
     /// <summary>
-    /// Layout of master boot record container partition is in.
+    /// Layout of master boot record or guid partition table container partition is in.
     /// </summary>
     public PartitionLayout? ContainerLayout { get; init; }
 
@@ -2277,13 +2309,18 @@ public record DiskPartitionTable(PartitionLayout Layout, string Path)
     public bool IsInNewPartition => Container is { IsNew: true };
 
     /// <summary>
+    /// Partition table type of container partition is in, e.g. master boot record. None for disk.
+    /// </summary>
+    public PartitionTableType ContainerTableType => ContainerLayout?.TableType ?? PartitionTableType.None;
+
+    /// <summary>
     /// Name of partition partition table is in, e.g. Master Boot Record partition #2.
     /// </summary>
     public string ContainerName => Container == null
         ? string.Empty
         : Container.IsNew
-            ? $"new {PartitionLayout.FormatTableTypeName(PartitionTableType.MasterBootRecord)} PiStorm partition"
-            : $"{PartitionLayout.FormatTableTypeName(PartitionTableType.MasterBootRecord)} partition #{Container.Number}";
+            ? $"new {PartitionLayout.FormatTableTypeName(ContainerTableType)} PiStorm partition"
+            : $"{PartitionLayout.FormatTableTypeName(ContainerTableType)} partition #{Container.Number}";
 }
 
 /// <summary>

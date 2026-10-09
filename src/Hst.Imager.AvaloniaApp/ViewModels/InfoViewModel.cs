@@ -34,7 +34,8 @@ public class InfoViewModel : ViewModelBase
         _mediaService = mediaService;
         _navigationService = navigationService;
 
-        // PiStorm disks in master boot record partitions can be selected to read their rigid disk block
+        // PiStorm disks in master boot record and guid partition table partitions can be selected to read their rigid
+        // disk block
         Source = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
         {
             Title = "Disk",
