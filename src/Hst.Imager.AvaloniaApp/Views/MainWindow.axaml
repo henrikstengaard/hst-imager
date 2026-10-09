@@ -5,7 +5,7 @@
         xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
         x:Class="Hst.Imager.AvaloniaApp.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Title="Hst Imager"
+        Title="{Binding Title}"
         Icon="avares://Hst.Imager.AvaloniaApp/Assets/hst.imager.ico"
         Width="1280" Height="720"
         MinWidth="900" MinHeight="500"

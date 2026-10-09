@@ -43,6 +43,10 @@ public class MainWindowViewModel : ViewModelBase
 
     public bool IsElevated { get; } = User.IsAdministrator();
 
+    public string Title => IsElevated
+        ? $"{Core.Models.Constants.AppName} (Administrator)"
+        : Core.Models.Constants.AppName;
+
     public IReadOnlyList<NavItemViewModel> NavItems { get; } =
     [
         new("Start", "Start", "fa-home") { IsActive = true },
