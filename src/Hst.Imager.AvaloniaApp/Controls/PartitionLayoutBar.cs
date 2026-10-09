@@ -159,7 +159,7 @@ public class PartitionLayoutBar : Control
             AddPartitionPlacement.End => "last third of unallocated space",
             _ => "all unallocated space"
         };
-        return $"Add {layout.TableTypeName} partition in {area}";
+        return $"Add partition in {area}";
     }
 
     private enum DragMode
@@ -404,7 +404,7 @@ public class PartitionLayoutBar : Control
         // longest label fitting in placement is shown
         var layout = segment.Layout;
         var labels = layout.CanAddPartition
-            ? new[] { $"Add {layout.TableTypeName} partition", "Add partition", "Add" }
+            ? new[] { "Add partition", "Add" }
             : new[] { $"Max {layout.MaxPartitions} partitions", "Max" };
         var label = labels
             .Select(x => CreateText(x, new Typeface(FontFamily.Default), 11, FontWeight.SemiBold, textBrush))
