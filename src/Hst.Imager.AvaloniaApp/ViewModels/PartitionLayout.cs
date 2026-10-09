@@ -1995,7 +1995,9 @@ public class PartitionLayout
             Number = x.Number!.Value,
             DosType = x.IsDosTypeChanged ? x.DosType : null,
             Name = x.IsNameChanged ? x.Name : null,
-            Path = x.IsDataReplaced ? x.Path : null
+            Path = x.IsDataReplaced ? x.Path : null,
+            Version = x.IsVersionChanged ? (int?)x.VersionNumber : null,
+            Revision = x.IsVersionChanged ? (int?)x.RevisionNumber : null
         }).ToList(),
         DeleteFileSystemNumbers = GetFileSystemsToDelete(_deletedFileSystems).Select(x => x.Number!.Value).ToList(),
         AddFileSystems = _fileSystems.Where(x => x.IsNew).Select(x => new PlannedFileSystem
@@ -2005,22 +2007,10 @@ public class PartitionLayout
             Name = x.Name,
             IsImport = x.IsFromMedia,
             CloneNumber = x.IsClone ? x.CloneNumber : null,
-            Version = x.RequiresManualVersion ? (int?)x.ManualVersion : x.IsClone ? ParseVersion(x.Version).Version : null,
-            Revision = x.RequiresManualVersion ? (int?)x.ManualRevision : x.IsClone ? ParseVersion(x.Version).Revision : null
+            Version = (int?)x.VersionNumber,
+            Revision = (int?)x.RevisionNumber
         }).ToList()
     };
-
-    /// <summary>
-    /// Parse version and revision of file system, e.g. 19.2. Version of cloned file system is used, if exported file
-    /// system data doesn't have a version string.
-    /// </summary>
-    private static (int? Version, int? Revision) ParseVersion(string version)
-    {
-        var parts = version.Split('.');
-        return parts.Length == 2 && int.TryParse(parts[0], out var major) && int.TryParse(parts[1], out var minor)
-            ? (major, minor)
-            : (null, null);
-    }
 
     // ─── File systems ─────────────────────────────────────────────────────────
 
@@ -2146,8 +2136,11 @@ public class PartitionLayout
                     $"File system file of {title} is larger than max size {MediaOptions.FormatBytes(RdbFileSystemEntry.MaxFileSystemSize)}");
 
             if (fileSystem.RequiresManualVersion &&
-                (!fileSystem.ManualVersion.HasValue || !fileSystem.ManualRevision.HasValue))
+                (!fileSystem.VersionNumber.HasValue || !fileSystem.RevisionNumber.HasValue))
                 errors.Add($"Version and revision are required for {title}, as file system file has no version string");
+            else if (fileSystem.VersionNumber.HasValue != fileSystem.RevisionNumber.HasValue ||
+                     (fileSystem.IsVersionChanged && !fileSystem.VersionNumber.HasValue))
+                errors.Add($"Version and revision are both required for {title}");
         }
 
         foreach (var dosType in fileSystems

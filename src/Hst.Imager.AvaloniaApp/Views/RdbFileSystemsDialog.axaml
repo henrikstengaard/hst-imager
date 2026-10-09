@@ -110,25 +110,29 @@
       </StackPanel>
       <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding PathHelp}" />
 
-      <!-- Version of file system file without version string -->
-      <StackPanel Spacing="4" IsVisible="{Binding SelectedFileSystem.RequiresManualVersion, FallbackValue=False}">
+      <!-- Version of file system -->
+      <StackPanel Spacing="4">
         <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto">
           <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
             <ia:Icon Value="fa-code-branch" Classes="field-icon" />
             <TextBlock Classes="field-label" Text="Version" />
           </StackPanel>
           <NumericUpDown Grid.Row="1" Grid.Column="0" Minimum="0" Maximum="65535" Increment="1" FormatString="0"
-                         Value="{Binding SelectedFileSystem.ManualVersion, FallbackValue={x:Null}}" />
+                         Value="{Binding SelectedFileSystem.VersionNumber, FallbackValue={x:Null}}" />
           <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
             <ia:Icon Value="fa-code-branch" Classes="field-icon" />
             <TextBlock Classes="field-label" Text="Revision" />
           </StackPanel>
           <NumericUpDown Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" Minimum="0" Maximum="65535" Increment="1"
                          FormatString="0"
-                         Value="{Binding SelectedFileSystem.ManualRevision, FallbackValue={x:Null}}" />
+                         Value="{Binding SelectedFileSystem.RevisionNumber, FallbackValue={x:Null}}" />
         </Grid>
         <TextBlock Classes="field-help" TextWrapping="Wrap"
+                   IsVisible="{Binding SelectedFileSystem.RequiresManualVersion, FallbackValue=False}"
                    Text="File system file has no version string. Version and revision must be set manually." />
+        <TextBlock Classes="field-help" TextWrapping="Wrap"
+                   IsVisible="{Binding !SelectedFileSystem.RequiresManualVersion, FallbackValue=False}"
+                   Text="Version is read from file system and can be changed." />
       </StackPanel>
     </StackPanel>
 

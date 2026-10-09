@@ -23,9 +23,12 @@ public class RdbFsUpdateCommand : CommandBase
     private readonly string dosType;
     private readonly string fileSystemName;
     private readonly string fileSystemPath;
+    private readonly int? version;
+    private readonly int? revision;
 
     public RdbFsUpdateCommand(ILogger<RdbFsUpdateCommand> logger, ICommandHelper commandHelper,
-        IEnumerable<IPhysicalDrive> physicalDrives, string path, int fileSystemNumber, string dosType, string fileSystemName, string fileSystemPath)
+        IEnumerable<IPhysicalDrive> physicalDrives, string path, int fileSystemNumber, string dosType, string fileSystemName, string fileSystemPath,
+        int? version = null, int? revision = null)
     {
         this.logger = logger;
         this.commandHelper = commandHelper;
@@ -35,6 +38,8 @@ public class RdbFsUpdateCommand : CommandBase
         this.dosType = dosType;
         this.fileSystemName = fileSystemName;
         this.fileSystemPath = fileSystemPath;
+        this.version = version;
+        this.revision = revision;
     }
 
     public override async Task<Result> Execute(CancellationToken token)
@@ -118,6 +123,23 @@ public class RdbFsUpdateCommand : CommandBase
             fileSystemHeaderBlock.NextFileSysHeaderBlock = 0;
             
             OnInformationMessage($"Size '{((long)fileSystemHeaderBlock.FileSystemSize).FormatBytes()}' ({fileSystemHeaderBlock.FileSystemSize} bytes)");
+        }
+
+        if (version.HasValue || revision.HasValue)
+        {
+            OnDebugMessage($"Updating file system version '{version?.ToString() ?? "-"}.{revision?.ToString() ?? "-"}'");
+
+            if (version.HasValue)
+            {
+                fileSystemHeaderBlock.Version = version.Value;
+            }
+
+            if (revision.HasValue)
+            {
+                fileSystemHeaderBlock.Revision = revision.Value;
+            }
+
+            OnInformationMessage($"Version '{fileSystemHeaderBlock.VersionFormatted}'");
         }
 
         OnDebugMessage("Writing Rigid Disk Block");

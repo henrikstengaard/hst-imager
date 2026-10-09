@@ -291,7 +291,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
         if (e.PropertyName is nameof(RdbFileSystemEntry.DosType) or nameof(RdbFileSystemEntry.Name)
             or nameof(RdbFileSystemEntry.Path) or nameof(RdbFileSystemEntry.Size)
             or nameof(RdbFileSystemEntry.SourceError) or nameof(RdbFileSystemEntry.HasVersionString)
-            or nameof(RdbFileSystemEntry.ManualVersion) or nameof(RdbFileSystemEntry.ManualRevision))
+            or nameof(RdbFileSystemEntry.VersionNumber) or nameof(RdbFileSystemEntry.RevisionNumber))
             Validate();
     }
 
@@ -338,7 +338,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
 
         var version = RdbFileSystemEntry.FormatVersion(VersionStringReader.Read(data));
         fileSystem.Size = size;
-        fileSystem.Version = version;
+        fileSystem.SetVersion(version);
         fileSystem.HasVersionString = data.Length == 0 || !string.IsNullOrEmpty(version);
         return string.Empty;
     }
@@ -349,7 +349,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
         if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(name) || RdbFileSystemEntry.IsUrl(path))
         {
             fileSystem.Size = null;
-            fileSystem.Version = string.Empty;
+            fileSystem.SetVersion(string.Empty);
             return string.Empty;
         }
 
@@ -361,7 +361,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
             return string.Empty;
 
         fileSystem.Size = info?.Size;
-        fileSystem.Version = info?.Version ?? string.Empty;
+        fileSystem.SetVersion(info?.Version ?? string.Empty);
         return info == null ? $"File system '{name}' not found in media '{System.IO.Path.GetFileName(path)}'" : string.Empty;
     }
 

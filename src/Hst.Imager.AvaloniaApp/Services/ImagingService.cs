@@ -308,7 +308,7 @@ public class ImagingService : IImagingService
         {
             await Run(new RdbFsUpdateCommand(_loggerFactory.CreateLogger<RdbFsUpdateCommand>(), commandHelper,
                 physicalDrives, path, update.Number, update.DosType ?? string.Empty, update.Name ?? string.Empty,
-                update.Path ?? string.Empty));
+                update.Path ?? string.Empty, update.Version, update.Revision));
         }
 
         // delete file systems from highest number, so file system numbers to delete are not changed by deleting
@@ -318,8 +318,9 @@ public class ImagingService : IImagingService
                 physicalDrives, path, fileSystemNumber));
         }
 
-        // add and import file systems, which replace existing file systems with same dos type. name is set after
-        // adding, as file system name is set to name of file or name found in media when added
+        // add and import file systems, which replace existing file systems with same dos type. name and version are
+        // set after adding, as file system name is set to name of file or name found in media and version is read
+        // from version string of file system when added
         foreach (var fileSystem in plan.AddFileSystems)
         {
             if (fileSystem.IsImport)
@@ -352,7 +353,8 @@ public class ImagingService : IImagingService
             var fileSystemNumber = await ReadRdbFileSystemNumberAsync(commandHelper, physicalDrives, path,
                 fileSystem.DosType, token);
             await Run(new RdbFsUpdateCommand(_loggerFactory.CreateLogger<RdbFsUpdateCommand>(), commandHelper,
-                physicalDrives, path, fileSystemNumber, string.Empty, fileSystem.Name, string.Empty));
+                physicalDrives, path, fileSystemNumber, string.Empty, fileSystem.Name, string.Empty, fileSystem.Version,
+                fileSystem.Revision));
         }
 
         // add file systems used by new partitions, which are not already in rigid disk block

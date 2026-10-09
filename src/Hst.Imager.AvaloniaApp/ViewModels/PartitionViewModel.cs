@@ -1279,6 +1279,8 @@ public class PartitionViewModel : ViewModelBase
                 changes.Add($"name to '{fileSystem.Name}'");
             if (fileSystem.IsDataReplaced)
                 changes.Add($"data with file '{fileSystem.Path}'");
+            if (fileSystem.IsVersionChanged)
+                changes.Add($"version to {fileSystem.Version}");
             operations.Add(
                 $"Update {layout.TableTypeName} file system #{fileSystem.Number} ({fileSystem.OriginalDosType}) {string.Join(", ", changes)}{location}");
         }

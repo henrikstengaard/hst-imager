@@ -49,11 +49,10 @@ public class RdbFileSystemEntry : ReactiveObject
     private string _dosTypeText = string.Empty;
     private string _name = string.Empty;
     private string _path = string.Empty;
-    private string _version = string.Empty;
     private long? _size;
     private bool _hasVersionString = true;
-    private decimal? _manualVersion;
-    private decimal? _manualRevision;
+    private decimal? _versionNumber;
+    private decimal? _revisionNumber;
     private string _sourceError = string.Empty;
 
     public RdbFileSystemEntry(RdbFileSystemSource source)
@@ -87,6 +86,12 @@ public class RdbFileSystemEntry : ReactiveObject
     /// Name of existing file system read from disk.
     /// </summary>
     public string OriginalName { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Version and revision of existing file system read from disk.
+    /// </summary>
+    public int? OriginalVersionNumber { get; init; }
+    public int? OriginalRevisionNumber { get; init; }
 
     /// <summary>
     /// Dos type of file system without backslash, e.g. PFS3 or DOS3.
@@ -150,13 +155,11 @@ public class RdbFileSystemEntry : ReactiveObject
     }
 
     /// <summary>
-    /// Version of file system, e.g. 19.2.
+    /// Version of file system, e.g. 19.2. Empty, if version or revision isn't set.
     /// </summary>
-    public string Version
-    {
-        get => _version;
-        set => this.RaiseAndSetIfChanged(ref _version, value);
-    }
+    public string Version => _versionNumber.HasValue && _revisionNumber.HasValue
+        ? $"{_versionNumber:0}.{_revisionNumber:0}"
+        : string.Empty;
 
     public long? Size
     {
@@ -171,8 +174,8 @@ public class RdbFileSystemEntry : ReactiveObject
     public string SizeText => _size.HasValue ? MediaOptions.FormatBytes(_size.Value) : string.Empty;
 
     /// <summary>
-    /// File system file has a version string. Version and revision must be set manually for file system added from a
-    /// file without a version string.
+    /// File system file has a version string. Version and revision must be set for file system added from a file
+    /// without a version string.
     /// </summary>
     public bool HasVersionString
     {
@@ -186,16 +189,31 @@ public class RdbFileSystemEntry : ReactiveObject
 
     public bool RequiresManualVersion => IsFromFile && !_hasVersionString;
 
-    public decimal? ManualVersion
+    /// <summary>
+    /// Version of file system (number before . in version). Read from disk for existing file systems and from file
+    /// system file or media for new file systems, which can be changed.
+    /// </summary>
+    public decimal? VersionNumber
     {
-        get => _manualVersion;
-        set => this.RaiseAndSetIfChanged(ref _manualVersion, value);
+        get => _versionNumber;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _versionNumber, value);
+            RaiseVersionChanged();
+        }
     }
 
-    public decimal? ManualRevision
+    /// <summary>
+    /// Revision of file system (number after . in version).
+    /// </summary>
+    public decimal? RevisionNumber
     {
-        get => _manualRevision;
-        set => this.RaiseAndSetIfChanged(ref _manualRevision, value);
+        get => _revisionNumber;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _revisionNumber, value);
+            RaiseVersionChanged();
+        }
     }
 
     /// <summary>
@@ -219,7 +237,9 @@ public class RdbFileSystemEntry : ReactiveObject
     public bool IsDosTypeChanged => IsExisting && !string.Equals(_dosType, OriginalDosType, StringComparison.OrdinalIgnoreCase);
     public bool IsNameChanged => IsExisting && _name != OriginalName;
     public bool IsDataReplaced => IsExisting && !string.IsNullOrWhiteSpace(_path);
-    public bool IsUpdated => IsDosTypeChanged || IsNameChanged || IsDataReplaced;
+    public bool IsVersionChanged => IsExisting &&
+                                    (_versionNumber != OriginalVersionNumber || _revisionNumber != OriginalRevisionNumber);
+    public bool IsUpdated => IsDosTypeChanged || IsNameChanged || IsDataReplaced || IsVersionChanged;
 
     public string NumberText => Number?.ToString() ?? string.Empty;
 
@@ -235,9 +255,12 @@ public class RdbFileSystemEntry : ReactiveObject
             Number = number,
             OriginalDosType = dosType,
             OriginalName = name,
+            OriginalVersionNumber = headerBlock.Version,
+            OriginalRevisionNumber = headerBlock.Revision,
             DosType = dosType,
             Name = name,
-            Version = headerBlock.VersionFormatted ?? string.Empty,
+            VersionNumber = headerBlock.Version,
+            RevisionNumber = headerBlock.Revision,
             Size = headerBlock.LoadSegBlocks?.Sum(x => (long)(x.Data?.Length ?? 0)) ?? 0
         };
     }
@@ -248,14 +271,15 @@ public class RdbFileSystemEntry : ReactiveObject
         CloneNumber = CloneNumber,
         OriginalDosType = OriginalDosType,
         OriginalName = OriginalName,
+        OriginalVersionNumber = OriginalVersionNumber,
+        OriginalRevisionNumber = OriginalRevisionNumber,
         DosType = _dosType,
         Name = _name,
         Path = _path,
-        Version = _version,
         Size = _size,
         HasVersionString = _hasVersionString,
-        ManualVersion = _manualVersion,
-        ManualRevision = _manualRevision,
+        VersionNumber = _versionNumber,
+        RevisionNumber = _revisionNumber,
         SourceError = _sourceError
     };
 
@@ -269,11 +293,10 @@ public class RdbFileSystemEntry : ReactiveObject
         DosType = _dosType,
         Name = _name,
         Path = IsExisting ? string.Empty : _path,
-        Version = _version,
         Size = _size,
         HasVersionString = _hasVersionString,
-        ManualVersion = _manualVersion,
-        ManualRevision = _manualRevision,
+        VersionNumber = _versionNumber,
+        RevisionNumber = _revisionNumber,
         SourceError = _sourceError
     };
 
@@ -307,6 +330,24 @@ public class RdbFileSystemEntry : ReactiveObject
         return version == null ? string.Empty : $"{version.Version}.{version.Revision}";
     }
 
+    /// <summary>
+    /// Set version and revision from version read from file system file or media, e.g. 19.2. Version and revision are
+    /// cleared, if version is empty or invalid.
+    /// </summary>
+    public void SetVersion(string version)
+    {
+        var parts = version.Split('.');
+        if (parts.Length == 2 && int.TryParse(parts[0], out var major) && int.TryParse(parts[1], out var minor))
+        {
+            VersionNumber = major;
+            RevisionNumber = minor;
+            return;
+        }
+
+        VersionNumber = null;
+        RevisionNumber = null;
+    }
+
     public static bool IsUrl(string path) => path.StartsWith("http", StringComparison.OrdinalIgnoreCase);
 
     private void SetDosType(string value)
@@ -315,6 +356,12 @@ public class RdbFileSystemEntry : ReactiveObject
         this.RaisePropertyChanged(nameof(DosTypeText));
         this.RaisePropertyChanged(nameof(DosTypeError));
         this.RaisePropertyChanged(nameof(HasDosTypeError));
+        RaiseStatusChanged();
+    }
+
+    private void RaiseVersionChanged()
+    {
+        this.RaisePropertyChanged(nameof(Version));
         RaiseStatusChanged();
     }
 

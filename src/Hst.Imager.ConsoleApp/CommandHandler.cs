@@ -566,11 +566,12 @@ namespace Hst.Imager.ConsoleApp
         }
 
         public static async Task RdbFsUpdate(string path, int fileSystemNumber, string dosType, string fileSystemName,
-            string fileSystemPath)
+            string fileSystemPath, int? version, int? revision)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new RdbFsUpdateCommand(GetLogger<RdbFsUpdateCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath));
+                await GetPhysicalDrives(), path, fileSystemNumber, dosType, fileSystemName, fileSystemPath, version,
+                revision));
         }
 
         public static async Task RdbPartAdd(string path, string name, string dosType, string size, uint? reserved,

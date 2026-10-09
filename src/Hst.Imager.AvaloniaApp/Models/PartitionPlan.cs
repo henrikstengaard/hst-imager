@@ -133,6 +133,16 @@ public class PlannedFileSystemUpdate
     /// Path to file system file to replace data of file system with.
     /// </summary>
     public string? Path { get; set; }
+
+    /// <summary>
+    /// Version of file system (number before . in version).
+    /// </summary>
+    public int? Version { get; set; }
+
+    /// <summary>
+    /// Revision of file system (number after . in version).
+    /// </summary>
+    public int? Revision { get; set; }
 }
 
 /// <summary>
@@ -164,12 +174,14 @@ public class PlannedFileSystem
     public int? CloneNumber { get; set; }
 
     /// <summary>
-    /// Version of file system added from a file system file without a version string or of file system cloned.
+    /// Version of file system, which is used when adding a file system file without a version string and set after
+    /// file system is added or imported.
     /// </summary>
     public int? Version { get; set; }
 
     /// <summary>
-    /// Revision of file system added from a file system file without a version string or of file system cloned.
+    /// Revision of file system, which is used when adding a file system file without a version string and set after
+    /// file system is added or imported.
     /// </summary>
     public int? Revision { get; set; }
 }
