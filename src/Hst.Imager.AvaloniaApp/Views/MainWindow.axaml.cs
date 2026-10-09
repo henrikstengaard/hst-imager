@@ -6,6 +6,9 @@ namespace Hst.Imager.AvaloniaApp.Views;
 
 public partial class MainWindow : Window
 {
+    // used by runtime loader and designer
+    public MainWindow() => InitializeComponent();
+
     public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();

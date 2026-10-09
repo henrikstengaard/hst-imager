@@ -5,6 +5,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Avalonia.Styling;
+using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
@@ -20,6 +21,11 @@ public partial class App : Application
     private readonly string _appDataPath;
     private readonly string[] _startupArgs;
     private IServiceProvider? _services;
+
+    // used by runtime loader and designer
+    public App() : this(ApplicationDataHelper.GetApplicationDataDir("HstImager"), [])
+    {
+    }
 
     public App(string appDataPath, string[] startupArgs)
     {

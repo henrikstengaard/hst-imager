@@ -17,7 +17,7 @@ public static class User
 {
     public static bool IsAdministrator()
     {
-        if (Hst.Core.OperatingSystem.IsWindows())
+        if (System.OperatingSystem.IsWindows())
         {
             return IsWindowsAdministrator();
         }
