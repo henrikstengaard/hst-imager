@@ -203,7 +203,8 @@ public class ImagingService : IImagingService
             : [];
         var cloneFileSystems = plan.AddFileSystems.Where(x => x.CloneNumber.HasValue).ToList();
 
-        var steps = (plan.Initialize ? 2 : 0) + plan.DeletePartitionNumbers.Count + plan.UpdatePartitions.Count +
+        var steps = (plan.Initialize ? 2 : 0) + (plan.ResizeRdbSize.HasValue ? 1 : 0) +
+                    plan.DeletePartitionNumbers.Count + plan.UpdatePartitions.Count +
                     plan.UpdateFileSystems.Count +
                     plan.DeleteFileSystemNumbers.Count + plan.AddFileSystems.Count * 2 + rdbDosTypes.Count +
                     cloneFileSystems.Count +
@@ -268,6 +269,14 @@ public class ImagingService : IImagingService
                     partitionNumber),
                 _ => throw new ImagingException($"Unsupported partition table '{plan.TableType}'")
             });
+        }
+
+        // resize rigid disk block after deleting partitions, which frees space at end of rigid disk block for
+        // shrinking it, and before adding partitions, which can use space of expanded rigid disk block
+        if (plan.ResizeRdbSize.HasValue)
+        {
+            await Run(new RdbResizeCommand(_loggerFactory.CreateLogger<RdbResizeCommand>(), commandHelper,
+                physicalDrives, path, new Size(plan.ResizeRdbSize.Value, Unit.Bytes)));
         }
 
         // update existing rigid disk block partitions using partition numbers after deleting partitions, which

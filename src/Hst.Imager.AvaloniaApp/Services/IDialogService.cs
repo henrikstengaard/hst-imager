@@ -22,6 +22,10 @@ public interface IDialogService
     /// </summary>
     Task<bool> ShowInitializePartitionTableDialogAsync(InitializePartitionTableViewModel viewModel);
     /// <summary>
+    /// Show resize rigid disk block dialog. Returns true, if OK is clicked.
+    /// </summary>
+    Task<bool> ShowResizeRigidDiskBlockDialogAsync(ResizeRigidDiskBlockViewModel viewModel);
+    /// <summary>
     /// Show partition dialog with details of selected or added partition in partition view model. Returns true, if OK or Add is
     /// clicked and false, if dialog is cancelled.
     /// </summary>

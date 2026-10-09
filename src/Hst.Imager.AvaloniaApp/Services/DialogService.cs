@@ -121,6 +121,14 @@ public class DialogService : IDialogService
         return await dialog.ShowDialog<bool>(_window);
     }
 
+    public async Task<bool> ShowResizeRigidDiskBlockDialogAsync(ResizeRigidDiskBlockViewModel viewModel)
+    {
+        if (_window == null) return false;
+
+        var dialog = new ResizeRigidDiskBlockDialog { DataContext = viewModel };
+        return await dialog.ShowDialog<bool>(_window);
+    }
+
     public async Task<bool> ShowPartitionDialogAsync(PartitionViewModel viewModel)
     {
         if (_window == null) return false;

@@ -97,12 +97,8 @@ public static class DiskPartitionTables
         var tableList = tables.ToList();
         var segments = new List<PartitionSegmentViewModel>();
 
-        // unallocated space of hybrid disk is named by partition table it belongs to, as partition table column is
-        // empty for unallocated space
-        var diskTables = tableList.Where(x => x.IsDiskPath).ToList();
-        var isHybrid = diskTables.Count(x => x.Layout.HasPartitionTable) > 1;
-        foreach (var table in diskTables)
-            segments.AddRange(table.Layout.BuildSegments(nameUnallocatedByTable: isHybrid).Where(x => !x.IsReserved));
+        foreach (var table in tableList.Where(x => x.IsDiskPath))
+            segments.AddRange(table.Layout.BuildSegments().Where(x => !x.IsReserved));
 
         foreach (var table in tableList.Where(x => !x.IsDiskPath))
         {

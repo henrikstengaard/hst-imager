@@ -49,6 +49,13 @@ public class PartitionPlan
     /// </summary>
     public long RdbSize { get; set; }
 
+    /// <summary>
+    /// New size of existing rigid disk block to resize to, e.g. after an image file is written to a larger disk.
+    /// Rigid disk block is resized after partitions are deleted and before partitions are added. Null, if rigid disk
+    /// block isn't resized.
+    /// </summary>
+    public long? ResizeRdbSize { get; set; }
+
     public long DiskSize { get; set; }
 
     /// <summary>
@@ -103,7 +110,7 @@ public class PartitionPlan
     /// </summary>
     public List<PlannedFileSystem> AddFileSystems { get; set; } = [];
 
-    public bool HasChanges => Initialize || DeletePartitionNumbers.Count > 0 || AddPartitions.Count > 0 ||
+    public bool HasChanges => Initialize || ResizeRdbSize.HasValue || DeletePartitionNumbers.Count > 0 || AddPartitions.Count > 0 ||
                               FormatPartitions.Count > 0 || UpdatePartitions.Count > 0 || UpdateFileSystems.Count > 0 ||
                               DeleteFileSystemNumbers.Count > 0 || AddFileSystems.Count > 0;
 }

@@ -96,6 +96,7 @@ public class PartitionViewModel : ViewModelBase
         DeletePartitionCommand = ReactiveCommand.Create(DeletePartition, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditPartitionCommand = ReactiveCommand.CreateFromTask(EditPartitionAsync, this.WhenAnyValue(x => x.IsPartitionSelected));
         EditFileSystemsCommand = ReactiveCommand.CreateFromTask(EditFileSystemsAsync, this.WhenAnyValue(x => x.IsRdb));
+        ResizeRdbCommand = ReactiveCommand.CreateFromTask(ResizeRdbAsync, this.WhenAnyValue(x => x.CanResizeRdb));
         ImportFileSystemFromMediaCommand = ReactiveCommand.CreateFromTask(() => ImportFileSystemAsync(true),
             this.WhenAnyValue(x => x.CanImportFileSystem));
         AddFileSystemFromFileCommand = ReactiveCommand.CreateFromTask(() => ImportFileSystemAsync(false),
@@ -143,11 +144,13 @@ public class PartitionViewModel : ViewModelBase
     /// <summary>
     /// Partition tables in order changes are applied. Partition tables in master boot record partitions are applied
     /// first, as partition numbers in their paths can change by changes to master boot record. Master boot record is
-    /// applied before rigid disk block, as rigid disk block initialized for a hybrid disk keeps master boot record.
+    /// applied before rigid disk block, as rigid disk block initialized for a hybrid disk keeps master boot record and
+    /// rigid disk block expanded can use space of deleted master boot record partitions. Rigid disk block shrunk is
+    /// applied before master boot record, so master boot record partitions can be added in space freed.
     /// Partition tables in new PiStorm partitions are applied last, when their partitions are added.
     /// </summary>
     private IEnumerable<DiskPartitionTable> TablesInApplyOrder => ActiveTables
-        .OrderBy(x => x.IsInNewPartition ? 3 : !x.IsDiskPath ? 0 : x.Layout.IsRdb ? 2 : 1);
+        .OrderBy(x => x.IsInNewPartition ? 4 : !x.IsDiskPath ? 0 : x.Layout.IsRdb ? x.Layout.IsRdbShrunk ? 1 : 3 : 2);
 
     private IEnumerable<PartitionLayout> RdbLayouts => ActiveTables.Select(x => x.Layout).Where(x => x.IsRdb);
 
@@ -192,7 +195,7 @@ public class PartitionViewModel : ViewModelBase
         {
             var layout = x.Layout;
             var name = layout.HasPartitionTable
-                ? $"{FormatTableType(layout.TableType)}{(layout.IsInitialize ? " (new)" : string.Empty)}"
+                ? $"{FormatTableType(layout.TableType)}{(layout.IsInitialize ? " (new)" : layout.IsRdbResized ? " (resized)" : string.Empty)}"
                 : layout.IsBlank ? "Uninitialized" : "No partition table";
             return new PartitionTableSummary
             {
@@ -259,6 +262,23 @@ public class PartitionViewModel : ViewModelBase
     public bool IsMbr => _layout is { TableType: PartitionTableType.MasterBootRecord };
 
     public bool CanAddPartition => IsUnallocatedSelected && _layout!.CanAddPartitionTo(_selectedSegment);
+
+    /// <summary>
+    /// Selected existing rigid disk block can be resized, e.g. when an image file with a rigid disk block is written
+    /// to a larger image file or physical disk.
+    /// </summary>
+    public bool CanResizeRdb => _layout is { CanResizeRdb: true };
+
+    /// <summary>
+    /// Tooltip for resizing rigid disk block, which shows why selected partition table can't be resized.
+    /// </summary>
+    public string ResizeRdbHint => _layout switch
+    {
+        { CanResizeRdb: true } =>
+            $"Resize selected {_layout.TableTypeName}{FormatContainer(_layout)} to use free space after it or free space at end of it",
+        { IsRdb: true } => "Rigid Disk Block being initialized is resized by initializing it again",
+        _ => "Select a Rigid Disk Block partition or unallocated space to resize Rigid Disk Block"
+    };
 
     /// <summary>
     /// Text for adding partition, which indicates partition table partition is added to.
@@ -541,6 +561,11 @@ public class PartitionViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> EditFileSystemsCommand { get; }
 
     /// <summary>
+    /// Show resize dialog to resize selected existing rigid disk block.
+    /// </summary>
+    public ReactiveCommand<Unit, Unit> ResizeRdbCommand { get; }
+
+    /// <summary>
     /// Import file system with dos type of selected partition from media in partition dialog.
     /// </summary>
     public ReactiveCommand<Unit, Unit> ImportFileSystemFromMediaCommand { get; }
@@ -633,6 +658,7 @@ public class PartitionViewModel : ViewModelBase
             table.Layout.Changed += OnLayoutChanged;
 
         SyncNewPiStormTables();
+        SyncRigidDiskBlockReservations();
         _layout = null;
         _selectedSegment = null;
         SelectedPartition = null;
@@ -943,9 +969,45 @@ public class PartitionViewModel : ViewModelBase
             dialog.Apply();
     }
 
+    /// <summary>
+    /// Resize selected existing rigid disk block in resize dialog. Resize is added as a pending operation, which keeps
+    /// partitions in rigid disk block.
+    /// </summary>
+    private async Task ResizeRdbAsync()
+    {
+        if (_layout is not { CanResizeRdb: true } layout || FindTable(layout) is not { } table)
+            return;
+
+        SyncRigidDiskBlockReservations();
+        var dialog = new ResizeRigidDiskBlockViewModel($"Resize {layout.TableTypeName}{FormatContainer(layout)}",
+            layout.OriginalUsableEnd, layout.UsableEnd, layout.MinRdbSize, layout.MaxRdbSize, layout.Alignment,
+            layout.DiskSize, table.IsDiskPath ? "disk" : table.ContainerName, layout.RdbSizeLimit?.Name);
+        if (!await _dialogService.ShowResizeRigidDiskBlockDialogAsync(dialog) || !dialog.CanResize)
+            return;
+
+        layout.ResizeRdb(dialog.Size);
+    }
+
+    /// <summary>
+    /// Sync areas reserved by existing rigid disk block and master boot record of a hybrid disk for each other, so
+    /// rigid disk block can be expanded into space of deleted master boot record partitions and master boot record
+    /// partitions can be added in space freed by shrinking rigid disk block. Changed events aren't raised, as sync is
+    /// done when layouts change.
+    /// </summary>
+    private void SyncRigidDiskBlockReservations()
+    {
+        if (MasterBootRecordTable?.Layout is not { } mbrLayout ||
+            _tables.FirstOrDefault(x => x.IsDiskPath && x.Layout.CanResizeRdb)?.Layout is not { } rdbLayout)
+            return;
+
+        rdbLayout.ReserveMasterBootRecordPartitions(mbrLayout.GetPartitionAreas());
+        mbrLayout.ReserveRigidDiskBlock(rdbLayout.UsableEnd, (int)(rdbLayout.TableStart / 512), false);
+    }
+
     private void OnLayoutChanged(object? sender, EventArgs e)
     {
         SyncNewPiStormTables();
+        SyncRigidDiskBlockReservations();
         RebuildSegments();
         UpdatePending();
     }
@@ -1036,6 +1098,8 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(AddPartitionHint));
         this.RaisePropertyChanged(nameof(CanClonePartition));
         this.RaisePropertyChanged(nameof(ClonePartitionHint));
+        this.RaisePropertyChanged(nameof(CanResizeRdb));
+        this.RaisePropertyChanged(nameof(ResizeRdbHint));
         RaiseEditorChanged();
         RaiseFileSystemChanged();
     }
@@ -1140,6 +1204,10 @@ public class PartitionViewModel : ViewModelBase
         foreach (var partition in layout.DeletedPartitions)
             operations.Add(
                 $"Delete {layout.TableTypeName} partition #{partition.Number}{FormatDeviceName(partition)} ({partition.ExistingFileSystem}, {MediaOptions.FormatBytes(partition.Size)}){location}");
+
+        if (layout.IsRdbResized)
+            operations.Add(
+                $"{(layout.IsRdbShrunk ? "Shrink" : "Expand")} Rigid Disk Block from {MediaOptions.FormatBytes(layout.OriginalUsableEnd)} to {MediaOptions.FormatBytes(layout.UsableEnd)}{location}");
 
         foreach (var partition in layout.Partitions)
         {
@@ -1262,6 +1330,14 @@ public class PartitionViewModel : ViewModelBase
         }
 
         errors.AddRange(layout.ValidateFileSystems().Select(x => $"{x}{location}"));
+
+        // expanding requires free space after rigid disk block and shrinking requires free space at end of it
+        if (layout.IsRdbResized && layout.UsableEnd > layout.MaxRdbSize)
+            errors.Add(
+                $"Rigid Disk Block of {MediaOptions.FormatBytes(layout.UsableEnd)} requires free space after it, but there's only free space up to {MediaOptions.FormatBytes(layout.MaxRdbSize)}. Resize Rigid Disk Block again{location}");
+        if (layout.IsRdbResized && layout.UsableEnd < layout.MinRdbSize)
+            errors.Add(
+                $"Rigid Disk Block of {MediaOptions.FormatBytes(layout.UsableEnd)} is smaller than space used by its partitions up to {MediaOptions.FormatBytes(layout.MinRdbSize)}. Resize Rigid Disk Block again{location}");
 
         // pfs3aio and FastFileSystem are added automatically, other file systems must be imported
         foreach (var partition in layout.Partitions.Where(x => x.IsNew && x.PartitionTypeError == null &&

@@ -77,6 +77,10 @@
                     ToolTip.Tip="Initialize new empty partition table, which erases existing partitions">
               <ia:Icon Value="fa-table-columns" />
             </Button>
+            <Button Classes="icon" Command="{Binding ResizeRdbCommand}"
+                    ToolTip.Tip="{Binding ResizeRdbHint}">
+              <ia:Icon Value="fa-arrows-left-right-to-line" />
+            </Button>
             <Button Classes="icon" Command="{Binding EditFileSystemsCommand}"
                     ToolTip.Tip="File systems in selected Rigid Disk Block">
               <ia:Icon Value="fa-puzzle-piece" />

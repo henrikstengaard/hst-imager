@@ -1052,9 +1052,10 @@ public class PartitionSegmentViewModel
     public string TableColor { get; }
     public IBrush TableColorBrush => new SolidColorBrush(Avalonia.Media.Color.Parse(TableColor));
     /// <summary>
-    /// Partition table is shown for partitions, reserved areas and partition tables, not for unallocated space.
+    /// Partition table is shown for partitions, unallocated space, reserved areas and partition tables, when segment
+    /// belongs to a partition table.
     /// </summary>
-    public bool HasTableType => !string.IsNullOrEmpty(TableType) && !IsUnallocated;
+    public bool HasTableType => !string.IsNullOrEmpty(TableType);
     public bool IsUnallocated => Partition == null && !IsReserved && !IsPartitionTable;
     public long Start { get; }
     public long Size { get; }
@@ -1121,6 +1122,7 @@ public class PartitionLayout
         Alignment = alignment;
         MaxPartitions = maxPartitions;
         IsInitialize = isInitialize;
+        OriginalUsableEnd = usableEnd;
     }
 
     public event EventHandler? Changed;
@@ -1163,7 +1165,7 @@ public class PartitionLayout
     /// <summary>
     /// Layout has changes to apply.
     /// </summary>
-    public bool HasChanges => IsInitialize || _deletedPartitions.Count > 0 ||
+    public bool HasChanges => IsInitialize || IsRdbResized || _deletedPartitions.Count > 0 ||
                               _partitions.Any(x => x.IsNew || x.FormatRequested || x.HasRdbChanges) ||
                               HasFileSystemChanges;
 
@@ -1173,8 +1175,37 @@ public class PartitionLayout
     public bool HasFileSystemChanges => _deletedFileSystems.Count > 0 || _fileSystems.Any(x => x.IsNew || x.IsUpdated);
 
     public long DiskSize { get; }
-    public long UsableStart { get; }
-    public long UsableEnd { get; }
+
+    /// <summary>
+    /// Start of usable area for partitions. Master boot record of a hybrid disk uses area after rigid disk block
+    /// reserved, so it can change when rigid disk block is resized.
+    /// </summary>
+    public long UsableStart { get; private set; }
+
+    /// <summary>
+    /// End of usable area for partitions, which is end of rigid disk block for rigid disk block.
+    /// </summary>
+    public long UsableEnd { get; private set; }
+
+    /// <summary>
+    /// End of usable area read from disk, which is size of rigid disk block before it's resized.
+    /// </summary>
+    public long OriginalUsableEnd { get; }
+
+    /// <summary>
+    /// Existing rigid disk block can be resized, e.g. when an image file is written to a larger disk.
+    /// </summary>
+    public bool CanResizeRdb => IsRdb && !IsInitialize;
+
+    /// <summary>
+    /// Existing rigid disk block is resized to usable end.
+    /// </summary>
+    public bool IsRdbResized => CanResizeRdb && UsableEnd != OriginalUsableEnd;
+
+    /// <summary>
+    /// Existing rigid disk block is shrunk, which frees space after it for other partition tables.
+    /// </summary>
+    public bool IsRdbShrunk => IsRdbResized && UsableEnd < OriginalUsableEnd;
 
     /// <summary>
     /// Alignment of new partitions in bytes, 1MB or cylinder size for rigid disk block.
@@ -1240,14 +1271,68 @@ public class PartitionLayout
     /// <summary>
     /// Reserve area used by rigid disk block initialized at sector rdb block lo keeping master boot record for a hybrid
     /// disk, so master boot record partitions are added after rigid disk block. Replaces rigid disk block area reserved
-    /// before.
+    /// before. Usable area starts after master boot record, as area used by rigid disk block is reserved.
     /// </summary>
-    public void ReserveRigidDiskBlock(long rdbSize, int rdbBlockLo)
+    public void ReserveRigidDiskBlock(long rdbSize, int rdbBlockLo, bool raiseChanged = true)
     {
         var rdbStart = rdbBlockLo * 512L;
         _reservedAreas.RemoveAll(x => x.TableType == PartitionTableType.RigidDiskBlock);
         _reservedAreas.Add(new ReservedArea(rdbStart, AlignUp(rdbSize + RdbMbrGap, MiB) - rdbStart,
             "Rigid Disk Block", PartitionTableType.RigidDiskBlock));
+        UsableStart = Math.Min(UsableStart, MiB);
+        if (raiseChanged)
+            OnChanged();
+    }
+
+    /// <summary>
+    /// Reserve areas of master boot record partitions after existing rigid disk block in a hybrid disk, including
+    /// new partitions and excluding deleted partitions, which limit how much rigid disk block can be expanded.
+    /// Replaces master boot record partition areas reserved before. Partitions starting before end of rigid disk block
+    /// are ignored.
+    /// </summary>
+    public void ReserveMasterBootRecordPartitions(IEnumerable<ReservedArea> partitionAreas)
+    {
+        var rdbEnd = Math.Min(UsableEnd, OriginalUsableEnd);
+        _reservedAreas.RemoveAll(x => x.TableType == PartitionTableType.MasterBootRecord);
+        _reservedAreas.AddRange(partitionAreas.Where(x => x.Start >= rdbEnd));
+    }
+
+    /// <summary>
+    /// Min size existing rigid disk block can be resized to, which is end of last partition. Shrinking requires
+    /// free space at end of rigid disk block, so partitions at end must be deleted to shrink it further.
+    /// </summary>
+    public long MinRdbSize => AlignUp(_partitions.Select(x => x.End).Append(UsableStart + Alignment).Max());
+
+    /// <summary>
+    /// Area limiting how much existing rigid disk block can be expanded, which is first master boot record partition
+    /// after rigid disk block in a hybrid disk. Null, if rigid disk block can be expanded to end of disk.
+    /// </summary>
+    public ReservedArea? RdbSizeLimit => _reservedAreas
+        .Where(x => x.Start >= Math.Min(UsableEnd, OriginalUsableEnd))
+        .MinBy(x => x.Start);
+
+    /// <summary>
+    /// Max size existing rigid disk block can be resized to, which is free space after rigid disk block up to first
+    /// master boot record partition in a hybrid disk or end of disk.
+    /// </summary>
+    public long MaxRdbSize => AlignDown(Math.Min(DiskSize, RdbSizeLimit?.Start ?? DiskSize));
+
+    /// <summary>
+    /// Resize existing rigid disk block to size aligned to cylinders, limited by min and max size. Size read from disk
+    /// is restored as is.
+    /// </summary>
+    public void ResizeRdb(long size)
+    {
+        if (!CanResizeRdb)
+            return;
+
+        var usableEnd = size == OriginalUsableEnd
+            ? OriginalUsableEnd
+            : Math.Clamp(AlignDown(size), MinRdbSize, Math.Max(MinRdbSize, MaxRdbSize));
+        if (usableEnd == UsableEnd)
+            return;
+
+        UsableEnd = usableEnd;
         OnChanged();
     }
 
@@ -1516,19 +1601,11 @@ public class PartitionLayout
     /// </summary>
      /// <param name="offset">Start of partition table on disk.</param>
     /// <param name="depth">Nesting depth of partition table.</param>
-    /// <param name="nameUnallocatedByTable">Unallocated space is named by partition table it belongs to, e.g. for a
-    /// hybrid disk with rigid disk block and master boot record.</param>
-    public List<PartitionSegmentViewModel> BuildSegments(long offset = 0, int depth = 0,
-        bool nameUnallocatedByTable = false)
+    public List<PartitionSegmentViewModel> BuildSegments(long offset = 0, int depth = 0)
     {
-        var unallocatedName = nameUnallocatedByTable
-            ? $"Unallocated ({GetTableTypeAbbreviation(TableType)})"
-            : null;
-
         PartitionSegmentViewModel Segment(long start, long size, PartitionEntryViewModel? partition,
             ReservedArea? reserved = null) =>
-            new(this, start, size, partition, reserved, partition == null && reserved == null ? unallocatedName : null,
-                offset, depth);
+            new(this, start, size, partition, reserved, null, offset, depth);
 
         var segments = new List<PartitionSegmentViewModel>();
         if (!HasPartitionTable)
@@ -1901,6 +1978,7 @@ public class PartitionLayout
         KeepMasterBootRecord = KeepMasterBootRecord,
         RdbBlockLo = RdbBlockLo,
         RdbSize = RdbSize,
+        ResizeRdbSize = IsRdbResized ? UsableEnd : null,
         DiskSize = DiskSize,
         CylinderSize = IsRdb ? Alignment : 512,
         DeletePartitionNumbers = _deletedPartitions

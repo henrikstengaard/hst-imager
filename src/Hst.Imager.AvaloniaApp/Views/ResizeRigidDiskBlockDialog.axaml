@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        x:Class="Hst.Imager.AvaloniaApp.Views.ResizeRigidDiskBlockDialog"
+        x:DataType="vm:ResizeRigidDiskBlockViewModel"
+        Title="{Binding Title}"
+        Width="560"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppWindowBackgroundBrush}">
+
+  <StackPanel Margin="20" Spacing="12">
+    <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" />
+
+    <TextBlock TextWrapping="Wrap"
+               Text="Expand Rigid Disk Block to use free space after it, e.g. when an image file is written to a larger image file or physical disk, or shrink it to free space at end of it. Partitions and their data are kept." />
+
+    <Grid ColumnDefinitions="Auto,*">
+      <ia:Icon Grid.Column="0" Value="fa-circle-info" Classes="field-icon" VerticalAlignment="Top" Margin="0,2,6,0" />
+      <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="{Binding SizeInfoText}" />
+    </Grid>
+
+    <StackPanel Spacing="4">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Rigid Disk Block size (MB)" />
+      </StackPanel>
+      <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+        <TextBox Grid.Column="0" Text="{Binding SizeText, UpdateSourceTrigger=LostFocus}" />
+        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding UseMinSizeCommand}"
+                ToolTip.Tip="Use min size to shrink Rigid Disk Block to end of its last partition">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-down-left-and-up-right-to-center" />
+            <TextBlock Text="Min" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="2" Margin="8,0,0,0" Command="{Binding UseMaxSizeCommand}"
+                ToolTip.Tip="Use max size to expand Rigid Disk Block to use all free space after it">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-arrows-left-right-to-line" />
+            <TextBlock Text="Max" />
+          </StackPanel>
+        </Button>
+        <Button Grid.Column="3" Margin="8,0,0,0" Command="{Binding UseOriginalSizeCommand}"
+                ToolTip.Tip="Use size of Rigid Disk Block on disk">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Original" />
+          </StackPanel>
+        </Button>
+      </Grid>
+      <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding SizeHelpText}" />
+    </StackPanel>
+
+    <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasResultText}">
+      <ia:Icon Grid.Column="0" Value="fa-circle-info" Classes="field-icon" VerticalAlignment="Top" Margin="0,2,6,0" />
+      <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="{Binding ResultText}" />
+    </Grid>
+
+    <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
+            IsVisible="{Binding HasError}">
+      <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+    </Border>
+
+    <TextBlock Classes="field-help" TextWrapping="Wrap"
+               Text="Resize is added as a pending operation, which is applied when Apply is clicked." />
+
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button x:Name="CancelButton" MinWidth="80" HorizontalContentAlignment="Center" Content="Cancel" />
+      <Button x:Name="OkButton" MinWidth="80" HorizontalContentAlignment="Center" Content="OK"
+              IsEnabled="{Binding CanResize}" />
+    </StackPanel>
+  </StackPanel>
+</Window>
