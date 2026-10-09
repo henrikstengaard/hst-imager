@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Reactive;
 using System.Threading.Tasks;
@@ -46,7 +47,8 @@ public class TransferViewModel : ViewModelBase
         });
 
         // size is also used for custom part of destination
-        Destination.Committed += (_, _) => Source.SizeAlwaysEnabled = Destination.PartPath.IsCustom;
+        this.WhenAnyValue(x => x.Destination.PartPath.IsCustom)
+            .Subscribe(isCustom => Source.SizeAlwaysEnabled = isCustom);
 
         StartTransferCommand = ReactiveCommand.CreateFromTask(StartTransferAsync,
             this.WhenAnyValue(x => x.Source.IsSelected, x => x.Destination.IsSelected, x => x.Progress.IsRunning,

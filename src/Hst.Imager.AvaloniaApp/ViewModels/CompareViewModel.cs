@@ -1,3 +1,4 @@
+using System;
 using System.Reactive;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
@@ -40,7 +41,8 @@ public class CompareViewModel : ViewModelBase
         });
 
         // size is also used for custom part of destination
-        Destination.Committed += (_, _) => Source.SizeAlwaysEnabled = Destination.PartPath.IsCustom;
+        this.WhenAnyValue(x => x.Destination.PartPath.IsCustom)
+            .Subscribe(isCustom => Source.SizeAlwaysEnabled = isCustom);
 
         StartCompareCommand = ReactiveCommand.CreateFromTask(StartCompareAsync,
             this.WhenAnyValue(x => x.Source.IsSelected, x => x.Destination.IsSelected, x => x.Progress.IsRunning,

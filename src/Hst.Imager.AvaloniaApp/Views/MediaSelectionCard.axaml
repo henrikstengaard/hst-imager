@@ -5,27 +5,69 @@
              x:Class="Hst.Imager.AvaloniaApp.Views.MediaSelectionCard"
              x:DataType="vm:MediaSelectionViewModel">
 
-  <!-- Selected source or destination media, click to change it in media selection dialog -->
-  <StackPanel Spacing="4">
-    <TextBlock Classes="field-label" Text="{Binding Options.Title}" />
-    <Button Classes="media-card" Command="{Binding EditCommand}"
-            ToolTip.Tip="Click to change">
-      <Grid ColumnDefinitions="Auto,*,Auto">
-        <ia:Icon Grid.Column="0" Value="{Binding TypeIcon}" FontSize="20" VerticalAlignment="Center"
-                 Margin="0,0,12,0" Classes="field-icon" />
-        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-          <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
-                     Classes.placeholder="{Binding !IsSelected}" />
-          <TextBlock Classes="field-help" Text="{Binding Details}" TextTrimming="CharacterEllipsis"
-                     IsVisible="{Binding HasDetails}" />
-          <TextBlock Classes="error-text" FontSize="12" Text="{Binding ErrorMessage}" TextTrimming="CharacterEllipsis"
-                     IsVisible="{Binding HasError}" />
-        </StackPanel>
-        <Panel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
-          <ia:Icon Value="fa-spinner" Animation="Spin" IsVisible="{Binding IsLoading}" />
-          <ia:Icon Value="fa-pen-to-square" IsVisible="{Binding !IsLoading}" Classes="field-icon" />
-        </Panel>
-      </Grid>
-    </Button>
+  <StackPanel Spacing="12">
+    <!-- Selected source or destination media, click to change it in media selection dialog -->
+    <StackPanel Spacing="4">
+      <TextBlock Classes="field-label" Text="{Binding Options.Title}" />
+      <Button Classes="media-card" Command="{Binding EditCommand}"
+              ToolTip.Tip="Click to change">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <ia:Icon Grid.Column="0" Value="{Binding TypeIcon}" FontSize="20" VerticalAlignment="Center"
+                   Margin="0,0,12,0" Classes="field-icon" />
+          <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                       Classes.placeholder="{Binding !IsSelected}" />
+            <TextBlock Classes="field-help" Text="{Binding Details}" TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding HasDetails}" />
+            <TextBlock Classes="error-text" FontSize="12" Text="{Binding ErrorMessage}" TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding HasError}" />
+          </StackPanel>
+          <Panel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">
+            <ia:Icon Value="fa-spinner" Animation="Spin" IsVisible="{Binding IsLoading}" />
+            <ia:Icon Value="fa-pen-to-square" IsVisible="{Binding !IsLoading}" Classes="field-icon" />
+          </Panel>
+        </Grid>
+      </Button>
+    </StackPanel>
+
+    <!-- Part of media, shown when media has been read -->
+    <StackPanel Spacing="4" IsVisible="{Binding ShowPart}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-chart-pie" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="{Binding Options.PartLabel}" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding PartPath.Options}"
+                SelectedItem="{Binding PartPath.Selected}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+    </StackPanel>
+
+    <StackPanel Spacing="4" IsVisible="{Binding ShowStartOffset}">
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Start offset" />
+      </StackPanel>
+      <NumericUpDown Value="{Binding PartPath.StartOffset}" Minimum="0" Increment="512" FormatString="0"
+                     IsEnabled="{Binding PartPath.IsCustom}" />
+    </StackPanel>
+
+    <!-- Size of custom part -->
+    <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto" IsVisible="{Binding ShowSize}">
+      <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+        <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Size" />
+      </StackPanel>
+      <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                     IsEnabled="{Binding IsSizeEnabled}" />
+      <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+        <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Unit" />
+      </StackPanel>
+      <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                ItemsSource="{x:Static vm:MediaSelectionViewModel.SizeUnits}"
+                SelectedItem="{Binding SizeUnit}"
+                IsEnabled="{Binding IsSizeEnabled}" />
+    </Grid>
   </StackPanel>
 </UserControl>

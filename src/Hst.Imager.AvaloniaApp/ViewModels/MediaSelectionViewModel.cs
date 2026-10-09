@@ -107,6 +107,10 @@ public class MediaSelectionViewModel : ViewModelBase
 
     // load requested, but not completed yet
     private bool _isStale;
+
+    // copy edited in media selection dialog, which doesn't load media info
+    private bool _isEditCopy;
+
     private decimal _size;
     private string _sizeUnit = "Bytes";
     private bool _sizeAlwaysEnabled;
@@ -267,31 +271,13 @@ public class MediaSelectionViewModel : ViewModelBase
     public bool IsLoading
     {
         get => _isLoading;
-        private set
-        {
-            this.RaiseAndSetIfChanged(ref _isLoading, value);
-            this.RaisePropertyChanged(nameof(CanConfirm));
-        }
+        private set => this.RaiseAndSetIfChanged(ref _isLoading, value);
     }
 
     /// <summary>
-    /// Load of media info is requested, but not completed yet.
+    /// Media selection can be confirmed, when physical disks are not being loaded.
     /// </summary>
-    private bool IsStale
-    {
-        get => _isStale;
-        set
-        {
-            if (_isStale == value) return;
-            _isStale = value;
-            this.RaisePropertyChanged(nameof(CanConfirm));
-        }
-    }
-
-    /// <summary>
-    /// Media selection can be confirmed, when physical disks and media info are not being loaded.
-    /// </summary>
-    public bool CanConfirm => !_isLoadingMedia && !_isLoading && !_isStale;
+    public bool CanConfirm => !_isLoadingMedia;
 
     // ─── Part ─────────────────────────────────────────────────────────────────
 
@@ -305,6 +291,11 @@ public class MediaSelectionViewModel : ViewModelBase
     };
 
     public bool ShowStartOffset => Options.PartMode == MediaPartMode.PartPath && PartPath.HasOptions;
+
+    /// <summary>
+    /// Size is shown, when part of media is shown or size is used for custom part of other media.
+    /// </summary>
+    public bool ShowSize => Options.ShowSize && (ShowPart || _sizeAlwaysEnabled);
 
     /// <summary>
     /// Path to selected part of media.
@@ -345,7 +336,7 @@ public class MediaSelectionViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _sizeAlwaysEnabled, value);
             this.RaisePropertyChanged(nameof(IsSizeEnabled));
-            RaiseDetailsChanged();
+            this.RaisePropertyChanged(nameof(ShowSize));
         }
     }
 
@@ -432,10 +423,6 @@ public class MediaSelectionViewModel : ViewModelBase
                     details.Add(MediaOptions.FormatBytes(_media.DiskSize));
             }
 
-            if (ShowPart && PartPath.Selected != null && !ReferenceEquals(PartPath.Selected, PartPath.Options[0]))
-                details.Add(PartPath.IsCustom ? $"Start offset {PartPath.StartOffset}" : PartPath.Selected.Title);
-            if (Options.ShowSize && IsSizeEnabled && _size > 0)
-                details.Add($"Size {_size} {_sizeUnit}");
             if (Options.ShowByteswap && _byteswap)
                 details.Add("Byteswap");
             return string.Join(" · ", details);
@@ -463,22 +450,23 @@ public class MediaSelectionViewModel : ViewModelBase
 
     private async Task EditAsync()
     {
-        var copy = new MediaSelectionViewModel(_mediaService, _dialogService, Options);
+        var copy = new MediaSelectionViewModel(_mediaService, _dialogService, Options) { _isEditCopy = true };
         copy.CopyFrom(this);
         if (copy.IsPhysicalDisk && copy.MediaItems.Count == 0)
             _ = copy.RefreshMediaAsync();
-        else if (copy._isStale)
-            // load media info in copy, otherwise dialog can't be confirmed
-            copy.RequestLoad();
 
         if (!await _dialogService.ShowMediaSelectionDialogAsync(copy))
             return;
 
         CopyFrom(copy);
 
-        // load media info, if media selection was changed without media info being loaded yet
+        // load media info, if media selection was changed in media selection dialog
         if (_isStale)
+        {
+            Media = null;
+            UpdatePartOptions(null);
             await LoadMediaAsync();
+        }
 
         Committed?.Invoke(this, EventArgs.Empty);
     }
@@ -514,7 +502,6 @@ public class MediaSelectionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(Byteswap));
         this.RaisePropertyChanged(nameof(ErrorMessage));
         this.RaisePropertyChanged(nameof(HasError));
-        this.RaisePropertyChanged(nameof(CanConfirm));
         RaiseTypeChanged();
         RaisePartChanged();
     }
@@ -541,6 +528,7 @@ public class MediaSelectionViewModel : ViewModelBase
     {
         this.RaisePropertyChanged(nameof(ShowPart));
         this.RaisePropertyChanged(nameof(ShowStartOffset));
+        this.RaisePropertyChanged(nameof(ShowSize));
         this.RaisePropertyChanged(nameof(IsSizeEnabled));
         this.RaisePropertyChanged(nameof(ResolvedPath));
         RaiseDetailsChanged();
@@ -555,7 +543,15 @@ public class MediaSelectionViewModel : ViewModelBase
     private void RequestLoad()
     {
         if (!Options.LoadMedia) return;
-        IsStale = true;
+        _isStale = true;
+
+        // media info is loaded, when media selection is confirmed in media selection dialog
+        if (_isEditCopy)
+        {
+            HasError = false;
+            return;
+        }
+
         _loadRequests.OnNext(Unit.Default);
     }
 
@@ -626,7 +622,7 @@ public class MediaSelectionViewModel : ViewModelBase
         // ignore result, if selection was changed while loading
         if (path != Path || byteswap != _byteswap) return;
 
-        IsStale = false;
+        _isStale = false;
         Media = media;
         UpdatePartOptions(media);
     }
