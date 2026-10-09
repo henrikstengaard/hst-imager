@@ -680,7 +680,7 @@ public class PartitionViewModel : ViewModelBase
         var mbrLayout = MasterBootRecordTable?.Layout;
 
         var dialog = new InitializePartitionTableViewModel(targets, selectedTarget, tableType,
-            mbrLayout?.GetPartitionAreas().ToList());
+            mbrLayout?.GetPartitionAreas().ToList(), mbrLayout != null ? mbrLayout.GetFreeSpaceWithRigidDiskBlock : null);
         if (!await _dialogService.ShowInitializePartitionTableDialogAsync(dialog) || !dialog.CanInitialize)
             return;
 

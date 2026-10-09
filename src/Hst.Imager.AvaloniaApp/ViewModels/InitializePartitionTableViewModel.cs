@@ -43,6 +43,7 @@ public class InitializePartitionTableViewModel : ViewModelBase
     ];
 
     private readonly IReadOnlyList<ReservedArea>? _masterBootRecordPartitions;
+    private readonly Func<long, long>? _masterBootRecordFreeSpace;
     private InitializeTarget _selectedTarget;
     private List<SelectOption> _tableTypeOptions = AllTableTypeOptions;
     private SelectOption _selectedTableType;
@@ -55,11 +56,15 @@ public class InitializePartitionTableViewModel : ViewModelBase
     /// <param name="tableType">Partition table type selected by default.</param>
     /// <param name="masterBootRecordPartitions">Partitions of master boot record of disk, which can be kept when
     /// initializing rigid disk block for a hybrid disk. Null, if disk doesn't have a master boot record.</param>
+    /// <param name="masterBootRecordFreeSpace">Free space for partitions in master boot record by size of rigid disk
+    /// block initialized keeping master boot record.</param>
     public InitializePartitionTableViewModel(IReadOnlyList<InitializeTarget> targets, InitializeTarget selectedTarget,
-        PartitionTableType tableType, IReadOnlyList<ReservedArea>? masterBootRecordPartitions)
+        PartitionTableType tableType, IReadOnlyList<ReservedArea>? masterBootRecordPartitions,
+        Func<long, long>? masterBootRecordFreeSpace = null)
     {
         Targets = targets;
         _masterBootRecordPartitions = masterBootRecordPartitions;
+        _masterBootRecordFreeSpace = masterBootRecordFreeSpace;
         _selectedTarget = selectedTarget;
 
         // existing or initialized master boot record is kept by default for a hybrid disk
@@ -136,7 +141,11 @@ public class InitializePartitionTableViewModel : ViewModelBase
     public decimal RdbBlockLo
     {
         get => _rdbBlockLo;
-        set => this.RaiseAndSetIfChanged(ref _rdbBlockLo, Math.Clamp(Math.Round(value), MinRdbBlockLo, 15));
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _rdbBlockLo, Math.Clamp(Math.Round(value), MinRdbBlockLo, 15));
+            this.RaisePropertyChanged(nameof(SpaceText));
+        }
     }
 
     public decimal MinRdbBlockLo => IsKeepingMasterBootRecord ? 1 : 0;
@@ -155,9 +164,18 @@ public class InitializePartitionTableViewModel : ViewModelBase
         : _selectedTarget.DiskSize;
 
     /// <summary>
-    /// Selected size of rigid disk block. Defaults to max size.
+    /// Default size of rigid disk block is half of disk, when keeping master boot record for a hybrid disk, so both
+    /// partition tables have space for partitions. Limited to max size. Otherwise max size.
     /// </summary>
-    private long SelectedRdbSize => _rdbSize == 0 ? MaxRdbSize : _rdbSize;
+    private long DefaultRdbSize => IsKeepingMasterBootRecord
+        ? Math.Min(MaxRdbSize, Math.Max(_selectedTarget.DiskSize / 2 / PartitionLayout.MiB * PartitionLayout.MiB,
+            Math.Min(MinRdbSize, MaxRdbSize)))
+        : MaxRdbSize;
+
+    /// <summary>
+    /// Selected size of rigid disk block. Defaults to default size.
+    /// </summary>
+    private long SelectedRdbSize => _rdbSize == 0 ? DefaultRdbSize : _rdbSize;
 
     /// <summary>
     /// Size of rigid disk block in MB.
@@ -172,12 +190,13 @@ public class InitializePartitionTableViewModel : ViewModelBase
             {
                 // size larger than max is kept, when keeping master boot record to show error for missing space
                 var bytes = (long)(number * 1024 * 1024);
-                _rdbSize = bytes == MaxRdbSize || (bytes > MaxRdbSize && !IsKeepingMasterBootRecord)
+                _rdbSize = bytes == DefaultRdbSize || (bytes > MaxRdbSize && !IsKeepingMasterBootRecord)
                     ? 0
                     : Math.Max(bytes, Math.Min(MinRdbSize, MaxRdbSize));
             }
 
             this.RaisePropertyChanged();
+            this.RaisePropertyChanged(nameof(SpaceText));
             RaiseErrorChanged();
         }
     }
@@ -191,8 +210,28 @@ public class InitializePartitionTableViewModel : ViewModelBase
     /// record partition, when keeping master boot record.
     /// </summary>
     public long RdbSize => _rdbSize == 0
-        ? IsKeepingMasterBootRecord ? MaxRdbSize : 0
+        ? IsKeepingMasterBootRecord ? DefaultRdbSize : 0
         : Math.Min(_rdbSize, MaxRdbSize);
+
+    /// <summary>
+    /// Space available for partitions in rigid disk block and master boot record, when keeping master boot record for
+    /// a hybrid disk. Empty otherwise or if size is invalid.
+    /// </summary>
+    public string SpaceText
+    {
+        get
+        {
+            if (!IsKeepingMasterBootRecord || HasError || _masterBootRecordFreeSpace == null)
+                return string.Empty;
+
+            var rdbFreeSpace = PartitionLayout.CreateNewRdb(_selectedTarget.DiskSize, RdbSize, (int)_rdbBlockLo,
+                _masterBootRecordPartitions).FreeSpace;
+            var mbrFreeSpace = _masterBootRecordFreeSpace(RdbSize);
+            return $"Rigid Disk Block has {MediaOptions.FormatBytes(rdbFreeSpace)} available for partitions and Master Boot Record has {MediaOptions.FormatBytes(mbrFreeSpace)} available for partitions.";
+        }
+    }
+
+    public bool HasSpaceText => !string.IsNullOrEmpty(SpaceText);
 
     /// <summary>
     /// Description of what is erased by initializing partition table.
@@ -241,6 +280,7 @@ public class InitializePartitionTableViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(RdbSizeText));
         this.RaisePropertyChanged(nameof(RdbSizeHelpText));
         this.RaisePropertyChanged(nameof(WarningText));
+        this.RaisePropertyChanged(nameof(SpaceText));
         RaiseErrorChanged();
     }
 
@@ -249,5 +289,6 @@ public class InitializePartitionTableViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(ErrorMessage));
         this.RaisePropertyChanged(nameof(HasError));
         this.RaisePropertyChanged(nameof(CanInitialize));
+        this.RaisePropertyChanged(nameof(HasSpaceText));
     }
 }

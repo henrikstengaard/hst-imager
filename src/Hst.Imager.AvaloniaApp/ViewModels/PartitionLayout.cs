@@ -1514,16 +1514,27 @@ public class PartitionLayout
     /// Build segments of partitions and unallocated space in usable area of partition table. Segments are offset by
     /// start of partition table on disk and nested with depth, when partition table is in a partition.
     /// </summary>
-    public List<PartitionSegmentViewModel> BuildSegments(long offset = 0, int depth = 0)
+     /// <param name="offset">Start of partition table on disk.</param>
+    /// <param name="depth">Nesting depth of partition table.</param>
+    /// <param name="nameUnallocatedByTable">Unallocated space is named by partition table it belongs to, e.g. for a
+    /// hybrid disk with rigid disk block and master boot record.</param>
+    public List<PartitionSegmentViewModel> BuildSegments(long offset = 0, int depth = 0,
+        bool nameUnallocatedByTable = false)
     {
+        var unallocatedName = nameUnallocatedByTable
+            ? $"Unallocated ({GetTableTypeAbbreviation(TableType)})"
+            : null;
+
         PartitionSegmentViewModel Segment(long start, long size, PartitionEntryViewModel? partition,
-            ReservedArea? reserved = null, string? unallocatedName = null) =>
-            new(this, start, size, partition, reserved, unallocatedName, offset, depth);
+            ReservedArea? reserved = null) =>
+            new(this, start, size, partition, reserved, partition == null && reserved == null ? unallocatedName : null,
+                offset, depth);
 
         var segments = new List<PartitionSegmentViewModel>();
         if (!HasPartitionTable)
         {
-            segments.Add(Segment(0, DiskSize, null, null, IsBlank ? "Uninitialized" : "No partition table"));
+            segments.Add(new PartitionSegmentViewModel(this, 0, DiskSize, null, null,
+                IsBlank ? "Uninitialized" : "No partition table", offset, depth));
             return segments;
         }
 
@@ -1563,6 +1574,46 @@ public class PartitionLayout
                 $"{TableTypeName} (backup)", offset, depth, true));
 
         return segments;
+    }
+
+    /// <summary>
+    /// Unallocated space available for partitions in usable area of partition table.
+    /// </summary>
+    public long FreeSpace => GetFreeSpace(_partitions.Select(x => (x.Start, x.End))
+        .Concat(_reservedAreas.Select(x => (x.Start, End: x.Start + x.Size))));
+
+    /// <summary>
+    /// Unallocated space available for partitions in master boot record, when rigid disk block of size is
+    /// initialized keeping master boot record for a hybrid disk. Replaces rigid disk block area reserved before.
+    /// </summary>
+    public long GetFreeSpaceWithRigidDiskBlock(long rdbSize) => GetFreeSpace(_partitions
+        .Select(x => (x.Start, x.End))
+        .Concat(_reservedAreas.Where(x => x.TableType != PartitionTableType.RigidDiskBlock)
+            .Select(x => (x.Start, End: x.Start + x.Size)))
+        .Append((0, AlignUp(rdbSize + RdbMbrGap, MiB))));
+
+    /// <summary>
+    /// Sum of unallocated space between occupied areas in usable area, which has room for a partition. Same as
+    /// unallocated segments.
+    /// </summary>
+    private long GetFreeSpace(IEnumerable<(long Start, long End)> occupied)
+    {
+        if (!HasPartitionTable)
+            return 0;
+
+        var free = 0L;
+        var position = UsableStart;
+        foreach (var (start, end) in occupied.OrderBy(x => x.Start))
+        {
+            var gapEnd = Math.Min(start, UsableEnd);
+            if (gapEnd - position >= MinPartitionSize)
+                free += gapEnd - position;
+            position = Math.Max(position, end);
+        }
+
+        if (UsableEnd - position >= MinPartitionSize)
+            free += UsableEnd - position;
+        return free;
     }
 
     /// <summary>

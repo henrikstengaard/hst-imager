@@ -68,6 +68,10 @@
         <TextBlock Grid.Row="2" Grid.Column="1" Classes="field-help" TextWrapping="Wrap" Margin="8,4,0,0"
                    Text="{Binding RdbSizeHelpText}" />
       </Grid>
+      <Grid ColumnDefinitions="Auto,*" IsVisible="{Binding HasSpaceText}">
+        <ia:Icon Grid.Column="0" Value="fa-circle-info" Classes="field-icon" VerticalAlignment="Top" Margin="0,2,6,0" />
+        <TextBlock Grid.Column="1" TextWrapping="Wrap" Text="{Binding SpaceText}" />
+      </Grid>
     </StackPanel>
 
     <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8"
