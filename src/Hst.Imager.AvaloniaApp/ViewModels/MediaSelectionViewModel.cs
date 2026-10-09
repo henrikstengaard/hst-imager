@@ -97,10 +97,14 @@ public class MediaSelectionViewModel : ViewModelBase
     private readonly IDialogService _dialogService;
     private readonly Subject<Unit> _loadRequests = new();
 
+    // last choice in media choices to select image file
+    private readonly MediaItemViewModel _imageFileChoice;
+
     private SelectOption _type;
     private string _imagePath = string.Empty;
     private ObservableCollection<MediaItemViewModel> _mediaItems = [];
     private MediaItemViewModel? _selectedDisk;
+    private IReadOnlyList<MediaItemViewModel> _mediaChoices = [];
     private bool _isLoadingMedia;
     private MediaInfo? _media;
     private bool _isLoading;
@@ -129,6 +133,8 @@ public class MediaSelectionViewModel : ViewModelBase
             .Where(x => x.Value == MediaOptions.ImageFile ? options.AllowImageFile : options.AllowPhysicalDisk)
             .ToList();
         _type = TypeOptions[0];
+        _imageFileChoice = new MediaItemViewModel { Name = "Image file" };
+        UpdateMediaChoices();
 
         PartPath = new PartPathSelection();
         PartPath.SelectionChanged += option =>
@@ -176,8 +182,6 @@ public class MediaSelectionViewModel : ViewModelBase
             if (value == null || ReferenceEquals(_type, value)) return;
             this.RaiseAndSetIfChanged(ref _type, value);
             RaiseTypeChanged();
-            if (IsPhysicalDisk && _mediaItems.Count == 0)
-                _ = RefreshMediaAsync();
             RequestLoad();
         }
     }
@@ -186,11 +190,9 @@ public class MediaSelectionViewModel : ViewModelBase
     public bool IsPhysicalDisk => !IsImageFile;
 
     /// <summary>
-    /// Physical disks can only be selected with administrator privileges.
+    /// Warning is shown to indicate why no physical disks are listed.
     /// </summary>
-    public bool IsElevated => IsAdministrator;
-
-    public bool ShowElevationWarning => IsPhysicalDisk && !IsAdministrator;
+    public bool ShowElevationWarning => Options.AllowPhysicalDisk && !IsAdministrator;
 
     // ─── Image file ───────────────────────────────────────────────────────────
 
@@ -211,8 +213,56 @@ public class MediaSelectionViewModel : ViewModelBase
     public ObservableCollection<MediaItemViewModel> MediaItems
     {
         get => _mediaItems;
-        private set => this.RaiseAndSetIfChanged(ref _mediaItems, value);
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _mediaItems, value);
+            UpdateMediaChoices();
+        }
     }
+
+    /// <summary>
+    /// Physical disks and last image file choice, if image file is allowed.
+    /// </summary>
+    public IReadOnlyList<MediaItemViewModel> MediaChoices
+    {
+        get => _mediaChoices;
+        private set => this.RaiseAndSetIfChanged(ref _mediaChoices, value);
+    }
+
+    /// <summary>
+    /// Selected physical disk or image file choice.
+    /// </summary>
+    public MediaItemViewModel? SelectedChoice
+    {
+        get => IsImageFile ? _imageFileChoice : _selectedDisk;
+        set
+        {
+            // ignore null pushed by combobox, when media choices are changed
+            if (value == null || ReferenceEquals(SelectedChoice, value)) return;
+            if (ReferenceEquals(value, _imageFileChoice))
+            {
+                Type = TypeOptions.First(x => x.Value == MediaOptions.ImageFile);
+                return;
+            }
+
+            SelectedDisk = value;
+            Type = TypeOptions.First(x => x.Value == MediaOptions.PhysicalDisk);
+        }
+    }
+
+    /// <summary>
+    /// Physical disks are listed with administrator privileges. Without image file, physical disks are listed when
+    /// none exist to show physical disks are empty, otherwise only image file can be selected.
+    /// </summary>
+    public bool ShowMediaChoices => Options.AllowPhysicalDisk && IsAdministrator &&
+                                    (!Options.AllowImageFile || _isLoadingMedia || _mediaItems.Count > 0);
+
+    public string MediaChoicesLabel => Options.AllowImageFile ? "Physical disk or image file" : "Physical disk";
+
+    /// <summary>
+    /// Image file path is shown, when image file is selected or no physical disks are listed.
+    /// </summary>
+    public bool ShowImageFile => Options.AllowImageFile && (IsImageFile || !ShowMediaChoices);
 
     public MediaItemViewModel? SelectedDisk
     {
@@ -221,6 +271,7 @@ public class MediaSelectionViewModel : ViewModelBase
         {
             if (ReferenceEquals(_selectedDisk, value)) return;
             this.RaiseAndSetIfChanged(ref _selectedDisk, value);
+            this.RaisePropertyChanged(nameof(SelectedChoice));
             RaiseSelectionChanged();
             RequestLoad();
         }
@@ -236,6 +287,7 @@ public class MediaSelectionViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _isLoadingMedia, value);
             this.RaisePropertyChanged(nameof(CanConfirm));
+            RaiseMediaChoicesChanged();
         }
     }
 
@@ -444,15 +496,17 @@ public class MediaSelectionViewModel : ViewModelBase
     /// </summary>
     public async Task InitializeAsync()
     {
-        if (IsPhysicalDisk)
+        if (CanListPhysicalDisks)
             await RefreshMediaAsync();
     }
+
+    private bool CanListPhysicalDisks => Options.AllowPhysicalDisk && IsAdministrator;
 
     private async Task EditAsync()
     {
         var copy = new MediaSelectionViewModel(_mediaService, _dialogService, Options) { _isEditCopy = true };
         copy.CopyFrom(this);
-        if (copy.IsPhysicalDisk && copy.MediaItems.Count == 0)
+        if (copy.CanListPhysicalDisks && copy.MediaItems.Count == 0)
             _ = copy.RefreshMediaAsync();
 
         if (!await _dialogService.ShowMediaSelectionDialogAsync(copy))
@@ -493,6 +547,7 @@ public class MediaSelectionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(Type));
         this.RaisePropertyChanged(nameof(ImagePath));
         this.RaisePropertyChanged(nameof(MediaItems));
+        UpdateMediaChoices();
         this.RaisePropertyChanged(nameof(SelectedDisk));
         this.RaisePropertyChanged(nameof(Media));
         this.RaisePropertyChanged(nameof(HasMedia));
@@ -510,9 +565,23 @@ public class MediaSelectionViewModel : ViewModelBase
     {
         this.RaisePropertyChanged(nameof(IsImageFile));
         this.RaisePropertyChanged(nameof(IsPhysicalDisk));
-        this.RaisePropertyChanged(nameof(ShowElevationWarning));
         this.RaisePropertyChanged(nameof(TypeIcon));
+        this.RaisePropertyChanged(nameof(SelectedChoice));
+        this.RaisePropertyChanged(nameof(ShowImageFile));
         RaiseSelectionChanged();
+    }
+
+    private void UpdateMediaChoices()
+    {
+        MediaChoices = Options.AllowImageFile ? [.. _mediaItems, _imageFileChoice] : [.. _mediaItems];
+        this.RaisePropertyChanged(nameof(SelectedChoice));
+        RaiseMediaChoicesChanged();
+    }
+
+    private void RaiseMediaChoicesChanged()
+    {
+        this.RaisePropertyChanged(nameof(ShowMediaChoices));
+        this.RaisePropertyChanged(nameof(ShowImageFile));
     }
 
     private void RaiseSelectionChanged()
@@ -572,8 +641,27 @@ public class MediaSelectionViewModel : ViewModelBase
             var selected = _selectedDisk == null
                 ? null
                 : MediaItems.FirstOrDefault(x => x.Path == _selectedDisk.Path);
-            _selectedDisk = null;
-            SelectedDisk = selected ?? MediaItems.FirstOrDefault();
+            if (IsImageFile && _selectedDisk == null && string.IsNullOrWhiteSpace(_imagePath) &&
+                MediaItems.Count > 0)
+            {
+                // select first physical disk, if no image file or physical disk has been selected
+                SelectedChoice = MediaItems[0];
+            }
+            else if (IsPhysicalDisk)
+            {
+                _selectedDisk = null;
+                SelectedDisk = selected ?? MediaItems.FirstOrDefault();
+
+                // select image file, if no physical disks exist and image file is allowed
+                if (_selectedDisk == null && Options.AllowImageFile)
+                    Type = TypeOptions.First(x => x.Value == MediaOptions.ImageFile);
+            }
+            else
+            {
+                // keep image file selected without loading media info again
+                _selectedDisk = selected;
+                this.RaisePropertyChanged(nameof(SelectedDisk));
+            }
         }
         catch (Exception ex)
         {

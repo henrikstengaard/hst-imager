@@ -15,20 +15,37 @@
   <StackPanel Margin="20" Spacing="12">
     <TextBlock Text="{Binding Options.Title}" FontSize="18" FontWeight="SemiBold" />
 
-    <!-- Image file or physical disk -->
-    <StackPanel Spacing="4" IsVisible="{Binding HasTypeOptions}">
+    <Border Classes="warning" IsVisible="{Binding ShowElevationWarning}">
+      <TextBlock TextWrapping="Wrap"
+                 Text="Physical disks are not listed, because administrator privileges are required to access physical disks. Use 'Run as Administrator' in the menu to enable it." />
+    </Border>
+
+    <!-- Physical disks and image file -->
+    <StackPanel Spacing="4" IsVisible="{Binding ShowMediaChoices}">
       <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-shapes" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Type" />
+        <ia:Icon Value="fa-hdd" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="{Binding MediaChoicesLabel}" />
       </StackPanel>
-      <ComboBox ItemsSource="{Binding TypeOptions}"
-                SelectedItem="{Binding Type}"
-                DisplayMemberBinding="{Binding Title}"
-                HorizontalAlignment="Stretch" />
+      <Grid ColumnDefinitions="*,Auto">
+        <Panel Grid.Column="0">
+          <ComboBox ItemsSource="{Binding MediaChoices}"
+                    SelectedItem="{Binding SelectedChoice}"
+                    DisplayMemberBinding="{Binding Label}"
+                    HorizontalAlignment="Stretch" />
+          <!-- loading indicator shown while getting physical disks -->
+          <ia:Icon Value="fa-spinner" Animation="Spin"
+                   IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
+                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
+        </Panel>
+        <Button Grid.Column="1" Margin="8,0,0,0"
+                Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
+          <ia:Icon Value="fa-sync-alt" />
+        </Button>
+      </Grid>
     </StackPanel>
 
     <!-- Image file -->
-    <StackPanel Spacing="4" IsVisible="{Binding IsImageFile}">
+    <StackPanel Spacing="4" IsVisible="{Binding ShowImageFile}">
       <StackPanel Orientation="Horizontal" Spacing="5">
         <ia:Icon Value="fa-file" Classes="field-icon" />
         <TextBlock Classes="field-label" Text="Image file" />
@@ -37,35 +54,6 @@
         <TextBox Grid.Column="0" Text="{Binding ImagePath}" />
         <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseCommand}" ToolTip.Tip="Browse">
           <ia:Icon Value="fa-folder-open" />
-        </Button>
-      </Grid>
-    </StackPanel>
-
-    <!-- Physical disk -->
-    <StackPanel Spacing="4" IsVisible="{Binding IsPhysicalDisk}">
-      <StackPanel Orientation="Horizontal" Spacing="5">
-        <ia:Icon Value="fa-hdd" Classes="field-icon" />
-        <TextBlock Classes="field-label" Text="Physical disk" />
-      </StackPanel>
-      <Border Classes="warning" IsVisible="{Binding ShowElevationWarning}">
-        <TextBlock TextWrapping="Wrap"
-                   Text="Physical disk selection is disabled, because administrator privileges are required to access physical disks. Use 'Run as Administrator' in the menu to enable it." />
-      </Border>
-      <Grid ColumnDefinitions="*,Auto">
-        <Panel Grid.Column="0">
-          <ComboBox IsEnabled="{Binding IsElevated}"
-                    ItemsSource="{Binding MediaItems}"
-                    SelectedItem="{Binding SelectedDisk}"
-                    DisplayMemberBinding="{Binding Label}"
-                    HorizontalAlignment="Stretch" />
-          <!-- loading indicator shown while getting physical disks -->
-          <ia:Icon Value="fa-spinner" Animation="Spin"
-                   IsVisible="{Binding IsLoadingMedia}" IsHitTestVisible="False"
-                   HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,36,0" />
-        </Panel>
-        <Button Grid.Column="1" Margin="8,0,0,0" IsEnabled="{Binding IsElevated}"
-                Command="{Binding RefreshMediaCommand}" ToolTip.Tip="Refresh">
-          <ia:Icon Value="fa-sync-alt" />
         </Button>
       </Grid>
     </StackPanel>
