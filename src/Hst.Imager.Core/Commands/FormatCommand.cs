@@ -433,14 +433,14 @@ namespace Hst.Imager.Core.Commands
         /// <param name="version">Version to check.</param>
         /// <param name="revision">Revision to check.</param>
         /// <returns>True if version and revision supports DOS7 long filenames. Otherwise false.</returns>
-        private static bool HasFastFileSystemDos7Support(int version, int revision)
+        public static bool HasFastFileSystemDos7Support(int version, int revision)
         {
             if (version > 46)
             {
                 return true;
             }
-            
-            return revision >= 13;
+
+            return version == 46 && revision >= 13;
         }
 
         private async Task<Result<int>> FormatRdbDisk(long diskSize, long maxRdbDiskSize,
