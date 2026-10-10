@@ -9,7 +9,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Hst.Imager.AvaloniaApp.ViewModels;
-using Projektanker.Icons.Avalonia;
+using Optris.Icons.Avalonia;
 
 namespace Hst.Imager.AvaloniaApp.Controls;
 

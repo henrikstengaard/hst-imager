@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Humanizer;
 using Hst.Imager.AvaloniaApp.Models;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

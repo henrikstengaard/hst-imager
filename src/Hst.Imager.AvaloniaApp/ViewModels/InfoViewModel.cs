@@ -8,6 +8,7 @@ using Humanizer;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

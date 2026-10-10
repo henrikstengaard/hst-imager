@@ -9,6 +9,7 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.FileSystems;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

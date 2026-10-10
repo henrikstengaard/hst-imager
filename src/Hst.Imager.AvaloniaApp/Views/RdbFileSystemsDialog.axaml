@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
-        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
         xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
         x:Class="Hst.Imager.AvaloniaApp.Views.RdbFileSystemsDialog"
         x:DataType="vm:RdbFileSystemsViewModel"
@@ -79,7 +79,7 @@
             <TextBlock Classes="field-label" Text="DOS type" />
           </StackPanel>
           <TextBox Text="{Binding SelectedFileSystem.DosTypeText, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
-                   Watermark="e.g. PDS3, PFS3, DOS3" />
+                   PlaceholderText="e.g. PDS3, PFS3, DOS3" />
           <TextBlock Classes="error-text" TextWrapping="Wrap"
                      IsVisible="{Binding SelectedFileSystem.HasDosTypeError, FallbackValue=False}"
                      Text="{Binding SelectedFileSystem.DosTypeError, FallbackValue=''}" />

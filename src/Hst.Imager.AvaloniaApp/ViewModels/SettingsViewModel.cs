@@ -7,6 +7,7 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Models;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 using Unit = System.Reactive.Unit;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
@@ -64,7 +65,7 @@ public class SettingsViewModel : ViewModelBase
         this.Changed
             .Where(e => e.PropertyName != nameof(IsSaved))
             .Throttle(TimeSpan.FromMilliseconds(800))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe(e => { _ = SaveAsync(); });
     }
 

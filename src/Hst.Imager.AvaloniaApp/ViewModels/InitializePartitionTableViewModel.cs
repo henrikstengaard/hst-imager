@@ -5,6 +5,7 @@ using System.Linq;
 using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

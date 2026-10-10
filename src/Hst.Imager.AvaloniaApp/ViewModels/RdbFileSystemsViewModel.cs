@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Hst.Amiga.VersionStrings;
 using Hst.Imager.AvaloniaApp.Services;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 using Unit = System.Reactive.Unit;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;

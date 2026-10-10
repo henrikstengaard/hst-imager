@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
              xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
-             xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
              xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
              x:Class="Hst.Imager.AvaloniaApp.Views.ReadView"
              x:DataType="vm:ReadViewModel">

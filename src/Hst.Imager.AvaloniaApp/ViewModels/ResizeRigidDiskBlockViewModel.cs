@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.Reactive;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

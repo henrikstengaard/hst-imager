@@ -4,6 +4,7 @@ using System.Reactive;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 

@@ -7,6 +7,7 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Microsoft.Extensions.DependencyInjection;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 using Serilog;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;

@@ -10,6 +10,7 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 using Unit = System.Reactive.Unit;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;

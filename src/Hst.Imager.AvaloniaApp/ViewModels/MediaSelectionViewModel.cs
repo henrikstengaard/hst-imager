@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
@@ -156,7 +157,7 @@ public class MediaSelectionViewModel : ViewModelBase
         // load media info, when user stops changing selection
         _loadRequests
             .Throttle(TimeSpan.FromMilliseconds(500))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Select(_ => Observable.FromAsync(LoadMediaAsync))
             .Concat()
             .Subscribe();

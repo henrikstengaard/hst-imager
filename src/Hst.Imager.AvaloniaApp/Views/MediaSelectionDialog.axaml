@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
-        xmlns:ia="clr-namespace:Projektanker.Icons.Avalonia;assembly=Projektanker.Icons.Avalonia"
+        xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
         x:Class="Hst.Imager.AvaloniaApp.Views.MediaSelectionDialog"
         x:DataType="vm:MediaSelectionViewModel"
         Title="{Binding Options.Title}"

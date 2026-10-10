@@ -1,12 +1,12 @@
 using System;
 using System.IO;
 using Avalonia;
-using Avalonia.ReactiveUI;
+using ReactiveUI.Avalonia.Reactive;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
-using Projektanker.Icons.Avalonia;
-using Projektanker.Icons.Avalonia.FontAwesome;
+using Optris.Icons.Avalonia;
+using Optris.Icons.Avalonia.FontAwesome;
 using Serilog;
 using Serilog.Events;
 using Velopack;
@@ -49,7 +49,7 @@ class Program
         return AppBuilder.Configure<App>(() => new App(appDataPath ?? ApplicationDataHelper.GetApplicationDataDir("HstImager"), startupArgs ?? []))
             .UsePlatformDetect()
             .WithInterFont()
-            .UseReactiveUI()
+            .UseReactiveUI(_ => { })
             .LogToTrace();
     }
 

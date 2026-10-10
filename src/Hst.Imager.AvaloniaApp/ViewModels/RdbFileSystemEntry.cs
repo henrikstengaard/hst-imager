@@ -4,6 +4,7 @@ using Hst.Amiga.RigidDiskBlocks;
 using Hst.Amiga.VersionStrings;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
+using ReactiveUI.Reactive;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
