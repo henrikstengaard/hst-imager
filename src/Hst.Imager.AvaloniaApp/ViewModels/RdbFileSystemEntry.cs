@@ -349,6 +349,25 @@ public class RdbFileSystemEntry : ReactiveObject
         RevisionNumber = null;
     }
 
+    /// <summary>
+    /// Set dos type of new FastFileSystem to DOS7, if its version supports long filenames, otherwise DOS3. Dos type is
+    /// only changed for FastFileSystem with dos type DOS3 or DOS7 and a version.
+    /// </summary>
+    public void UpdateFastFileSystemDosType()
+    {
+        if (IsExisting || _dosType is not ("DOS3" or "DOS7") || _versionNumber is not { } version ||
+            _revisionNumber is not { } revision)
+            return;
+
+        DosType = SupportsLongFilenames((int)version, (int)revision) ? "DOS7" : "DOS3";
+    }
+
+    /// <summary>
+    /// FastFileSystem v46.13 and newer from AmigaOS 3.1.4 supports DOS7 long filenames.
+    /// </summary>
+    public static bool SupportsLongFilenames(int version, int revision) =>
+        version > 46 || (version == 46 && revision >= 13);
+
     public static bool IsUrl(string path) => path.StartsWith("http", StringComparison.OrdinalIgnoreCase);
 
     private void SetDosType(string value)

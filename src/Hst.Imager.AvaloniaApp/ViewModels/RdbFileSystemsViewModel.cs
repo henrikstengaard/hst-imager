@@ -340,6 +340,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
         var version = RdbFileSystemEntry.FormatVersion(VersionStringReader.Read(data));
         fileSystem.Size = size;
         fileSystem.SetVersion(version);
+        fileSystem.UpdateFastFileSystemDosType();
         fileSystem.HasVersionString = data.Length == 0 || !string.IsNullOrEmpty(version);
         return string.Empty;
     }
@@ -363,6 +364,7 @@ public class RdbFileSystemsViewModel : ViewModelBase
 
         fileSystem.Size = info?.Size;
         fileSystem.SetVersion(info?.Version ?? string.Empty);
+        fileSystem.UpdateFastFileSystemDosType();
         return info == null ? $"File system '{name}' not found in media '{System.IO.Path.GetFileName(path)}'" : string.Empty;
     }
 
