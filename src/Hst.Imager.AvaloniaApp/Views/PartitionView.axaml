@@ -71,7 +71,7 @@
             <ToggleButton Classes="icon" IsEnabled="{Binding IsExistingPartitionSelected}"
                           IsChecked="{Binding SelectedPartition.FormatRequested, FallbackValue=False}"
                           ToolTip.Tip="Format selected partition, which erases all data on it">
-              <ia:Icon Value="fa-eraser" />
+              <ia:Icon Value="fa-broom" />
             </ToggleButton>
             <Button Classes="icon" Command="{Binding InitializeCommand}"
                     ToolTip.Tip="Initialize new empty partition table, which erases existing partitions">

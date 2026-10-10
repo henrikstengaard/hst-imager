@@ -1035,7 +1035,7 @@ public class PartitionSegmentViewModel
             : string.Empty;
         Flags = partition.Bootable ? layout.IsRdb ? "bootable" : "active" : string.Empty;
         Status = partition.IsNew ? "New" : partition.FormatRequested ? "Format" : string.Empty;
-        StatusIcon = partition.IsNew ? "fa-circle-plus" : partition.FormatRequested ? "fa-eraser" : string.Empty;
+        StatusIcon = partition.IsNew ? "fa-circle-plus" : partition.FormatRequested ? "fa-broom" : string.Empty;
     }
 
     /// <summary>
