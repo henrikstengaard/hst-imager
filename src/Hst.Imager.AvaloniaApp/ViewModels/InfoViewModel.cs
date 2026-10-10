@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reactive;
 using System.Threading.Tasks;
 using Humanizer;
-using Humanizer.Bytes;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;

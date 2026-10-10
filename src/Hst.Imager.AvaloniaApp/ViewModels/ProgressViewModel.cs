@@ -3,7 +3,6 @@ using System.Reactive;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
-using Humanizer.Bytes;
 using Hst.Imager.AvaloniaApp.Models;
 using ReactiveUI;
 

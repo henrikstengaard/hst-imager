@@ -1,5 +1,4 @@
 using Humanizer;
-using Humanizer.Bytes;
 using Hst.Imager.Core.Commands;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
@@ -13,6 +12,6 @@ public class MediaItemViewModel
     public MediaInfo? MediaInfo { get; set; }
 
     public string DisplayName => Name;
-    public string SizeFormatted => DiskSize > 0 ? Humanizer.Bytes.ByteSize.FromBytes(DiskSize).Humanize("#.#") : string.Empty;
+    public string SizeFormatted => DiskSize > 0 ? ByteSize.FromBytes(DiskSize).Humanize("#.#") : string.Empty;
     public string Label => string.IsNullOrEmpty(SizeFormatted) ? Name : $"{Name} ({SizeFormatted})";
 }
