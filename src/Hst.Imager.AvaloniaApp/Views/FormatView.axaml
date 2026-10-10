@@ -121,7 +121,7 @@
         </Button>
         <Button Command="{Binding StartFormatCommand}" Classes="danger">
           <StackPanel Orientation="Horizontal" Spacing="6">
-            <ia:Icon Value="fa-check" />
+            <ia:Icon Value="fa-broom" />
             <TextBlock Text="Format" />
           </StackPanel>
         </Button>

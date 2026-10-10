@@ -57,7 +57,7 @@ public class MainWindowViewModel : ViewModelBase
         new("Compare", "Compare", "fa-check"),
         new("Blank", "Blank", "fa-plus"),
         new("Optimize", "Optimize", "fa-compress"),
-        new("Format", "Format", "fa-eraser"),
+        new("Format", "Format", "fa-broom"),
         new("Partition", "Partition", "fa-table-columns")
     ];
 
