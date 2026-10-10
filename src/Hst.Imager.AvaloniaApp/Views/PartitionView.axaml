@@ -155,7 +155,8 @@
 
         <!-- Amiga file systems for new rigid disk block partitions -->
         <StackPanel Spacing="8" IsVisible="{Binding ShowAmigaFileSystems}">
-          <StackPanel Spacing="4" IsVisible="{Binding NeedsPfs3FileSystem}">
+          <!-- download pfs3aio is always shown, as it makes PFS\3 and PDS\3 available for new partitions -->
+          <StackPanel Spacing="4">
             <CheckBox Content="Download pfs3aio from aminet.net for PFS\3 and PDS\3 partitions"
                       IsChecked="{Binding DownloadPfs3Aio}" />
             <StackPanel Spacing="4" IsVisible="{Binding ShowPfs3FileSystemPath}">

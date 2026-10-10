@@ -85,8 +85,8 @@
     </controls:ResponsiveColumns>
 
     <TextBlock Classes="error-text" TextWrapping="Wrap"
-               IsVisible="{Binding SelectedPartition.HasPartitionTypeError, FallbackValue=False}"
-               Text="{Binding SelectedPartition.PartitionTypeError, FallbackValue=''}" />
+               IsVisible="{Binding SelectedPartition.HasDialogError, FallbackValue=False}"
+               Text="{Binding SelectedPartition.DialogError, FallbackValue=''}" />
 
     <!-- File system in rigid disk block used by new rigid disk block partition, which can be imported -->
     <StackPanel Spacing="6" IsVisible="{Binding ShowRdbFileSystem}">

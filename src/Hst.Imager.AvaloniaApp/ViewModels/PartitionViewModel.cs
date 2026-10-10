@@ -759,7 +759,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         var layout = _layout;
-        var partition = layout.AddPartition(segment.Start, segment.End, _useExperimental, placement);
+        var partition = layout.AddPartition(segment.Start, segment.End, _useExperimental, _downloadPfs3Aio, placement);
         var partitionSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, partition));
         if (partition == null || partitionSegment == null)
             return;
@@ -784,7 +784,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         var layout = _layout;
-        var clone = layout.ClonePartition(source);
+        var clone = layout.ClonePartition(source, _downloadPfs3Aio);
         var cloneSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, clone));
         if (clone == null || cloneSegment == null)
             return;
@@ -878,7 +878,7 @@ public class PartitionViewModel : ViewModelBase
     private async Task<bool> ShowPartitionDialogAsync(PartitionLayout layout, PartitionEntryViewModel partition)
     {
         if (partition is { IsNew: true, IsRdb: true })
-            partition.PartitionTypeOptions = layout.GetDosTypeOptions();
+            partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio);
 
         _dialogFileSystems.Clear();
         bool ok;
@@ -927,7 +927,7 @@ public class PartitionViewModel : ViewModelBase
         fileSystem.PropertyChanged += (_, _) => UpdatePending();
         _dialogFileSystems.Add(fileSystem);
         layout.AddFileSystem(fileSystem);
-        partition.PartitionTypeOptions = layout.GetDosTypeOptions();
+        partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio);
     }
 
     private void RemoveImportedFileSystem()
@@ -937,7 +937,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         _layout.RemoveFileSystem(fileSystem);
-        _selectedPartition.PartitionTypeOptions = _layout.GetDosTypeOptions();
+        _selectedPartition.PartitionTypeOptions = _layout.GetDosTypeOptions(_downloadPfs3Aio);
     }
 
     /// <summary>

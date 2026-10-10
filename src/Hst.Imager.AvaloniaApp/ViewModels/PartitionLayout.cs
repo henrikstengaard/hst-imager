@@ -465,6 +465,9 @@ public class PartitionEntryViewModel : ReactiveObject
         {
             this.RaiseAndSetIfChanged(ref _partitionTypeOptions, value);
             this.RaisePropertyChanged(nameof(PartitionTypeOption));
+            this.RaisePropertyChanged(nameof(DialogError));
+            this.RaisePropertyChanged(nameof(HasDialogError));
+            this.RaisePropertyChanged(nameof(HasError));
         }
     }
 
@@ -541,6 +544,18 @@ public class PartitionEntryViewModel : ReactiveObject
     public string? PartitionTypeError => IsNew ? PartitionTypes.Validate(TableType, PartitionType) : null;
 
     public bool HasPartitionTypeError => PartitionTypeError != null;
+
+    /// <summary>
+    /// Error for partition type shown in partition dialog or null, if it's valid. Dos type of new rigid disk block
+    /// partition must be one of the dos types available, which are dos types of file systems in rigid disk block.
+    /// </summary>
+    public string? DialogError => IsNew && IsRdb && _partitionTypeOptions.Count == 0
+        ? "Rigid Disk Block doesn't have any file systems. Add a file system to Rigid Disk Block or check download pfs3aio from aminet.net to add a partition."
+        : IsNew && IsRdb && PartitionTypeOption == null
+            ? $"Rigid Disk Block doesn't have a file system with DOS type {PartitionFileSystems.FormatDosType(PartitionType)}."
+            : PartitionTypeError;
+
+    public bool HasDialogError => DialogError != null;
 
     /// <summary>
     /// File system displayed, which is the new file system for new or formatted partitions and partition type for new
@@ -712,7 +727,7 @@ public class PartitionEntryViewModel : ReactiveObject
     /// <summary>
     /// Partition has errors preventing partition dialog from being closed with OK.
     /// </summary>
-    public bool HasError => HasPartitionTypeError || HasRdbPropertiesError;
+    public bool HasError => HasDialogError || HasRdbPropertiesError;
 
     /// <summary>
     /// Existing rigid disk block partition has changed device name, bootable or properties. File system properties
@@ -854,6 +869,8 @@ public class PartitionEntryViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(IsFormattable));
         this.RaisePropertyChanged(nameof(PartitionTypeError));
         this.RaisePropertyChanged(nameof(HasPartitionTypeError));
+        this.RaisePropertyChanged(nameof(DialogError));
+        this.RaisePropertyChanged(nameof(HasDialogError));
         this.RaisePropertyChanged(nameof(HasError));
         this.RaisePropertyChanged(nameof(CanEditFileSystem));
         this.RaisePropertyChanged(nameof(ShowFileSystem));
@@ -1760,7 +1777,7 @@ public class PartitionLayout
     /// Add new partition in unallocated space with default file system, name and size filling unallocated space.
     /// </summary>
     public PartitionEntryViewModel? AddPartition(long freeStart, long freeEnd, bool useExperimental,
-        AddPartitionPlacement placement = AddPartitionPlacement.All)
+        bool downloadPfs3Aio, AddPartitionPlacement placement = AddPartitionPlacement.All)
     {
         if (!CanAddPartition || GetAddRange(freeStart, freeEnd, placement) is not { } range)
             return null;
@@ -1770,9 +1787,10 @@ public class PartitionLayout
         var entry = new PartitionEntryViewModel(TableType, true);
         if (IsRdb)
         {
-            entry.PartitionTypeOptions = GetDosTypeOptions();
+            // dos type of first file system available or none, if no file systems are available
+            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio);
             var isFirst = _partitions.Count == 0;
-            entry.FileSystem = PartitionFileSystems.RdbOptions[0].Value;
+            entry.PartitionType = entry.PartitionTypeOptions.FirstOrDefault()?.Value ?? string.Empty;
             entry.DeviceName = GetNextDeviceName();
             entry.Label = isFirst ? "Workbench" : GetNextWorkLabel();
             entry.Bootable = isFirst;
@@ -1803,7 +1821,7 @@ public class PartitionLayout
     /// with room for it, preferring unallocated space after partition. Only layout details are cloned, not data, so
     /// new partition is added and formatted like other new partitions.
     /// </summary>
-    public PartitionEntryViewModel? ClonePartition(PartitionEntryViewModel source)
+    public PartitionEntryViewModel? ClonePartition(PartitionEntryViewModel source, bool downloadPfs3Aio)
     {
         if (!CanClonePartition(source) || FindCloneStart(source) is not { } start)
             return null;
@@ -1815,7 +1833,7 @@ public class PartitionLayout
         var entry = new PartitionEntryViewModel(TableType, true);
         if (IsRdb)
         {
-            entry.PartitionTypeOptions = GetDosTypeOptions();
+            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio);
             entry.FileSystem = partitionType.ToLowerInvariant();
             entry.DeviceName = GetNextDeviceName();
             entry.Label = GetNextWorkLabel();
@@ -2087,18 +2105,23 @@ public class PartitionLayout
     }
 
     /// <summary>
-    /// Dos types for new rigid disk block partitions, which are common dos types and dos types of file systems in
-    /// rigid disk block. Dos types with a file system in rigid disk block show its name.
+    /// Dos types for new rigid disk block partitions, which are dos types of file systems in rigid disk block showing
+    /// their names. PFS3 and PDS3 are also available without a file system in rigid disk block, if pfs3aio is
+    /// downloaded from aminet.net.
     /// </summary>
-    public List<PartitionTypeOption> GetDosTypeOptions()
+    public List<PartitionTypeOption> GetDosTypeOptions(bool downloadPfs3Aio)
     {
-        var common = PartitionTypes.RdbOptions.Where(x => !x.IsCustom).Select(x =>
-        {
-            var fileSystem = FindFileSystem(x.Value);
-            return fileSystem == null
-                ? x
-                : new PartitionTypeOption { Title = $"{x.Title}, {FormatFileSystemName(fileSystem)}", Value = x.Value };
-        });
+        var common = PartitionTypes.RdbOptions.Where(x => !x.IsCustom)
+            .Select(x => (Option: x, FileSystem: FindFileSystem(x.Value)))
+            .Where(x => x.FileSystem != null ||
+                        (downloadPfs3Aio && PartitionFileSystems.IsPfs3(x.Option.Value.ToLowerInvariant())))
+            .Select(x => new PartitionTypeOption
+            {
+                Title = x.FileSystem == null
+                    ? $"{x.Option.Title}, download from aminet.net"
+                    : $"{x.Option.Title}, {FormatFileSystemName(x.FileSystem)}",
+                Value = x.Option.Value
+            });
         var other = _fileSystems
             .Where(x => x.DosType.Length == 4 &&
                         PartitionTypes.RdbOptions.All(o => !string.Equals(o.Value, x.DosType,
@@ -2109,7 +2132,7 @@ public class PartitionLayout
                 Title = $"{PartitionFileSystems.FormatDosType(x.Key)}, {FormatFileSystemName(x.First())}",
                 Value = x.Key
             });
-        return common.Concat(other).Append(PartitionTypes.RdbOptions.Last()).ToList();
+        return common.Concat(other).ToList();
     }
 
     /// <summary>
