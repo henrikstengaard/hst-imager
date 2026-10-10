@@ -23,8 +23,8 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          $commitCount = (git rev-list --count $env:GITHUB_REF)
-          $commitSha = (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF)
+          $commitCount = (git rev-list --count HEAD)
+          $commitSha = (git log --pretty=format:'%h' -n 1 HEAD)
           $version = (Select-Xml -Path ./src/Directory.Build.props -XPath '/Project/PropertyGroup/Version').Node.InnerXML
           "VERSION={0}" -f ($version) >> $env:GITHUB_ENV
           "BUILD_VERSION={0}" -f ($version -replace '^(.*)\.\d+.*$', "`$1.$commitCount") >> $env:GITHUB_ENV
@@ -70,7 +70,7 @@ jobs:
         working-directory: src/Hst.Imager.ConsoleApp
         shell: pwsh
         run: |
-          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }} -p:Version=${{ env.BUILD_VERSION }}
+          dotnet publish --configuration Release -p:PublishSingleFile=True -p:SelfContained=True -p:RuntimeIdentifier=${{ matrix.target }} -p:PublishReadyToRun=True -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishDir=publish/${{ matrix.target }}
 
       - name: List console app output
         working-directory: src/Hst.Imager.ConsoleApp/publish
@@ -121,8 +121,8 @@ jobs:
       - name: Set version and tag
         shell: pwsh
         run: |
-          $commitCount = (git rev-list --count $env:GITHUB_REF)
-          $commitSha = (git log --pretty=format:'%h' -n 1 $env:GITHUB_REF)
+          $commitCount = (git rev-list --count HEAD)
+          $commitSha = (git log --pretty=format:'%h' -n 1 HEAD)
           $version = (Select-Xml -Path ./src/Directory.Build.props -XPath '/Project/PropertyGroup/Version').Node.InnerXML
           "VERSION={0}" -f ($version) >> $env:GITHUB_ENV
           "BUILD_VERSION={0}" -f ($version -replace '^(.*)\.\d+.*$', "`$1.$commitCount") >> $env:GITHUB_ENV
@@ -149,13 +149,13 @@ jobs:
       - name: Build gui app for Windows x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-x64
         if: matrix.os == 'windows-latest'
 
       - name: Build gui app for Windows arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64
         if: matrix.os == 'windows-latest'
 
       - name: Pack gui app for Windows x64 (Velopack)
@@ -269,13 +269,13 @@ jobs:
       - name: Build gui app for macOS x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true -o publish/osx-x64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r osx-x64 --self-contained -p:PublishSingleFile=true -o publish/osx-x64
         if: matrix.os == 'macos-latest'
 
       - name: Build gui app for macOS arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64
         if: matrix.os == 'macos-latest'
 
       - name: Pack gui app for macOS x64 (Velopack)
@@ -366,13 +366,13 @@ jobs:
       - name: Build gui app for Linux x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux-x64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -o publish/linux-x64
         if: matrix.os == 'ubuntu-latest'
 
       - name: Build gui app for Linux arm64
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true -o publish/linux-arm64 -p:Version=${{ env.BUILD_VERSION }}
+        run: dotnet publish -c Release -r linux-arm64 --self-contained -p:PublishSingleFile=true -o publish/linux-arm64
         if: matrix.os == 'ubuntu-latest'
 
       - name: Pack gui app for Linux x64 (Velopack)
