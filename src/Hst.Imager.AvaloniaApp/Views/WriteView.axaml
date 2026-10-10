@@ -9,11 +9,16 @@
 
   <controls:PageLayout Title="Write"
                        Description="Write an image file or part of to a physical disk.">
-    <!-- Source and destination side by side, when there is room for it -->
-    <controls:ResponsiveColumns>
-      <views:MediaSelectionCard DataContext="{Binding Source}" />
-      <views:MediaSelectionCard DataContext="{Binding Destination}" />
-    </controls:ResponsiveColumns>
+    <StackPanel Spacing="12">
+      <!-- Source and destination side by side, when there is room for it -->
+      <controls:ResponsiveColumns>
+        <views:MediaSelectionCard DataContext="{Binding Source}" />
+        <views:MediaSelectionCard DataContext="{Binding Destination}" />
+      </controls:ResponsiveColumns>
+
+      <!-- Partition layout of source same as info view -->
+      <views:MediaPartitionLayoutView DataContext="{Binding SourceLayout}" />
+    </StackPanel>
 
     <controls:PageLayout.Actions>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">

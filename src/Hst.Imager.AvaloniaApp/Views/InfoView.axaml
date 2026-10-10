@@ -7,21 +7,6 @@
              x:Class="Hst.Imager.AvaloniaApp.Views.InfoView"
              x:DataType="vm:InfoViewModel">
 
-  <UserControl.Styles>
-    <!-- partition table abbreviation in partition table color -->
-    <Style Selector="Border.table-badge">
-      <Setter Property="CornerRadius" Value="3" />
-      <Setter Property="Padding" Value="5,1" />
-      <Setter Property="HorizontalAlignment" Value="Left" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-    </Style>
-    <Style Selector="Border.table-badge TextBlock">
-      <Setter Property="FontSize" Value="11" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Foreground" Value="White" />
-    </Style>
-  </UserControl.Styles>
-
   <controls:PageLayout Title="Info"
                        Description="Display information about an image file or a physical disk.">
     <StackPanel Spacing="12">
@@ -38,72 +23,8 @@
       <!-- Loading indicator -->
       <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsLoading}" Height="4" />
 
-      <StackPanel Spacing="4" Margin="0,8,0,0" IsVisible="{Binding HasDiskInfo}">
-        <TextBlock Classes="section-title" Margin="0" Text="{Binding SourceTypeFormatted, StringFormat='Source {0}'}" />
-        <TextBlock Foreground="{DynamicResource AppBodyForegroundBrush}" Text="{Binding SourceTypeFormatted, StringFormat='Disk information read from source {0}.'}" />
-      </StackPanel>
-
-      <StackPanel Spacing="8" IsVisible="{Binding HasDiskInfo}">
-        <!-- Visual view, read only without add and edit commands -->
-        <controls:PartitionLayoutBar Height="96"
-                                     DiskSize="{Binding DiskSize}"
-                                     Segments="{Binding Segments}"
-                                     SelectedSegment="{Binding SelectedSegment}" />
-
-        <!-- List view -->
-        <DataGrid x:Name="PartitionsGrid" ItemsSource="{Binding Segments}"
-                  SelectedItem="{Binding SelectedSegment}"
-                  SelectionMode="Single"
-                  IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                  GridLinesVisibility="All" Background="{DynamicResource AppPanelBackgroundBrush}">
-          <DataGrid.Columns>
-            <DataGridTemplateColumn Header="Table" Width="75">
-              <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate DataType="vm:PartitionSegmentViewModel">
-                  <Border Classes="table-badge" Background="{Binding TableColorBrush}" IsVisible="{Binding HasTableType}"
-                          Margin="8,0,0,0">
-                    <TextBlock Text="{Binding TableType}" />
-                  </Border>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="" Width="28">
-              <DataGridTemplateColumn.CellTemplate>
-                <DataTemplate DataType="vm:PartitionSegmentViewModel">
-                  <Border Width="14" Height="14" CornerRadius="2" Background="{Binding ColorBrush}"
-                          HorizontalAlignment="Center" VerticalAlignment="Center" />
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-            <DataGridTemplateColumn Header="Partition" Width="2*">
-              <DataGridTemplateColumn.CellTemplate>
-                <!-- partitions of partition table in a partition are indented -->
-                <DataTemplate DataType="vm:PartitionSegmentViewModel">
-                  <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0,0,0">
-                    <ia:Icon Value="fa-turn-up" IsVisible="{Binding IsNested}" Classes="field-icon"
-                             Margin="4,0,0,0" RenderTransform="rotate(90deg)" />
-                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                    <ia:Icon Value="{Binding StatusIcon}" IsVisible="{Binding HasStatus}"
-                             VerticalAlignment="Center" ToolTip.Tip="{Binding Status}" />
-                  </StackPanel>
-                </DataTemplate>
-              </DataGridTemplateColumn.CellTemplate>
-            </DataGridTemplateColumn>
-            <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="40" />
-            <DataGridTextColumn Header="File system" Binding="{Binding FileSystem}" Width="*" />
-            <DataGridTextColumn Header="Size" Binding="{Binding SizeText}" Width="90" />
-            <DataGridTextColumn Header="Start" Binding="{Binding StartText}" Width="100" />
-            <DataGridTextColumn Header="End" Binding="{Binding EndText}" Width="100" />
-            <!-- visibility set by view, when disk has a rigid disk block -->
-            <DataGridTextColumn Tag="cylinder" Header="Start cyl." Binding="{Binding StartCylinderText}"
-                                Width="80" IsVisible="False" />
-            <DataGridTextColumn Tag="cylinder" Header="End cyl." Binding="{Binding EndCylinderText}"
-                                Width="80" IsVisible="False" />
-            <DataGridTextColumn Header="Flags" Binding="{Binding Flags}" Width="90" />
-          </DataGrid.Columns>
-        </DataGrid>
-        <TextBlock Classes="field-help" TextWrapping="Wrap" Text="{Binding SectorsOrCylindersText}" />
-      </StackPanel>
+      <!-- Partition layout of disk -->
+      <views:MediaPartitionLayoutView DataContext="{Binding Layout}" />
 
       <!-- Details read from disk and partition tables -->
       <Expander Header="Details" IsExpanded="{Binding IsDetailsExpanded}" IsVisible="{Binding HasDiskInfo}"

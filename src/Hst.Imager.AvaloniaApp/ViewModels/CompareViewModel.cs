@@ -32,6 +32,7 @@ public class CompareViewModel : ViewModelBase
             ShowByteswap = true,
             ByteswapLabel = "Byteswap source sectors"
         });
+        SourceLayout = new MediaPartitionLayoutViewModel(mediaService, Source);
         Destination = new MediaSelectionViewModel(mediaService, dialogService, new MediaSelectionOptions
         {
             Title = "Destination",
@@ -55,6 +56,7 @@ public class CompareViewModel : ViewModelBase
     public ProgressViewModel Progress { get; }
     public MediaSelectionViewModel Source { get; }
     public MediaSelectionViewModel Destination { get; }
+    public MediaPartitionLayoutViewModel SourceLayout { get; }
 
     public ReactiveCommand<Unit, Unit> StartCompareCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }

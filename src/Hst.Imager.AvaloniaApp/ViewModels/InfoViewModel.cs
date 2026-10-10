@@ -18,9 +18,6 @@ public class InfoViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
 
     private MediaInfo? _mediaInfo;
-    private List<DiskPartitionTable> _tables = [];
-    private ObservableCollection<PartitionSegmentViewModel> _segments = [];
-    private PartitionSegmentViewModel? _selectedSegment;
     private ObservableCollection<DetailSectionBase> _detailSections = [];
     private bool _showHumanReadable = true;
     private bool _isDetailsExpanded;
@@ -45,6 +42,12 @@ public class InfoViewModel : ViewModelBase
             PartLabel = "PiStorm disk to read",
             ShowByteswap = true
         });
+        // partition layout is set, when info is read from source or PiStorm disk
+        Layout = new MediaPartitionLayoutViewModel(Source)
+        {
+            Name = "Source",
+            DescriptionFormat = "Disk information read from {0}."
+        };
         Source.Committed += (_, _) => _ = GetInfoAsync();
 
         GetInfoCommand = ReactiveCommand.CreateFromTask(() => GetInfoAsync(reload: true),
@@ -54,22 +57,7 @@ public class InfoViewModel : ViewModelBase
 
     public MediaSelectionViewModel Source { get; }
 
-    public string SourceTypeFormatted => Source.IsImageFile ? "image file" : "physical disk";
-
-    /// <summary>
-    /// Segments of partition tables shown in partition layout bar and list same as partition view.
-    /// </summary>
-    public ObservableCollection<PartitionSegmentViewModel> Segments
-    {
-        get => _segments;
-        set => this.RaiseAndSetIfChanged(ref _segments, value);
-    }
-
-    public PartitionSegmentViewModel? SelectedSegment
-    {
-        get => _selectedSegment;
-        set => this.RaiseAndSetIfChanged(ref _selectedSegment, value);
-    }
+    public MediaPartitionLayoutViewModel Layout { get; }
 
     /// <summary>
     /// Details of disk and partition tables read from disk shown in expandable details panel.
@@ -96,17 +84,7 @@ public class InfoViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _isDetailsExpanded, value);
     }
 
-    public long DiskSize => _mediaInfo?.DiskSize ?? 0;
-
     public bool HasDiskInfo => _mediaInfo?.DiskInfo != null;
-
-    /// <summary>
-    /// Start and end cylinder columns are shown, when disk has a rigid disk block or PiStorm rigid disk block.
-    /// </summary>
-    public bool ShowCylinders => _tables.Any(x => x.Layout.IsRdb);
-
-    public string SectorsOrCylindersText =>
-        DiskPartitionTables.FormatSectorsOrCylinders(_tables.Select(x => x.Layout));
 
     public string ErrorMessage
     {
@@ -134,15 +112,9 @@ public class InfoViewModel : ViewModelBase
     private void SetInfo(MediaInfo? info, List<DiskPartitionTable> tables)
     {
         _mediaInfo = info;
-        _tables = tables;
-        Segments = new ObservableCollection<PartitionSegmentViewModel>(DiskPartitionTables.BuildSegments(tables));
-        SelectedSegment = null;
+        Layout.SetLayout(info, tables);
         BuildDetailSections();
-        this.RaisePropertyChanged(nameof(DiskSize));
         this.RaisePropertyChanged(nameof(HasDiskInfo));
-        this.RaisePropertyChanged(nameof(ShowCylinders));
-        this.RaisePropertyChanged(nameof(SectorsOrCylindersText));
-        this.RaisePropertyChanged(nameof(SourceTypeFormatted));
     }
 
     /// <summary>
