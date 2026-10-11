@@ -20,6 +20,8 @@
     <ItemGroup>
       <None Remove="Data\guid-partition-types.csv" />
       <EmbeddedResource Include="Data\guid-partition-types.csv" />
+      <None Remove="Data\win32-errors.json" />
+      <EmbeddedResource Include="Data\win32-errors.json" />
     </ItemGroup>
 
     <ItemGroup>

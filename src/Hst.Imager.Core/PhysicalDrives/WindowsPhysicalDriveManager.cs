@@ -156,9 +156,11 @@
                 }
                 catch (Exception e)
                 {
+                    var message =
+                        $"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications accessing the physical drive '{physicalDrivePath}' and retry!";
+                    var win32Error = Win32Errors.Find(e);
                     throw new IOException(
-                        $"Failed to open physical drive '{physicalDrivePath}'. Close Windows Explorer, Antivirus or other applications accessing the physical drive '{physicalDrivePath}' and retry!",
-                        e);
+                        win32Error == null ? message : $"{message}{Environment.NewLine}{win32Error}", e);
                 }
             }
 

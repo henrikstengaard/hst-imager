@@ -19,7 +19,7 @@
                        Classes.placeholder="{Binding !IsSelected}" />
             <TextBlock Classes="field-help" Text="{Binding Details}" TextTrimming="CharacterEllipsis"
                        IsVisible="{Binding HasDetails}" />
-            <TextBlock Classes="error-text" FontSize="12" Text="{Binding ErrorMessage}" TextTrimming="CharacterEllipsis"
+            <TextBlock Classes="error-text" FontSize="12" Text="{Binding ErrorMessage}" TextWrapping="Wrap"
                        IsVisible="{Binding HasError}" />
           </StackPanel>
           <Panel Grid.Column="2" VerticalAlignment="Center" Margin="12,0,0,0">

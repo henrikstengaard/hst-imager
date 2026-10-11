@@ -56,7 +56,8 @@
                 return;
             }
 
-            throw new Win32Exception(Marshal.GetLastWin32Error(), $"Handle for path '{path}' is invalid");
+            var error = Marshal.GetLastWin32Error();
+            throw new Win32Exception(error, Win32Errors.CreateMessage($"Failed to open path '{path}'", error));
         }
 
         public bool LockDevice()
@@ -126,7 +127,9 @@
                     ref bytesReturned,
                     IntPtr.Zero))
                 {
-                    throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed to get device number for path '{path}'");
+                    var error = Marshal.GetLastWin32Error();
+                    throw new Win32Exception(error,
+                        Win32Errors.CreateMessage($"Failed to get device number for path '{path}'", error));
                 }
                 
                 // Marshal the output buffer to the STORAGE_DEVICE_NUMBER struct
@@ -160,7 +163,8 @@
                     ref bytesReturned,
                     IntPtr.Zero))
             {
-                throw new IOException($"IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for path '{path}' failed");
+                throw new Win32IoException($"IOCTL_VOLUME_GET_VOLUME_DISK_EXTENTS for path '{path}' failed",
+                    Marshal.GetLastWin32Error());
             }
 
             // The call succeeded, so marshal the data back to a
@@ -196,7 +200,9 @@
                     ref bytesReturned,
                     IntPtr.Zero))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY for path '{path}'");
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error,
+                    Win32Errors.CreateMessage($"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY for path '{path}'", error));
             }
             
             // convert out buffer pointer to structure
@@ -236,7 +242,9 @@
                     ref bytesReturned,
                     IntPtr.Zero))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), $"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY_EX for path '{path}'");
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error,
+                    Win32Errors.CreateMessage($"Failed IOCTL_DISK_GET_DRIVE_GEOMETRY_EX for path '{path}'", error));
             }
             
             // convert out buffer pointer to structure
@@ -278,7 +286,8 @@
                     ref headerBytesReturned,
                     IntPtr.Zero))
             {
-                throw new IOException("IOCTL_STORAGE_QUERY_PROPERTY failed");
+                throw new Win32IoException($"IOCTL_STORAGE_QUERY_PROPERTY for path '{path}' failed",
+                    Marshal.GetLastWin32Error());
             }
 
             var header =
@@ -297,7 +306,8 @@
                     ref descriptorBytesReturned,
                     IntPtr.Zero))
             {
-                throw new IOException("IOCTL_STORAGE_QUERY_PROPERTY descriptor failed");
+                throw new Win32IoException($"IOCTL_STORAGE_QUERY_PROPERTY descriptor for path '{path}' failed",
+                    Marshal.GetLastWin32Error());
             }
 
             var descriptor = (Kernel32.STORAGE_DEVICE_DESCRIPTOR)Marshal.PtrToStructure(
@@ -402,9 +412,8 @@
             }
 
             var error = Marshal.GetLastWin32Error();
-            var offset = Position();
-            throw new IOException(
-                $"Failed to read data '{buffer.Length}', count '{count}' and offset '{offset}', ReadFile returned Win32 error {error}");
+            throw new Win32IoException(
+                $"Failed to read {count} bytes at offset {PositionForError()} from path '{path}'", error);
         }
 
         public uint Write(byte[] buffer, int count)
@@ -416,9 +425,8 @@
             }
 
             var error = Marshal.GetLastWin32Error();
-            var offset = Position();
-            throw new IOException(
-                $"Failed to write data '{buffer.Length}', count '{count}' and offset '{offset}', WriteFile returned Win32 error {error}");
+            throw new Win32IoException(
+                $"Failed to write {count} bytes at offset {PositionForError()} to path '{path}'", error);
         }
 
         public long Seek(long offset, SeekOrigin origin)
@@ -434,8 +442,8 @@
             }
 
             var error = Marshal.GetLastWin32Error();
-            throw new IOException(
-                $"Failed to seek position offset '{offset}' and origin '{origin}', SetFilePointerEx returned Win32 error {error}");
+            throw new Win32IoException(
+                $"Failed to seek to offset {offset} from {origin} on path '{path}'", error);
         }
 
         public long Position()
@@ -446,8 +454,17 @@
             }
 
             var error = Marshal.GetLastWin32Error();
-            throw new IOException($"Failed to get position, SetFilePointerEx returned Win32 error {error}");
+            throw new Win32IoException($"Failed to get position on path '{path}'", error);
         }
+
+        /// <summary>
+        /// Get position for error message without throwing, as getting position can also fail when read or write
+        /// fails, e.g. if the disk is disconnected.
+        /// </summary>
+        private string PositionForError() =>
+            DeviceApi.SetFilePointerEx(safeFileHandle, 0, out var offset, DeviceApi.EMoveMethod.Current)
+                ? offset.ToString()
+                : "unknown";
 
         public long Size()
         {

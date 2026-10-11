@@ -43,7 +43,8 @@ public static class WindowsDiskManager
         {
             if (!Kernel32.FindVolumeClose(findHandle))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to close the volume handle");
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error, Win32Errors.CreateMessage("Failed to close the volume handle", error));
             }
         }
             
