@@ -1,4 +1,5 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 
@@ -180,6 +181,11 @@ public class Iso9660EntryIterator : IEntryIterator
     public Task<Result> DeleteEntry(string[] fullPathComponents)
     {
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Iso9660")));
+    }
+
+    public Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        return Task.FromResult(new Result<int>(new Error("Set attributes is not supported for Iso9660")));
     }
 
     public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)

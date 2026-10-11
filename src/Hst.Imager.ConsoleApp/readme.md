@@ -35,6 +35,7 @@ Hst Imager console comes with following features:
   - Move directories and files from source to destination file system.
   - Extract directories and files from source to destination file system.
   - Create a directory in a file system.
+  - Set attributes or protection bits of directories and files in a file system.
 - Amiga Disk File:
   - Create ADF disk image file.
 - Master Boot Record:
@@ -732,6 +733,43 @@ hst.imager fs mkdir 16gb.img\mbr\1\games
 Example of creating a "games" directory in 16GB img image file Rigid Disk Block partition DH0:
 ```
 hst.imager fs mkdir 16gb.img\rdb\dh0\games
+```
+
+### Set attributes or protection bits of directories and files in a file system.
+
+Attributes are added with `+`, removed with `-` and set exactly without `+` or `-`, e.g. `+s`, `-wd` or `rwed`.
+Amiga file systems use protection bits `hsparwed`, FAT and NTFS use Windows attributes `rash` and local directories use Windows attributes `rash` on Windows and Unix permissions `rwx` or octal mode (e.g. `755`) on macOS and Linux.
+Amiga protection bits can be set for local directories with `--attributes Amiga`, which are written to UAE metadata.
+A path to a directory sets attributes of the directory, a path with wildcard sets attributes of matching entries and `--recursive` also sets attributes of entries in subdirectories.
+
+Example of displaying usage for setting attributes in a file system:
+```
+hst.imager fs attrib --help
+```
+
+Example of setting script protection bit for "startup-sequence" file in 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs attrib 16gb.img\rdb\dh0\s\startup-sequence +s
+```
+
+Example of removing write and delete protection bits for "c" directory and all files and subdirectories in it in 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs attrib 16gb.img\rdb\dh0\c -w -d --recursive
+```
+
+Example of setting only read and execute protection bits for all files in "c" directory in 16GB img image file Rigid Disk Block partition DH0:
+```
+hst.imager fs attrib 16gb.img\rdb\dh0\c\* re
+```
+
+Example of setting read-only and hidden attributes for "boot.ini" file in 16GB img image file Master Boot Record partition 1:
+```
+hst.imager fs attrib 16gb.img\mbr\1\boot.ini +rh
+```
+
+Example of setting script protection bit for "startup-sequence" file in local directory "dh0" written to UAE metafile used by FS-UAE Amiga emulator:
+```
+hst.imager fs attrib dh0\s\startup-sequence +s --attributes Amiga --uaemetadata UaeMetafile
 ```
 
 ## ADF commands

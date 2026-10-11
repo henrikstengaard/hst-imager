@@ -1,4 +1,5 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -215,6 +216,11 @@ public class LhaArchiveEntryIterator : IEntryIterator
     public Task<Result> DeleteEntry(string[] fullPathComponents)
     {
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Lha archive")));
+    }
+
+    public Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        return Task.FromResult(new Result<int>(new Error("Set attributes is not supported for Lha archive")));
     }
 
     public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)

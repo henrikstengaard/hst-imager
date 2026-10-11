@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PathComponents;
@@ -86,6 +87,11 @@ public class LzwArchiveEntryIterator : IEntryIterator
     public Task<Result> DeleteEntry(string[] fullPathComponents)
     {
         return new Task<Result>(() => new Result(new Error("Delete is not supported for Lzw archive")));
+    }
+
+    public Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        return Task.FromResult(new Result<int>(new Error("Set attributes is not supported for Lzw archive")));
     }
 
     public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)

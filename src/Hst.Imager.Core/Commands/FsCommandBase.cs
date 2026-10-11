@@ -349,6 +349,102 @@ public abstract partial class FsCommandBase : CommandBase
         };
     }
 
+    /// <summary>
+    /// Get initialized entry iterator with writable media for path to local directory, ADF, floppy or
+    /// disk partition (mbr, gpt, rdb incl. PiStorm RDB).
+    /// </summary>
+    protected async Task<Result<IEntryIterator>> GetWritableEntryIterator(string path, bool recursive,
+        UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
+    {
+        var mediaResult = commandHelper.ResolveMedia(path);
+
+        // return directory entry iterator, if media path doesn't exist. otherwise return error
+        if (mediaResult.IsFaulted)
+        {
+            if (mediaResult.Error is not PathNotFoundError)
+            {
+                return new Result<IEntryIterator>(mediaResult.Error);
+            }
+
+            return await InitializeEntryIterator(await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+                uaeMetadataHelper));
+        }
+
+        if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath) &&
+            (Directory.Exists(path) || File.Exists(path)))
+        {
+            return await InitializeEntryIterator(await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
+                uaeMetadataHelper));
+        }
+
+        OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
+        OnDebugMessage($"Virtual Path: '{mediaResult.Value.FileSystemPath}'");
+
+        var dataType = await commandHelper.DetectDataType(mediaResult.Value.MediaPath);
+
+        var writableMediaResult = await commandHelper.GetWritableMedia(physicalDrives, mediaResult.Value.MediaPath,
+            mediaResult.Value.Modifiers);
+        if (writableMediaResult.IsFaulted)
+        {
+            return new Result<IEntryIterator>(writableMediaResult.Error);
+        }
+
+        var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
+        var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
+
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
+            writableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+
+        var media = piStormRdbMediaResult.Media;
+        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
+
+        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
+
+        if (media.Type == Media.MediaType.Floppy)
+        {
+            return await InitializeEntryIterator(await GetFloppyFileSystemEntryIterator(media, parts, recursive));
+        }
+
+        if (dataType == DataType.Adf)
+        {
+            var fileSystemVolumeResult = await MountAdfFileSystemVolume(media.Stream);
+            if (fileSystemVolumeResult.IsFaulted)
+            {
+                return new Result<IEntryIterator>(fileSystemVolumeResult.Error);
+            }
+
+            return await InitializeEntryIterator(new Result<IEntryIterator>(new AmigaVolumeEntryIterator(media,
+                PartitionTableType.RigidDiskBlock, 0, fileSystemVolumeResult.Value, parts, recursive)));
+        }
+
+        if (parts.Length < 2)
+        {
+            return new Result<IEntryIterator>(
+                new Error($"Path '{path}' doesn't contain partition table and partition number"));
+        }
+
+        return await InitializeEntryIterator(parts[0].ToLowerInvariant() switch
+        {
+            "mbr" => await GetMbrFileSystemEntryIterator(media, parts, recursive),
+            "gpt" => await GetGptFileSystemEntryIterator(media, parts, recursive),
+            "rdb" => await GetAmigaVolumeEntryIterator(media, parts, recursive),
+            _ => new Result<IEntryIterator>(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"))
+        });
+    }
+
+    private static async Task<Result<IEntryIterator>> InitializeEntryIterator(Result<IEntryIterator> entryIteratorResult)
+    {
+        if (entryIteratorResult.IsFaulted)
+        {
+            return entryIteratorResult;
+        }
+
+        var initializeResult = await entryIteratorResult.Value.Initialize();
+        return initializeResult.IsFaulted
+            ? new Result<IEntryIterator>(initializeResult.Error)
+            : entryIteratorResult;
+    }
+
     private async Task<Result<IEntryIterator>> GetAmigaVolumeEntryIterator(Media media, string[] parts, bool recursive)
     {
         if (parts.Length < 2)

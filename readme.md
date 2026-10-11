@@ -68,6 +68,7 @@ Hst Imager Console version comes with following additional features:
   - Move directories and files from source to destination file system.
   - Extract directories and files from source to destination file system.
   - Create a directory in a file system.
+  - Set attributes or protection bits of directories and files in a file system.
 - Amiga Disk File:
   - Create ADF disk image file.
 - Master Boot Record:

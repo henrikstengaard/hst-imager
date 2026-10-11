@@ -1,4 +1,5 @@
 ﻿using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PathComponents;
 
@@ -43,6 +44,14 @@ public interface IEntryIterator : IDisposable
     bool IsSingleFileEntryNext { get; }
     Task<Stream> OpenEntry(Entry entry);
     Task<Result> DeleteEntry(string[] fullPathComponents);
+
+    /// <summary>
+    /// Set attributes of entry by applying attributes change to current attributes of entry.
+    /// </summary>
+    /// <param name="fullPathComponents">Full path components of entry.</param>
+    /// <param name="attributesChange">Attributes change to apply.</param>
+    /// <returns>Attributes set for entry.</returns>
+    Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange);
     string[] GetPathComponents(string path);
     bool UsesPattern { get; }
     Task Flush();
