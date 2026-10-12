@@ -158,6 +158,7 @@ Hst Imager will also automatically detect when UAE metadata files will be read a
 supports UAE metadata files.
 The type of UAE metadata files to read and write can be changed by specifying the `--uaemetadata` option with values
 `None`, `UaeFsDb` or `UaeMetafile` for file system copy and extract commands.
+File system dir and attrib commands only read and write UAE metadata for local directories, when the `--uaemetadata` option is specified.
 
 ## Cache
 
@@ -605,6 +606,11 @@ Example of listing of files and directories in 16GB img image file Rigid Disk Bl
 hst.imager fs dir 16gb.img\rdb\dh0\s
 ```
 
+Example of listing of files and directories in local directory "dh0" with Amiga protection bits read from UAEFSDB metadata files used by WinUAE Amiga emulator:
+```
+hst.imager fs dir dh0 --uaemetadata UaeFsDb
+```
+
 ### Copy directories and files from source to destination file system
 
 Example of displaying usage for copying files and subdirectories from source to destination file system:
@@ -739,7 +745,7 @@ hst.imager fs mkdir 16gb.img\rdb\dh0\games
 
 Attributes are added with `+`, removed with `-` and set exactly without `+` or `-`, e.g. `+s`, `-wd` or `rwed`.
 Amiga file systems use protection bits `hsparwed`, FAT and NTFS use Windows attributes `rash` and local directories use Windows attributes `rash` on Windows and Unix permissions `rwx` or octal mode (e.g. `755`) on macOS and Linux.
-Amiga protection bits can be set for local directories with `--attributes Amiga`, which are written to UAE metadata.
+Amiga protection bits can be set for local directories and files with `--uaemetadata`, which are written to UAE metadata (UAEFSDB or UAE metafile).
 A path to a directory sets attributes of the directory, a path with wildcard sets attributes of matching entries and `--recursive` also sets attributes of entries in subdirectories.
 
 Example of displaying usage for setting attributes in a file system:
@@ -762,6 +768,11 @@ Example of setting only read and execute protection bits for all files in "c" di
 hst.imager fs attrib 16gb.img\rdb\dh0\c\* re
 ```
 
+Example of setting only read, write, execute and delete protection bits for all files in local directory "dh0\c" written to UAEFSDB used by WinUAE Amiga emulator:
+```
+hst.imager fs attrib dh0\c\* rwed --uaemetadata UaeFsDb
+```
+
 Example of setting read-only and hidden attributes for "boot.ini" file in 16GB img image file Master Boot Record partition 1:
 ```
 hst.imager fs attrib 16gb.img\mbr\1\boot.ini +rh
@@ -769,7 +780,7 @@ hst.imager fs attrib 16gb.img\mbr\1\boot.ini +rh
 
 Example of setting script protection bit for "startup-sequence" file in local directory "dh0" written to UAE metafile used by FS-UAE Amiga emulator:
 ```
-hst.imager fs attrib dh0\s\startup-sequence +s --attributes Amiga --uaemetadata UaeMetafile
+hst.imager fs attrib dh0\s\startup-sequence +s --uaemetadata UaeMetafile
 ```
 
 ## ADF commands

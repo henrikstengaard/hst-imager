@@ -1,5 +1,6 @@
 ﻿using System.CommandLine;
 using System.Linq;
+using Hst.Imager.Core.UaeMetadatas;
 
 namespace Hst.Imager.ConsoleApp.Tests;
 
@@ -64,5 +65,37 @@ public class GivenFsAttribCommandParser
         var recursiveOption = (Option<bool>)command.Options.First(x => x.Name == "--recursive");
         Assert.Equal(["+s", "-d", "-r"], parseResult.GetValue(attributesArgument));
         Assert.True(parseResult.GetValue(recursiveOption));
+    }
+
+    [Fact]
+    public void When_ParsingWithoutUaeMetadata_Then_UaeMetadataIsNone()
+    {
+        // arrange - create root command
+        var rootCommand = CommandFactory.CreateRootCommand();
+
+        // act - parse fs attrib command without uae metadata option
+        var parseResult = rootCommand.Parse(["fs", "attrib", "dh0", "+s"]);
+
+        // assert - no errors and uae metadata is none
+        Assert.Empty(parseResult.Errors);
+        var uaeMetadataOption = (Option<UaeMetadata>)parseResult.CommandResult.Command.Options
+            .First(x => x.Name == "--uaemetadata");
+        Assert.Equal(UaeMetadata.None, parseResult.GetValue(uaeMetadataOption));
+    }
+
+    [Fact]
+    public void When_ParsingUaeMetadata_Then_UaeMetadataIsParsed()
+    {
+        // arrange - create root command
+        var rootCommand = CommandFactory.CreateRootCommand();
+
+        // act - parse fs attrib command with uae metadata option
+        var parseResult = rootCommand.Parse(["fs", "attrib", "dh0", "+s", "--uaemetadata", "UaeMetafile"]);
+
+        // assert - no errors and uae metadata is parsed
+        Assert.Empty(parseResult.Errors);
+        var uaeMetadataOption = (Option<UaeMetadata>)parseResult.CommandResult.Command.Options
+            .First(x => x.Name == "--uaemetadata");
+        Assert.Equal(UaeMetadata.UaeMetafile, parseResult.GetValue(uaeMetadataOption));
     }
 }

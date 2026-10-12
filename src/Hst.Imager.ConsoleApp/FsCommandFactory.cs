@@ -39,8 +39,8 @@ public static class FsCommandFactory
 
         var uaeMetadataOption = new Option<UaeMetadata>("--uaemetadata", ["-uae"])
         {
-            Description = "Type of UAE metadata to read.",
-            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.UaeFsDb
+            Description = "Type of UAE metadata to read for local directories. When specified, Amiga protection bits are shown as attributes unless attributes type is specified.",
+            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.None
         };
 
         var attributesOption = new Option<AttributesMode>("--attributes", ["-a"])
@@ -323,14 +323,14 @@ public static class FsCommandFactory
 
         var attributesOption = new Option<AttributesMode>("--attributes")
         {
-            Description = "Type of attributes to set. Auto uses Amiga protection bits for Amiga file systems, Windows attributes for FAT and NTFS and Windows or Unix attributes depending on operating system for local directories.",
+            Description = "Type of attributes to set. Auto uses Amiga protection bits for Amiga file systems, Windows attributes for FAT and NTFS and Windows or Unix attributes depending on operating system for local directories or Amiga protection bits, if UAE metadata is specified.",
             DefaultValueFactory = (ArgumentResult _) => AttributesMode.Auto
         };
 
         var uaeMetadataOption = new Option<UaeMetadata>("--uaemetadata", ["-uae"])
         {
-            Description = "Type of UAE metadata to read and write Amiga protection bits for local directories.",
-            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.UaeFsDb
+            Description = "Type of UAE metadata to read and write Amiga protection bits for local directories and files. When specified, Amiga protection bits are set unless attributes type is specified.",
+            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.None
         };
 
         // hidden option to parse "-h" as an attribute to remove hidden or held resident instead of showing help

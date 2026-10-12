@@ -165,7 +165,11 @@ public class DirectoryEntryIterator : IEntryIterator
     public string[] DirPathComponents { get; private set; }
 
     public Media Media => media;
-    public AttributesMode AttributesMode => AttributesMode.Auto;
+    /// <summary>
+    /// Attributes mode is Amiga protection bits, when UAE metadata is used. Otherwise attributes mode is auto
+    /// using Windows attributes or Unix file mode depending on operating system.
+    /// </summary>
+    public AttributesMode AttributesMode => UaeMetadata == UaeMetadata.None ? AttributesMode.Auto : AttributesMode.Amiga;
 
     public Entry Current => currentEntry;
 

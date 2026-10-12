@@ -16,6 +16,8 @@ namespace Hst.Imager.Core.Commands.FsCommands;
 /// Set attributes or protection bits of files and directories.
 /// A path to a directory sets attributes of the directory, a path with wildcard sets attributes of matching
 /// entries and recursive also sets attributes of entries in sub-directories.
+/// Amiga protection bits are set for local directories and files, when UAE metadata is specified and attributes
+/// mode is auto.
 /// </summary>
 public class FsAttribCommand(
     ICommandHelper commandHelper,
@@ -24,7 +26,7 @@ public class FsAttribCommand(
     IEnumerable<string> attributes,
     bool recursive,
     AttributesMode attributesMode = AttributesMode.Auto,
-    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+    UaeMetadata uaeMetadata = UaeMetadata.None)
     : FsCommandBase(commandHelper, physicalDrives)
 {
     public override async Task<Result> Execute(CancellationToken token)
