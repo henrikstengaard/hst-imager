@@ -249,7 +249,7 @@
     "code": 1117,
     "name": "ERROR_IO_DEVICE",
     "message": "The request could not be performed because of an I/O device error.",
-    "reason": "The disk reported an I/O error. This is commonly caused by bad sectors, a failing or worn out SD/CF card, a faulty card reader or USB adapter, a bad cable or insufficient USB power. Try another card reader, USB port or cable. Use retries or force to skip unreadable sectors when reading."
+    "reason": "The disk reported an I/O error. This is commonly caused by bad sectors, a failing or worn out SD/CF card, a faulty card reader or USB adapter, a bad cable or insufficient USB power. Heavy system load (e.g. GPU) can cause power drops on USB ports. Try another card reader, a rear USB port, a powered USB hub or another cable. Use retries or force to skip unreadable sectors when reading."
   },
   {
     "code": 1126,
