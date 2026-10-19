@@ -1,4 +1,6 @@
-﻿using Hst.Core;
+﻿using Hst.Amiga.FileSystems;
+using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 
@@ -163,7 +165,11 @@ public class DirectoryEntryIterator : IEntryIterator
     public string[] DirPathComponents { get; private set; }
 
     public Media Media => media;
-    public AttributesMode AttributesMode => AttributesMode.Auto;
+    /// <summary>
+    /// Attributes mode is Amiga protection bits, when UAE metadata is used. Otherwise attributes mode is auto
+    /// using Windows attributes or Unix file mode depending on operating system.
+    /// </summary>
+    public AttributesMode AttributesMode => UaeMetadata == UaeMetadata.None ? AttributesMode.Auto : AttributesMode.Amiga;
 
     public Entry Current => currentEntry;
 
@@ -243,6 +249,61 @@ public class DirectoryEntryIterator : IEntryIterator
         await UaeMetadataHelper.RemoveUaeMetadata(entryPath);
 
         return new Result();
+    }
+
+    public async Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(UaeMetadata, fullPathComponents);
+
+        var entryPath = uaeMetadataEntry != null && uaeMetadataEntry.UaeMetadataExists
+            ? Path.Combine(uaeMetadataEntry.NormalPathComponents)
+            : Path.Combine(fullPathComponents);
+
+        if (!File.Exists(entryPath) && !Directory.Exists(entryPath))
+        {
+            return new Result<int>(new PathNotFoundError($"Path not found '{entryPath}'", entryPath));
+        }
+
+        switch (attributesChange.Mode)
+        {
+            case AttributesMode.Windows:
+                var windowsAttributes = attributesChange.Apply((int)File.GetAttributes(entryPath));
+                File.SetAttributes(entryPath, windowsAttributes == 0 ? FileAttributes.Normal : (FileAttributes)windowsAttributes);
+                return new Result<int>(windowsAttributes);
+            case AttributesMode.Unix:
+                if (OperatingSystem.IsWindows())
+                {
+                    return new Result<int>(new Error("Unix file mode is not supported on Windows"));
+                }
+
+                var unixFileMode = attributesChange.Apply((int)File.GetUnixFileMode(entryPath));
+                File.SetUnixFileMode(entryPath, (UnixFileMode)unixFileMode);
+                return new Result<int>(unixFileMode);
+            case AttributesMode.Amiga:
+                if (UaeMetadata == UaeMetadata.None)
+                {
+                    return new Result<int>(new Error("UAE metadata is required to set Amiga protection bits in local directory"));
+                }
+
+                // protection bits in uae metadata has "rwed" set when not allowed
+                var protectionBits = attributesChange.Apply(
+                    (int)ProtectionBitsConverter.ToProtectionBits(uaeMetadataEntry?.ProtectionBits ?? 0));
+
+                var dirPath = Path.GetDirectoryName(entryPath) ?? string.Empty;
+                var normalName = Path.GetFileName(entryPath);
+                var amigaName = uaeMetadataEntry != null ? uaeMetadataEntry.UaePathComponents[^1] : normalName;
+                var date = uaeMetadataEntry?.Date ?? (File.Exists(entryPath)
+                    ? File.GetLastWriteTime(entryPath)
+                    : Directory.GetLastWriteTime(entryPath));
+
+                await UaeMetadataHelper.WriteUaeMetadata(UaeMetadata, dirPath, amigaName, normalName,
+                    ProtectionBitsConverter.ToProtectionValue((ProtectionBits)protectionBits), date,
+                    uaeMetadataEntry?.Comment);
+
+                return new Result<int>(protectionBits);
+            default:
+                return new Result<int>(new Error($"Unsupported attributes mode '{attributesChange.Mode}'"));
+        }
     }
 
     public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)

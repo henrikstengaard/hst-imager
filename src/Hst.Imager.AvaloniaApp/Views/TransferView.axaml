@@ -1,0 +1,40 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.TransferView"
+             x:DataType="vm:TransferViewModel">
+
+  <controls:PageLayout Title="Transfer"
+                       Description="Transfer converts, imports or exports from an image file or part of to another.">
+    <StackPanel Spacing="12">
+      <!-- Source and destination side by side, when there is room for it -->
+      <controls:ResponsiveColumns>
+        <views:MediaSelectionCard DataContext="{Binding Source}" />
+        <views:MediaSelectionCard DataContext="{Binding Destination}" />
+      </controls:ResponsiveColumns>
+
+      <!-- Partition layout of source same as info view -->
+      <views:MediaPartitionLayoutView DataContext="{Binding SourceLayout}" />
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding StartTransferCommand}" Classes="danger">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-exchange-alt" />
+            <TextBlock Text="Start transfer" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

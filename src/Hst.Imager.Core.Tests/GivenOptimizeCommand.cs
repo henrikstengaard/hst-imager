@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using Commands;
     using Models;
-    using Microsoft.Extensions.Logging.Abstractions;
     using Xunit;
 
     public class GivenOptimizeCommand : CommandTestBase
@@ -24,8 +23,8 @@
             
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
-                new Size(size, Unit.Bytes), PartitionTable.None);
+            var optimizeCommand = new OptimizeCommand(testCommandHelper, imgPath, new Size(size, Unit.Bytes),
+                PartitionTable.None);
 
             // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
@@ -48,8 +47,8 @@
 
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
-                new Size(0, Unit.Bytes), PartitionTable.None);
+            var optimizeCommand = new OptimizeCommand(testCommandHelper, imgPath, new Size(0, Unit.Bytes),
+                PartitionTable.None);
 
             // act - optimize img media
             var result = await optimizeCommand.Execute(cancellationTokenSource.Token);
@@ -72,7 +71,7 @@
 
             // arrange - optimize command
             var cancellationTokenSource = new CancellationTokenSource();
-            var optimizeCommand = new OptimizeCommand(new NullLogger<OptimizeCommand>(), testCommandHelper, imgPath,
+            var optimizeCommand = new OptimizeCommand(testCommandHelper, imgPath,
                 new Size(rigidDiskBlockSize, Unit.Bytes), PartitionTable.Rdb);
 
             // act - optimize img media

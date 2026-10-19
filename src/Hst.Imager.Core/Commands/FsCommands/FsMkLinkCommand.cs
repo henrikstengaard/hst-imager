@@ -8,11 +8,10 @@ using Hst.Core;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.Core.Commands.FsCommands;
 
-public class FsMkLinkCommand(ILogger<FsMkLinkCommand> logger, ICommandHelper commandHelper,
+public class FsMkLinkCommand(ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives, string fromPath, string toPath)
     : FsCommandBase(commandHelper, physicalDrives)
 {

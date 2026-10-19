@@ -1,5 +1,8 @@
 ﻿using DiscUtils;
 using DiscUtils.Ntfs;
+using Hst.Imager.Core.Apis;
+using Hst.Imager.Core.FileSystems;
+using Hst.Imager.Core.FileSystems.ExFat;
 using Hst.Imager.Core.FileSystems.Fat32;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
@@ -8,6 +11,7 @@ namespace Hst.Imager.Core.Commands
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Threading;
     using System.Threading.Tasks;
@@ -25,9 +29,11 @@ namespace Hst.Imager.Core.Commands
         private readonly int partitionNumber;
         private readonly string name;
         private readonly string fileSystem;
+        private readonly int clusterSize;
 
         public MbrPartFormatCommand(ILogger<MbrPartFormatCommand> logger, ICommandHelper commandHelper,
-            IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, string fileSystem)
+            IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, string name, string fileSystem,
+            int clusterSize = 0)
         {
             this.logger = logger;
             this.commandHelper = commandHelper;
@@ -36,6 +42,7 @@ namespace Hst.Imager.Core.Commands
             this.partitionNumber = partitionNumber;
             this.name = name;
             this.fileSystem = fileSystem;
+            this.clusterSize = clusterSize;
         }
 
         public override async Task<Result> Execute(CancellationToken token)
@@ -96,34 +103,20 @@ namespace Hst.Imager.Core.Commands
             OnInformationMessage($"- File system '{partitionFileSystem}'");
             OnInformationMessage($"- Partition name '{name}'");
 
-            // format mbr partition
-            switch (partitionFileSystem)
+            OnInformationMessage($"- Cluster size '{ClusterSizeHelper.Format(clusterSize)}'");
+
+            var clusterSizeResult = ClusterSizeHelper.Validate(partitionFileSystem.ToString(),
+                partitionFileSystem is MbrPartType.Fat32 or MbrPartType.Fat32Lba,
+                partitionFileSystem == MbrPartType.ExFat, clusterSize, disk.SectorSize);
+            if (clusterSizeResult.IsFaulted)
             {
-                case MbrPartType.Fat12:
-                case MbrPartType.Fat16:
-                case MbrPartType.Fat16Small:
-                case MbrPartType.Fat16Lba:
-                    FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
-                    break;
-                case MbrPartType.Fat32:
-                case MbrPartType.Fat32Lba:
-                    var partitionOffset = partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector;
-                    await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
-                        partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
-                        disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder,
-                        name);
-                    break;
-                case MbrPartType.Ntfs:
-                    NtfsFileSystem.Format(partitionInfo.Open(), name, Geometry.FromCapacity(partitionInfo.SectorCount * 512),
-                        partitionInfo.FirstSector, partitionInfo.SectorCount);
-                    break;
-                case MbrPartType.ExFat:
-                    var volumeManager = new VolumeManager(disk);
-                    var physicalVolumes = volumeManager.GetPhysicalVolumes();
-                    DiscUtils.ExFat.ExFatFileSystem.Format(physicalVolumes[partitionNumber - 1], label: name);
-                    break;
-                default:
-                    return new Result(new Error("Unsupported partition type"));
+                return clusterSizeResult;
+            }
+
+            var formatResult = await FormatPartition(disk, partitionInfo, partitionFileSystem);
+            if (formatResult.IsFaulted)
+            {
+                return formatResult;
             }
 
             // flush disk content
@@ -134,6 +127,50 @@ namespace Hst.Imager.Core.Commands
                 await commandHelper.RescanPhysicalDrives();
             }
             
+            return new Result();
+        }
+
+        private async Task<Result> FormatPartition(VirtualDisk disk, DiscUtils.Partitions.PartitionInfo partitionInfo,
+            MbrPartType partitionFileSystem)
+        {
+            try
+            {
+                // format mbr partition
+                switch (partitionFileSystem)
+                {
+                    case MbrPartType.Fat12:
+                    case MbrPartType.Fat16:
+                    case MbrPartType.Fat16Small:
+                    case MbrPartType.Fat16Lba:
+                        FatFileSystem.FormatPartition(disk, partitionNumber - 1, name);
+                        break;
+                    case MbrPartType.Fat32:
+                    case MbrPartType.Fat32Lba:
+                        var partitionOffset = partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector;
+                        await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
+                            partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
+                            disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder,
+                            name, clusterSize);
+                        break;
+                    case MbrPartType.Ntfs:
+                        NtfsFileSystem.Format(partitionInfo.Open(), name, Geometry.FromCapacity(partitionInfo.SectorCount * 512),
+                            partitionInfo.FirstSector, partitionInfo.SectorCount);
+                        break;
+                    case MbrPartType.ExFat:
+                        await ExFatFormatter.FormatPartition(disk.Content,
+                            partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector,
+                            partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
+                            disk.Geometry.Value.BytesPerSector, name, clusterSize);
+                        break;
+                    default:
+                        return new Result(new Error("Unsupported partition type"));
+                }
+            }
+            catch (Exception e) when (e is ArgumentException or IOException and not Win32IoException)
+            {
+                return new Result(new Error($"Failed to format partition: {e.Message}"));
+            }
+
             return new Result();
         }
 

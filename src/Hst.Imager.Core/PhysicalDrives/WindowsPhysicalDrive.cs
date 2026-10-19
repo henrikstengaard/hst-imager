@@ -39,12 +39,48 @@ namespace Hst.Imager.Core.PhysicalDrives
             dismountedDrives.AddRange(LockAndDismountVolumes(physicalDeviceNumber));
             dismountedDrives.AddRange(LockAndDismountDriveLetters(physicalDeviceNumber, driveLetters));
 
-            var baseStream = new SectorStream(new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives),
-                byteSwap: ByteSwap, leaveOpen: false);
+            Stream physicalDriveStream = new WindowsPhysicalDriveStream(Path, Size, Writable, dismountedDrives);
+
+            // defer writing start of physical drive with partition tables until physical drive stream is closed,
+            // so Windows doesn't detect and automatically mount partitions while they are still being written
+            if (Writable)
+            {
+                physicalDriveStream = new DeferredStartWriteStream(physicalDriveStream);
+            }
+
+            var baseStream = new SectorStream(physicalDriveStream, byteSwap: ByteSwap, leaveOpen: false);
             
             return useCache
                 ? CacheHelper.AddLayeredCache(Path, baseStream, Writable, blockSize, cacheType)
                 : baseStream;
+        }
+
+        /// <summary>
+        /// Update disk properties of physical drive, so Windows reads the partition table again and updates
+        /// partitions and volumes from it.
+        /// </summary>
+        /// <returns>True, if disk properties were updated.</returns>
+        public bool UpdateDiskProperties()
+        {
+            using var win32RawDisk = new Win32RawDisk(Path, false, true);
+
+            return !win32RawDisk.IsInvalid() && win32RawDisk.UpdateDiskProperties();
+        }
+
+        /// <summary>
+        /// Remount volumes on physical drive by locking, dismounting and unlocking them, so Windows mounts the
+        /// volumes again and detects their file systems. Windows can mount a new partition as RAW, if it detects the
+        /// partition before the partition is formatted, and keeps the volume as RAW until it's dismounted.
+        /// </summary>
+        public void RemountVolumes()
+        {
+            var physicalDeviceNumber = GetPhysicalDriveNumber(Path);
+
+            foreach (var dismountedDrive in LockAndDismountVolumes(physicalDeviceNumber))
+            {
+                // dispose unlocks and closes volume, which mounts it again on next access
+                dismountedDrive.Dispose();
+            }
         }
 
         private static int GetPhysicalDriveNumber(string path)

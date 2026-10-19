@@ -43,7 +43,8 @@ public static class WindowsDiskManager
         {
             if (!Kernel32.FindVolumeClose(findHandle))
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to close the volume handle");
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error, Win32Errors.CreateMessage("Failed to close the volume handle", error));
             }
         }
             
@@ -215,32 +216,55 @@ public static class WindowsDiskManager
         return false;
     }
 
+    /// <summary>
+    /// Rescan drives using diskpart, so Windows detects changes to partition tables and volumes.
+    /// Waits for diskpart to finish rescan.
+    /// </summary>
+    /// <returns>True, if diskpart rescan completed successfully.</returns>
+    /// <exception cref="IOException">Failed to run diskpart.</exception>
     public static bool RescanDrives()
     {
+        var scriptPath = Path.Combine(Path.GetTempPath(), $"hst-imager-rescan-{Guid.NewGuid()}.txt");
+
         try
         {
-            var processInfo = new ProcessStartInfo("diskpart.exe", "/s test.txt")
+            File.WriteAllLines(scriptPath, ["rescan", "exit"]);
+
+            var processInfo = new ProcessStartInfo("diskpart.exe", $"/s \"{scriptPath}\"")
             {
-                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
             };
-            
+
             using var process = Process.Start(processInfo);
 
             if (process == null)
             {
                 return false;
             }
-            
-            process.StandardInput.WriteLine("rescan");
-            process.StandardInput.WriteLine("exit");
-            
-            return true;
+
+            // read output to prevent diskpart from blocking on a full output buffer
+            process.StandardOutput.ReadToEnd();
+
+            if (!process.WaitForExit(TimeSpan.FromSeconds(60)))
+            {
+                process.Kill();
+                return false;
+            }
+
+            return process.ExitCode == 0;
         }
         catch (Exception e)
         {
             throw new IOException("Failed to rescan drives", e);
+        }
+        finally
+        {
+            if (File.Exists(scriptPath))
+            {
+                File.Delete(scriptPath);
+            }
         }
     }
 }

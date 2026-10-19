@@ -117,7 +117,8 @@
         {
             if (null == hDevice || hDevice.IsInvalid)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error, Win32Errors.CreateMessage("Invalid handle for disk geometry", error));
             }
 
             var dwIoControlCode = DISK_GET_DRIVE_GEOMETRY_EX;
@@ -137,7 +138,8 @@
 
             if (0 == result)
             {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
+                var error = Marshal.GetLastWin32Error();
+                throw new Win32Exception(error, Win32Errors.CreateMessage("Failed IOCTL_DISK_GET_DRIVE_GEOMETRY_EX", error));
             }
 
             var diskGeometryEx = (DiskGeometryEx)Marshal.PtrToStructure(lpOutBuffer, typeof(DiskGeometryEx))!;

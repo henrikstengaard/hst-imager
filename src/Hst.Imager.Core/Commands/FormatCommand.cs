@@ -30,6 +30,7 @@ namespace Hst.Imager.Core.Commands
         private readonly Size maxPartitionSize;
         private readonly bool useExperimental;
         private readonly bool kickstart31;
+        private readonly int clusterSize;
 
         private int commandsExecuted;
         private int maxCommandsToExecute;
@@ -58,10 +59,12 @@ namespace Hst.Imager.Core.Commands
         /// <param name="maxPartitionSize">Max partition size for RDB and PiStorm.</param>
         /// <param name="useExperimental">Confirm using PFS3 experimental partition size.</param>
         /// <param name="kickstart31">Create Workbench partition size for Kickstart v3.1 or lower.</param>
+        /// <param name="clusterSize">Cluster size in bytes for FAT32 and exFAT file systems with Master Boot Record and
+        /// Guid Partition Table format types (0 = optimal cluster size).</param>
         public FormatCommand(ILogger<FormatCommand> logger, ILoggerFactory loggerFactory, ICommandHelper commandHelper,
             IEnumerable<IPhysicalDrive> physicalDrives, string path, FormatType formatType, string fileSystem,
             string fileSystemPath, string outputPath, Size size, Size maxPartitionSize, bool useExperimental,
-            bool kickstart31)
+            bool kickstart31, int clusterSize = 0)
         {
             this.logger = logger;
             this.loggerFactory = loggerFactory;
@@ -78,6 +81,7 @@ namespace Hst.Imager.Core.Commands
             this.commandsExecuted = 0;
             this.maxCommandsToExecute = 0;
             this.kickstart31 = kickstart31;
+            this.clusterSize = clusterSize;
         }
 
         private bool IsPiStorm => formatType is FormatType.PiStorm or FormatType.PiStormMbr or FormatType.PiStormGpt;
@@ -96,6 +100,24 @@ namespace Hst.Imager.Core.Commands
             if (formatType == FormatType.Mbr && !Enum.TryParse(fileSystem, true, out mbrFileSystem))
             {
                 return new Result(new Error($"Unsupported Master Boot Record file system '{fileSystem}'"));
+            }
+
+            if (clusterSize != 0 && formatType != FormatType.Mbr && formatType != FormatType.Gpt)
+            {
+                return new Result(new Error($"Cluster size is not supported for format type '{formatType}'"));
+            }
+
+            // validate cluster size before formatting with 512 bytes per sector,
+            // partition format commands validates cluster size with bytes per sector of disk
+            var clusterSizeResult = ClusterSizeHelper.Validate(fileSystem,
+                (formatType == FormatType.Mbr && mbrFileSystem == FormatMbrFileSystem.Fat32) ||
+                (formatType == FormatType.Gpt && gptFileSystem == FormatGptFileSystem.Fat32),
+                (formatType == FormatType.Mbr && mbrFileSystem == FormatMbrFileSystem.ExFat) ||
+                (formatType == FormatType.Gpt && gptFileSystem == FormatGptFileSystem.ExFat),
+                clusterSize, 512);
+            if (clusterSizeResult.IsFaulted)
+            {
+                return clusterSizeResult;
             }
 
             var rdbFileSystem = FormatRdbFileSystem.Pds3;
@@ -354,7 +376,7 @@ namespace Hst.Imager.Core.Commands
             UpdateCommandsExecuted(1);
 
             var mbrPartFormatCommand = new MbrPartFormatCommand(loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives,
-                path, 1, "Empty", fileSystem.ToUpper());
+                path, 1, "Empty", fileSystem.ToUpper(), clusterSize);
             AddMessageEvents(mbrPartFormatCommand);
 
             var mbrPartFormatResult = await mbrPartFormatCommand.Execute(cancellationToken);
@@ -397,7 +419,7 @@ namespace Hst.Imager.Core.Commands
 
             var gptPartFormatCommand = new GptPartFormatCommand(loggerFactory.CreateLogger<GptPartFormatCommand>(),
                 commandHelper, physicalDrives,
-                path, 1, gptPartType, "Empty");
+                path, 1, gptPartType, "Empty", clusterSize);
             AddMessageEvents(gptPartFormatCommand);
 
             var gptPartFormatResult = await gptPartFormatCommand.Execute(cancellationToken);
@@ -433,14 +455,14 @@ namespace Hst.Imager.Core.Commands
         /// <param name="version">Version to check.</param>
         /// <param name="revision">Revision to check.</param>
         /// <returns>True if version and revision supports DOS7 long filenames. Otherwise false.</returns>
-        private static bool HasFastFileSystemDos7Support(int version, int revision)
+        public static bool HasFastFileSystemDos7Support(int version, int revision)
         {
             if (version > 46)
             {
                 return true;
             }
-            
-            return revision >= 13;
+
+            return version == 46 && revision >= 13;
         }
 
         private async Task<Result<int>> FormatRdbDisk(long diskSize, long maxRdbDiskSize,

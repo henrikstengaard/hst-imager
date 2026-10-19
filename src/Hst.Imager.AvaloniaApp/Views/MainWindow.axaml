@@ -1,0 +1,128 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+        xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+        xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+        x:Class="Hst.Imager.AvaloniaApp.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Icon="avares://Hst.Imager.AvaloniaApp/Assets/hst.imager.ico"
+        Width="1280" Height="720"
+        MinWidth="900" MinHeight="500"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppWindowBackgroundBrush}"
+        x:Name="Root">
+
+  <Window.Resources>
+    <DataTemplate x:Key="NavItemTemplate" DataType="vm:NavItemViewModel">
+      <Button Classes="nav-item" Classes.active="{Binding IsActive}" Margin="0,0,0,2"
+              Command="{Binding #Root.((vm:MainWindowViewModel)DataContext).NavigateToCommand}"
+              CommandParameter="{Binding Page}"
+              ToolTip.Tip="{Binding Title}">
+        <Grid ColumnDefinitions="3,Auto,*">
+          <Border Grid.Column="0" Classes="nav-indicator" IsVisible="{Binding IsActive}" />
+          <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+            <ia:Icon Value="{Binding Icon}" FontSize="16" HorizontalAlignment="Center" />
+          </Panel>
+          <TextBlock Grid.Column="2" Classes="nav-label" Text="{Binding Title}"
+                     IsVisible="{Binding #Root.((vm:MainWindowViewModel)DataContext).IsSidebarExpanded}" />
+        </Grid>
+      </Button>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Grid>
+
+    <!-- Main Content Area -->
+    <Grid ColumnDefinitions="Auto,*">
+
+      <!-- Navigation Sidebar, expanded shows icons with labels and collapsed shows icons only -->
+      <Border Grid.Column="0" Classes="sidebar" Classes.collapsed="{Binding !IsSidebarExpanded}"
+              Background="{DynamicResource AppSidebarBackgroundBrush}">
+        <DockPanel Margin="4,8">
+
+          <Button DockPanel.Dock="Top" Classes="nav-item" Margin="0,0,0,8"
+                  Command="{Binding ToggleSidebarCommand}" ToolTip.Tip="Toggle menu">
+            <Grid ColumnDefinitions="3,Auto,*">
+              <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+                <ia:Icon Value="fa-bars" FontSize="16" HorizontalAlignment="Center" />
+              </Panel>
+              <TextBlock Grid.Column="2" Classes="nav-label" Text="Hst Imager" FontWeight="SemiBold"
+                         IsVisible="{Binding IsSidebarExpanded}" />
+            </Grid>
+          </Button>
+
+          <ItemsControl DockPanel.Dock="Bottom" ItemsSource="{Binding FooterNavItems}"
+                        ItemTemplate="{StaticResource NavItemTemplate}" />
+
+          <!-- Administrator privileges are required to access physical disks -->
+          <Button DockPanel.Dock="Bottom" Classes="nav-item" Margin="0,8,0,2"
+                  IsVisible="{Binding !IsElevated}" Command="{Binding ElevateCommand}"
+                  ToolTip.Tip="Administrator privileges are required to access physical disks. Click to restart as Administrator.">
+            <Grid ColumnDefinitions="3,Auto,*">
+              <Panel Grid.Column="1" Width="20" Margin="14,0,0,0">
+                <ia:Icon Value="fa-shield-halved" FontSize="16" HorizontalAlignment="Center"
+                         Foreground="{DynamicResource AppWarningForegroundBrush}" />
+              </Panel>
+              <TextBlock Grid.Column="2" Classes="nav-label" Text="Run as Administrator"
+                         Foreground="{DynamicResource AppWarningForegroundBrush}"
+                         IsVisible="{Binding IsSidebarExpanded}" />
+            </Grid>
+          </Button>
+
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding NavItems}"
+                          ItemTemplate="{StaticResource NavItemTemplate}" />
+          </ScrollViewer>
+
+        </DockPanel>
+      </Border>
+
+      <!-- Page Content -->
+      <ContentControl Grid.Column="1"
+                      Content="{Binding CurrentPage}">
+        <ContentControl.DataTemplates>
+          <DataTemplate DataType="vm:StartViewModel">
+            <views:StartView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:ReadViewModel">
+            <views:ReadView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:WriteViewModel">
+            <views:WriteView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:InfoViewModel">
+            <views:InfoView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:TransferViewModel">
+            <views:TransferView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:CompareViewModel">
+            <views:CompareView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:BlankViewModel">
+            <views:BlankView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:OptimizeViewModel">
+            <views:OptimizeView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:FormatViewModel">
+            <views:FormatView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:PartitionViewModel">
+            <views:PartitionView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:SettingsViewModel">
+            <views:SettingsView />
+          </DataTemplate>
+          <DataTemplate DataType="vm:AboutViewModel">
+            <views:AboutView />
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+    </Grid>
+
+    <!-- Progress overlay for running tasks, covers navigation and pages -->
+    <views:ProgressOverlay DataContext="{Binding Progress}" />
+  </Grid>
+</Window>

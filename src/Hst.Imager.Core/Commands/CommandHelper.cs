@@ -22,6 +22,7 @@ namespace Hst.Imager.Core.Commands
     using Helpers;
     using Hst.Core;
     using Models;
+    using PhysicalDrives;
     using OperatingSystem = Hst.Core.OperatingSystem;
     using Microsoft.Extensions.Logging;
 
@@ -1435,7 +1436,25 @@ namespace Hst.Imager.Core.Commands
         {
             if (OperatingSystem.IsWindows())
             {
-                WindowsDiskManager.RescanDrives();
+                var disksUpdated = true;
+
+                foreach (var windowsPhysicalDrive in activePhysicalDrives.OfType<WindowsPhysicalDrive>())
+                {
+                    // update disk properties, so windows reads partition table written to physical drive
+                    if (!windowsPhysicalDrive.UpdateDiskProperties())
+                    {
+                        disksUpdated = false;
+                    }
+
+                    // remount volumes, so windows detects file systems written to physical drive
+                    windowsPhysicalDrive.RemountVolumes();
+                }
+
+                // fallback to rescan drives with diskpart, if updating disk properties failed
+                if (!disksUpdated)
+                {
+                    WindowsDiskManager.RescanDrives();
+                }
             }
         
             return Task.CompletedTask;

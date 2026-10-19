@@ -170,6 +170,11 @@
                 Description = "File system to format partition with."
             };
 
+            var clusterSizeOption = new Option<string>("--cluster-size", ["-cs"])
+            {
+                Description = "Cluster size in bytes for FAT32 and exFAT, e.g. 4096 or 32kb (default auto calculates optimal cluster size)."
+            };
+
             var formatCommand = new Command("format", "Format partition.");
             formatCommand.SetAction((ParseResult ctx) =>
             {
@@ -177,11 +182,14 @@
                 var partitionNumber = ctx.GetValue(partitionNumberArgument);
                 var name = ctx.GetValue(nameArgument);
                 var fileSystem = ctx.GetValue(fileSystemOption);
-                return CommandHandler.MbrPartFormat(path, partitionNumber, name, fileSystem);
+                var clusterSize = ctx.GetValue(clusterSizeOption);
+                return CommandHandler.MbrPartFormat(path, partitionNumber, name, fileSystem, clusterSize);
             });
             formatCommand.Add(pathArgument);
             formatCommand.Add(partitionNumberArgument);
             formatCommand.Add(nameArgument);
+            formatCommand.Add(fileSystemOption);
+            formatCommand.Add(clusterSizeOption);
 
             return formatCommand;
         }

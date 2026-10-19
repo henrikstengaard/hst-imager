@@ -1,0 +1,175 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reactive.Linq;
+using System.Threading.Tasks;
+using Hst.Imager.AvaloniaApp.Models;
+using Hst.Imager.AvaloniaApp.Services;
+using Hst.Imager.Core.Models;
+using ReactiveUI;
+using ReactiveUI.Reactive;
+using Unit = System.Reactive.Unit;
+
+namespace Hst.Imager.AvaloniaApp.ViewModels;
+
+public class SettingsViewModel : ViewModelBase
+{
+    private readonly ISettingsService _settingsService;
+    private readonly AppStateModel _appState;
+
+    private Settings _settings = SettingsService.CreateDefaultSettings();
+    private bool _allPhysicalDrives;
+    private bool _startAsAdministrator;
+    private SelectOption _macOsElevateMethod;
+    private SelectOption _colorMode;
+    private bool _verify;
+    private bool _force;
+    private int _retries = 5;
+    private bool _skipUnusedSectors;
+    private bool _sparseFiles = true;
+    private bool _useCache;
+    private bool _debugMode;
+    private bool _isMacOs;
+    private bool _isSaved;
+
+    public SettingsViewModel(ISettingsService settingsService, AppStateModel appState, IDialogService dialogService)
+    {
+        _settingsService = settingsService;
+        _appState = appState;
+        _isMacOs = appState.IsMacOs;
+
+        LogsPath = appState.LogsPath;
+
+        MacOsElevateMethodOptions =
+        [
+            new SelectOption { Title = "Osascript sudo", Value = nameof(Settings.MacOsElevateMethodEnum.OsascriptSudo) },
+            new SelectOption { Title = "Osascript administrator privileges", Value = nameof(Settings.MacOsElevateMethodEnum.OsascriptAdministrator) }
+        ];
+        _macOsElevateMethod = MacOsElevateMethodOptions[1];
+
+        ColorModeOptions =
+        [
+            new SelectOption { Title = "System", Value = nameof(Settings.ColorModeEnum.System) },
+            new SelectOption { Title = "Light", Value = nameof(Settings.ColorModeEnum.Light) },
+            new SelectOption { Title = "Dark", Value = nameof(Settings.ColorModeEnum.Dark) }
+        ];
+        _colorMode = ColorModeOptions[0];
+
+        SaveCommand = ReactiveCommand.CreateFromTask(SaveAsync);
+        ViewLogsCommand = ReactiveCommand.CreateFromTask(() => dialogService.OpenExternalAsync(LogsPath));
+
+        // Load settings on creation
+        _ = LoadSettingsAsync();
+
+        // Auto-save on any property change (debounced)
+        this.Changed
+            .Where(e => e.PropertyName != nameof(IsSaved))
+            .Throttle(TimeSpan.FromMilliseconds(800))
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
+            .Subscribe(e => { _ = SaveAsync(); });
+    }
+
+    public List<SelectOption> MacOsElevateMethodOptions { get; }
+    public List<SelectOption> ColorModeOptions { get; }
+
+    public SelectOption ColorMode
+    {
+        get => _colorMode;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _colorMode, value);
+            App.ApplyColorMode(ParseColorMode(value));
+        }
+    }
+
+    public bool AllPhysicalDrives { get => _allPhysicalDrives; set => this.RaiseAndSetIfChanged(ref _allPhysicalDrives, value); }
+    public bool StartAsAdministrator { get => _startAsAdministrator; set => this.RaiseAndSetIfChanged(ref _startAsAdministrator, value); }
+
+    public SelectOption MacOsElevateMethod
+    {
+        get => _macOsElevateMethod;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _macOsElevateMethod, value);
+            if (IsDebugModeDisabled)
+                DebugMode = false;
+            this.RaisePropertyChanged(nameof(IsDebugModeDisabled));
+            this.RaisePropertyChanged(nameof(IsDebugModeEnabled));
+        }
+    }
+
+    public bool Verify { get => _verify; set => this.RaiseAndSetIfChanged(ref _verify, value); }
+    public bool Force { get => _force; set => this.RaiseAndSetIfChanged(ref _force, value); }
+    public int Retries { get => _retries; set => this.RaiseAndSetIfChanged(ref _retries, value); }
+    public bool SkipUnusedSectors { get => _skipUnusedSectors; set => this.RaiseAndSetIfChanged(ref _skipUnusedSectors, value); }
+    public bool SparseFiles { get => _sparseFiles; set => this.RaiseAndSetIfChanged(ref _sparseFiles, value); }
+    public bool UseCache { get => _useCache; set => this.RaiseAndSetIfChanged(ref _useCache, value); }
+    public bool DebugMode { get => _debugMode; set => this.RaiseAndSetIfChanged(ref _debugMode, value); }
+    public bool IsMacOs { get => _isMacOs; set => this.RaiseAndSetIfChanged(ref _isMacOs, value); }
+    public bool IsSaved { get => _isSaved; set => this.RaiseAndSetIfChanged(ref _isSaved, value); }
+    public string LogsPath { get; }
+
+    public bool IsDebugModeDisabled => IsMacOs &&
+        _macOsElevateMethod.Value == nameof(Settings.MacOsElevateMethodEnum.OsascriptAdministrator);
+    public bool IsDebugModeEnabled => !IsDebugModeDisabled;
+
+    public ReactiveCommand<Unit, Unit> SaveCommand { get; }
+    public ReactiveCommand<Unit, Unit> ViewLogsCommand { get; }
+
+    private static Settings.ColorModeEnum ParseColorMode(SelectOption? option) =>
+        Enum.TryParse<Settings.ColorModeEnum>(option?.Value, out var colorMode)
+            ? colorMode
+            : Settings.ColorModeEnum.System;
+
+    private async Task LoadSettingsAsync()
+    {
+        try
+        {
+            _settings = await _settingsService.GetSettingsAsync();
+            AllPhysicalDrives = _settings.AllPhysicalDrives;
+            StartAsAdministrator = _settings.StartAsAdministrator;
+            MacOsElevateMethod = MacOsElevateMethodOptions.FirstOrDefault(x => x.Value == _settings.MacOsElevateMethod.ToString())
+                                 ?? MacOsElevateMethodOptions[1];
+            Verify = _settings.Verify;
+            Force = _settings.Force;
+            Retries = _settings.Retries;
+            SkipUnusedSectors = _settings.SkipUnusedSectors;
+            SparseFiles = _settings.SparseFiles;
+            UseCache = _settings.UseCache;
+            DebugMode = _settings.DebugMode;
+            ColorMode = ColorModeOptions.FirstOrDefault(x => x.Value == _settings.ColorMode.ToString())
+                        ?? ColorModeOptions[0];
+        }
+        catch { /* use defaults */ }
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            var settings = new Settings
+            {
+                AllPhysicalDrives = AllPhysicalDrives,
+                StartAsAdministrator = StartAsAdministrator,
+                MacOsElevateMethod = Enum.TryParse<Settings.MacOsElevateMethodEnum>(MacOsElevateMethod.Value, out var method)
+                    ? method
+                    : _settings.MacOsElevateMethod,
+                Verify = Verify,
+                Force = Force,
+                Retries = Retries,
+                SkipUnusedSectors = SkipUnusedSectors,
+                SparseFiles = SparseFiles,
+                DebugMode = DebugMode,
+                UseCache = UseCache,
+                CacheType = _settings.CacheType,
+                ColorMode = ParseColorMode(ColorMode),
+                // sidebar expanded is changed from main window and not settings page
+                SidebarExpanded = _appState.Settings.SidebarExpanded
+            };
+            _appState.Settings = settings;
+            await _settingsService.SaveSettingsAsync(settings);
+            IsSaved = true;
+        }
+        catch { /* ignore save errors */ }
+    }
+}

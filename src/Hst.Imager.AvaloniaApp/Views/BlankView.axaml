@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.BlankView"
+             x:DataType="vm:BlankViewModel">
+
+  <controls:PageLayout Title="Blank"
+                       Description="Create a blank image file.">
+    <StackPanel Spacing="8">
+
+      <Border Background="{DynamicResource AppErrorBackgroundBrush}" CornerRadius="4" Padding="8" IsVisible="{Binding HasError}">
+        <TextBlock Classes="error-text" Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+      </Border>
+
+      <views:MediaSelectionCard DataContext="{Binding Destination}" />
+
+      <!-- Size and unit -->
+      <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">
+        <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+          <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Size" />
+        </StackPanel>
+        <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1" />
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+          <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Unit" />
+        </StackPanel>
+        <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                  ItemsSource="{x:Static vm:BlankViewModel.SizeUnits}"
+                  SelectedItem="{Binding SizeUnit}" />
+      </Grid>
+
+      <CheckBox Content="Size compatible with various SD/CF-cards, SSD and hard-disk brands"
+                IsChecked="{Binding CompatibleSize}" />
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding StartBlankCommand}" Classes="primary">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-plus" />
+            <TextBlock Text="Create blank image" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

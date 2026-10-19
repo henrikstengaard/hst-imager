@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands.FsCommands;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
@@ -31,8 +30,7 @@ public class GivenFsMkLinkCommand
         await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);
@@ -75,8 +73,7 @@ public class GivenFsMkLinkCommand
         await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["dir", "file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);
@@ -128,8 +125,7 @@ public class GivenFsMkLinkCommand
         await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);
@@ -172,8 +168,7 @@ public class GivenFsMkLinkCommand
         await RdbTestHelper.CreateFile(commandHelper, mediaPath, ["dir", "file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);
@@ -225,8 +220,7 @@ public class GivenFsMkLinkCommand
         await AdfTestHelper.CreateFile(commandHelper, mediaPath, ["file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);
@@ -269,8 +263,7 @@ public class GivenFsMkLinkCommand
         await AdfTestHelper.CreateFile(commandHelper, mediaPath, ["dir", "file.txt"]);
         
         // arrange - create fs mklink command
-        var command = new FsMkLinkCommand(new NullLogger<FsMkLinkCommand>(), commandHelper, [], fromPath,
-            toPath);
+        var command = new FsMkLinkCommand(commandHelper, [], fromPath, toPath);
 
         // act - execute fs mklink command
         var result = await command.Execute(CancellationToken.None);

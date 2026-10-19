@@ -28,10 +28,10 @@ public static class Fat32Formatter
     {
         if (volumeLabel == null) throw new ArgumentNullException(nameof(volumeLabel));
 
-        if (clusterSize < 0 || clusterSize > 65536 || clusterSize % 512 != 0)
+        if (clusterSize != 0 && !IsValidClusterSize(clusterSize, bytesPerSector))
         {
-            throw new ArgumentOutOfRangeException(
-                $"Invalid cluster size {clusterSize}. Must be 512-65536 and dividable by 512");
+            throw new ArgumentOutOfRangeException(nameof(clusterSize),
+                $"Invalid FAT32 cluster size {clusterSize}. Must be a power of 2 between {Math.Max(512, bytesPerSector)} and 65536");
         }
         
         var volumeId = GetVolumeId();
@@ -53,7 +53,7 @@ public static class Fat32Formatter
         const uint backupBootSector = 6;
 
         var sectorsPerCluster = (byte)(clusterSize > 0 
-            ? clusterSize / 512
+            ? clusterSize / bytesPerSector
             : CalculateOptimalSectorsPerCluster(size, (uint)bytesPerSector));
 
         var fatSizeInSectors = CalculateFatSizeSectors((uint)sectorCount, reservedSectorCount, 
@@ -253,6 +253,18 @@ High order word is calculated:
         var fatSize = (numerator / denominator) + 1;
 
         return (uint)fatSize;
+    }
+
+    /// <summary>
+    /// Cluster size is valid for FAT32, if it's a power of 2 between bytes per sector (min 512) and 65536
+    /// </summary>
+    /// <param name="clusterSize">Cluster size in bytes</param>
+    /// <param name="bytesPerSector"></param>
+    /// <returns></returns>
+    public static bool IsValidClusterSize(int clusterSize, int bytesPerSector)
+    {
+        return clusterSize >= Math.Max(512, bytesPerSector) && clusterSize <= 65536 &&
+               (clusterSize & (clusterSize - 1)) == 0;
     }
 
     /// <summary>

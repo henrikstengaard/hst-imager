@@ -383,6 +383,11 @@ namespace Hst.Imager.ConsoleApp
                 Description = "Create Workbench partition size for Kickstart v3.1 or lower within first 4GB."
             };
 
+            var clusterSizeOption = new Option<string>("--cluster-size", ["-cs"])
+            {
+                Description = "Cluster size in bytes for FAT32 and exFAT with MBR and GPT format types, e.g. 4096 or 32kb (default auto calculates optimal cluster size)."
+            };
+
             var command = new Command("format", "Format a physical disk or an image file.");
             command.Add(pathArgument);
             command.Add(partitionTableArgument);
@@ -392,6 +397,7 @@ namespace Hst.Imager.ConsoleApp
             command.Add(maxPartitionSizeOption);
             command.Add(useExperimentalOption);
             command.Add(kickstart31Option);
+            command.Add(clusterSizeOption);
             command.SetAction((ParseResult ctx) =>
             {
                 var path = ctx.GetValue(pathArgument);
@@ -402,7 +408,8 @@ namespace Hst.Imager.ConsoleApp
                 var maxPartitionSize = ctx.GetValue(maxPartitionSizeOption);
                 var useExperimental = ctx.GetValue(useExperimentalOption);
                 var kickstart31 = ctx.GetValue(kickstart31Option);
-                return CommandHandler.Format(path, formatType, fileSystem, fileSystemPath, size, maxPartitionSize, useExperimental, kickstart31);
+                var clusterSize = ctx.GetValue(clusterSizeOption);
+                return CommandHandler.Format(path, formatType, fileSystem, fileSystemPath, size, maxPartitionSize, useExperimental, kickstart31, clusterSize);
             });
 
             return command;

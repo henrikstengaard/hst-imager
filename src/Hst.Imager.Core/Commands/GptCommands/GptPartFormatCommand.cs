@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,9 @@ using DiscUtils;
 using DiscUtils.Ntfs;
 using DiscUtils.Partitions;
 using Hst.Core;
+using Hst.Imager.Core.Apis;
+using Hst.Imager.Core.FileSystems;
+using Hst.Imager.Core.FileSystems.ExFat;
 using Hst.Imager.Core.FileSystems.Fat32;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
@@ -23,10 +27,11 @@ public class GptPartFormatCommand : CommandBase
     private readonly int partitionNumber;
     private readonly GptPartType type;
     private readonly string name;
+    private readonly int clusterSize;
 
     public GptPartFormatCommand(ILogger<GptPartFormatCommand> logger, ICommandHelper commandHelper,
         IEnumerable<IPhysicalDrive> physicalDrives, string path, int partitionNumber, GptPartType type,
-        string name)
+        string name, int clusterSize = 0)
     {
         this.logger = logger;
         this.commandHelper = commandHelper;
@@ -35,6 +40,7 @@ public class GptPartFormatCommand : CommandBase
         this.partitionNumber = partitionNumber;
         this.type = type;
         this.name = name;
+        this.clusterSize = clusterSize;
     }
 
     public override async Task<Result> Execute(CancellationToken token)
@@ -77,28 +83,19 @@ public class GptPartFormatCommand : CommandBase
         OnInformationMessage($"- Type '{partitionInfo.TypeAsString}'");
         OnInformationMessage($"- File system '{type}'");
         OnInformationMessage($"- Partition name '{name}'");
+        OnInformationMessage($"- Cluster size '{ClusterSizeHelper.Format(clusterSize)}'");
 
-        // format gpt partition
-        switch (type)
+        var clusterSizeResult = ClusterSizeHelper.Validate(type.ToString(), type == GptPartType.Fat32,
+            type == GptPartType.ExFat, clusterSize, disk.SectorSize);
+        if (clusterSizeResult.IsFaulted)
         {
-            case GptPartType.Fat32:
-                var partitionOffset = partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector;
-                await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
-                    partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
-                    disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder, 
-                    name);
-                break;
-            case GptPartType.Ntfs:
-                NtfsFileSystem.Format(partitionInfo.Open(), name, Geometry.FromCapacity(partitionInfo.SectorCount * 512),
-                    partitionInfo.FirstSector, partitionInfo.SectorCount);
-                break;
-            case GptPartType.ExFat:
-                var volumeManager = new VolumeManager(disk);
-                var physicalVolumes = volumeManager.GetPhysicalVolumes();
-                DiscUtils.ExFat.ExFatFileSystem.Format(physicalVolumes[partitionNumber - 1], label: name);
-                break;
-            default:
-                return new Result(new Error("Unsupported partition type"));
+            return clusterSizeResult;
+        }
+
+        var formatResult = await FormatPartition(disk, partitionInfo);
+        if (formatResult.IsFaulted)
+        {
+            return formatResult;
         }
             
         // flush disk content
@@ -107,6 +104,41 @@ public class GptPartFormatCommand : CommandBase
         if (media.IsPhysicalDrive)
         {
             await commandHelper.RescanPhysicalDrives();
+        }
+
+        return new Result();
+    }
+
+    private async Task<Result> FormatPartition(VirtualDisk disk, DiscUtils.Partitions.PartitionInfo partitionInfo)
+    {
+        try
+        {
+            switch (type)
+            {
+                case GptPartType.Fat32:
+                    var partitionOffset = partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector;
+                    await Fat32Formatter.FormatPartition(disk.Content, partitionOffset,
+                        partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
+                        disk.Geometry.Value.BytesPerSector, disk.Geometry.Value.SectorsPerTrack, disk.Geometry.Value.HeadsPerCylinder, 
+                        name, clusterSize);
+                    break;
+                case GptPartType.Ntfs:
+                    NtfsFileSystem.Format(partitionInfo.Open(), name, Geometry.FromCapacity(partitionInfo.SectorCount * 512),
+                        partitionInfo.FirstSector, partitionInfo.SectorCount);
+                    break;
+                case GptPartType.ExFat:
+                    await ExFatFormatter.FormatPartition(disk.Content,
+                        partitionInfo.FirstSector * disk.Geometry.Value.BytesPerSector,
+                        partitionInfo.SectorCount * disk.Geometry.Value.BytesPerSector,
+                        disk.Geometry.Value.BytesPerSector, name, clusterSize);
+                    break;
+                default:
+                    return new Result(new Error("Unsupported partition type"));
+            }
+        }
+        catch (Exception e) when (e is ArgumentException or IOException and not Win32IoException)
+        {
+            return new Result(new Error($"Failed to format partition: {e.Message}"));
         }
 
         return new Result();

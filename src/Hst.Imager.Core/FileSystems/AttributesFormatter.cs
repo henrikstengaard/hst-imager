@@ -86,7 +86,7 @@ public static class AttributesFormatter
         return uint.TryParse(propertyValue, out var uintValue) ? uintValue : defaultWindowsAttributes;
     }
 
-    private static string FormatWindowsAttributes(FileAttributes fileAttributes)
+    public static string FormatWindowsAttributes(FileAttributes fileAttributes)
     {
         const string windowsAttributes = "ARHS";
 
@@ -102,7 +102,7 @@ public static class AttributesFormatter
             orderedAttributes.Select(x => fileAttributes.HasFlag(x)).ToArray());
     }
     
-    private static string FormatUnixFileMode(Core.Models.FileSystems.EntryType entryType, UnixFileMode unixFileMode)
+    public static string FormatUnixFileMode(Core.Models.FileSystems.EntryType entryType, UnixFileMode unixFileMode)
     {
         const string unixAttributes = "rwxrwxrwx";
 

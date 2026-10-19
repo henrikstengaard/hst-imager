@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             x:Class="Hst.Imager.AvaloniaApp.Views.StartView"
+             x:DataType="vm:StartViewModel"
+             x:Name="Root">
+
+  <ScrollViewer>
+    <ItemsControl ItemsSource="{Binding Actions}" Margin="12">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="2" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate DataType="vm:StartAction">
+          <Button Command="{Binding #Root.((vm:StartViewModel)DataContext).NavigateCommand}"
+                  CommandParameter="{Binding Page}"
+                  Background="{DynamicResource AppCardBackgroundBrush}"
+                  CornerRadius="4"
+                  Padding="16"
+                  Margin="4"
+                  HorizontalAlignment="Stretch"
+                  VerticalAlignment="Stretch"
+                  HorizontalContentAlignment="Stretch"
+                  VerticalContentAlignment="Top">
+            <StackPanel Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="{Binding Title}" FontSize="28" FontWeight="SemiBold"
+                           Foreground="{DynamicResource AppStrongForegroundBrush}" VerticalAlignment="Center" />
+                <ia:Icon Value="{Binding Icon}" FontSize="28" VerticalAlignment="Center" />
+              </StackPanel>
+              <TextBlock Text="{Binding Description}" Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap" />
+            </StackPanel>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </ScrollViewer>
+</UserControl>

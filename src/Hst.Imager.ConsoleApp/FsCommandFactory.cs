@@ -3,6 +3,7 @@
 namespace Hst.Imager.ConsoleApp;
 
 using System.CommandLine;
+using System.Linq;
 using System.CommandLine.Parsing;
 using Core.UaeMetadatas;
 
@@ -18,6 +19,7 @@ public static class FsCommandFactory
         command.Add(CreateFsExtract());
         command.Add(CreateFsMkDir());
         command.Add(CreateFsDelete());
+        command.Add(CreateFsAttrib());
 
         return command;
     }
@@ -37,8 +39,8 @@ public static class FsCommandFactory
 
         var uaeMetadataOption = new Option<UaeMetadata>("--uaemetadata", ["-uae"])
         {
-            Description = "Type of UAE metadata to read.",
-            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.UaeFsDb
+            Description = "Type of UAE metadata to read for local directories. When specified, Amiga protection bits are shown as attributes unless attributes type is specified.",
+            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.None
         };
 
         var attributesOption = new Option<AttributesMode>("--attributes", ["-a"])
@@ -296,6 +298,66 @@ public static class FsCommandFactory
             return CommandHandler.FsDelete(path);
         });
         command.Add(pathArgument);
+
+        return command;
+    }
+
+    private static Command CreateFsAttrib()
+    {
+        var pathArgument = new Argument<string>("Path")
+        {
+            Description = "Path to directory or file to set attributes for locally, in physical drive or image file."
+        };
+
+        var attributesArgument = new Argument<string[]>("Attributes")
+        {
+            Description = "Attributes to set: '+' adds, '-' removes and without '+' or '-' sets exactly, e.g. +s, -wd or rwed. Amiga protection bits 'hsparwed', Windows attributes 'rash' or Unix permissions 'rwx' or octal mode, e.g. 755.",
+            Arity = ArgumentArity.ZeroOrMore
+        };
+
+        var recursiveOption = new Option<bool>("--recursive")
+        {
+            Description = "Recursively set attributes of files and sub-directories.",
+            DefaultValueFactory = (ArgumentResult _) => false
+        };
+
+        var attributesOption = new Option<AttributesMode>("--attributes")
+        {
+            Description = "Type of attributes to set. Auto uses Amiga protection bits for Amiga file systems, Windows attributes for FAT and NTFS and Windows or Unix attributes depending on operating system for local directories or Amiga protection bits, if UAE metadata is specified.",
+            DefaultValueFactory = (ArgumentResult _) => AttributesMode.Auto
+        };
+
+        var uaeMetadataOption = new Option<UaeMetadata>("--uaemetadata", ["-uae"])
+        {
+            Description = "Type of UAE metadata to read and write Amiga protection bits for local directories and files. When specified, Amiga protection bits are set unless attributes type is specified.",
+            DefaultValueFactory = (ArgumentResult _) => UaeMetadata.None
+        };
+
+        // hidden option to parse "-h" as an attribute to remove hidden or held resident instead of showing help
+        var removeHiddenOption = new Option<bool>("-h")
+        {
+            Hidden = true
+        };
+
+        var command = new Command("attrib", "Set attributes or protection bits of a directory or file.");
+        command.Aliases.Add("attr");
+        command.SetAction(ctx =>
+        {
+            var path = ctx.GetValue(pathArgument);
+            var attributes = ctx.GetValue(removeHiddenOption)
+                ? (ctx.GetValue(attributesArgument) ?? []).Concat(["-h"]).ToArray()
+                : ctx.GetValue(attributesArgument);
+            var recursive = ctx.GetValue(recursiveOption);
+            var attributesMode = ctx.GetValue(attributesOption);
+            var uaeMetadata = ctx.GetValue(uaeMetadataOption);
+            return CommandHandler.FsAttrib(path, attributes, recursive, attributesMode, uaeMetadata);
+        });
+        command.Add(pathArgument);
+        command.Add(attributesArgument);
+        command.Add(recursiveOption);
+        command.Add(attributesOption);
+        command.Add(uaeMetadataOption);
+        command.Add(removeHiddenOption);
 
         return command;
     }

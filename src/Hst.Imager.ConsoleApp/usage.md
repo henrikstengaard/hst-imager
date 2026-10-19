@@ -243,6 +243,13 @@ Example of formatting partition number 1 with label "PC" in Master Boot Record o
 hst.imager mbr part format 4gb.vhd 1 PC
 ```
 
+Example of formatting partition number 1 with label "PC" in Master Boot Record on a 4GB vhd image file with exFAT file system and 64KB cluster size:
+```
+hst.imager mbr part format 4gb.vhd 1 PC --file-system exfat --cluster-size 64kb
+```
+
+Cluster size is only supported for FAT32 and exFAT file systems. If cluster size is not specified, optimal cluster size is calculated from partition size.
+
 ## Read Rigid Disk Block information
 
 Reads Rigid Disk Block from sector 0-15 and displays a table with partitions.

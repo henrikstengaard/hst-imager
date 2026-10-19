@@ -1,0 +1,326 @@
+[
+  {
+    "code": 1,
+    "name": "ERROR_INVALID_FUNCTION",
+    "message": "Incorrect function.",
+    "reason": "The disk or its driver does not support the requested operation. This can happen with card readers, USB adapters or virtual drives that do not support raw sector access or the requested control code."
+  },
+  {
+    "code": 2,
+    "name": "ERROR_FILE_NOT_FOUND",
+    "message": "The system cannot find the file specified.",
+    "reason": "The physical drive or image file does not exist. The disk may have been disconnected, renumbered after reconnecting or the path is misspelled. Refresh the list of physical drives and try again."
+  },
+  {
+    "code": 3,
+    "name": "ERROR_PATH_NOT_FOUND",
+    "message": "The system cannot find the path specified.",
+    "reason": "The path to the physical drive or image file does not exist. Check the path and that the disk is still connected."
+  },
+  {
+    "code": 5,
+    "name": "ERROR_ACCESS_DENIED",
+    "message": "Access is denied.",
+    "reason": "Windows denied raw access to the disk. Hst Imager must run as administrator to access physical drives. Windows also blocks writing to sectors of a mounted volume, so close Windows Explorer and other applications using the disk. Antivirus software, controlled folder access or BitLocker can block raw disk access as well. A disk set as read-only by Windows (diskpart attributes) also causes this error."
+  },
+  {
+    "code": 6,
+    "name": "ERROR_INVALID_HANDLE",
+    "message": "The handle is invalid.",
+    "reason": "The handle to the disk is no longer valid. This typically happens when the disk was disconnected or reset by Windows while it was being accessed."
+  },
+  {
+    "code": 8,
+    "name": "ERROR_NOT_ENOUGH_MEMORY",
+    "message": "Not enough memory resources are available to process this command.",
+    "reason": "Windows ran out of memory or kernel resources while processing the disk request. Close other applications and try again."
+  },
+  {
+    "code": 13,
+    "name": "ERROR_INVALID_DATA",
+    "message": "The data is invalid.",
+    "reason": "The disk or driver rejected the data in the request. This can be caused by a faulty card reader or USB adapter."
+  },
+  {
+    "code": 14,
+    "name": "ERROR_OUTOFMEMORY",
+    "message": "Not enough memory resources are available to complete this operation.",
+    "reason": "Windows ran out of memory while processing the disk request. Close other applications and try again."
+  },
+  {
+    "code": 15,
+    "name": "ERROR_INVALID_DRIVE",
+    "message": "The system cannot find the drive specified.",
+    "reason": "The drive does not exist. The disk may have been disconnected or the drive letter has changed."
+  },
+  {
+    "code": 19,
+    "name": "ERROR_WRITE_PROTECT",
+    "message": "The media is write protected.",
+    "reason": "The disk is write protected. Check if the write protect switch on the SD card, SD card adapter or floppy disk is enabled. Some card readers report cards as write protected when the switch is loose or the contacts are worn. The disk can also be set read-only in Windows using diskpart."
+  },
+  {
+    "code": 20,
+    "name": "ERROR_BAD_UNIT",
+    "message": "The system cannot find the device specified.",
+    "reason": "The disk was not found. It may have been disconnected or failed to initialize."
+  },
+  {
+    "code": 21,
+    "name": "ERROR_NOT_READY",
+    "message": "The device is not ready.",
+    "reason": "The disk is not ready. This typically happens with card readers without a card inserted, a card not fully inserted, or a disk that was disconnected or is still initializing. Reinsert the card or disk and try again."
+  },
+  {
+    "code": 22,
+    "name": "ERROR_BAD_COMMAND",
+    "message": "The device does not recognize the command.",
+    "reason": "The disk or its controller does not support the command sent. This can happen with some card readers and USB adapters."
+  },
+  {
+    "code": 23,
+    "name": "ERROR_CRC",
+    "message": "Data error (cyclic redundancy check).",
+    "reason": "The disk returned data that failed the cyclic redundancy check, meaning the data could not be read correctly. This usually indicates bad sectors, a worn or failing SD/CF card, a damaged disk or a faulty card reader or cable. Try another card reader or USB port. Use retries or force to skip unreadable sectors when reading."
+  },
+  {
+    "code": 24,
+    "name": "ERROR_BAD_LENGTH",
+    "message": "The program issued a command but the command length is incorrect.",
+    "reason": "The size of the read or write is not supported by the disk. Raw disk access requires sizes that are a multiple of the disk sector size."
+  },
+  {
+    "code": 25,
+    "name": "ERROR_SEEK",
+    "message": "The drive cannot locate a specific area or track on the disk.",
+    "reason": "The disk could not locate the requested position. This can indicate a damaged disk or an offset beyond the end of the disk."
+  },
+  {
+    "code": 26,
+    "name": "ERROR_NOT_DOS_DISK",
+    "message": "The specified disk or diskette cannot be accessed.",
+    "reason": "Windows could not access the disk. The disk may be damaged or not supported by the drive."
+  },
+  {
+    "code": 27,
+    "name": "ERROR_SECTOR_NOT_FOUND",
+    "message": "The drive cannot find the sector requested.",
+    "reason": "The requested sector does not exist or could not be found. This can be caused by reading or writing beyond the end of the disk, for example when writing an image larger than the disk, or by a damaged disk. Fake capacity SD cards and USB sticks also cause this error when accessing beyond the real size."
+  },
+  {
+    "code": 29,
+    "name": "ERROR_WRITE_FAULT",
+    "message": "The system cannot write to the specified device.",
+    "reason": "Writing to the disk failed. The disk may be failing, worn out, write protected or disconnected during write. Try another card reader, USB port or cable."
+  },
+  {
+    "code": 30,
+    "name": "ERROR_READ_FAULT",
+    "message": "The system cannot read from the specified device.",
+    "reason": "Reading from the disk failed. The disk may have bad sectors, be failing or been disconnected during read. Try another card reader, USB port or cable. Use retries or force to skip unreadable sectors when reading."
+  },
+  {
+    "code": 31,
+    "name": "ERROR_GEN_FAILURE",
+    "message": "A device attached to the system is not functioning.",
+    "reason": "The disk, card reader or USB adapter stopped responding or reported a general failure. This is often caused by a failing disk, a faulty or underpowered USB adapter, a loose connection or the disk being disconnected. Try another USB port, a powered USB hub or another card reader."
+  },
+  {
+    "code": 32,
+    "name": "ERROR_SHARING_VIOLATION",
+    "message": "The process cannot access the file because it is being used by another process.",
+    "reason": "Another application is using the disk or image file. Close Windows Explorer, disk tools, emulators (e.g. WinUAE), antivirus scans and other applications accessing the disk and try again."
+  },
+  {
+    "code": 33,
+    "name": "ERROR_LOCK_VIOLATION",
+    "message": "The process cannot access the file because another process has locked a portion of the file.",
+    "reason": "Another application has locked the disk or a volume on it. Close Windows Explorer, disk tools, emulators and other applications accessing the disk and try again."
+  },
+  {
+    "code": 38,
+    "name": "ERROR_HANDLE_EOF",
+    "message": "Reached the end of the file.",
+    "reason": "The read or write went beyond the end of the disk or image file. The source or destination may be smaller than expected."
+  },
+  {
+    "code": 50,
+    "name": "ERROR_NOT_SUPPORTED",
+    "message": "The request is not supported.",
+    "reason": "The disk or its driver does not support the requested operation."
+  },
+  {
+    "code": 55,
+    "name": "ERROR_DEV_NOT_EXIST",
+    "message": "The specified network resource or device is no longer available.",
+    "reason": "The disk is no longer available. It was likely disconnected, ejected or reset while being accessed. Check the connection and try again."
+  },
+  {
+    "code": 87,
+    "name": "ERROR_INVALID_PARAMETER",
+    "message": "The parameter is incorrect.",
+    "reason": "Windows rejected the parameters of the disk request. Raw disk access requires offsets and sizes to be aligned to the disk sector size, so this can happen with disks using a sector size other than 512 bytes or when accessing beyond the end of the disk."
+  },
+  {
+    "code": 112,
+    "name": "ERROR_DISK_FULL",
+    "message": "There is not enough space on the disk.",
+    "reason": "There is not enough free space on the destination to write the data. Use a larger destination or free up space."
+  },
+  {
+    "code": 121,
+    "name": "ERROR_SEM_TIMEOUT",
+    "message": "The semaphore timeout period has expired.",
+    "reason": "The disk did not respond in time. This is often caused by a failing disk, bad sectors that take long to read, a faulty or underpowered USB adapter or card reader, or a loose connection. Try another USB port, a powered USB hub or another card reader."
+  },
+  {
+    "code": 131,
+    "name": "ERROR_NEGATIVE_SEEK",
+    "message": "An attempt was made to move the file pointer before the beginning of the file.",
+    "reason": "An attempt was made to access a position before the start of the disk."
+  },
+  {
+    "code": 132,
+    "name": "ERROR_SEEK_ON_DEVICE",
+    "message": "The file pointer cannot be set on the specified device or file.",
+    "reason": "The disk does not support seeking to the requested position."
+  },
+  {
+    "code": 170,
+    "name": "ERROR_BUSY",
+    "message": "The requested resource is in use.",
+    "reason": "The disk is in use by Windows or another application. Close applications using the disk and try again."
+  },
+  {
+    "code": 433,
+    "name": "ERROR_NO_SUCH_DEVICE",
+    "message": "A device which does not exist was specified.",
+    "reason": "The disk does not exist. It may have been disconnected. Refresh the list of physical drives and try again."
+  },
+  {
+    "code": 483,
+    "name": "ERROR_DEVICE_HARDWARE_ERROR",
+    "message": "The request failed due to a fatal device hardware error.",
+    "reason": "The disk reported a fatal hardware error. The disk is likely failing or damaged."
+  },
+  {
+    "code": 740,
+    "name": "ERROR_ELEVATION_REQUIRED",
+    "message": "The requested operation requires elevation.",
+    "reason": "Accessing physical drives requires administrator privileges. Run Hst Imager as administrator."
+  },
+  {
+    "code": 995,
+    "name": "ERROR_OPERATION_ABORTED",
+    "message": "The I/O operation has been aborted because of either a thread exit or an application request.",
+    "reason": "The disk operation was aborted. This can happen when the disk was disconnected, the operation was cancelled or Windows reset the device."
+  },
+  {
+    "code": 998,
+    "name": "ERROR_NOACCESS",
+    "message": "Invalid access to memory location.",
+    "reason": "The disk driver could not access the memory buffer used for the read or write. This can be caused by buffer sizes not aligned to the disk sector size."
+  },
+  {
+    "code": 1005,
+    "name": "ERROR_UNRECOGNIZED_VOLUME",
+    "message": "The volume does not contain a recognized file system.",
+    "reason": "Windows does not recognize the file system on the volume. This is expected for Amiga formatted disks and does not affect raw disk access."
+  },
+  {
+    "code": 1006,
+    "name": "ERROR_FILE_INVALID",
+    "message": "The volume for a file has been externally altered so that the opened file is no longer valid.",
+    "reason": "The disk was changed, removed or remounted by Windows while it was being accessed. Make sure no other application accesses the disk and try again."
+  },
+  {
+    "code": 1110,
+    "name": "ERROR_MEDIA_CHANGED",
+    "message": "The media in the drive may have changed.",
+    "reason": "The card or disk was removed or changed while it was being accessed."
+  },
+  {
+    "code": 1112,
+    "name": "ERROR_NO_MEDIA_IN_DRIVE",
+    "message": "No media in drive.",
+    "reason": "There is no card or disk in the drive. Insert the card or disk and try again."
+  },
+  {
+    "code": 1117,
+    "name": "ERROR_IO_DEVICE",
+    "message": "The request could not be performed because of an I/O device error.",
+    "reason": "The disk reported an I/O error. This is commonly caused by bad sectors, a failing or worn out SD/CF card, a faulty card reader or USB adapter, a bad cable or insufficient USB power. Heavy system load (e.g. GPU) can cause power drops on USB ports. Try another card reader, a rear USB port, a powered USB hub or another cable. Use retries or force to skip unreadable sectors when reading."
+  },
+  {
+    "code": 1126,
+    "name": "ERROR_DISK_RECALIBRATE_FAILED",
+    "message": "While accessing the hard disk, a recalibrate operation failed, even after retries.",
+    "reason": "The disk failed to recalibrate. The disk is likely failing or damaged."
+  },
+  {
+    "code": 1127,
+    "name": "ERROR_DISK_OPERATION_FAILED",
+    "message": "While accessing the hard disk, a disk operation failed even after retries.",
+    "reason": "The disk failed to complete the operation even after retries. The disk is likely failing, has bad sectors or the connection is unstable."
+  },
+  {
+    "code": 1128,
+    "name": "ERROR_DISK_RESET_FAILED",
+    "message": "While accessing the hard disk, a disk controller reset was needed, but even that failed.",
+    "reason": "The disk controller stopped responding and could not be reset. The disk, card reader or USB adapter is likely failing."
+  },
+  {
+    "code": 1129,
+    "name": "ERROR_BUS_RESET",
+    "message": "The I/O bus was reset.",
+    "reason": "The USB or storage bus was reset while accessing the disk. This can be caused by an unstable connection, insufficient USB power or a failing disk."
+  },
+  {
+    "code": 1167,
+    "name": "ERROR_DEVICE_NOT_CONNECTED",
+    "message": "The device is not connected.",
+    "reason": "The disk was disconnected while being accessed. Check the cable, USB port or card reader and try again."
+  },
+  {
+    "code": 1314,
+    "name": "ERROR_PRIVILEGE_NOT_HELD",
+    "message": "A required privilege is not held by the client.",
+    "reason": "Hst Imager does not have the privileges required to access the disk. Run Hst Imager as administrator."
+  },
+  {
+    "code": 1392,
+    "name": "ERROR_FILE_CORRUPT",
+    "message": "The file or directory is corrupted and unreadable.",
+    "reason": "Windows detected corruption on the disk. The disk may be damaged."
+  },
+  {
+    "code": 1393,
+    "name": "ERROR_DISK_CORRUPT",
+    "message": "The disk structure is corrupted and unreadable.",
+    "reason": "Windows detected the disk structure is corrupted. The disk may be damaged."
+  },
+  {
+    "code": 1450,
+    "name": "ERROR_NO_SYSTEM_RESOURCES",
+    "message": "Insufficient system resources exist to complete the requested service.",
+    "reason": "Windows ran out of system resources processing the disk request. This can happen with very large read or write sizes or with some USB drivers. Close other applications and try again."
+  },
+  {
+    "code": 1460,
+    "name": "ERROR_TIMEOUT",
+    "message": "This operation returned because the timeout period expired.",
+    "reason": "The disk did not respond in time. The disk may be failing or the connection is unstable."
+  },
+  {
+    "code": 1784,
+    "name": "ERROR_INVALID_USER_BUFFER",
+    "message": "The supplied user buffer is not valid for the requested operation.",
+    "reason": "The buffer used for the read or write was rejected by the disk driver, typically because the size is not aligned to the disk sector size."
+  },
+  {
+    "code": 1785,
+    "name": "ERROR_UNRECOGNIZED_MEDIA",
+    "message": "The disk media is not recognized. It may not be formatted.",
+    "reason": "The drive does not recognize the media. The card or disk may be unsupported by the reader or damaged."
+  }
+]

@@ -1,5 +1,6 @@
 ﻿using DiscUtils.Ntfs;
 using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 
 namespace Hst.Imager.Core.Commands;
@@ -336,22 +337,21 @@ public class FileSystemEntryIterator : IEntryIterator
         
         try
         {
+            // attributes are stored as numeric values to be parsed by attributes formatter
             switch (fileSystem)
             {
                 case ExtFileSystem extFileSystem:
                     var unixFileInfo = extFileSystem.GetUnixFileInfo(path);
-                    attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.UnixFileMode,
-                        unixFileInfo?.Permissions.ToString()));
+                    if (unixFileInfo != null)
+                    {
+                        attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.UnixFileMode,
+                            ((uint)unixFileInfo.Permissions).ToString()));
+                    }
                     break;
-                case FatFileSystem fatFileSystem:
-                    var fileAttributes = fatFileSystem.GetAttributes(path);
+                default:
+                    var fileAttributes = fileSystem.GetAttributes(path);
                     attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.WindowsAttributes,
-                        fileAttributes.ToString()));
-                    break;
-                case NtfsFileSystem ntfsFileSystem:
-                    var ntfsFileAttributes = ntfsFileSystem.GetAttributes(path);
-                    attributeProperties.Add(new KeyValuePair<string, string>(Core.Constants.EntryPropertyNames.WindowsAttributes,
-                        ntfsFileAttributes.ToString()));
+                        ((uint)fileAttributes).ToString()));
                     break;
             }
         }
@@ -382,6 +382,33 @@ public class FileSystemEntryIterator : IEntryIterator
 
         fileSystem.DeleteDirectory(entryPath);
         return Task.FromResult(new Result());
+    }
+
+    public Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        if (attributesChange.Mode != AttributesMode.Windows || fileSystem is ExtFileSystem)
+        {
+            return Task.FromResult(new Result<int>(new Error(
+                $"Attributes mode '{attributesChange.Mode}' is not supported for file system '{fileSystem.GetType().Name}'")));
+        }
+
+        var entryPath = mediaPath.Join(fullPathComponents);
+
+        if (!fileSystem.Exists(entryPath))
+        {
+            return Task.FromResult(new Result<int>(new PathNotFoundError($"Path not found '{entryPath}'", entryPath)));
+        }
+
+        try
+        {
+            var attributes = attributesChange.Apply((int)fileSystem.GetAttributes(entryPath));
+            fileSystem.SetAttributes(entryPath, (FileAttributes)attributes);
+            return Task.FromResult(new Result<int>(attributes));
+        }
+        catch (Exception e)
+        {
+            return Task.FromResult(new Result<int>(new Error(e.Message)));
+        }
     }
 
     public Task<Result> MoveEntry(string[] srcFullPathComponents, string[] destFullPathComponents)

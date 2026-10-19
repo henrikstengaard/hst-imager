@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+  <controls:PageLayout Title="Settings"
+                       Description="Configure settings for appearance, read, write, and debug.">
+    <StackPanel Spacing="8">
+
+      <TextBlock Classes="field-label" Text="Color mode" />
+      <ComboBox ItemsSource="{Binding ColorModeOptions}"
+                SelectedItem="{Binding ColorMode}"
+                DisplayMemberBinding="{Binding Title}"
+                Width="200" HorizontalAlignment="Left" />
+      <TextBlock Classes="field-help" TextWrapping="Wrap"
+                 Text="System follows the light or dark mode used by the operating system." />
+
+      <CheckBox Content="Show all physical drives (except system/boot drives)"
+                IsChecked="{Binding AllPhysicalDrives}" />
+
+      <Border Classes="warning" IsVisible="{Binding AllPhysicalDrives}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="All physical drive shown enables Hst Imager to read and write all disks except system and boot drives. Be very sure to select the correct physical drive when this is enabled otherwise Hst Imager might destroy your disk and it's file system!" />
+      </Border>
+
+      <CheckBox Content="Start as administrator (applied after restart of app)"
+                IsChecked="{Binding StartAsAdministrator}" />
+
+      <TextBlock Classes="field-label" Text="macOS elevate method" Margin="0,8,0,0" />
+      <ComboBox ItemsSource="{Binding MacOsElevateMethodOptions}"
+                SelectedItem="{Binding MacOsElevateMethod}"
+                DisplayMemberBinding="{Binding Title}"
+                IsEnabled="{Binding IsMacOs}"
+                HorizontalAlignment="Stretch" />
+
+      <TextBlock Classes="section-title" Text="Read and write" />
+
+      <TextBlock Classes="field-label" Text="Retries" />
+      <NumericUpDown Value="{Binding Retries}" Minimum="0" Maximum="100" FormatString="0"
+                     Width="140" HorizontalAlignment="Left" />
+
+      <CheckBox Content="Force and ignore errors when retries are exceeded"
+                IsChecked="{Binding Force}" />
+
+      <CheckBox Content="Verify while reading and writing"
+                IsChecked="{Binding Verify}" />
+
+      <CheckBox Content="Skip unused sectors"
+                IsChecked="{Binding SkipUnusedSectors}" />
+
+      <Border Classes="warning" IsVisible="{Binding SkipUnusedSectors}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Skip unused sectors will make writing and comparing images much faster as sectors with only zeroes are skipped. It also means skipped sectors may contain old data that would otherwise be erased with zeroes and not all operating systems or file systems support this. As an example ChromeOS images will not be able to recover properly if unused sectors are skipped!" />
+      </Border>
+
+      <CheckBox Content="Sparse files"
+                IsChecked="{Binding SparseFiles}" />
+
+      <CheckBox Content="Use cache for physical drive operations"
+                IsChecked="{Binding UseCache}" />
+
+      <TextBlock Classes="field-help" TextWrapping="Wrap" Margin="28,-4,0,0"
+                 Text="Disabled by default, as using cache slows down reading and writing of physical disks and image files. When enabled, data is first written to a cache and then written to the physical disk or VHD image file when finished, which is shown as a separate progress." />
+
+      <TextBlock Classes="section-title" Text="Debug" />
+
+      <CheckBox Content="Debug mode (applied after restart of app)"
+                IsChecked="{Binding DebugMode}"
+                IsEnabled="{Binding IsDebugModeEnabled}" />
+
+      <Button Command="{Binding ViewLogsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <ia:Icon Value="fa-chart-line" />
+          <TextBlock Text="View logs" />
+        </StackPanel>
+      </Button>
+    </StackPanel>
+  </controls:PageLayout>
+</UserControl>

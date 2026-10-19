@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             x:Class="Hst.Imager.AvaloniaApp.Views.ProgressOverlay"
+             x:DataType="vm:ProgressViewModel">
+
+  <!-- Modal overlay blocking the app while a task runs, like gui app progress backdrop -->
+  <Border Background="#B3000000" IsVisible="{Binding IsVisible}">
+    <Border Classes="card" Width="560" Padding="20"
+            HorizontalAlignment="Center" VerticalAlignment="Center">
+      <StackPanel Spacing="12">
+
+        <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" Foreground="{DynamicResource AppStrongForegroundBrush}"
+                   TextWrapping="Wrap" TextAlignment="Center" />
+
+        <!-- Running -->
+        <StackPanel Spacing="8" IsVisible="{Binding IsRunning}">
+          <TextBlock Text="{Binding Stage}" IsVisible="{Binding HasStage}"
+                     Foreground="{DynamicResource AppBodyForegroundBrush}" HorizontalAlignment="Center" />
+          <ProgressBar Value="{Binding PercentComplete}" Minimum="0" Maximum="100" Height="8"
+                       IsIndeterminate="{Binding IsFinishing}" />
+          <TextBlock Text="{Binding PercentText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center"
+                     IsVisible="{Binding !IsFinishing}" />
+          <TextBlock Text="Finishing, please wait..." Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center"
+                     IsVisible="{Binding IsFinishing}" />
+          <TextBlock Text="{Binding BytesText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center" />
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
+            <TextBlock Text="{Binding SpeedText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" />
+            <TextBlock Text="{Binding EtaText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" />
+          </StackPanel>
+          <Button Command="{Binding CancelCommand}" HorizontalAlignment="Center">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-ban" />
+              <TextBlock Text="Cancel" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+
+        <!-- Completed -->
+        <StackPanel Spacing="12" IsVisible="{Binding IsComplete}">
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                      IsVisible="{Binding IsSuccess}">
+            <ia:Icon Value="fa-check" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
+            <TextBlock Text="Completed successfully" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                      IsVisible="{Binding HasError}">
+            <ia:Icon Value="fa-times" Foreground="{DynamicResource AppFailureForegroundBrush}" VerticalAlignment="Top" />
+            <TextBlock Foreground="{DynamicResource AppFailureForegroundBrush}" TextWrapping="Wrap" MaxWidth="480"
+                       Text="{Binding ErrorMessage, StringFormat='Failed: {0}'}" />
+          </StackPanel>
+          <Button Command="{Binding OkCommand}" Classes="primary" HorizontalAlignment="Center" MinWidth="80"
+                  HorizontalContentAlignment="Center">Ok</Button>
+        </StackPanel>
+
+      </StackPanel>
+    </Border>
+  </Border>
+</UserControl>

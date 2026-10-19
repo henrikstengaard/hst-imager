@@ -309,6 +309,16 @@
                 Description = "Path to file system."
             };
 
+            var versionOption = new Option<int?>("--version", ["-v"])
+            {
+                Description = "Version of file system (number before . in version)."
+            };
+
+            var revisionOption = new Option<int?>("--revision", ["-r"])
+            {
+                Description = "Revision of file system (number after . in version)."
+            };
+
             var command = new Command("update", "Update file system.");
             command.SetAction((ParseResult ctx) =>
             {
@@ -317,18 +327,24 @@
                 var dosType = ctx.GetValue(dosTypeArgument);
                 var name = ctx.GetValue(fileSystemNameOption);
                 var fsPath = ctx.GetValue(fileSystemPathOption);
-                return CommandHandler.RdbFsUpdate(path, num, dosType, name, fsPath);
+                var version = ctx.GetValue(versionOption);
+                var revision = ctx.GetValue(revisionOption);
+                return CommandHandler.RdbFsUpdate(path, num, dosType, name, fsPath, version, revision);
             });
             command.Add(pathArgument);
             command.Add(fileSystemNumber);
             command.Add(dosTypeArgument);
             command.Add(fileSystemNameOption);
             command.Add(fileSystemPathOption);
+            command.Add(versionOption);
+            command.Add(revisionOption);
             command.Validators.Add((CommandResult validate) =>
             {
                 if (validate.GetResult(dosTypeArgument) is null &&
                     validate.GetResult(fileSystemNameOption) is null &&
-                    validate.GetResult(fileSystemPathOption) is null)
+                    validate.GetResult(fileSystemPathOption) is null &&
+                    validate.GetResult(versionOption) is null &&
+                    validate.GetResult(revisionOption) is null)
                 {
                     validate.AddError("At least one option must be specified");
                 }

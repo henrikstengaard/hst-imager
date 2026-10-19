@@ -1,0 +1,143 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.FormatView"
+             x:DataType="vm:FormatViewModel">
+
+  <controls:PageLayout Title="Format"
+                       Description="Format a physical disk or an image file.">
+    <StackPanel Spacing="8">
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
+
+      <!-- Format type -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-sliders" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Format type" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding FormatTypeOptions}"
+                SelectedItem="{Binding SelectedFormatType}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+
+      <!-- File system -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-sliders" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="File system" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding FileSystemOptions}"
+                SelectedItem="{Binding SelectedFileSystem}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="None available"
+                HorizontalAlignment="Stretch" />
+
+      <!-- Cluster size -->
+      <StackPanel Spacing="4" IsVisible="{Binding ShowClusterSize}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-table-cells" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Cluster size" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding ClusterSizeOptionList}"
+                  SelectedItem="{Binding ClusterSize}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
+      <CheckBox Content="Download pfs3aio from aminet.net"
+                IsChecked="{Binding DownloadPfs3Aio}"
+                IsVisible="{Binding ShowDownloadPfs3Aio}" />
+
+      <!-- File system file -->
+      <StackPanel Spacing="4" IsVisible="{Binding ShowFileSystemPath}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-file" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="File system file" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding FileSystemPath}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseFileSystemPathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+      </StackPanel>
+
+      <!-- Advanced -->
+      <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+        <Expander.Header>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-gear" />
+            <TextBlock Text="Advanced" />
+          </StackPanel>
+        </Expander.Header>
+        <StackPanel Spacing="8" Margin="0,8">
+
+          <Grid ColumnDefinitions="2*,*,Auto" RowDefinitions="Auto,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+              <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Size" />
+            </StackPanel>
+            <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                           IsEnabled="{Binding Source.HasMedia}" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+              <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Unit" />
+            </StackPanel>
+            <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                      ItemsSource="{x:Static vm:FormatViewModel.SizeUnits}"
+                      SelectedItem="{Binding SizeUnit}"
+                      IsEnabled="{Binding Source.HasMedia}" />
+            <Button Grid.Row="1" Grid.Column="2" Margin="8,0,0,0"
+                    Command="{Binding ResetSizeCommand}"
+                    IsEnabled="{Binding Source.HasMedia}"
+                    ToolTip.Tip="Reset">
+              <ia:Icon Value="fa-rotate-left" />
+            </Button>
+          </Grid>
+
+          <StackPanel Spacing="8" IsVisible="{Binding IsRdbFormat}">
+            <StackPanel Spacing="4" IsVisible="{Binding ShowUseExperimental}">
+              <CheckBox Content="Use PFS3 experimental partition sizes" IsChecked="{Binding UseExperimental}" />
+              <Border Classes="warning">
+                <TextBlock TextWrapping="Wrap"
+                           Text="Using PFS3 experimental partition sizes might cause data loss and/or corruption." />
+              </Border>
+            </StackPanel>
+
+            <CheckBox IsChecked="{Binding Kickstart31}">
+              <TextBlock TextWrapping="Wrap"
+                         Text="Create Workbench partition size for Kickstart v3.1 or lower within first 4GB." />
+            </CheckBox>
+
+            <TextBlock Classes="field-label" Text="Max partition size" />
+            <ComboBox ItemsSource="{Binding MaxPartitionSizeOptions}"
+                      SelectedItem="{Binding MaxPartitionSize}"
+                      DisplayMemberBinding="{Binding Title}"
+                      PlaceholderText="None available"
+                      HorizontalAlignment="Stretch" />
+          </StackPanel>
+
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding StartFormatCommand}" Classes="danger">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-broom" />
+            <TextBlock Text="Format" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

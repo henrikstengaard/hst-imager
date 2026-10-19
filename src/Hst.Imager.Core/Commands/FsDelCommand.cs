@@ -13,12 +13,10 @@ using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.UaeMetadatas;
-using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.Core.Commands;
 
 public class FsDelCommand(
-    ILogger<FsDelCommand> logger,
     ICommandHelper commandHelper,
     IEnumerable<IPhysicalDrive> physicalDrives,
     string path,

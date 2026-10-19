@@ -1,5 +1,6 @@
 ﻿using System;
 using Hst.Core;
+using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Models;
 
 namespace Hst.Imager.Core.Commands;
@@ -186,6 +187,41 @@ public class AmigaVolumeEntryIterator(
         await fileSystemVolume.Delete(fullPathComponents[^1], true);
 
         return new Result();
+    }
+
+    public async Task<Result<int>> SetAttributes(string[] fullPathComponents, AttributesChange attributesChange)
+    {
+        if (attributesChange.Mode != AttributesMode.Amiga)
+        {
+            return new Result<int>(new Error(
+                $"Attributes mode '{attributesChange.Mode}' is not supported for Amiga volume, use Amiga protection bits"));
+        }
+
+        if (fullPathComponents.Length == 0)
+        {
+            return new Result<int>(new Error("Attributes can't be set for root directory of Amiga volume"));
+        }
+
+        var changeDirectoryResult = await ChangeDirectoryIfNeeded(fullPathComponents.Take(fullPathComponents.Length - 1).ToArray());
+        if (changeDirectoryResult.IsFaulted)
+        {
+            return new Result<int>(changeDirectoryResult.Error);
+        }
+
+        var name = fullPathComponents[^1];
+        var entry = (await fileSystemVolume.ListEntries()).FirstOrDefault(x =>
+            x.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
+        if (entry == null)
+        {
+            return new Result<int>(new PathNotFoundError($"Path not found '{mediaPath.Join(fullPathComponents)}'",
+                mediaPath.Join(fullPathComponents)));
+        }
+
+        var protectionBits = attributesChange.Apply((int)entry.ProtectionBits);
+
+        await fileSystemVolume.SetProtectionBits(entry.Name, (ProtectionBits)protectionBits);
+
+        return new Result<int>(protectionBits);
     }
     
     private async Task<bool> IsDirectoryChanged(string[] fullPathComponents)

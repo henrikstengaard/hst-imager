@@ -68,12 +68,13 @@
                 ? rigidDiskBlock.LoCylinder
                 : lastPartitionBlock.HighCyl;
 
-            var minimumRigidDiskBlockSize = (long)highestUsedCylinder * cylinderSize;
+            var minimumRigidDiskBlockSize = ((long)highestUsedCylinder + 1) * cylinderSize;
 
             var diskSize = media.Size;
             var newRigidDiskBlockSize = diskSize.ResolveSize(size).ToSectorSize();
 
-            var hiCylinder = Convert.ToUInt32(Math.Floor((double)newRigidDiskBlockSize / cylinderSize));
+            // rigid disk block uses cylinders up to and including hi cylinder
+            var hiCylinder = Convert.ToUInt32(Math.Max(0, Math.Floor((double)newRigidDiskBlockSize / cylinderSize) - 1));
 
             OnInformationMessage($"Disk size '{diskSize.FormatBytes()}' ({diskSize} bytes)");
 
@@ -81,19 +82,42 @@
             OnDebugMessage($"Highest used cylinder '{highestUsedCylinder}'");
             OnDebugMessage($"New Rigid Disk Block size '{newRigidDiskBlockSize.FormatBytes()}' ({newRigidDiskBlockSize} bytes)");
 
-            if (newRigidDiskBlockSize < minimumRigidDiskBlockSize)
+            if (hiCylinder < highestUsedCylinder)
             {
                 OnDebugMessage($"Adjusted to smallest Rigid Disk Block size '{minimumRigidDiskBlockSize.FormatBytes()}' ({minimumRigidDiskBlockSize} bytes)");
                 hiCylinder = highestUsedCylinder;
             }
 
             var largestCylinder = Convert.ToUInt32(Math.Floor((double)diskSize / cylinderSize));
-            var largestRigidDiskBlockSize = largestCylinder * cylinderSize;
+            var largestRigidDiskBlockSize = (long)largestCylinder * cylinderSize;
 
-            if (newRigidDiskBlockSize > largestRigidDiskBlockSize)
+            if (largestCylinder > 0 && hiCylinder >= largestCylinder)
             {
-                OnDebugMessage($"Adjusted to largest Rigid Disk Block size '{minimumRigidDiskBlockSize.FormatBytes()}' ({minimumRigidDiskBlockSize} bytes)");
+                OnDebugMessage($"Adjusted to largest Rigid Disk Block size '{largestRigidDiskBlockSize.FormatBytes()}' ({largestRigidDiskBlockSize} bytes)");
                 hiCylinder = largestCylinder - 1;
+            }
+
+            // master boot record partitions after rigid disk block in a hybrid disk must not be overlapped by
+            // rigid disk block, when it's expanded
+            var oldRigidDiskBlockEnd = ((long)rigidDiskBlock.HiCylinder + 1) * cylinderSize;
+            var newRigidDiskBlockEnd = ((long)hiCylinder + 1) * cylinderSize;
+            var overlappedMbrPartition = diskInfo.GptPartitionTablePart == null
+                ? (diskInfo.MbrPartitionTablePart?.Parts ?? Enumerable.Empty<PartInfo>())
+                .Where(x => x.PartType == PartType.Partition && x.StartOffset >= oldRigidDiskBlockEnd &&
+                            x.StartOffset < newRigidDiskBlockEnd)
+                .OrderBy(x => x.StartOffset)
+                .FirstOrDefault()
+                : null;
+            if (overlappedMbrPartition != null)
+            {
+                return new Result(new Error(
+                    $"Rigid Disk Block of size '{newRigidDiskBlockEnd.FormatBytes()}' overlaps Master Boot Record partition #{overlappedMbrPartition.PartitionNumber} starting at offset {overlappedMbrPartition.StartOffset}"));
+            }
+
+            if (highestUsedCylinder > hiCylinder)
+            {
+                return new Result(new Error(
+                    $"Rigid Disk Block can't be resized to fit disk, as partitions use cylinders up to '{highestUsedCylinder}'"));
             }
 
             rigidDiskBlock.Cylinders = (uint)(hiCylinder + 1);
@@ -103,7 +127,7 @@
             OnDebugMessage("Writing Rigid Disk Block");
             await MediaHelper.WriteRigidDiskBlockToMedia(media, rigidDiskBlock);
 
-            OnDebugMessage($"Resized Rigid Disk Block to size '{newRigidDiskBlockSize.FormatBytes()}' ({newRigidDiskBlockSize} bytes)");
+            OnDebugMessage($"Resized Rigid Disk Block to size '{newRigidDiskBlockEnd.FormatBytes()}' ({newRigidDiskBlockEnd} bytes)");
 
             return new Result();
         }

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands.FsCommands;
 using Hst.Imager.Core.Models.FileSystems;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Hst.Imager.Core.Tests.CommandTests.FsCommandTests;
@@ -31,8 +30,7 @@ public class GivenFsMkDirCommandWithMbrFatFormattedDisk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath, 100.MB());
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -67,8 +65,7 @@ public class GivenFsMkDirCommandWithMbrFatFormattedDisk
             await TestHelper.CreateMbrFatFormattedDisk(testCommandHelper, mediaPath, 100.MB());
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -116,8 +113,7 @@ public class GivenFsMkDirCommandWithMbrFatFormattedDisk
             await MbrTestHelper.CreateDirectory(testCommandHelper, mediaPath, 0, ["dir3"]);
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -149,8 +145,7 @@ public class GivenFsMkDirCommandWithMbrFatFormattedDisk
             await File.WriteAllTextAsync(mediaPath, string.Empty);
 
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);
@@ -186,8 +181,7 @@ public class GivenFsMkDirCommandWithMbrFatFormattedDisk
             await MbrTestHelper.CreateDirectoriesAndFiles(testCommandHelper, mediaPath);
             
             // arrange - create fs mkdir command
-            var fsMkDirCommand = new FsMkDirCommand(new NullLogger<FsMkDirCommand>(), testCommandHelper, [],
-                mkDirPath);
+            var fsMkDirCommand = new FsMkDirCommand(testCommandHelper, [], mkDirPath);
 
             // act - execute fs mkdir command
             var result = await fsMkDirCommand.Execute(CancellationToken.None);

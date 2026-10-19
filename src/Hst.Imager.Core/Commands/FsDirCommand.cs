@@ -29,7 +29,7 @@ public class FsDirCommand(
     IEnumerable<IPhysicalDrive> physicalDrives,
     string path,
     bool recursive,
-    UaeMetadata uaeMetadata = UaeMetadata.UaeFsDb)
+    UaeMetadata uaeMetadata = UaeMetadata.None)
     : FsCommandBase(commandHelper, physicalDrives)
 {
     private readonly ILogger<FsDirCommand> logger = logger;

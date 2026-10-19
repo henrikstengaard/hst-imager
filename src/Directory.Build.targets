@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Replace last part of version with git commit count (e.g. 2.0.0 -> 2.0.701). Used by both local builds and
+    build and release workflow, so versions are identical. Skipped when version is passed with -p:Version=...
+    Product version (InformationalVersion) gets git commit sha appended by .NET SDK (e.g. 2.0.701+44d19f8...).
+  -->
+  <Target Name="SetVersionFromGitCommitCount" BeforeTargets="GetAssemblyVersion;GenerateNuspec">
+    <XmlPeek XmlInputPath="$(MSBuildThisFileDirectory)Directory.Build.props" Query="/Project/PropertyGroup/Version/text()">
+      <Output TaskParameter="Result" PropertyName="PropsVersion" />
+    </XmlPeek>
+    <Exec Condition="'$(Version)' == '$(PropsVersion)'" Command="git rev-list --count HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true" EchoOff="true" IgnoreExitCode="true" StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="GitCommitCount" />
+      <Output TaskParameter="ExitCode" PropertyName="GitExitCode" />
+    </Exec>
+    <PropertyGroup Condition="'$(GitExitCode)' == '0' And $([System.Text.RegularExpressions.Regex]::IsMatch('$(GitCommitCount)', '^\d+$'))">
+      <Version>$([System.Text.RegularExpressions.Regex]::Replace('$(Version)', '^(.*)\.\d+.*$', '$1.$(GitCommitCount)'))</Version>
+    </PropertyGroup>
+    <Message Importance="high" Text="$(MSBuildProjectName) version: $(Version)" />
+  </Target>
+</Project>

@@ -167,6 +167,11 @@ public static class GptCommandFactory
             Description = "Name of the partition."
         };
 
+        var clusterSizeOption = new Option<string>("--cluster-size", ["-cs"])
+        {
+            Description = "Cluster size in bytes for FAT32 and exFAT, e.g. 4096 or 32kb (default auto calculates optimal cluster size)."
+        };
+
         var formatCommand = new Command("format", "Format partition.");
         formatCommand.SetAction((ParseResult ctx) =>
         {
@@ -174,12 +179,14 @@ public static class GptCommandFactory
             var partitionNumber = ctx.GetValue(partitionNumberArgument);
             var type = ctx.GetValue(typeArgument);
             var name = ctx.GetValue(nameArgument);
-            return CommandHandler.GptPartFormat(path, partitionNumber, type, name);
+            var clusterSize = ctx.GetValue(clusterSizeOption);
+            return CommandHandler.GptPartFormat(path, partitionNumber, type, name, clusterSize);
         });
         formatCommand.Add(pathArgument);
         formatCommand.Add(partitionNumberArgument);
         formatCommand.Add(typeArgument);
         formatCommand.Add(nameArgument);
+        formatCommand.Add(clusterSizeOption);
 
         return formatCommand;
     }

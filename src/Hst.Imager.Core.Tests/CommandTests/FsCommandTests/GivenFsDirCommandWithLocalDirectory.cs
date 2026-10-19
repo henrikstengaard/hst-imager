@@ -8,6 +8,9 @@ using Hst.Amiga.DataTypes.UaeFsDbs;
 using Hst.Amiga.FileSystems;
 using Hst.Core.Extensions;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Commands.FsCommands;
+using Hst.Imager.Core.FileSystems;
+using Hst.Imager.Core.Models;
 using Hst.Imager.Core.UaeMetadatas;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -331,6 +334,96 @@ public class GivenFsDirCommandWithLocalDirectory
             
             // assert - error is path not found error
             Assert.IsType<PathNotFoundError>(result.Error);
+        }
+        finally
+        {
+            if (Directory.Exists(localPath))
+            {
+                Directory.Delete(localPath, true);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(UaeMetadata.UaeFsDb)]
+    [InlineData(UaeMetadata.UaeMetafile)]
+    public async Task When_ListingEntriesWithUaeMetadataProtectionBits_Then_EntriesHaveAmigaAttributes(
+        UaeMetadata uaeMetadata)
+    {
+        // arrange - paths
+        var localPath = $"{Guid.NewGuid()}-local";
+        var file1Path = Path.Combine(localPath, "file1.txt");
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create local directory with file1.txt
+            Directory.CreateDirectory(localPath);
+            await File.WriteAllTextAsync(file1Path, string.Empty);
+
+            // arrange - set script protection bit for file1.txt in uae metadata
+            var fsAttribCommand = new FsAttribCommand(testCommandHelper, [], file1Path, ["+s"], false,
+                uaeMetadata: uaeMetadata);
+            Assert.True((await fsAttribCommand.Execute(CancellationToken.None)).IsSuccess);
+
+            // arrange - create fs dir command
+            EntriesInfo entriesInfo = null;
+            var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(), localPath, false, uaeMetadata: uaeMetadata);
+            fsDirCommand.EntriesRead += (_, e) => entriesInfo = e.EntriesInfo;
+
+            // act - execute fs dir command
+            var result = await fsDirCommand.Execute(CancellationToken.None);
+
+            // assert - result is successful and attributes mode is amiga
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(entriesInfo);
+            Assert.Equal(AttributesMode.Amiga, entriesInfo.AttributesMode);
+
+            // assert - single entry file1.txt has script protection bit from uae metadata
+            var entry = Assert.Single(entriesInfo.Entries);
+            Assert.Equal("file1.txt", entry.Name);
+            Assert.Equal("-S--RWED", AttributesFormatter.FormatAttributes(entry, entriesInfo.AttributesMode));
+        }
+        finally
+        {
+            if (Directory.Exists(localPath))
+            {
+                Directory.Delete(localPath, true);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task When_ListingEntriesWithoutUaeMetadata_Then_AttributesModeIsAuto()
+    {
+        // arrange - paths
+        var localPath = $"{Guid.NewGuid()}-local";
+
+        try
+        {
+            // arrange - test command helper
+            using var testCommandHelper = new TestCommandHelper();
+
+            // arrange - create local directory with file1.txt
+            Directory.CreateDirectory(localPath);
+            await File.WriteAllTextAsync(Path.Combine(localPath, "file1.txt"), string.Empty);
+
+            // arrange - create fs dir command without uae metadata
+            EntriesInfo entriesInfo = null;
+            var fsDirCommand = new FsDirCommand(new NullLogger<FsDirCommand>(), testCommandHelper,
+                new List<IPhysicalDrive>(), localPath, false);
+            fsDirCommand.EntriesRead += (_, e) => entriesInfo = e.EntriesInfo;
+
+            // act - execute fs dir command
+            var result = await fsDirCommand.Execute(CancellationToken.None);
+
+            // assert - result is successful and attributes mode is auto using host os attributes
+            Assert.True(result.IsSuccess);
+            Assert.NotNull(entriesInfo);
+            Assert.Equal(AttributesMode.Auto, entriesInfo.AttributesMode);
         }
         finally
         {

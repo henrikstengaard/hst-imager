@@ -18,6 +18,13 @@ namespace Hst.Imager.Core.Models
             MacOs,
             Linux
         }
+
+        public enum ColorModeEnum
+        {
+            System,
+            Light,
+            Dark
+        }
         
         public bool AllPhysicalDrives { get; set; }
 
@@ -50,6 +57,21 @@ namespace Hst.Imager.Core.Models
         /// </summary>
         public bool SparseFiles { get; set; }
 
+        /// <summary>
+        /// Start app with administrator privileges.
+        /// </summary>
+        public bool StartAsAdministrator { get; set; }
+
+        /// <summary>
+        /// Color mode for app. System follows operating system light or dark mode.
+        /// </summary>
+        public ColorModeEnum ColorMode { get; set; }
+
+        /// <summary>
+        /// Sidebar expanded showing icons with labels, otherwise collapsed showing icons only.
+        /// </summary>
+        public bool SidebarExpanded { get; set; }
+
         public Settings()
         {
             AllPhysicalDrives = false;
@@ -62,6 +84,9 @@ namespace Hst.Imager.Core.Models
             UseCache = true;
             CacheType = CacheType.Disk;
             SparseFiles = true;
+            StartAsAdministrator = false;
+            ColorMode = ColorModeEnum.System;
+            SidebarExpanded = true;
         }
     }
 }

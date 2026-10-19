@@ -1,0 +1,74 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.OptimizeView"
+             x:DataType="vm:OptimizeViewModel">
+
+  <controls:PageLayout Title="Optimize"
+                       Description="Optimize an image file size.">
+    <StackPanel Spacing="8">
+
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
+
+      <!-- Advanced -->
+      <Expander IsExpanded="False" HorizontalAlignment="Stretch">
+        <Expander.Header>
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-gear" />
+            <TextBlock Text="Advanced" />
+          </StackPanel>
+        </Expander.Header>
+        <StackPanel Spacing="8" Margin="0,8">
+
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <ia:Icon Value="fa-location-crosshairs" Classes="field-icon" />
+            <TextBlock Classes="field-label" Text="Image size to optimize" />
+          </StackPanel>
+          <ComboBox ItemsSource="{Binding SizeOptions}"
+                    SelectedItem="{Binding SelectedSizeOption}"
+                    DisplayMemberBinding="{Binding Title}"
+                    PlaceholderText="None available"
+                    IsEnabled="{Binding Source.HasMedia}"
+                    HorizontalAlignment="Stretch" />
+
+          <Grid ColumnDefinitions="2*,*" RowDefinitions="Auto,Auto">
+            <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal" Spacing="5" Margin="0,0,0,4">
+              <ia:Icon Value="fa-ruler-horizontal" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Size" />
+            </StackPanel>
+            <NumericUpDown Grid.Row="1" Grid.Column="0" Value="{Binding Size}" Minimum="0" Increment="1"
+                           IsEnabled="{Binding Source.HasMedia}" />
+            <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Spacing="5" Margin="8,0,0,4">
+              <ia:Icon Value="fa-scale-balanced" Classes="field-icon" />
+              <TextBlock Classes="field-label" Text="Unit" />
+            </StackPanel>
+            <ComboBox Grid.Row="1" Grid.Column="1" Margin="8,0,0,0" HorizontalAlignment="Stretch"
+                      ItemsSource="{x:Static vm:OptimizeViewModel.SizeUnits}"
+                      SelectedItem="{Binding SizeUnit}"
+                      IsEnabled="{Binding Source.HasMedia}" />
+          </Grid>
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding StartOptimizeCommand}" Classes="primary">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-compress" />
+            <TextBlock Text="Optimize image" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

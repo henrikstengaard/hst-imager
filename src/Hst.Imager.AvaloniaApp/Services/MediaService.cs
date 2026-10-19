@@ -1,0 +1,120 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Hst.Imager.AvaloniaApp.Models;
+using Hst.Imager.Core;
+using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Models;
+using Hst.Imager.Core.PhysicalDrives;
+using Microsoft.Extensions.Logging;
+
+namespace Hst.Imager.AvaloniaApp.Services;
+
+public class MediaService : IMediaService
+{
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly AppStateModel _appState;
+
+    public MediaService(ILoggerFactory loggerFactory, AppStateModel appState)
+    {
+        _loggerFactory = loggerFactory;
+        _appState = appState;
+    }
+
+    // commands runs on thread pool to keep ui responsive while accessing physical disks
+    public Task<IEnumerable<MediaInfo>> ListMediaAsync(CancellationToken cancellationToken = default) =>
+        Task.Run(() => ListMedia(cancellationToken), cancellationToken);
+
+    public Task<MediaInfo?> GetMediaInfoAsync(string path, bool byteswap = false, bool allowNonExisting = false,
+        CancellationToken cancellationToken = default) =>
+        Task.Run(() => GetMediaInfo(path, byteswap, allowNonExisting, cancellationToken), cancellationToken);
+
+    public Task<bool> IsBlankAsync(string path, bool byteswap = false, CancellationToken cancellationToken = default) =>
+        Task.Run(() => IsBlank(path, byteswap, cancellationToken), cancellationToken);
+
+    // master boot record uses sector 0, guid partition table sector 1 to 33 and rigid disk block sector 0 to 15
+    private const int PartitionTableSectors = 34;
+
+    private async Task<bool> IsBlank(string path, bool byteswap, CancellationToken cancellationToken)
+    {
+        var physicalDriveManager = CreatePhysicalDriveManager();
+        var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();
+
+        using var commandHelper = CreateCommandHelper();
+        var mediaPath = string.Concat(byteswap ? "+bs:" : string.Empty, path);
+        var mediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaPath);
+        if (mediaResult.IsFaulted)
+            throw new ImagingException(mediaResult.Error?.Message ?? $"Failed to open '{path}'");
+
+        using var media = mediaResult.Value;
+        var stream = media.Stream;
+        var bytes = new byte[(int)Math.Min(PartitionTableSectors * 512L, media.Size)];
+        stream.Position = 0;
+        var bytesRead = await stream.ReadAtLeastAsync(bytes, bytes.Length, false, cancellationToken);
+        return bytes.Take(bytesRead).All(x => x == 0);
+    }
+
+    private async Task<IEnumerable<MediaInfo>> ListMedia(CancellationToken cancellationToken)
+    {
+        var physicalDriveManager = CreatePhysicalDriveManager();
+        var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();
+
+        using var commandHelper = CreateCommandHelper();
+        var listCommand = new ListCommand(_loggerFactory.CreateLogger<ListCommand>(), commandHelper, physicalDrives);
+
+        IEnumerable<MediaInfo> result = [];
+        listCommand.ListRead += (_, args) =>
+        {
+            result = args.MediaInfos.Where(x => !x.SystemDrive).ToList();
+        };
+
+        var commandResult = await listCommand.Execute(cancellationToken);
+        if (commandResult.IsFaulted)
+            throw new ImagingException(commandResult.Error?.Message ?? "List command returned error without message error");
+
+        return result;
+    }
+
+    private async Task<MediaInfo?> GetMediaInfo(string path, bool byteswap, bool allowNonExisting, CancellationToken cancellationToken)
+    {
+        var physicalDriveManager = CreatePhysicalDriveManager();
+        var physicalDrives = (await physicalDriveManager.GetPhysicalDrives(_appState.Settings.AllPhysicalDrives)).ToList();
+
+        using var commandHelper = CreateCommandHelper();
+        var infoPath = string.Concat(byteswap ? "+bs:" : string.Empty, path);
+        var infoCommand = new InfoCommand(_loggerFactory.CreateLogger<InfoCommand>(), commandHelper, physicalDrives, infoPath, allowNonExisting);
+
+        MediaInfo? result = null;
+        infoCommand.DiskInfoRead += (_, args) =>
+        {
+            result = args.MediaInfo;
+        };
+
+        var commandResult = await infoCommand.Execute(cancellationToken);
+        if (commandResult.IsFaulted)
+            throw new ImagingException(commandResult.Error?.Message ?? "Info command returned error without message error");
+
+        return result;
+    }
+
+    private IPhysicalDriveManager CreatePhysicalDriveManager()
+    {
+        if (Hst.Core.OperatingSystem.IsWindows())
+            return new WindowsPhysicalDriveManager(_loggerFactory.CreateLogger<WindowsPhysicalDriveManager>());
+        if (Hst.Core.OperatingSystem.IsMacOs())
+            return new MacOsPhysicalDriveManager(_loggerFactory.CreateLogger<MacOsPhysicalDriveManager>());
+        if (Hst.Core.OperatingSystem.IsLinux())
+            return new LinuxPhysicalDriveManager(_loggerFactory.CreateLogger<LinuxPhysicalDriveManager>());
+        return new StaticPhysicalDriveManager([]);
+    }
+
+    private CommandHelper CreateCommandHelper() =>
+        new(_loggerFactory.CreateLogger<ICommandHelper>(),
+            _appState.IsAdministrator,
+            _appState.Settings.SparseFiles,
+            _appState.Settings.UseCache,
+            _appState.Settings.CacheType);
+}
