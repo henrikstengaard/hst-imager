@@ -100,9 +100,68 @@ jobs:
           name: "${{ steps.build_console_app_artifact.outputs.artifact_name }}"
           path: "${{ steps.build_console_app_artifact.outputs.artifact_path }}"
           retention-days: 3
-  
+
+  # code signing windows console app artifacts with azure artifact signing, which requires windows runner.
+  # skipped unless repository variable ARTIFACT_SIGNING_ENABLED is set to 'true'.
+  sign-console:
+    needs: build-console
+    if: vars.ARTIFACT_SIGNING_ENABLED == 'true'
+    runs-on: windows-latest
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        target: [win-x64, win-x86, win-arm64]
+
+    steps:
+      - name: Download console app artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: hst-imager.console.${{ matrix.target }}.zip
+          path: unsigned
+
+      - name: Extract console app artifact
+        shell: pwsh
+        run: Expand-Archive -Path 'unsigned/hst-imager.console.${{ matrix.target }}.zip' -DestinationPath console
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Sign console app
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\console
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Build signed console app artifact
+        shell: pwsh
+        run: Compress-Archive -Path console/* -DestinationPath 'hst-imager.console.${{ matrix.target }}.zip' -Force
+
+      - name: Upload signed console app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hst-imager.console.${{ matrix.target }}.zip
+          path: hst-imager.console.${{ matrix.target }}.zip
+          retention-days: 3
+          overwrite: true
+
   build-gui:
     runs-on: ${{ matrix.os }}
+    # id token is used by azure login for code signing windows gui app
+    permissions:
+      id-token: write
+      contents: read
     strategy:
       matrix:
         include:
@@ -158,16 +217,59 @@ jobs:
         run: dotnet publish -c Release -r win-arm64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish/win-arm64
         if: matrix.os == 'windows-latest'
 
+        # code signing windows gui app with azure artifact signing.
+        # skipped unless repository variable ARTIFACT_SIGNING_ENABLED is set to 'true'.
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+        if: matrix.os == 'windows-latest' && vars.ARTIFACT_SIGNING_ENABLED == 'true'
+
+        # sign published exe used by portable artifacts. velopack pack signs remaining exe files like setup and update
+      - name: Sign gui app for Windows
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.ARTIFACT_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\src\Hst.Imager.AvaloniaApp\publish
+          files-folder-filter: exe,dll
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+        if: matrix.os == 'windows-latest' && vars.ARTIFACT_SIGNING_ENABLED == 'true'
+
+      - name: Create Velopack signing metadata
+        shell: pwsh
+        run: |
+          $metadataPath=(Join-Path $env:RUNNER_TEMP -ChildPath 'artifact-signing-metadata.json')
+          @{
+            Endpoint = '${{ vars.ARTIFACT_SIGNING_ENDPOINT }}'
+            CodeSigningAccountName = '${{ vars.ARTIFACT_SIGNING_ACCOUNT_NAME }}'
+            CertificateProfileName = '${{ vars.ARTIFACT_SIGNING_CERTIFICATE_PROFILE_NAME }}'
+          } | ConvertTo-Json | Set-Content -Path $metadataPath
+          "VPK_SIGN_FILE={0}" -f $metadataPath >> $env:GITHUB_ENV
+        if: matrix.os == 'windows-latest' && vars.ARTIFACT_SIGNING_ENABLED == 'true'
+
       - name: Pack gui app for Windows x64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-x64 --outputDir artifacts/win-x64 --packTitle "Hst Imager" --runtime win-x64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico
+        run: |
+          $signArgs=if ($env:VPK_SIGN_FILE) { @('--azureTrustedSignFile', $env:VPK_SIGN_FILE) } else { @() }
+          dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-x64 --outputDir artifacts/win-x64 --packTitle "Hst Imager" --runtime win-x64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico @signArgs
+          if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for Windows x64" }
         if: matrix.os == 'windows-latest'
 
       - name: Pack gui app for Windows arm64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-arm64 --outputDir artifacts/win-arm64 --packTitle "Hst Imager" --runtime win-arm64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico
+        run: |
+          $signArgs=if ($env:VPK_SIGN_FILE) { @('--azureTrustedSignFile', $env:VPK_SIGN_FILE) } else { @() }
+          dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/win-arm64 --outputDir artifacts/win-arm64 --packTitle "Hst Imager" --runtime win-arm64 --mainExe Hst.Imager.AvaloniaApp.exe --icon Assets/hst.imager.ico @signArgs
+          if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for Windows arm64" }
         if: matrix.os == 'windows-latest'
 
       - name: Set Windows x64 setup artifact
@@ -428,9 +530,9 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
   publish:
-    needs: [build-console, build-gui]
-    # skip draft release, when only building artifacts
-    if: ${{ !inputs.artifacts_only }}
+    needs: [build-console, sign-console, build-gui]
+    # skip draft release, when only building artifacts. runs when sign console is skipped, but not when any job failed
+    if: ${{ !inputs.artifacts_only && !cancelled() && !contains(needs.*.result, 'failure') }}
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
@@ -531,43 +633,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: hst-imager.gui.linux-arm64.AppImage
-
-        # code signing windows artifacts with signpath.
-        # skipped until code signing certificate is ready and repository variable SIGNPATH_ENABLED is set to 'true'.
-        # requires repository variable SIGNPATH_ORGANIZATION_ID and secret SIGNPATH_API_TOKEN.
-      - name: Upload unsigned Windows artifacts
-        id: upload_unsigned_windows_artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: hst-imager.windows-unsigned
-          path: |
-            hst-imager.console.win-x64.zip
-            hst-imager.console.win-x86.zip
-            hst-imager.console.win-arm64.zip
-            hst-imager.gui.win-x64-setup.exe
-            hst-imager.gui.win-arm64-setup.exe
-            hst-imager.gui.win-x64-portable.zip
-            hst-imager.gui.win-arm64-portable.zip
-          retention-days: 3
-        if: vars.SIGNPATH_ENABLED == 'true'
-
-      - name: Sign Windows artifacts with SignPath
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: hst-imager
-          signing-policy-slug: release-signing
-          github-artifact-id: ${{ steps.upload_unsigned_windows_artifacts.outputs.artifact-id }}
-          wait-for-completion: true
-          output-artifact-directory: signed
-        if: vars.SIGNPATH_ENABLED == 'true'
-
-      - name: Replace Windows artifacts with signed artifacts
-        shell: pwsh
-        run: |
-          Get-ChildItem -Path signed -Recurse -File | ForEach-Object { Copy-Item -Path $_.FullName -Destination . -Force }
-        if: vars.SIGNPATH_ENABLED == 'true'
 
       - name: Version artifacts
         shell: pwsh
