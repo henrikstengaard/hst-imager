@@ -134,6 +134,34 @@ namespace Hst.Imager.ConsoleApp
             };
         }
 
+        /// <summary>
+        /// Parse cluster size in bytes, e.g. 4096 or 32kb. Empty or auto returns 0 for optimal cluster size.
+        /// </summary>
+        private static int ParseClusterSize(string clusterSize)
+        {
+            if (string.IsNullOrWhiteSpace(clusterSize) || clusterSize.Equals("auto", StringComparison.OrdinalIgnoreCase))
+            {
+                return 0;
+            }
+
+            Size size;
+            try
+            {
+                size = ParseSize(clusterSize);
+            }
+            catch (ArgumentException)
+            {
+                throw new ArgumentException("Invalid cluster size", nameof(clusterSize));
+            }
+
+            if (size.Unit != Unit.Bytes || size.Value < 0 || size.Value > int.MaxValue || size.Value % 1 != 0)
+            {
+                throw new ArgumentException("Invalid cluster size", nameof(clusterSize));
+            }
+
+            return (int)size.Value;
+        }
+
         private static async Task Execute(CommandBase command)
         {
             command.DebugMessage += (_, message) => { Log.Logger.Debug(message); };
@@ -372,7 +400,7 @@ namespace Hst.Imager.ConsoleApp
 
         public static async Task Format(string path, FormatType formatType, string fileSystem,
             string fileSystemPath, string size, string maxPartitionSize, bool useExperimental,
-            bool kickstart31)
+            bool kickstart31, string clusterSize)
         {
             if (IsPfs3Format(formatType, fileSystem) && string.IsNullOrWhiteSpace(fileSystemPath))
             {
@@ -385,7 +413,7 @@ namespace Hst.Imager.ConsoleApp
                 commandHelper, await GetPhysicalDrives(), path,
                 formatType, fileSystem, fileSystemPath,
                 AppState.Instance.AppPath, ParseSize(size), ParseSize(maxPartitionSize), useExperimental,
-                kickstart31));
+                kickstart31, ParseClusterSize(clusterSize)));
         }
 
         private static bool IsPfs3Format(FormatType formatType, string fileSystem) =>
@@ -453,11 +481,12 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
-        public static async Task GptPartFormat(string path, int partitionNumber, GptPartType type, string name)
+        public static async Task GptPartFormat(string path, int partitionNumber, GptPartType type, string name,
+            string clusterSize)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new GptPartFormatCommand(GetLogger<GptPartFormatCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, partitionNumber, type, name));
+                await GetPhysicalDrives(), path, partitionNumber, type, name, ParseClusterSize(clusterSize)));
         }
 
         public static async Task MbrInfo(string path, bool showUnallocated)
@@ -493,11 +522,12 @@ namespace Hst.Imager.ConsoleApp
                 await GetPhysicalDrives(), path, partitionNumber));
         }
 
-        public static async Task MbrPartFormat(string path, int partitionNumber, string name, string fileSystem)
+        public static async Task MbrPartFormat(string path, int partitionNumber, string name, string fileSystem,
+            string clusterSize)
         {
             using var commandHelper = GetCommandHelper();
             await Execute(new MbrPartFormatCommand(GetLogger<MbrPartFormatCommand>(), commandHelper,
-                await GetPhysicalDrives(), path, partitionNumber, name, fileSystem));
+                await GetPhysicalDrives(), path, partitionNumber, name, fileSystem, ParseClusterSize(clusterSize)));
         }
 
         public static async Task MbrPartExport(string sourcePath, string partition, string destinationPath)

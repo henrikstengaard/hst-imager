@@ -34,6 +34,18 @@
                 PlaceholderText="None available"
                 HorizontalAlignment="Stretch" />
 
+      <!-- Cluster size -->
+      <StackPanel Spacing="4" IsVisible="{Binding ShowClusterSize}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-table-cells" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Cluster size" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding ClusterSizeOptionList}"
+                  SelectedItem="{Binding ClusterSize}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
       <CheckBox Content="Download pfs3aio from aminet.net"
                 IsChecked="{Binding DownloadPfs3Aio}"
                 IsVisible="{Binding ShowDownloadPfs3Aio}" />

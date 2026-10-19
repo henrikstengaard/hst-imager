@@ -319,6 +319,7 @@ public class PartitionEntryViewModel : ReactiveObject
     private string _deviceName = string.Empty;
     private bool _bootable;
     private bool _formatRequested;
+    private int _clusterSize = ClusterSizeOptions.Auto;
     private List<PartitionTypeOption> _partitionTypeOptions;
     private RdbPropertiesText _rdb = RdbPropertiesText.From(RdbPartitionProperties.Default);
 
@@ -400,8 +401,13 @@ public class PartitionEntryViewModel : ReactiveObject
         get => _fileSystem;
         set
         {
+            var fileSystemChanged = _fileSystem != value;
             this.RaiseAndSetIfChanged(ref _fileSystem, value);
             this.RaisePropertyChanged(nameof(FileSystemOption));
+
+            // cluster sizes depends on file system, so cluster size is reset to auto when file system is changed
+            if (fileSystemChanged)
+                ClusterSize = ClusterSizeOptions.Auto;
             if (IsRdb)
             {
                 this.RaisePropertyChanged(nameof(PartitionType));
@@ -631,6 +637,7 @@ public class PartitionEntryViewModel : ReactiveObject
             this.RaisePropertyChanged(nameof(CanEditLabel));
             this.RaisePropertyChanged(nameof(FileSystemDisplay));
             this.RaisePropertyChanged(nameof(CanEditRdbFileSystemProperties));
+            this.RaisePropertyChanged(nameof(ShowClusterSize));
 
             // file system properties of existing partition can only be changed, when it's formatted
             if (!value && ExistingRdbProperties is { } existing)
@@ -813,6 +820,45 @@ public class PartitionEntryViewModel : ReactiveObject
     public bool CanEditLabel => (IsNew && IsFormattable) || _formatRequested;
 
     /// <summary>
+    /// Cluster size can be selected for new and formatted master boot record and guid partitions with FAT32 or exFAT
+    /// file system.
+    /// </summary>
+    public bool ShowClusterSize => !IsRdb && ClusterSizeOptions.IsSupported(_fileSystem) &&
+                                   ((IsNew && IsFormattable) || _formatRequested);
+
+    /// <summary>
+    /// Cluster size in bytes partition is formatted with, auto calculates optimal cluster size.
+    /// </summary>
+    public int ClusterSize
+    {
+        get => _clusterSize;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _clusterSize, value);
+            this.RaisePropertyChanged(nameof(ClusterSizeOption));
+        }
+    }
+
+    /// <summary>
+    /// Cluster sizes, which can be selected for file system.
+    /// </summary>
+    public List<SelectOption> ClusterSizeOptionList => ClusterSizeOptions.GetOptions(_fileSystem);
+
+    /// <summary>
+    /// Cluster size selected in partition dialog.
+    /// </summary>
+    public SelectOption? ClusterSizeOption
+    {
+        get => ClusterSizeOptionList.FirstOrDefault(x => ClusterSizeOptions.GetClusterSize(x) == _clusterSize);
+        set
+        {
+            if (value == null)
+                return;
+            ClusterSize = ClusterSizeOptions.GetClusterSize(value);
+        }
+    }
+
+    /// <summary>
     /// Device name, bootable and properties not affecting file system can be changed for new and existing rigid disk
     /// block partitions.
     /// </summary>
@@ -831,7 +877,7 @@ public class PartitionEntryViewModel : ReactiveObject
     /// </summary>
     public PartitionEntryState GetState() =>
         new(_start, _size, _fileSystem, _partitionType, _isCustomPartitionType, _label, _deviceName, _bootable,
-            _formatRequested, _rdb);
+            _formatRequested, _rdb, _clusterSize);
 
     /// <summary>
     /// Restore editable state of partition except range, which is restored by partition layout.
@@ -850,6 +896,7 @@ public class PartitionEntryViewModel : ReactiveObject
         DeviceName = state.DeviceName;
         Bootable = state.Bootable;
         SetRdb(state.Rdb);
+        ClusterSize = state.ClusterSize;
     }
 
     internal void SetRange(long start, long size)
@@ -876,6 +923,9 @@ public class PartitionEntryViewModel : ReactiveObject
         this.RaisePropertyChanged(nameof(ShowFileSystem));
         this.RaisePropertyChanged(nameof(CanEditLabel));
         this.RaisePropertyChanged(nameof(FileSystemDisplay));
+        this.RaisePropertyChanged(nameof(ShowClusterSize));
+        this.RaisePropertyChanged(nameof(ClusterSizeOptionList));
+        this.RaisePropertyChanged(nameof(ClusterSizeOption));
     }
 }
 
@@ -910,7 +960,7 @@ public record AddPartitionRequest(PartitionSegmentViewModel Segment, AddPartitio
 /// </summary>
 public record PartitionEntryState(long Start, long Size, string FileSystem, string PartitionType,
     bool IsCustomPartitionType, string Label, string DeviceName, bool Bootable, bool FormatRequested,
-    RdbPropertiesText Rdb);
+    RdbPropertiesText Rdb, int ClusterSize);
 
 /// <summary>
 /// Rigid disk block partition properties as entered in partition dialog, which are parsed and validated.
@@ -1853,6 +1903,8 @@ public class PartitionLayout
             if (source.IsExisting && (option == null || !option.FileSystems.Contains(entry.FileSystem)))
                 entry.FileSystem = option?.FileSystems.FirstOrDefault() ?? PartitionFileSystems.None;
             entry.Label = string.IsNullOrWhiteSpace(source.Label) ? "Empty" : source.Label;
+            if (entry.FileSystem == source.FileSystem)
+                entry.ClusterSize = source.ClusterSize;
         }
 
         entry.SetRange(start, source.Size);
@@ -2242,6 +2294,7 @@ public class PartitionLayout
         IsPiStorm = partition.IsPiStorm,
         PartitionType = partition.IsNew && !partition.IsRdb ? partition.PartitionType : string.Empty,
         Format = partition.IsNew ? partition.IsFormattable : partition.FormatRequested,
+        ClusterSize = partition.ShowClusterSize ? partition.ClusterSize : ClusterSizeOptions.Auto,
         RdbProperties = partition.RdbProperties ?? RdbPartitionProperties.Default
     };
 

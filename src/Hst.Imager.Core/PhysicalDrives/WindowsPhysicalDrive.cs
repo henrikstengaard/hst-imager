@@ -55,6 +55,34 @@ namespace Hst.Imager.Core.PhysicalDrives
                 : baseStream;
         }
 
+        /// <summary>
+        /// Update disk properties of physical drive, so Windows reads the partition table again and updates
+        /// partitions and volumes from it.
+        /// </summary>
+        /// <returns>True, if disk properties were updated.</returns>
+        public bool UpdateDiskProperties()
+        {
+            using var win32RawDisk = new Win32RawDisk(Path, false, true);
+
+            return !win32RawDisk.IsInvalid() && win32RawDisk.UpdateDiskProperties();
+        }
+
+        /// <summary>
+        /// Remount volumes on physical drive by locking, dismounting and unlocking them, so Windows mounts the
+        /// volumes again and detects their file systems. Windows can mount a new partition as RAW, if it detects the
+        /// partition before the partition is formatted, and keeps the volume as RAW until it's dismounted.
+        /// </summary>
+        public void RemountVolumes()
+        {
+            var physicalDeviceNumber = GetPhysicalDriveNumber(Path);
+
+            foreach (var dismountedDrive in LockAndDismountVolumes(physicalDeviceNumber))
+            {
+                // dispose unlocks and closes volume, which mounts it again on next access
+                dismountedDrive.Dispose();
+            }
+        }
+
         private static int GetPhysicalDriveNumber(string path)
         {
             var physicalDrivePathMatch = Regexs.PhysicalDrivePathRegex.Match(path);

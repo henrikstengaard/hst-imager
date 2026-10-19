@@ -350,6 +350,25 @@
                     IntPtr.Zero);
         }
 
+        /// <summary>
+        /// Update disk properties, which makes Windows read the partition table of the disk again and update
+        /// partitions and volumes from it.
+        /// </summary>
+        /// <returns>True, if disk properties were updated.</returns>
+        public bool UpdateDiskProperties()
+        {
+            uint bytesReturned = 0;
+            return DeviceApi.DeviceIoControl(
+                    safeFileHandle,
+                    DeviceApi.IOCTL_DISK_UPDATE_PROPERTIES,
+                    IntPtr.Zero,
+                    0,
+                    IntPtr.Zero,
+                    0,
+                    ref bytesReturned,
+                    IntPtr.Zero);
+        }
+
         public static string GetData(byte[] array, int index, bool reverse = false)
         {
             //index is used to get data from particular position in the byte array

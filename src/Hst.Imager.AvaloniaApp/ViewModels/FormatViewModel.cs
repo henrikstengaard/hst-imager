@@ -88,6 +88,8 @@ public class FormatViewModel : ViewModelBase
     private SelectOption _maxPartitionSize = Pfs3MaxPartitionSizeOptions[0];
     private bool _useExperimental;
     private bool _kickstart31;
+    private List<SelectOption> _clusterSizeOptions = ClusterSizeOptions.GetOptions(BasicFileSystemOptions[0].Value);
+    private SelectOption? _clusterSize;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
@@ -159,6 +161,7 @@ public class FormatViewModel : ViewModelBase
                 FileSystemOptions = BasicFileSystemOptions;
                 _selectedFileSystem = BasicFileSystemOptions[0];
             }
+            UpdateClusterSizeOptions();
             RaiseFileSystemChanged();
         }
     }
@@ -181,6 +184,7 @@ public class FormatViewModel : ViewModelBase
             this.RaiseAndSetIfChanged(ref _selectedFileSystem, value);
             DownloadPfs3Aio = IsPfs3FileSystem;
             UpdateMaxPartitionSizeOptions();
+            UpdateClusterSizeOptions();
             RaiseFileSystemChanged();
         }
     }
@@ -189,6 +193,29 @@ public class FormatViewModel : ViewModelBase
     public bool ShowDownloadPfs3Aio => IsRdbFormat && IsPfs3FileSystem;
     public bool ShowFileSystemPath => IsRdbFormat && !_downloadPfs3Aio;
     public bool ShowUseExperimental => IsRdbFormat && IsPfs3FileSystem;
+    public bool ShowClusterSize => !IsRdbFormat && ClusterSizeOptions.IsSupported(_selectedFileSystem.Value);
+
+    /// <summary>
+    /// Cluster sizes, which can be selected for FAT32 and exFAT file systems.
+    /// </summary>
+    public List<SelectOption> ClusterSizeOptionList
+    {
+        get => _clusterSizeOptions;
+        private set => this.RaiseAndSetIfChanged(ref _clusterSizeOptions, value);
+    }
+
+    /// <summary>
+    /// Cluster size selected, auto calculates optimal cluster size.
+    /// </summary>
+    public SelectOption? ClusterSize
+    {
+        get => _clusterSize ??= _clusterSizeOptions.FirstOrDefault();
+        set
+        {
+            if (value == null) return;
+            this.RaiseAndSetIfChanged(ref _clusterSize, value);
+        }
+    }
 
     public bool DownloadPfs3Aio
     {
@@ -258,6 +285,15 @@ public class FormatViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(ShowDownloadPfs3Aio));
         this.RaisePropertyChanged(nameof(ShowFileSystemPath));
         this.RaisePropertyChanged(nameof(ShowUseExperimental));
+        this.RaisePropertyChanged(nameof(ShowClusterSize));
+    }
+
+    private void UpdateClusterSizeOptions()
+    {
+        var options = ClusterSizeOptions.GetOptions(_selectedFileSystem.Value);
+        ClusterSizeOptionList = options;
+        _clusterSize = options.FirstOrDefault();
+        this.RaisePropertyChanged(nameof(ClusterSize));
     }
 
     private void UpdateMaxPartitionSizeOptions()
@@ -289,7 +325,11 @@ public class FormatViewModel : ViewModelBase
         var path = Source.Path!;
         var sourceTypeFormatted = Source.IsImageFile ? "image file" : "physical disk";
         var sizeFormatted = _size == 0 ? string.Empty : $", size {_size} {_sizeUnit}";
-        var description = $"{sourceTypeFormatted} '{Source.Media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}";
+        var clusterSize = ShowClusterSize ? ClusterSizeOptions.GetClusterSize(ClusterSize) : ClusterSizeOptions.Auto;
+        var clusterSizeFormatted = clusterSize == ClusterSizeOptions.Auto
+            ? string.Empty
+            : $", cluster size {ClusterSize?.Title}";
+        var description = $"{sourceTypeFormatted} '{Source.Media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}{clusterSizeFormatted}";
         var downloadFormatted = IsRdbFormat && IsPfs3FileSystem && _downloadPfs3Aio
             ? $" This will download pfs3aio from '{Pfs3AioUrl}'."
             : string.Empty;
@@ -306,6 +346,6 @@ public class FormatViewModel : ViewModelBase
         var byteswap = Source.Byteswap;
         await Progress.RunAsync($"Formatting {description}", (progress, token) =>
             _imagingService.FormatAsync(path, formatType, fileSystem, fileSystemPath, size, maxPartitionSize,
-                useExperimental, kickstart31, byteswap, progress, token));
+                useExperimental, kickstart31, clusterSize, byteswap, progress, token));
     }
 }

@@ -231,6 +231,11 @@ public class PlannedPartition
     public bool Format { get; set; } = true;
 
     /// <summary>
+    /// Cluster size in bytes for FAT32 and exFAT file systems, 0 calculates optimal cluster size.
+    /// </summary>
+    public int ClusterSize { get; set; }
+
+    /// <summary>
     /// Master boot record partition with bios type 0x76 or guid partition table partition with partition type guid
     /// 3F82EEBC-87C9-4097-8165-89D6540557C0 is a PiStorm partition containing a rigid disk block, which is not
     /// formatted.

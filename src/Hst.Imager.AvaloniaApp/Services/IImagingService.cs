@@ -26,8 +26,12 @@ public interface IImagingService
     Task OptimizeAsync(string path, long size, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Format disk at path. Cluster size in bytes is used for FAT32 and exFAT file systems with master boot record
+    /// and guid partition table format types, 0 calculates optimal cluster size.
+    /// </summary>
     Task FormatAsync(string path, FormatType formatType, string fileSystem, string? fileSystemPath,
-        long size, long maxPartitionSize, bool useExperimental, bool kickstart31, bool byteswap,
+        long size, long maxPartitionSize, bool useExperimental, bool kickstart31, int clusterSize, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 
     Task PartitionAsync(PartitionPlan plan, IProgress<ProgressModel> progress, CancellationToken cancellationToken);

@@ -63,6 +63,18 @@
                   HorizontalAlignment="Stretch" />
       </StackPanel>
 
+      <!-- Cluster size of FAT32 and exFAT file systems -->
+      <StackPanel Spacing="4" IsVisible="{Binding SelectedPartition.ShowClusterSize, FallbackValue=False}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-table-cells" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Cluster size" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding SelectedPartition.ClusterSizeOptionList, FallbackValue={x:Null}}"
+                  SelectedItem="{Binding SelectedPartition.ClusterSizeOption, FallbackValue={x:Null}}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
       <!-- Device name -->
       <StackPanel Spacing="4" IsVisible="{Binding IsRdb}">
         <StackPanel Orientation="Horizontal" Spacing="5">

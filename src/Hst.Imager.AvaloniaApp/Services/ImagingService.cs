@@ -145,7 +145,7 @@ public class ImagingService : IImagingService
     }
 
     public async Task FormatAsync(string path, FormatType formatType, string fileSystem, string? fileSystemPath,
-        long size, long maxPartitionSize, bool useExperimental, bool kickstart31, bool byteswap,
+        long size, long maxPartitionSize, bool useExperimental, bool kickstart31, int clusterSize, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken)
     {
         var physicalDrives = await GetPhysicalDrivesAsync();
@@ -159,7 +159,7 @@ public class ImagingService : IImagingService
             _loggerFactory.CreateLogger<FormatCommand>(), _loggerFactory, commandHelper, physicalDrives,
             formatPath, formatType, fileSystem, fileSystemPath, _appState.AppDataPath,
             new Size(size, Unit.Bytes), new Size(maxPartitionSize, Unit.Bytes),
-            useExperimental, kickstart31);
+            useExperimental, kickstart31, clusterSize);
 
         cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Formatting", args, stage));
         var result = await cmd.Execute(cache.Token);
@@ -455,10 +455,10 @@ public class ImagingService : IImagingService
             {
                 PartitionTableType.MasterBootRecord => new MbrPartFormatCommand(
                     _loggerFactory.CreateLogger<MbrPartFormatCommand>(), commandHelper, physicalDrives, path,
-                    partitionNumber, partition.Label, GetMbrPartType(partition.FileSystem)),
+                    partitionNumber, partition.Label, GetMbrPartType(partition.FileSystem), partition.ClusterSize),
                 PartitionTableType.GuidPartitionTable => new GptPartFormatCommand(
                     _loggerFactory.CreateLogger<GptPartFormatCommand>(), commandHelper, physicalDrives, path,
-                    partitionNumber, GetGptPartType(partition.FileSystem), partition.Label),
+                    partitionNumber, GetGptPartType(partition.FileSystem), partition.Label, partition.ClusterSize),
                 PartitionTableType.RigidDiskBlock => new RdbPartFormatCommand(
                     _loggerFactory.CreateLogger<RdbPartFormatCommand>(), commandHelper, physicalDrives, path,
                     partitionNumber, partition.Label, false, string.Empty, string.Empty),
