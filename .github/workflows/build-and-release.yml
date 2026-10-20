@@ -16,7 +16,7 @@ jobs:
         target: [win-x64, win-x86, win-arm64, osx-x64, osx-arm64, linux-x64, linux-arm, linux-arm64]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -40,7 +40,7 @@ jobs:
           "hst-imager_v${{ env.BUILD_VERSION }}-${{ env.BUILD_VERSION_SHA }}" > hst-imager.release-version.txt
 
       - name: Upload release tag artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hst-imager.release-tag
           path: hst-imager.release-tag.txt
@@ -48,7 +48,7 @@ jobs:
         if: matrix.target == 'win-x64'
 
       - name: Upload release version artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hst-imager.release-version
           path: hst-imager.release-version.txt
@@ -56,7 +56,7 @@ jobs:
         if: matrix.target == 'win-x64'
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             10.0.x
@@ -95,7 +95,7 @@ jobs:
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
 
       - name: Upload console app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.build_console_app_artifact.outputs.artifact_name }}"
           path: "${{ steps.build_console_app_artifact.outputs.artifact_path }}"
@@ -116,7 +116,7 @@ jobs:
 
     steps:
       - name: Download console app artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.${{ matrix.target }}.zip
           path: unsigned
@@ -126,7 +126,7 @@ jobs:
         run: Expand-Archive -Path 'unsigned/hst-imager.console.${{ matrix.target }}.zip' -DestinationPath console
 
       - name: Azure login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -149,7 +149,7 @@ jobs:
         run: Compress-Archive -Path console/* -DestinationPath 'hst-imager.console.${{ matrix.target }}.zip' -Force
 
       - name: Upload signed console app artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hst-imager.console.${{ matrix.target }}.zip
           path: hst-imager.console.${{ matrix.target }}.zip
@@ -173,7 +173,7 @@ jobs:
             rids: [linux-x64, linux-arm64]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -195,7 +195,7 @@ jobs:
           "BUILD_VERSION_SHA: ${{ env.BUILD_VERSION_SHA }}"
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             10.0.x
@@ -220,7 +220,7 @@ jobs:
         # code signing windows gui app with azure artifact signing.
         # skipped unless repository variable ARTIFACT_SIGNING_ENABLED is set to 'true'.
       - name: Azure login
-        uses: azure/login@v2
+        uses: azure/login@v3
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -285,7 +285,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows x64 setup artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.windows_x64_setup.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_setup.outputs.artifact_path }}"
@@ -305,7 +305,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows arm64 setup artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.windows_arm64_setup.outputs.artifact_name }}"
           path: "${{ steps.windows_arm64_setup.outputs.artifact_path }}"
@@ -333,7 +333,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows x64 portable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.windows_x64_portable.outputs.artifact_name }}"
           path: "${{ steps.windows_x64_portable.outputs.artifact_path }}"
@@ -361,7 +361,7 @@ jobs:
         if: matrix.os == 'windows-latest'
 
       - name: Upload Windows arm64 portable artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.windows_arm64_portable.outputs.artifact_name }}"
           path: "${{ steps.windows_arm64_portable.outputs.artifact_path }}"
@@ -430,7 +430,7 @@ jobs:
         if: matrix.os == 'macos-latest'
 
       - name: Upload macOS x64 dmg artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.macos_x64_dmg.outputs.artifact_name }}"
           path: "${{ steps.macos_x64_dmg.outputs.artifact_path }}"
@@ -458,7 +458,7 @@ jobs:
         if: matrix.os == 'macos-latest'
 
       - name: Upload macOS arm64 dmg artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.macos_arm64_dmg.outputs.artifact_name }}"
           path: "${{ steps.macos_arm64_dmg.outputs.artifact_path }}"
@@ -502,7 +502,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux x64 AppImage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.linux_x64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_x64_appimage.outputs.artifact_path }}"
@@ -522,7 +522,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
       - name: Upload Linux arm64 AppImage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: "${{ steps.linux_arm64_appimage.outputs.artifact_name }}"
           path: "${{ steps.linux_arm64_appimage.outputs.artifact_path }}"
@@ -536,12 +536,12 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Download release tag artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.release-tag
 
       - name: Download release version artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.release-version
 
@@ -553,84 +553,84 @@ jobs:
               
         # windows
       - name: Download Console Windows 64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.win-x64.zip
 
       - name: Download Console Windows 32-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.win-x86.zip
 
       - name: Download Console Windows arm64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.win-arm64.zip
         
       - name: Download Gui Windows x64 setup artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.win-x64-setup.exe
 
       - name: Download Gui Windows arm64 setup artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.win-arm64-setup.exe
 
       - name: Download Gui Windows x64 portable artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.win-x64-portable.zip
 
       - name: Download Gui Windows arm64 portable artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.win-arm64-portable.zip
 
         # macos
       - name: Download Console macOS 64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.osx-x64.zip
 
       - name: Download Console macOS arm64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.osx-arm64.zip
 
       - name: Download Gui macOS 64-bit dmg artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.osx-x64.dmg
 
       - name: Download Gui macOS arm64 dmg artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.osx-arm64.dmg
 
         # linux
       - name: Download Console Linux 64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.linux-x64.zip
 
       - name: Download Console Linux arm-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.linux-arm.zip
 
       - name: Download Console Linux arm64-bit zip artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.console.linux-arm64.zip
 
       - name: Download Gui Linux 64-bit appimage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.linux-x64.AppImage
 
       - name: Download Gui Linux arm64-bit appimage artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: hst-imager.gui.linux-arm64.AppImage
 
@@ -655,28 +655,31 @@ jobs:
           Rename-Item -Path hst-imager.gui.linux-arm64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ${{ env.RELEASE_VERSION }}_console_windows_x64.zip
-            ${{ env.RELEASE_VERSION }}_console_windows_x86.zip
-            ${{ env.RELEASE_VERSION }}_console_windows_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe
-            ${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe
-            ${{ env.RELEASE_VERSION }}_gui_windows_x64_portable.zip
-            ${{ env.RELEASE_VERSION }}_gui_windows_arm64_portable.zip
-            ${{ env.RELEASE_VERSION }}_console_macos_x64.zip
-            ${{ env.RELEASE_VERSION }}_console_macos_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg
-            ${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg
-            ${{ env.RELEASE_VERSION }}_console_linux_x64.zip
-            ${{ env.RELEASE_VERSION }}_console_linux_arm.zip
-            ${{ env.RELEASE_VERSION }}_console_linux_arm64.zip
-            ${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage
-            ${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage
-  
-          tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ env.RELEASE_VERSION }}
-          body: Prerelease of ${{ env.RELEASE_VERSION }}
-          draft: true
-          prerelease: true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ env.RELEASE_TAG }}" `
+            --repo "${{ github.repository }}" `
+            --target "${{ github.sha }}" `
+            --title "${{ env.RELEASE_VERSION }}" `
+            --notes "Prerelease of ${{ env.RELEASE_VERSION }}" `
+            --draft `
+            --prerelease `
+            "${{ env.RELEASE_VERSION }}_console_windows_x64.zip" `
+            "${{ env.RELEASE_VERSION }}_console_windows_x86.zip" `
+            "${{ env.RELEASE_VERSION }}_console_windows_arm64.zip" `
+            "${{ env.RELEASE_VERSION }}_gui_windows_x64_setup.exe" `
+            "${{ env.RELEASE_VERSION }}_gui_windows_arm64_setup.exe" `
+            "${{ env.RELEASE_VERSION }}_gui_windows_x64_portable.zip" `
+            "${{ env.RELEASE_VERSION }}_gui_windows_arm64_portable.zip" `
+            "${{ env.RELEASE_VERSION }}_console_macos_x64.zip" `
+            "${{ env.RELEASE_VERSION }}_console_macos_arm64.zip" `
+            "${{ env.RELEASE_VERSION }}_gui_macos_x64.dmg" `
+            "${{ env.RELEASE_VERSION }}_gui_macos_arm64.dmg" `
+            "${{ env.RELEASE_VERSION }}_console_linux_x64.zip" `
+            "${{ env.RELEASE_VERSION }}_console_linux_arm.zip" `
+            "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip" `
+            "${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage" `
+            "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
