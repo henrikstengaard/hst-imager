@@ -534,6 +534,12 @@ jobs:
     # skip draft release, when only building artifacts. runs when sign console is skipped, but not when any job failed
     if: ${{ !inputs.artifacts_only && !cancelled() && !contains(needs.*.result, 'failure') }}
     runs-on: windows-latest
+    # id token, attestations and artifact metadata are used by build provenance attestation of release artifacts
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
     steps:
       - name: Download release tag artifact
         uses: actions/download-artifact@v8
@@ -653,6 +659,12 @@ jobs:
           Rename-Item -Path hst-imager.console.linux-arm64.zip -NewName "${{ env.RELEASE_VERSION }}_console_linux_arm64.zip"
           Rename-Item -Path hst-imager.gui.linux-x64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_x64.AppImage"
           Rename-Item -Path hst-imager.gui.linux-arm64.AppImage -NewName "${{ env.RELEASE_VERSION }}_gui_linux_arm64.AppImage"
+
+        # attest build provenance of release artifacts, verify with: gh attestation verify <file> --repo henrikstengaard/hst-imager
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: "${{ env.RELEASE_VERSION }}_*"
 
       - name: Create release
         shell: pwsh
