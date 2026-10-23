@@ -201,7 +201,7 @@ jobs:
         shell: pwsh
         run: |
           # sign all mach-o binaries with hardened runtime required for notarization
-          $entitlementsPath=(Resolve-Path './src/Hst.Imager.AvaloniaApp/Packaging/macos/entitlements.plist').Path
+          $entitlementsPath=(Resolve-Path './src/Hst.Imager.AvaloniaApp/Packaging/macos/Hst.Imager.entitlements').Path
           $binaries=@(gci console -File -Recurse | Where-Object { (file -b $_.FullName) -match 'Mach-O' })
           if ($binaries.Count -eq 0) { throw "No Mach-O binaries found in console app artifact" }
           foreach ($binary in $binaries) {
@@ -478,7 +478,7 @@ jobs:
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
         run: |
-          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/entitlements.plist', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
+          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/Hst.Imager.entitlements', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
           dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager" --runtime osx-x64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns @signArgs
           if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for macOS x64" }
         if: matrix.os == 'macos-latest'
@@ -487,7 +487,7 @@ jobs:
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
         run: |
-          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/entitlements.plist', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
+          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/Hst.Imager.entitlements', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
           dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager" --runtime osx-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns @signArgs
           if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for macOS arm64" }
         if: matrix.os == 'macos-latest'
