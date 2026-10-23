@@ -156,6 +156,85 @@ jobs:
           retention-days: 3
           overwrite: true
 
+  # code signing and notarization of macos console app artifacts with apple developer id certificate, which requires macos runner.
+  # skipped unless repository variable MACOS_SIGNING_ENABLED is set to 'true'.
+  sign-console-macos:
+    needs: build-console
+    if: vars.MACOS_SIGNING_ENABLED == 'true'
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [osx-x64, osx-arm64]
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/scripts
+            src/Hst.Imager.AvaloniaApp/Packaging/macos
+
+      - name: Download console app artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: hst-imager.console.${{ matrix.target }}.zip
+          path: unsigned
+
+      - name: Extract console app artifact
+        shell: pwsh
+        run: |
+          # ditto preserves executable permissions
+          ditto -x -k 'unsigned/hst-imager.console.${{ matrix.target }}.zip' console
+          if ($LASTEXITCODE -ne 0) { throw "Failed to extract console app artifact" }
+
+      - name: Setup macOS code signing
+        shell: pwsh
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_NOTARY_KEY_P8: ${{ secrets.MACOS_NOTARY_KEY_P8 }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_SIGN_IDENTITY: ${{ vars.MACOS_SIGN_IDENTITY }}
+        run: ./.github/scripts/macos-signing-setup.ps1
+
+      - name: Sign console app
+        shell: pwsh
+        run: |
+          # sign all mach-o binaries with hardened runtime required for notarization
+          $entitlementsPath=(Resolve-Path './src/Hst.Imager.AvaloniaApp/Packaging/macos/entitlements.plist').Path
+          $binaries=@(gci console -File -Recurse | Where-Object { (file -b $_.FullName) -match 'Mach-O' })
+          if ($binaries.Count -eq 0) { throw "No Mach-O binaries found in console app artifact" }
+          foreach ($binary in $binaries) {
+            codesign --force --sign $env:MACOS_SIGN_IDENTITY --keychain $env:MACOS_KEYCHAIN --options runtime --timestamp --entitlements $entitlementsPath $binary.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Failed to sign '$($binary.FullName)'" }
+            codesign --verify --strict --verbose=2 $binary.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Failed to verify signature of '$($binary.FullName)'" }
+          }
+
+      - name: Build signed console app artifact
+        shell: pwsh
+        run: |
+          ditto -c -k console 'hst-imager.console.${{ matrix.target }}.zip'
+          if ($LASTEXITCODE -ne 0) { throw "Failed to create signed console app artifact" }
+
+        # standalone binaries can't be stapled, gatekeeper checks notarization online on first run
+      - name: Notarize console app
+        shell: pwsh
+        run: ./.github/scripts/macos-notarize.ps1 -Path 'hst-imager.console.${{ matrix.target }}.zip'
+
+      - name: Upload signed console app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: hst-imager.console.${{ matrix.target }}.zip
+          path: hst-imager.console.${{ matrix.target }}.zip
+          retention-days: 3
+          overwrite: true
+
+      - name: Cleanup macOS code signing
+        shell: pwsh
+        run: security delete-keychain $env:MACOS_KEYCHAIN
+        if: always() && env.MACOS_KEYCHAIN != ''
+
   build-gui:
     runs-on: ${{ matrix.os }}
     # id token is used by azure login for code signing windows gui app
@@ -380,16 +459,37 @@ jobs:
         run: dotnet publish -c Release -r osx-arm64 --self-contained -p:PublishSingleFile=true -o publish/osx-arm64
         if: matrix.os == 'macos-latest'
 
+        # code signing and notarization of macos gui app with apple developer id certificate.
+        # skipped unless repository variable MACOS_SIGNING_ENABLED is set to 'true'.
+      - name: Setup macOS code signing
+        shell: pwsh
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          MACOS_NOTARY_KEY_P8: ${{ secrets.MACOS_NOTARY_KEY_P8 }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
+          MACOS_SIGN_IDENTITY: ${{ vars.MACOS_SIGN_IDENTITY }}
+        run: ./.github/scripts/macos-signing-setup.ps1
+        if: matrix.os == 'macos-latest' && vars.MACOS_SIGNING_ENABLED == 'true'
+
+        # velopack signs app bundle with hardened runtime, notarizes and staples it, when macos code signing is set up
       - name: Pack gui app for macOS x64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager" --runtime osx-x64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns
+        run: |
+          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/entitlements.plist', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
+          dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-x64 --outputDir artifacts/osx-x64 --packTitle "Hst Imager" --runtime osx-x64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns @signArgs
+          if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for macOS x64" }
         if: matrix.os == 'macos-latest'
 
       - name: Pack gui app for macOS arm64 (Velopack)
         working-directory: ./src/Hst.Imager.AvaloniaApp
         shell: pwsh
-        run: dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager" --runtime osx-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns
+        run: |
+          $signArgs=if ($env:MACOS_KEYCHAIN) { @('--signAppIdentity', $env:MACOS_SIGN_IDENTITY, '--signEntitlements', 'Packaging/macos/entitlements.plist', '--keychain', $env:MACOS_KEYCHAIN, '--notaryProfile', $env:MACOS_NOTARY_PROFILE) } else { @() }
+          dotnet vpk pack --packId HstImager --packVersion ${{ env.BUILD_VERSION }} --packDir publish/osx-arm64 --outputDir artifacts/osx-arm64 --packTitle "Hst Imager" --runtime osx-arm64 --mainExe Hst.Imager.AvaloniaApp --icon Assets/hst.imager.icns @signArgs
+          if ($LASTEXITCODE -ne 0) { throw "Failed to pack gui app for macOS arm64" }
         if: matrix.os == 'macos-latest'
 
       - name: Setup dmgbuild
@@ -425,6 +525,12 @@ jobs:
           $artifactPath=(Join-Path $artifactsDir -ChildPath $artifactName)
           & $env:DMGBUILD -s $env:DMG_SETTINGS -D "app=$appPath" -D "background=$env:DMG_BACKGROUND" 'Hst Imager' $artifactPath
           if ($LASTEXITCODE -ne 0) { throw "Failed to create dmg '$artifactPath'" }
+          # sign, notarize and staple dmg, when macos code signing is set up
+          if ($env:MACOS_KEYCHAIN) {
+            codesign --sign $env:MACOS_SIGN_IDENTITY --keychain $env:MACOS_KEYCHAIN --timestamp $artifactPath
+            if ($LASTEXITCODE -ne 0) { throw "Failed to sign dmg '$artifactPath'" }
+            ./.github/scripts/macos-notarize.ps1 -Path $artifactPath -Staple
+          }
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
@@ -453,6 +559,12 @@ jobs:
           $artifactPath=(Join-Path $artifactsDir -ChildPath $artifactName)
           & $env:DMGBUILD -s $env:DMG_SETTINGS -D "app=$appPath" -D "background=$env:DMG_BACKGROUND" 'Hst Imager' $artifactPath
           if ($LASTEXITCODE -ne 0) { throw "Failed to create dmg '$artifactPath'" }
+          # sign, notarize and staple dmg, when macos code signing is set up
+          if ($env:MACOS_KEYCHAIN) {
+            codesign --sign $env:MACOS_SIGN_IDENTITY --keychain $env:MACOS_KEYCHAIN --timestamp $artifactPath
+            if ($LASTEXITCODE -ne 0) { throw "Failed to sign dmg '$artifactPath'" }
+            ./.github/scripts/macos-notarize.ps1 -Path $artifactPath -Staple
+          }
           Write-Output "artifact_name=$artifactName" >> $Env:GITHUB_OUTPUT
           Write-Output "artifact_path=$artifactPath" >> $Env:GITHUB_OUTPUT
         if: matrix.os == 'macos-latest'
@@ -464,6 +576,11 @@ jobs:
           path: "${{ steps.macos_arm64_dmg.outputs.artifact_path }}"
           retention-days: 3
         if: matrix.os == 'macos-latest'
+
+      - name: Cleanup macOS code signing
+        shell: pwsh
+        run: security delete-keychain $env:MACOS_KEYCHAIN
+        if: always() && matrix.os == 'macos-latest' && env.MACOS_KEYCHAIN != ''
 
       - name: Build gui app for Linux x64
         working-directory: ./src/Hst.Imager.AvaloniaApp
@@ -530,8 +647,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
 
   publish:
-    needs: [build-console, sign-console, build-gui]
-    # skip draft release, when only building artifacts. runs when sign console is skipped, but not when any job failed
+    needs: [build-console, sign-console, sign-console-macos, build-gui]
+    # skip draft release, when only building artifacts. runs when sign console jobs are skipped, but not when any job failed
     if: ${{ !inputs.artifacts_only && !cancelled() && !contains(needs.*.result, 'failure') }}
     runs-on: windows-latest
     # id token, attestations and artifact metadata are used by build provenance attestation of release artifacts
