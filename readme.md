@@ -1,5 +1,5 @@
 ﻿<p align="center">
-  <img src="assets/hst-imager-icon.png" alt="Hst Imager icon" width="128" height="128">
+  <img src="assets/hst-imager-icon.png" alt="Hst Imager icon" width="128" height="159">
 </p>
 
 <h1 align="center">Hst Imager</h1>
