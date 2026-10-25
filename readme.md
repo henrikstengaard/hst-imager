@@ -1,6 +1,14 @@
-﻿# Hst Imager
+﻿<p align="center">
+  <img src="assets/hst-imager-icon.png" alt="Hst Imager icon" width="128" height="128">
+</p>
 
-<img src="assets/hst-imager-icon.png" width="120" alt="Hst Imager icon" />
+<h1 align="center">Hst Imager</h1>
+
+<p align="center">
+  An imaging tool for Windows, macOS and Linux to read and write disk images to and from physical drives.
+</p>
+
+---
 
 Hst Imager is an imaging tool to read and write disk images to and from physical drives. It supports reading from .rar, .zip, .gz, .xz compressed image files when writing to physical drive and writing to .zip, .gz compressed image files when reading from physical drive.
 
@@ -38,13 +46,12 @@ See [Hst Imager Gui](src/Hst.Imager.GuiApp#hst-imager-gui) page for installation
 
 See [Hst Imager Console](src/Hst.Imager.ConsoleApp#hst-imager-console) page for installation and usage of Hst Imager Console.
 
-## Code signing policy
+## Code signing
 
-Hst Imager uses [SignPath](https://about.signpath.io) for signing Windows releases.
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-See [Code signing policy](code-signing-policy.md) for team roles and privacy policy.
+Releases of Hst Imager are built from the source code in this repository by GitHub Actions and code signed as part of the build:
+- Windows: Gui and console apps are signed with [Azure Artifact Signing](https://learn.microsoft.com/azure/artifact-signing/).
+- macOS: Gui and console apps are signed with an Apple Developer ID certificate and notarized by Apple.
+- Linux: Releases are not code signed.
 
 ## Features
 
@@ -154,7 +161,7 @@ Reading an Amiga hard drive to an image files is very useful with Amiga emulator
 
 ### Amiga emulators with vhd support
 
-Following Amiga emulators support .vhd image files:
+Following Amiga emulators has been tested to support .vhd image files:
 - WinUAE 4.9.0: https://www.winuae.net/
 - FS-UAE v3.1.66: https://fs-uae.net/
 
