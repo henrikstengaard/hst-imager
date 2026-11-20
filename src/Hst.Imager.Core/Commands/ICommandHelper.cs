@@ -20,6 +20,7 @@ namespace Hst.Imager.Core.Commands
         Task<Result<Media>> GetReadableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, ModifierEnum? modifiers = null);
         Task<Result<Media>> GetWritableMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path, ModifierEnum? modifiers = null,
             long? size = null, bool create = false);
+        Task<Result<Media>> CreateSparseFileMedia(string path, long size);
         long GetVhdSize(long size);
         bool IsZip(string path);
         bool IsGZip(string path);

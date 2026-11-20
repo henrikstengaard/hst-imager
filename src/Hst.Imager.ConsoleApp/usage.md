@@ -166,6 +166,30 @@ Example of optimizing the size of a 16GB img image file to size of Rigid Disk Bl
 hst.imager optimize 16gb.img -rdb
 ```
 
+Compacting an image file copies only used sectors to a new sparse image file, which replaces the image file. Zero filled sectors are not written, so they don't use disk space. Img and hdf image files are created as sparse files (requires a file system supporting sparse files like NTFS, APFS or ext4) and vhd image files are created as dynamic vhd. Vhd image files are always compacted when optimized.
+
+Example of compacting a 16GB img image file:
+```
+hst.imager optimize 16gb.img -c
+```
+
+Example of compacting a 4GB vhd image file:
+```
+hst.imager optimize 4gb.vhd
+```
+
+Option `--file-systems` (`-fs`) examines file systems to determine which sectors are used, so free sectors are not copied even if they contain data from deleted files. Supported file systems are FAT12, FAT16, FAT32, exFAT, OFS/FFS (DOS0-DOS7) and PFS3 in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions as well as partition hardfiles and floppy images without partition table. Sectors outside partitions and in partitions with unknown file systems are copied, if they are not zero filled.
+
+Example of compacting a 4GB vhd image file only copying sectors used by file systems:
+```
+hst.imager optimize 4gb.vhd -fs
+```
+
+Example of compacting a 16GB img image file to size of Rigid Disk Block only copying sectors used by file systems:
+```
+hst.imager optimize 16gb.img -pt rdb -fs
+```
+
 ## Read Master Boot Record information
 
 Reads Master Boot Record from sector 0 and displays a table with partitions.

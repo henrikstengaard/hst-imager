@@ -19,6 +19,8 @@ public class OptimizeViewModel : ViewModelBase
     private SelectOption? _selectedSizeOption;
     private decimal _size;
     private string _sizeUnit = "Bytes";
+    private bool _compact;
+    private bool _examineFileSystems;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
@@ -83,6 +85,38 @@ public class OptimizeViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
     }
 
+    /// <summary>
+    /// Compact image file by copying only used sectors to a new sparse image file.
+    /// </summary>
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _compact, value);
+            if (!value)
+            {
+                ExamineFileSystems = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Examine file systems to determine used sectors when compacting.
+    /// </summary>
+    public bool ExamineFileSystems
+    {
+        get => _examineFileSystems;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _examineFileSystems, value);
+            if (value)
+            {
+                Compact = true;
+            }
+        }
+    }
+
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
@@ -126,14 +160,19 @@ public class OptimizeViewModel : ViewModelBase
     private async Task StartOptimizeAsync()
     {
         var sizeFormatted = Size > 0 ? $" to size {Size} {SizeUnit}" : string.Empty;
+        var compactFormatted = ExamineFileSystems
+            ? " by compacting sectors used by file systems"
+            : Compact ? " by compacting used sectors" : string.Empty;
         if (!await _dialogService.ShowConfirmDialogAsync("Optimize",
-                $"Do you want to optimize image file '{Source.Path}'{sizeFormatted}?"))
+                $"Do you want to optimize image file '{Source.Path}'{sizeFormatted}{compactFormatted}?"))
             return;
 
         var path = Source.Path!;
         var size = SizeInBytes;
+        var compact = Compact;
+        var examineFileSystems = ExamineFileSystems;
         var byteswap = Source.Byteswap;
         await Progress.RunAsync($"Optimizing image file '{path}'", (progress, token) =>
-            _imagingService.OptimizeAsync(path, size, byteswap, progress, token));
+            _imagingService.OptimizeAsync(path, size, compact, examineFileSystems, byteswap, progress, token));
     }
 }

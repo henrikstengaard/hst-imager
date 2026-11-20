@@ -129,16 +129,18 @@ public class ImagingService : IImagingService
         ThrowIfFaulted(result);
     }
 
-    public async Task OptimizeAsync(string path, long size, bool byteswap,
+    public async Task OptimizeAsync(string path, long size, bool compact, bool examineFileSystems, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken)
     {
         var stage = GetCacheStage(path, []);
-        progress.Report(new ProgressModel { Title = "Optimizing", Stage = stage, PercentComplete = 50 });
+        progress.Report(new ProgressModel { Title = "Optimizing", Stage = stage, PercentComplete = compact ? 0 : 50 });
         using var cache = TrackCache(progress, cancellationToken);
         using var commandHelper = CreateCommandHelper();
 
         var optimizePath = string.Concat(byteswap ? "+bs:" : string.Empty, path);
-        var cmd = new OptimizeCommand(commandHelper, optimizePath, new Size(size, Unit.Bytes), PartitionTable.None);
+        var cmd = new OptimizeCommand(commandHelper, optimizePath, new Size(size, Unit.Bytes), PartitionTable.None,
+            compact, examineFileSystems);
+        cmd.DataProcessed += (_, args) => progress.Report(MapProgress("Optimizing", args, stage));
 
         var result = await cmd.Execute(cache.Token);
         ThrowIfFaulted(result);

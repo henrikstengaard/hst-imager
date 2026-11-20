@@ -1,5 +1,14 @@
 # Release notes
 
+## v2.0
+
+Hst Imager Gui:
+- Add compact and examine file systems options to optimize page.
+
+Hst Imager console:
+- Add compact option to optimize command copying only used sectors to a new sparse image file (sparse img/hdf or dynamic vhd), which replaces the image file. Zero filled sectors are not written. Vhd image files are always compacted when optimized.
+- Add file systems option to optimize command examining FAT12/16/32, exFAT, OFS/FFS (DOS\0-7) and PFS3 file systems in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions, so free sectors are not copied when compacting.
+
 ## v1.0
 
 Hst Imager Gui:

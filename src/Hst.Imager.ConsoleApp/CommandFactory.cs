@@ -465,16 +465,30 @@ namespace Hst.Imager.ConsoleApp
                 Description = "Optimize to size of partition table."
             };
 
+            var compactOption = new Option<bool>("--compact", ["-c"])
+            {
+                Description = "Compact image file by copying only used sectors to a new sparse image file. Vhd image files are always compacted."
+            };
+
+            var fileSystemsOption = new Option<bool>("--file-systems", ["-fs"])
+            {
+                Description = "Examine file systems to determine used sectors when compacting. Free sectors in known file systems are not copied. Implies compact."
+            };
+
             var optimizeCommand = new Command("optimize", "Optimize an image file size.");
             optimizeCommand.Add(pathArgument);
             optimizeCommand.Add(sizeOption);
             optimizeCommand.Add(partitionTableOption);
+            optimizeCommand.Add(compactOption);
+            optimizeCommand.Add(fileSystemsOption);
             optimizeCommand.SetAction((ParseResult ctx) =>
             {
                 var path = ctx.GetValue(pathArgument);
                 var size = ctx.GetValue(sizeOption);
                 var partitionTable = ctx.GetValue(partitionTableOption);
-                return CommandHandler.Optimize(path, size, partitionTable);
+                var compact = ctx.GetValue(compactOption);
+                var fileSystems = ctx.GetValue(fileSystemsOption);
+                return CommandHandler.Optimize(path, size, partitionTable, compact, fileSystems);
             });
 
             return optimizeCommand;

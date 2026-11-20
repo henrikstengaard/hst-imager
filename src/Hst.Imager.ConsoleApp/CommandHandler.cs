@@ -317,11 +317,12 @@ namespace Hst.Imager.ConsoleApp
             WriteIoErrors("Destination", DestIoErrors);
         }
 
-        public static async Task Optimize(string path, string size, PartitionTable? partitionTable)
+        public static async Task Optimize(string path, string size, PartitionTable? partitionTable, bool compact,
+            bool fileSystems)
         {
             using var commandHelper = GetCommandHelper();
             var command = new OptimizeCommand(commandHelper, path, ParseSize(size),
-                partitionTable);
+                partitionTable, compact, fileSystems);
             await Execute(command);
         }
 
