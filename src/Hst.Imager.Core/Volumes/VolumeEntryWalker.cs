@@ -12,7 +12,7 @@ namespace Hst.Imager.Core.Volumes;
 /// <summary>
 /// Volume entry walker iterates through entries in a volume from root path components.
 /// Last root path component can be a directory, a file or a pattern with wildcard, e.g. "*.txt".
-/// Entries are iterated depth first with directories before files ordered by name.
+/// Entries are iterated depth first in the entry order of the volume.
 /// </summary>
 public class VolumeEntryWalker
 {
@@ -192,6 +192,18 @@ public class VolumeEntryWalker
     }
 
     /// <summary>
+    /// Order entries by volume entry order.
+    /// Relative path order sorts directories as if their names ends with a path separator,
+    /// which lists entries in same order as sorting their relative paths.
+    /// </summary>
+    private IEnumerable<Entry> OrderEntries(IEnumerable<Entry> entries) =>
+        Volume.EntryOrder == VolumeEntryOrder.DirectoriesFirst
+            ? entries.OrderBy(x => x.Type == EntryType.Dir ? 0 : 1)
+                .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase)
+            : entries.OrderBy(x => x.Type == EntryType.Dir ? string.Concat(x.Name, "/") : x.Name,
+                StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Enqueue entries in directory with directories first followed by files ordered by name.
     /// </summary>
     /// <returns>Number of entries enqueued.</returns>
@@ -203,10 +215,9 @@ public class VolumeEntryWalker
             return 0;
         }
 
-        var directories = new List<Entry>();
-        var files = new List<Entry>();
+        var entries = new List<Entry>();
 
-        foreach (var volumeEntry in entriesResult.Value.OrderBy(x => x.Name, StringComparer.OrdinalIgnoreCase))
+        foreach (var volumeEntry in OrderEntries(entriesResult.Value))
         {
             var fullPathComponents = volumeEntry.FullPathComponents;
             var relativePathComponents = EntryIteratorFunctions.GetRelativePathComponents(
@@ -229,7 +240,7 @@ public class VolumeEntryWalker
             switch (entry.Type)
             {
                 case EntryType.Dir:
-                    directories.Add(entry);
+                    entries.Add(entry);
                     break;
                 case EntryType.File:
                     var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(relativePathComponents,
@@ -239,23 +250,18 @@ public class VolumeEntryWalker
                     // skip file entry, if it's not valid
                     if (isValid)
                     {
-                        files.Add(entry);
+                        entries.Add(entry);
                     }
 
                     break;
             }
         }
 
-        for (var i = files.Count - 1; i >= 0; i--)
+        for (var i = entries.Count - 1; i >= 0; i--)
         {
-            _nextEntries.Push(files[i]);
+            _nextEntries.Push(entries[i]);
         }
 
-        for (var i = directories.Count - 1; i >= 0; i--)
-        {
-            _nextEntries.Push(directories[i]);
-        }
-
-        return directories.Count + files.Count;
+        return entries.Count;
     }
 }

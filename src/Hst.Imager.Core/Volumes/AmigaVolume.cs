@@ -52,6 +52,7 @@ public class AmigaVolume : IVolume
     public int PartitionNumber { get; }
     public IMediaPath MediaPath { get; } = Core.PathComponents.MediaPath.AmigaOsPath;
     public AttributesMode AttributesMode => AttributesMode.Amiga;
+    public VolumeEntryOrder EntryOrder => VolumeEntryOrder.DirectoriesFirst;
     public bool IsReadOnly => false;
     public bool SupportsUaeMetadata => true;
     public UaeMetadata UaeMetadata { get; set; }

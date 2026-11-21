@@ -699,6 +699,53 @@ public abstract class FsCommandBase : CommandBase
         }
     }
 
+    /// <summary>
+    /// Is single file or uses pattern examines if the operation involves 1 file or if the operation uses pattern.
+    /// </summary>
+    /// <param name="entry">Entry to examine.</param>
+    /// <param name="walker">Volume entry walker to examine.</param>
+    /// <returns>True, if entry is a file and there are no more entries or if there is only a single file entry next or if the walker uses a pattern. Otherwise, false.</returns>
+    protected static bool IsSingleFileOrUsesPattern(Models.FileSystems.Entry entry,
+        Volumes.VolumeEntryWalker walker) =>
+        (entry.Type == Models.FileSystems.EntryType.File && !walker.HasMoreEntries) ||
+        walker.IsSingleFileEntryNext ||
+        walker.UsesPattern;
+
+    /// <summary>
+    /// Create volume factory for command.
+    /// </summary>
+    protected Volumes.VolumeFactory CreateVolumeFactory(UaeMetadataHelper uaeMetadataHelper,
+        UaeMetadata uaeMetadata) =>
+        new(commandHelper, physicalDrives, uaeMetadataHelper, uaeMetadata, OnDebugMessage);
+
+    /// <summary>
+    /// Open initialized volume target for destination path to write entries to.
+    /// An existing local file is only allowed as destination, when force overwrite is used.
+    /// </summary>
+    protected async Task<Result<Volumes.VolumeTarget>> OpenVolumeTarget(Volumes.VolumeFactory volumeFactory,
+        string destPath, bool recursive, bool createDestDirectory, bool forceOverwrite)
+    {
+        var mediaResult = commandHelper.ResolveMedia(destPath);
+        if (mediaResult.IsSuccess &&
+            string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath) &&
+            !Directory.Exists(destPath) &&
+            File.Exists(destPath) &&
+            !forceOverwrite)
+        {
+            return new Result<Volumes.VolumeTarget>(new PathExistsError($"Path already exists '{destPath}'"));
+        }
+
+        var volumePathResult = await volumeFactory.Open(destPath, Volumes.VolumeAccess.Write, openArchives: false);
+        if (volumePathResult.IsFaulted)
+        {
+            return new Result<Volumes.VolumeTarget>(volumePathResult.Error);
+        }
+
+        var (volume, pathComponents) = volumePathResult.Value;
+        return await Volumes.VolumeTarget.Create(volume, pathComponents, recursive, createDestDirectory,
+            forceOverwrite);
+    }
+
     private Volumes.VolumeMounter CreateVolumeMounter() => new(OnDebugMessage);
 
     protected Task<Result<IFileSystemVolume>> MountAdfFileSystemVolume(Stream stream) =>
@@ -720,4 +767,4 @@ public abstract class FsCommandBase : CommandBase
         PartitionBlock partitionBlock) =>
         CreateVolumeMounter().MountPartitionFileSystemVolume(media, partitionBlock);
 
-}
+}

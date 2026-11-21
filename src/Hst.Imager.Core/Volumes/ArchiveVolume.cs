@@ -78,6 +78,7 @@ public class ArchiveVolume : IVolume
     public int PartitionNumber => 0;
     public IMediaPath MediaPath { get; }
     public AttributesMode AttributesMode { get; }
+    public VolumeEntryOrder EntryOrder => VolumeEntryOrder.RelativePath;
     public bool IsReadOnly => true;
     public bool SupportsUaeMetadata { get; }
     public UaeMetadata UaeMetadata { get; set; }

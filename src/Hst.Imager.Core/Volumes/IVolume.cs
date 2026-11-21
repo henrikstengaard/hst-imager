@@ -44,6 +44,11 @@ public interface IVolume : IDisposable
     AttributesMode AttributesMode { get; }
 
     /// <summary>
+    /// Order entries are iterated in by volume entry walker.
+    /// </summary>
+    VolumeEntryOrder EntryOrder { get; }
+
+    /// <summary>
     /// Volume is read-only and all write operations returns <see cref="VolumeReadOnlyError"/>.
     /// </summary>
     bool IsReadOnly { get; }

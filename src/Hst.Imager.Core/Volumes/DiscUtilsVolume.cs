@@ -63,6 +63,7 @@ public partial class DiscUtilsVolume : IVolume
     public int PartitionNumber { get; }
     public IMediaPath MediaPath { get; }
     public AttributesMode AttributesMode { get; }
+    public VolumeEntryOrder EntryOrder => VolumeEntryOrder.RelativePath;
     public bool IsReadOnly => !_fileSystem.CanWrite;
     public bool SupportsUaeMetadata => false;
     public UaeMetadata UaeMetadata { get; set; }

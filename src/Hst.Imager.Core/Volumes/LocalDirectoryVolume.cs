@@ -25,6 +25,14 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
 {
     private readonly byte[] _buffer = new byte[4096];
 
+    /// <summary>
+    /// Local paths created by volume indexed by path components. UAE metadata is cached by UAE metadata helper,
+    /// so local paths created are remembered to resolve them without reading UAE metadata again.
+    /// </summary>
+    private readonly Dictionary<string, string> _createdLocalPaths = new(System.OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal);
+
     public Media Media { get; } = media;
     public PartitionTableType PartitionTableType => PartitionTableType.None;
     public int PartitionNumber => 0;
@@ -36,6 +44,7 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
     /// </summary>
     public AttributesMode AttributesMode => UaeMetadata == UaeMetadata.None ? AttributesMode.Auto : AttributesMode.Amiga;
 
+    public VolumeEntryOrder EntryOrder => VolumeEntryOrder.RelativePath;
     public bool IsReadOnly => false;
     public bool SupportsUaeMetadata => true;
     public UaeMetadata UaeMetadata { get; set; }
@@ -77,6 +86,8 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
 
     private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
 
+    private static string GetKey(string[] pathComponents) => string.Join("/", pathComponents);
+
     private static string[] GetNormalPathComponents(string[] pathComponents) =>
         pathComponents.Length == 0
             ? []
@@ -93,6 +104,11 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
         if (pathComponents.Length == 0)
         {
             return (string.Empty, null);
+        }
+
+        if (_createdLocalPaths.TryGetValue(GetKey(pathComponents), out var createdLocalPath))
+        {
+            return (createdLocalPath, null);
         }
 
         var uaeMetadataEntry = await uaeMetadataHelper.GetUaeMetadataEntry(UaeMetadata, pathComponents);
@@ -117,6 +133,11 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
     /// </summary>
     private async Task<string> ResolveWriteLocalPath(string[] pathComponents)
     {
+        if (_createdLocalPaths.TryGetValue(GetKey(pathComponents), out var createdLocalPath))
+        {
+            return createdLocalPath;
+        }
+
         var (dirPath, _) = await ResolveLocalPath(pathComponents[..^1]);
         var normalName = await uaeMetadataHelper.GetFileName(UaeMetadata, string.IsNullOrEmpty(dirPath)
             ? Directory.GetCurrentDirectory()
@@ -282,6 +303,7 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
         }
 
         Directory.CreateDirectory(localPath);
+        _createdLocalPaths[GetKey(pathComponents)] = localPath;
 
         return new Result();
     }
@@ -310,6 +332,8 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
         {
             return new Result(CreatePathNotFoundError(pathComponents[..^1]));
         }
+
+        _createdLocalPaths[GetKey(pathComponents)] = localPath;
 
         await using var fileStream = File.Open(localPath, System.IO.FileMode.Create, FileAccess.ReadWrite);
 
@@ -438,6 +462,7 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
 
     public async Task<Result> Delete(string[] pathComponents)
     {
+        _createdLocalPaths.Clear();
         var (localPath, _) = await ResolveLocalPath(pathComponents);
 
         if (!Exists(localPath))
@@ -462,6 +487,7 @@ public class LocalDirectoryVolume(Media media, UaeMetadataHelper uaeMetadataHelp
 
     public async Task<Result> Move(string[] srcPathComponents, string[] destPathComponents, bool overwrite)
     {
+        _createdLocalPaths.Clear();
         var (srcPath, srcUaeMetadataEntry) = await ResolveLocalPath(srcPathComponents);
 
         if (!Exists(srcPath))

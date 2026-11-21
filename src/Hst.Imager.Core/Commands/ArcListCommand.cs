@@ -8,6 +8,10 @@ using System.Threading.Tasks;
 using Hst.Core;
 using Microsoft.Extensions.Logging;
 using Models.FileSystems;
+using Caching;
+using MagicBytes;
+using UaeMetadatas;
+using Volumes;
 
 public class ArcListCommand : FsCommandBase
 {
@@ -41,46 +45,46 @@ public class ArcListCommand : FsCommandBase
 
         if (string.IsNullOrWhiteSpace(pathResult.Value.MediaPath))
         {
-            return new Result<IEntryIterator>(
+            return new Result(
                 new PathNotFoundError($"Media path not defined",
                     pathResult.Value.MediaPath));
         }
         
-        // lha
-        var lhaEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
-        if (lhaEntryIterator != null && lhaEntryIterator.IsSuccess)
+        var dataType = await commandHelper.DetectDataType(pathResult.Value.MediaPath);
+        if (dataType is not (DataType.Zip or DataType.Lha or DataType.Lzx or DataType.Lzw or DataType.Adf
+            or DataType.Iso9660))
         {
-            await ListEntries(lhaEntryIterator.Value, pathResult.Value.FileSystemPath);
-            return new Result();
+            return new Result(new Error($"Archive '{path}' not supported"));
         }
 
-        // adf
-        var adfEntryIterator = await GetLhaEntryIterator(pathResult.Value, recursive);
-        if (adfEntryIterator != null && adfEntryIterator.IsSuccess)
+        using var appCache = new MemoryAppCache();
+        using var volumeFactory = CreateVolumeFactory(new UaeMetadataHelper(appCache), UaeMetadata.None);
+
+        var volumePathResult = await volumeFactory.Open(path, VolumeAccess.Read);
+        if (volumePathResult.IsFaulted)
         {
-            await ListEntries(adfEntryIterator.Value, pathResult.Value.FileSystemPath);
-            return new Result();
+            return new Result(volumePathResult.Error);
         }
-        
-        // iso
-        var isoEntryIterator = await GetIso9660EntryIterator(pathResult.Value, recursive);
-        if (isoEntryIterator != null && isoEntryIterator.IsSuccess)
+
+        var (volume, pathComponents) = volumePathResult.Value;
+        var walkerResult = await VolumeEntryWalker.Create(volume, pathComponents, recursive);
+        if (walkerResult.IsFaulted)
         {
-            await ListEntries(isoEntryIterator.Value, pathResult.Value.FileSystemPath);
-            return new Result();
+            return new Result(walkerResult.Error);
         }
-        
-        return new Result<IEntryIterator>(new Error($"Archive '{path}' not supported"));
+
+        await ListEntries(walkerResult.Value);
+        return new Result();
     }
-    
-    private async Task ListEntries(IEntryIterator entryIterator, string fileSystemPath)
+
+    private async Task ListEntries(VolumeEntryWalker walker)
     {
         var dirs = new List<Entry>();
         var files = new List<Entry>();
 
-        while (await entryIterator.Next())
+        while (await walker.Next())
         {
-            var entry = entryIterator.Current;
+            var entry = walker.Current;
             switch (entry.Type)
             {
                 case EntryType.Dir:
@@ -103,4 +107,4 @@ public class ArcListCommand : FsCommandBase
     {
         EntriesRead?.Invoke(this, new EntriesInfoReadEventArgs(entriesInfo));
     }
-}
+}
