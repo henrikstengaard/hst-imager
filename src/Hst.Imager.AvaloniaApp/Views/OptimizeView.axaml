@@ -13,6 +13,16 @@
 
       <views:MediaSelectionCard DataContext="{Binding Source}" />
 
+      <CheckBox IsChecked="{Binding Compact}" IsEnabled="{Binding Source.HasMedia}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Compact image file by copying used sectors to a new sparse image file. Vhd image files are always compacted." />
+      </CheckBox>
+
+      <CheckBox IsChecked="{Binding ExamineFileSystems}" IsEnabled="{Binding Source.HasMedia}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Examine file systems to only copy sectors used by file systems (FAT, exFAT, FFS, PFS3)." />
+      </CheckBox>
+
       <!-- Advanced -->
       <Expander IsExpanded="False" HorizontalAlignment="Stretch">
         <Expander.Header>

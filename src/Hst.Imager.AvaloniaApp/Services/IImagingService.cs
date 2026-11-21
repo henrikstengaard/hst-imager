@@ -23,7 +23,7 @@ public interface IImagingService
     Task BlankAsync(string path, long size, bool compatibleSize,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 
-    Task OptimizeAsync(string path, long size, bool byteswap,
+    Task<OptimizeResult> OptimizeAsync(string path, long size, bool compact, bool examineFileSystems, bool byteswap,
         IProgress<ProgressModel> progress, CancellationToken cancellationToken);
 
     /// <summary>

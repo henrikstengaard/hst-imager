@@ -857,6 +857,61 @@ namespace Hst.Imager.Core.Commands
             return await GetWritableFileMedia(path, modifiers, size, create);
         }
 
+        /// <summary>
+        /// Create a new sparse file media, where unwritten areas don't allocate disk space.
+        /// Vhd files are created as dynamic vhd. Other files are created as sparse files, if supported by
+        /// the file system, otherwise as regular files.
+        /// </summary>
+        /// <param name="path">Path to file to create. Existing file is overwritten.</param>
+        /// <param name="size">Size of file.</param>
+        public virtual async Task<Result<Media>> CreateSparseFileMedia(string path, long size)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentNullException(nameof(path));
+            }
+
+            if (MediaHelper.IsVhd(path))
+            {
+                return await GetWritableFileMedia(path, size: size, create: true);
+            }
+
+            path = PathHelper.GetFullPath(path);
+
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            // windows requires sparse attribute set on file. linux and macos file systems
+            // creates sparse files by default when extending file size with set length
+            if (OperatingSystem.IsWindows())
+            {
+                try
+                {
+                    SparseFile.CreateSparseFile(path, size);
+                }
+                catch (Exception e)
+                {
+                    OnDebugMessage($"Failed to create sparse file '{path}': {e.Message}");
+                    OnWarningMessage($"Failed to create sparse file '{path}', fall back to regular file");
+                }
+            }
+
+            var stream = File.Open(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite);
+            stream.SetLength(size);
+
+            var media = new Media(path, Path.GetFileName(path), Media.MediaType.Raw, false, stream, false);
+            activeMedias.Add(media);
+            return new Result<Media>(media);
+        }
+
         public virtual long GetVhdSize(long size)
         {
             // increase size to next sector size, if not dividable by 512

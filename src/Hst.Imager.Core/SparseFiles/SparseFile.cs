@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.FileInfos;
 using Microsoft.Win32.SafeHandles;
 
 namespace Hst.Imager.Core.SparseFiles;
@@ -118,6 +119,29 @@ public static class SparseFile
         return sparseFileSize < fileSize;
     }
 
+    /// <summary>
+    /// Gets size allocated on disk for a file in bytes. For sparse files and dynamic vhd files this is
+    /// less than the file size, if unallocated areas exist. Falls back to file size, if size on disk
+    /// can't be determined.
+    /// </summary>
+    public static long GetSizeOnDisk(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return 0;
+        }
+
+        try
+        {
+            return GetSparseFileSize(path);
+        }
+        catch (Exception)
+        {
+            // fall back to file size
+            return new FileInfo(path).Length;
+        }
+    }
+
     public static long GetSparseFileSize(string path) =>
         Hst.Core.OperatingSystem.IsWindows() ? GetWindowsSparseFileSize(path) : GetLinuxSparseFileSize(path);
 
@@ -154,9 +178,26 @@ public static class SparseFile
 
     private static readonly Regex DuRegex = new(@"^(\d+)\s");
     
+    /// <summary>
+    /// Gets the actual disk space in bytes used by a file (including sparse files) on linux and macos.
+    /// Uses st_blocks from stat, which is number of 512 byte blocks allocated on both linux and macos.
+    /// Falls back to du, if stat fails.
+    /// </summary>
     public static long GetLinuxSparseFileSize(string path)
     {
-        var output = "du".RunProcess($"\"{path}\"").Trim();
+        if (System.OperatingSystem.IsLinux() && LinuxFileInfo.TryGetStat(path, out var linuxStat))
+        {
+            return linuxStat.Blocks * 512;
+        }
+
+        if (System.OperatingSystem.IsMacOS() && MacOsFileInfo.TryGetStat(path, out var macOsStat))
+        {
+            return macOsStat.Blocks * 512;
+        }
+
+        // du -k outputs size in 1024 byte blocks on both linux (gnu) and macos (bsd). without -k gnu du
+        // outputs 1024 byte blocks and bsd du outputs 512 byte blocks
+        var output = "du".RunProcess($"-k \"{path}\"").Trim();
 
         var duMatch = DuRegex.Match(output);
         if (!duMatch.Success)
@@ -164,11 +205,11 @@ public static class SparseFile
             throw new IOException($"Unexpected output from 'du' command: '{output}'");
         }
 
-        if (!long.TryParse(duMatch.Groups[1].Value, out var size))
+        if (!long.TryParse(duMatch.Groups[1].Value, out var kilobytes))
         {
             throw new IOException($"Unable to parse size from 'du' output: '{output}'");
         }
-        
-        return size;
+
+        return kilobytes * 1024;
     }
 }

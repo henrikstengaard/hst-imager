@@ -44,6 +44,9 @@
             <ia:Icon Value="fa-check" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
             <TextBlock Text="Completed successfully" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
           </StackPanel>
+          <TextBlock Text="{Binding ResultMessage}" IsVisible="{Binding HasResultMessage}"
+                     Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap" MaxWidth="480"
+                     TextAlignment="Center" HorizontalAlignment="Center" />
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
                       IsVisible="{Binding HasError}">
             <ia:Icon Value="fa-times" Foreground="{DynamicResource AppFailureForegroundBrush}" VerticalAlignment="Top" />

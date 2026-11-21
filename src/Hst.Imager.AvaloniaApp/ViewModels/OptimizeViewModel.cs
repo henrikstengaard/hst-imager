@@ -1,7 +1,9 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Reactive;
 using System.Threading.Tasks;
+using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
@@ -19,6 +21,8 @@ public class OptimizeViewModel : ViewModelBase
     private SelectOption? _selectedSizeOption;
     private decimal _size;
     private string _sizeUnit = "Bytes";
+    private bool _compact;
+    private bool _examineFileSystems;
 
     public static readonly string[] SizeUnits = ["GB", "MB", "KB", "Bytes"];
 
@@ -83,16 +87,42 @@ public class OptimizeViewModel : ViewModelBase
         set => this.RaiseAndSetIfChanged(ref _sizeUnit, value);
     }
 
+    /// <summary>
+    /// Compact image file by copying only used sectors to a new sparse image file.
+    /// </summary>
+    public bool Compact
+    {
+        get => _compact;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _compact, value);
+            if (!value)
+            {
+                ExamineFileSystems = false;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Examine file systems to determine used sectors when compacting.
+    /// </summary>
+    public bool ExamineFileSystems
+    {
+        get => _examineFileSystems;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _examineFileSystems, value);
+            if (value)
+            {
+                Compact = true;
+            }
+        }
+    }
+
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
-    private long SizeInBytes => _sizeUnit switch
-    {
-        "GB" => (long)(_size * 1_000_000_000m),
-        "MB" => (long)(_size * 1_000_000m),
-        "KB" => (long)(_size * 1_000m),
-        _ => (long)_size
-    };
+    private long SizeInBytes => MediaOptions.ToBytes(_size, _sizeUnit);
 
     private void UpdateSizeOptions(MediaInfo? media)
     {
@@ -126,14 +156,34 @@ public class OptimizeViewModel : ViewModelBase
     private async Task StartOptimizeAsync()
     {
         var sizeFormatted = Size > 0 ? $" to size {Size} {SizeUnit}" : string.Empty;
+        var compactFormatted = ExamineFileSystems
+            ? " by compacting sectors used by file systems"
+            : Compact ? " by compacting used sectors" : string.Empty;
         if (!await _dialogService.ShowConfirmDialogAsync("Optimize",
-                $"Do you want to optimize image file '{Source.Path}'{sizeFormatted}?"))
+                $"Do you want to optimize image file '{Source.Path}'{sizeFormatted}{compactFormatted}?"))
             return;
 
         var path = Source.Path!;
         var size = SizeInBytes;
+        var compact = Compact;
+        var examineFileSystems = ExamineFileSystems;
         var byteswap = Source.Byteswap;
-        await Progress.RunAsync($"Optimizing image file '{path}'", (progress, token) =>
-            _imagingService.OptimizeAsync(path, size, byteswap, progress, token));
+        await Progress.RunAsync($"Optimizing image file '{path}'", async (progress, token) =>
+            FormatResult(await _imagingService.OptimizeAsync(path, size, compact, examineFileSystems, byteswap,
+                progress, token)));
+    }
+
+    /// <summary>
+    /// Format original and optimized file sizes with percent reduced like console app output.
+    /// </summary>
+    private static string FormatResult(OptimizeResult result)
+    {
+        var action = result.IsCompacted ? "Compacted" : "Optimized";
+        var percentReduced = result.PercentReduced is { } percent
+            ? $"{action} {percent.ToString("0.0", CultureInfo.InvariantCulture)}%"
+            : "File size not reduced";
+        return $"Original file size {MediaOptions.FormatBytes(result.OriginalFileSize)}{Environment.NewLine}" +
+               $"{action} file size {MediaOptions.FormatBytes(result.OptimizedFileSize)}{Environment.NewLine}" +
+               percentReduced;
     }
 }

@@ -296,6 +296,14 @@ namespace Hst.Imager.Core.Tests
             return Task.FromResult(new Result<Media>(disk));
         }
 
+        public override Task<Result<Media>> CreateSparseFileMedia(string path, long size)
+        {
+            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
+            return testMedia != null
+                ? GetWritableFileMedia(path, size: size, create: true)
+                : base.CreateSparseFileMedia(path, size);
+        }
+
         public override Stream CreateWriteableStream(string path, bool create, long size)
         {
             var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));

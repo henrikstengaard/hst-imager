@@ -28,6 +28,18 @@ public static class MediaOptions
         new SelectOption { Title = "Physical disk", Value = PhysicalDisk }
     ];
 
+    /// <summary>
+    /// Convert size in unit to bytes. Units are binary (1 KB = 1024 bytes) like console app sizes
+    /// and sizes formatted by <see cref="FormatBytes"/>.
+    /// </summary>
+    public static long ToBytes(decimal size, string unit) => unit switch
+    {
+        "GB" => (long)(size * 1024m * 1024m * 1024m),
+        "MB" => (long)(size * 1024m * 1024m),
+        "KB" => (long)(size * 1024m),
+        _ => (long)size
+    };
+
     public static string FormatBytes(long bytes, int decimals = 1)
     {
         if (bytes <= 0) return "0 B";

@@ -86,13 +86,7 @@ public class BlankViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> StartBlankCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
-    private long SizeInBytes => _sizeUnit switch
-    {
-        "GB" => (long)(_size * 1_000_000_000m),
-        "MB" => (long)(_size * 1_000_000m),
-        "KB" => (long)(_size * 1_000m),
-        _ => (long)_size
-    };
+    private long SizeInBytes => MediaOptions.ToBytes(_size, _sizeUnit);
 
 
     private async Task StartBlankAsync()
