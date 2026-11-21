@@ -129,22 +129,22 @@ public class AttributesChange
     }
 
     /// <summary>
-    /// Resolve attributes mode to use. Auto uses entry iterator attributes mode or attributes mode of
-    /// operating system, if entry iterator attributes mode is also auto.
+    /// Resolve attributes mode to use. Auto uses volume attributes mode or attributes mode of
+    /// operating system, if volume attributes mode is also auto.
     /// </summary>
     /// <param name="attributesMode">Attributes mode requested.</param>
-    /// <param name="entryIteratorAttributesMode">Attributes mode of entry iterator.</param>
+    /// <param name="volumeAttributesMode">Attributes mode of volume.</param>
     /// <returns>Resolved attributes mode.</returns>
-    public static AttributesMode ResolveMode(AttributesMode attributesMode, AttributesMode entryIteratorAttributesMode)
+    public static AttributesMode ResolveMode(AttributesMode attributesMode, AttributesMode volumeAttributesMode)
     {
         if (attributesMode != AttributesMode.Auto)
         {
             return attributesMode;
         }
 
-        if (entryIteratorAttributesMode != AttributesMode.Auto)
+        if (volumeAttributesMode != AttributesMode.Auto)
         {
-            return entryIteratorAttributesMode;
+            return volumeAttributesMode;
         }
 
         return System.OperatingSystem.IsWindows() ? AttributesMode.Windows : AttributesMode.Unix;

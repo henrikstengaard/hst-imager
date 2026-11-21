@@ -220,7 +220,7 @@ public class VolumeEntryWalker
         foreach (var volumeEntry in OrderEntries(entriesResult.Value))
         {
             var fullPathComponents = volumeEntry.FullPathComponents;
-            var relativePathComponents = EntryIteratorFunctions.GetRelativePathComponents(
+            var relativePathComponents = VolumeEntryFunctions.GetRelativePathComponents(
                 DirPathComponents, fullPathComponents).ToArray();
             var relativePath = Volume.MediaPath.Join(relativePathComponents);
 
@@ -243,7 +243,7 @@ public class VolumeEntryWalker
                     entries.Add(entry);
                     break;
                 case EntryType.File:
-                    var isValid = EntryIteratorFunctions.IsRelativePathComponentsValid2(relativePathComponents,
+                    var isValid = VolumeEntryFunctions.IsRelativePathComponentsValid(relativePathComponents,
                                       Recursive) &&
                                   _pathComponentMatcher.IsMatch(fullPathComponents);
 

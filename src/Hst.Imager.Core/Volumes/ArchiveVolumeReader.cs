@@ -109,10 +109,12 @@ public static partial class ArchiveVolumeReader
     /// <summary>
     /// Read lha archive from stream.
     /// </summary>
-    public static async Task<ArchiveVolume> ReadLha(Stream stream)
+    /// <param name="stream">Stream with lha archive.</param>
+    /// <param name="lhaOptions">Lha options. Amiga lha options are used, if not specified.</param>
+    public static async Task<ArchiveVolume> ReadLha(Stream stream, LhaOptions lhaOptions = null)
     {
         var mediaPath = MediaPath.LhaArchivePath;
-        var lhaArchive = new LhaArchive(stream, LhaOptions.AmigaLhaOptions);
+        var lhaArchive = new LhaArchive(stream, lhaOptions ?? LhaOptions.AmigaLhaOptions);
 
         var items = new List<ArchiveItem>();
         foreach (var lhaEntry in await lhaArchive.Entries())
