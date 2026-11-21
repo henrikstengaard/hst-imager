@@ -254,10 +254,10 @@ public partial class DiscUtilsVolume : IVolume
 
         var entries = new List<Entry>();
 
-        entries.AddRange(_fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly)
+        entries.AddRange(_fileSystem.GetDirectories(path, "*", SearchOption.TopDirectoryOnly).ToList()
             .Select(dirPath => CreateDirEntry(dirPathComponents, dirPath)));
 
-        entries.AddRange(_fileSystem.GetFiles(path, "*", SearchOption.TopDirectoryOnly)
+        entries.AddRange(_fileSystem.GetFiles(path, "*", SearchOption.TopDirectoryOnly).ToList()
             .Select(filePath => CreateFileEntry(dirPathComponents, filePath))
             .Where(x => x != null));
 
