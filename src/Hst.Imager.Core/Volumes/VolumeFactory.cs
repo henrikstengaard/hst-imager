@@ -218,7 +218,17 @@ public class VolumeFactory : IDisposable
         var parts = (piStormRdbMediaResult.FileSystemPath ?? string.Empty).Split(
             resolvedMedia.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
-        var volumeResult = await MountVolume(media, dataType, resolvedMedia.MediaPath, parts, path);
+        Result<(IVolume, string[])> volumeResult;
+        try
+        {
+            volumeResult = await MountVolume(media, dataType, resolvedMedia.MediaPath, parts, path);
+        }
+        catch (Exception e)
+        {
+            volumeResult = new Result<(IVolume, string[])>(new Error(
+                $"Failed to mount file system in path '{path}': {e.Message}"));
+        }
+
         if (volumeResult.IsFaulted)
         {
             media.Dispose();
@@ -272,15 +282,25 @@ public class VolumeFactory : IDisposable
 
         var media = mediaResult.Value;
 
-        IVolume volume = dataType switch
+        IVolume volume;
+        try
         {
-            DataType.Zip => await ArchiveVolumeReader.ReadZip(media.Stream),
-            DataType.Lha => await ArchiveVolumeReader.ReadLha(media.Stream),
-            DataType.Lzx => await ArchiveVolumeReader.ReadLzx(media.Stream),
-            DataType.Iso9660 => new DiscUtilsVolume(media, PartitionTableType.None, 0,
-                new CDReader(media.Stream, true)),
-            _ => null
-        };
+            volume = dataType switch
+            {
+                DataType.Zip => await ArchiveVolumeReader.ReadZip(media.Stream),
+                DataType.Lha => await ArchiveVolumeReader.ReadLha(media.Stream),
+                DataType.Lzx => await ArchiveVolumeReader.ReadLzx(media.Stream),
+                DataType.Iso9660 => new DiscUtilsVolume(media, PartitionTableType.None, 0,
+                    new CDReader(media.Stream, true)),
+                _ => null
+            };
+        }
+        catch (Exception e)
+        {
+            media.Dispose();
+            return new Result<VolumePath>(new Error(
+                $"Failed to read archive '{resolvedMedia.MediaPath}': {e.Message}"));
+        }
 
         if (volume == null)
         {
