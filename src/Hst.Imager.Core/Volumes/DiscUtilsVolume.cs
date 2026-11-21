@@ -49,7 +49,7 @@ public partial class DiscUtilsVolume : IVolume
         _fileSystem = fileSystem;
         _ownsMedia = ownsMedia;
         _isIso9660 = fileSystem is CDReader;
-        MediaPath = _isIso9660 ? Core.PathComponents.MediaPath.Iso9660Path : Core.PathComponents.MediaPath.GenericMediaPath;
+        MediaPath = Core.PathComponents.MediaPath.GenericMediaPath;
         AttributesMode = fileSystem switch
         {
             ExtFileSystem => AttributesMode.Unix,
