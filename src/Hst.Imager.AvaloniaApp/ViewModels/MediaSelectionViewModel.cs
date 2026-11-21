@@ -467,7 +467,7 @@ public class MediaSelectionViewModel : ViewModelBase
             {
                 details.Add(_imagePath);
                 if (_media != null)
-                    details.Add(MediaOptions.FormatBytes(_media.DiskSize));
+                    details.Add(_media.IsDiskSizeUnknown ? "Unknown size" : MediaOptions.FormatBytes(_media.DiskSize));
             }
 
             if (Options.ShowByteswap && _byteswap)

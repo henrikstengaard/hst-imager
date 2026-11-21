@@ -389,7 +389,8 @@ namespace Hst.Imager.Core.Medias
 
             if (!isVhd)
             {
-                var fileStream = File.Open(path, FileMode.Open, FileAccess.Read);
+                // file is shared for reading, e.g. to decompress compressed file to determine uncompressed size
+                var fileStream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
                 var fileMedia = await GetFileMedia(path, name, fileStream, byteSwap);
                 this.activeMedias.Add(fileMedia);
                 return new Result<Media>(fileMedia);

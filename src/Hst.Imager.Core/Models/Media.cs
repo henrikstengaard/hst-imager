@@ -19,7 +19,13 @@
 
         public string Path;
         public string Model;
-        public virtual long Size => Stream.Length;
+        public virtual long Size => IsSizeUnknown ? 0 : Stream.Length;
+
+        /// <summary>
+        /// Size of media is unknown, e.g. gzip compressed media where uncompressed size can only be determined
+        /// by decompressing all data. Size is 0 and media stream must be read until end of stream.
+        /// </summary>
+        public bool IsSizeUnknown { get; init; }
         public bool IsPhysicalDrive;
         public MediaType Type;
         public bool Byteswap;

@@ -17,7 +17,7 @@ namespace Hst.Imager.Core.Medias
         public virtual async Task<DiskInfo> ReadDiskInfo(Media media,
             PartitionTableType partitionTableTypeContext = PartitionTableType.None)
         {
-            if (media.Size == 0)
+            if (media.Size == 0 && !media.IsSizeUnknown)
             {
                 return new DiskInfo
                 {
@@ -87,11 +87,14 @@ namespace Hst.Imager.Core.Medias
                 // ignored, if read rigid disk block fails
             }
 
+            var diskSize = GetDiskSize(media, disk);
+
             var diskInfo = new DiskInfo
             {
                 Path = media.Path,
                 Name = media.Model,
-                Size = GetDiskSize(media, disk),
+                Size = diskSize,
+                IsSizeUnknown = diskSize == 0 && media.IsSizeUnknown,
                 IsSparseFile = isSparseFile,
                 SparseFileSize = sparseFileSize,
                 PartitionTables = partitionTables,

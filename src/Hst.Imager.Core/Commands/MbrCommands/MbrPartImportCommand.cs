@@ -56,6 +56,12 @@
             var sourceStream = sourceMedia.Stream;
             var sourceSize = sourceMedia.Size;
 
+            // partition size is based on source size, which must be known
+            if (sourceMedia.IsSizeUnknown)
+            {
+                return new Result(new Error($"Source '{sourcePath}' has unknown size and can't be imported"));
+            }
+
             OnInformationMessage($"- Size '{sourceSize.FormatBytes()}' ({sourceSize} bytes)");
 
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");

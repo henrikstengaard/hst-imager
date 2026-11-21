@@ -5,6 +5,8 @@
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
+    using Commands;
+    using Extensions;
     using Helpers;
     using Hst.Core;
 
@@ -49,8 +51,14 @@
             dataProcessedEventArgs = null;
         }
 
+        /// <summary>
+        /// Copy size bytes from source to destination. Size 0 copies until end of source stream, used for sources
+        /// with unknown size, e.g. gzip compressed images, and data processed is reported as indeterminate.
+        /// </summary>
+        /// <param name="maxSize">Max size to copy, when size is 0. Copy fails, if source has more data than max size,
+        /// e.g. when source is larger than destination. Max size 0 copies until end of source stream.</param>
         public async Task<Result> Copy(CancellationToken token, Stream source, Stream destination, long size,
-            long sourceOffset = 0, long destinationOffset = 0, bool skipZeroFilled = false)
+            long sourceOffset = 0, long destinationOffset = 0, bool skipZeroFilled = false, long maxSize = 0)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -103,9 +111,29 @@
                     return new Result<Error>(new Error("Cancelled"));
                 }
 
-                var readBytes = size == 0
+                // limit copy to max size, when size is unknown
+                var limit = size == 0 ? maxSize : size;
+
+                if (size == 0 && maxSize > 0 && bytesProcessed >= maxSize)
+                {
+                    // fail, if source has more data than max size
+                    if (source.CanSeek)
+                    {
+                        source.Seek(srcOffset, SeekOrigin.Begin);
+                    }
+
+                    if (await source.ReadAsync(this.buffer, 0, 1, token) > 0)
+                    {
+                        return new Result(new SourceSizeTooLargeError(maxSize,
+                            $"Source is larger than max size {maxSize.FormatBytes()} ({maxSize} bytes)"));
+                    }
+
+                    break;
+                }
+
+                var readBytes = limit == 0
                     ? bufferSize
-                    : Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
+                    : Convert.ToInt32(bytesProcessed + bufferSize > limit ? limit - bytesProcessed : bufferSize);
 
                 bool srcReadFailed;
                 var srcRetry = 0;

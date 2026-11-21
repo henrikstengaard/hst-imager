@@ -17,6 +17,11 @@ public class ProgressModel
     public bool HasError { get; set; }
     public string? ErrorMessage { get; set; }
     public double PercentComplete { get; set; }
+
+    /// <summary>
+    /// Total size is unknown, e.g. writing gzip compressed image. Percent, total, remaining and ETA are not available.
+    /// </summary>
+    public bool IsIndeterminate { get; set; }
     public long? BytesPerSecond { get; set; }
     public long? BytesTotal { get; set; }
     public long? BytesProcessed { get; set; }

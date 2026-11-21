@@ -42,11 +42,13 @@ namespace Hst.Imager.Core.Commands
 
             using var media = MediaHelper.GetMediaWithPiStormRdbSupport(commandHelper, sourceMediaResult.Value, path);
 
-            OnDebugMessage($"Media size '{media.Size}'");
+            OnDebugMessage(media.IsSizeUnknown ? "Media size unknown" : $"Media size '{media.Size}'");
 
             var diskInfo = await commandHelper.ReadDiskInfo(media);
 
-            OnDebugMessage($"Path '{path}', disk size '{diskInfo.Size}'");
+            OnDebugMessage(diskInfo.IsSizeUnknown
+                ? $"Path '{path}', disk size unknown"
+                : $"Path '{path}', disk size '{diskInfo.Size}'");
 
             OnDiskInfoRead(new MediaInfo
             {
@@ -55,6 +57,7 @@ namespace Hst.Imager.Core.Commands
                 IsPhysicalDrive = media.IsPhysicalDrive,
                 Type = media.Type,
                 DiskSize = diskInfo.Size,
+                IsDiskSizeUnknown = diskInfo.IsSizeUnknown,
                 DiskInfo = diskInfo,
                 Byteswap = media.Byteswap
             });

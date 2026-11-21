@@ -7,6 +7,11 @@
     {
         public string Name { get; set; }
         public long Size { get; set; }
+
+        /// <summary>
+        /// Size of disk is unknown, e.g. gzip compressed image where uncompressed size is unknown. Size is 0.
+        /// </summary>
+        public bool IsSizeUnknown { get; set; }
         public IEnumerable<PartitionTableInfo> PartitionTables { get; set; }
         public long StartOffset { get; set; }
         public long EndOffset { get; set; }

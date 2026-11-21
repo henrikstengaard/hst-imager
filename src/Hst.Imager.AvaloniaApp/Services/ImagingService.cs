@@ -723,13 +723,14 @@ public class ImagingService : IImagingService
         Stage = stage,
         IsComplete = false,
         PercentComplete = args.PercentComplete,
+        IsIndeterminate = args.Indeterminate,
         BytesPerSecond = args.BytesPerSecond,
         BytesProcessed = args.BytesProcessed,
-        BytesRemaining = args.BytesRemaining,
-        BytesTotal = args.BytesTotal,
-        MillisecondsElapsed = args.PercentComplete > 0 ? (long)args.TimeElapsed.TotalMilliseconds : null,
-        MillisecondsRemaining = args.PercentComplete > 0 ? (long)args.TimeRemaining.TotalMilliseconds : null,
-        MillisecondsTotal = args.PercentComplete > 0 ? (long)args.TimeTotal.TotalMilliseconds : null
+        BytesRemaining = args.Indeterminate ? null : args.BytesRemaining,
+        BytesTotal = args.Indeterminate ? null : args.BytesTotal,
+        MillisecondsElapsed = args.PercentComplete > 0 || args.Indeterminate ? (long)args.TimeElapsed.TotalMilliseconds : null,
+        MillisecondsRemaining = args.PercentComplete > 0 && !args.Indeterminate ? (long)args.TimeRemaining.TotalMilliseconds : null,
+        MillisecondsTotal = args.PercentComplete > 0 && !args.Indeterminate ? (long)args.TimeTotal.TotalMilliseconds : null
     };
 
     /// <summary>

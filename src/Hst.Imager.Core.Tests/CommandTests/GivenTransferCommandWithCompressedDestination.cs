@@ -50,7 +50,19 @@ public class GivenTransferCommandWithCompressedDestination
                 var mediaResult = await commandHelper.GetReadableFileMedia(destinationPath);
                 Assert.True(mediaResult.IsSuccess);
                 var media = mediaResult.Value;
-                Assert.Equal(size, media.Size);
+
+                // assert - gzip uncompressed size is unknown, zip uncompressed size is known
+                if (extension == ".img.gz")
+                {
+                    Assert.True(media.IsSizeUnknown);
+                    Assert.Equal(0, media.Size);
+                }
+                else
+                {
+                    Assert.False(media.IsSizeUnknown);
+                    Assert.Equal(size, media.Size);
+                }
+
                 var destinationData = await media.Stream.ReadBytes(size);
                 Assert.Equal(data, destinationData);
             }

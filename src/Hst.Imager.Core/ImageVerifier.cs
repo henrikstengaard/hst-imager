@@ -6,6 +6,7 @@
     using System.Threading;
     using System.Threading.Tasks;
     using Commands;
+    using Extensions;
     using Helpers;
     using Hst.Core;
 
@@ -44,8 +45,14 @@
             dataProcessedEventArgs = null;
         }
         
+        /// <summary>
+        /// Verify size bytes of source and destination are equal. Size 0 verifies until end of source stream, used
+        /// for sources with unknown size, e.g. gzip compressed images, and data processed is reported as indeterminate.
+        /// </summary>
+        /// <param name="maxSize">Max size to verify, when size is 0. Verify fails, if source has more data than
+        /// max size, e.g. when source is larger than destination. Max size 0 verifies until end of source stream.</param>
         public async Task<Result> Verify(CancellationToken token, Stream source, long sourceOffset, Stream destination,
-            long destinationOffset, long size, bool skipZeroFilled = false)
+            long destinationOffset, long size, bool skipZeroFilled = false, long maxSize = 0)
         {
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -77,9 +84,29 @@
                     return new Result<Error>(new Error("Cancelled"));
                 }
 
-                var verifyBytes = size == 0
+                // limit verify to max size, when size is unknown
+                var limit = size == 0 ? maxSize : size;
+
+                if (size == 0 && maxSize > 0 && bytesProcessed >= maxSize)
+                {
+                    // fail, if source has more data than max size
+                    if (source.CanSeek)
+                    {
+                        source.Seek(sourceOffset, SeekOrigin.Begin);
+                    }
+
+                    if (await source.ReadAsync(srcBuffer, 0, 1, token) > 0)
+                    {
+                        return new Result(new SourceSizeTooLargeError(maxSize,
+                            $"Source is larger than max size {maxSize.FormatBytes()} ({maxSize} bytes)"));
+                    }
+
+                    break;
+                }
+
+                var verifyBytes = limit == 0
                     ? bufferSize
-                    : Convert.ToInt32(bytesProcessed + bufferSize > size ? size - bytesProcessed : bufferSize);
+                    : Convert.ToInt32(bytesProcessed + bufferSize > limit ? limit - bytesProcessed : bufferSize);
                 
                 bool srcReadFailed;
                 var srcRetry = 0;
@@ -138,20 +165,40 @@
                     destRetry++;
                 } while (destReadFailed && destRetry <= retries);
                 
-                if (size < bufferSize)
+                if (size == 0)
                 {
-                    verifyBytes = (int)size;
-                }
-                
-                if (srcBytesRead != destBytesRead)
-                {
-                    var minBytesRead = Math.Min(srcBytesRead, destBytesRead);
-                    verifyBytes = Math.Min(minBytesRead, verifyBytes);
-                }
+                    // end of source stream, when size is unknown
+                    if (srcBytesRead == 0)
+                    {
+                        break;
+                    }
 
-                if (verifyBytes < bufferSize && bytesProcessed + verifyBytes != size)
+                    // fail, if destination has less data than source
+                    if (destBytesRead < srcBytesRead)
+                    {
+                        return new Result(new SizeNotEqualError(bytesProcessed + destBytesRead,
+                            bytesProcessed + destBytesRead, bytesProcessed + srcBytesRead));
+                    }
+
+                    verifyBytes = srcBytesRead;
+                }
+                else
                 {
-                    return new Result(new SizeNotEqualError(bytesProcessed, bytesProcessed + verifyBytes, size));
+                    if (size < bufferSize)
+                    {
+                        verifyBytes = (int)size;
+                    }
+
+                    if (srcBytesRead != destBytesRead)
+                    {
+                        var minBytesRead = Math.Min(srcBytesRead, destBytesRead);
+                        verifyBytes = Math.Min(minBytesRead, verifyBytes);
+                    }
+
+                    if (verifyBytes < bufferSize && bytesProcessed + verifyBytes != size)
+                    {
+                        return new Result(new SizeNotEqualError(bytesProcessed, bytesProcessed + verifyBytes, size));
+                    }
                 }
 
                 // compare, if not skipping zero filled or if src buffer is not zero filled.
@@ -171,11 +218,11 @@
                 }
 
                 bytesProcessed += verifyBytes;
-                var bytesRemaining = size - bytesProcessed;
-                var percentComplete = bytesProcessed == 0 ? 0 : Math.Round((double)100 / size * bytesProcessed, 1);
+                var bytesRemaining = size == 0 ? 0 : size - bytesProcessed;
+                var percentComplete = size == 0 || bytesProcessed == 0 ? 0 : Math.Round((double)100 / size * bytesProcessed, 1);
                 var timeElapsed = stopwatch.Elapsed;
-                var timeRemaining = TimeHelper.CalculateTimeRemaining(percentComplete, timeElapsed);
-                var timeTotal = timeElapsed + timeRemaining;
+                var timeRemaining = size == 0 ? TimeSpan.Zero : TimeHelper.CalculateTimeRemaining(percentComplete, timeElapsed);
+                var timeTotal = size == 0 ? TimeSpan.Zero : timeElapsed + timeRemaining;
                 var bytesPerSecond = Convert.ToInt64(bytesProcessed / timeElapsed.TotalSeconds);
 
                 sourceOffset += srcBytesRead;
@@ -184,7 +231,7 @@
                 var indeterminate = size == 0;
                 OnDataProcessed(indeterminate, percentComplete, bytesProcessed, bytesRemaining, size,
                     timeElapsed, timeRemaining, timeTotal, bytesPerSecond);
-                endOfStream = srcBytesRead == 0 || bytesProcessed >= size;
+                endOfStream = srcBytesRead == 0 || (size > 0 && bytesProcessed >= size);
             } while (!endOfStream);
 
             timer.Stop();

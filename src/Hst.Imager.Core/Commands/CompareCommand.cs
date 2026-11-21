@@ -95,8 +95,11 @@ namespace Hst.Imager.Core.Commands
             
             var (srcStartOffset, srcSize) = startOffsetAndSizeResult.Value;
 
+            var isSrcSizeUnknown = srcMedia.IsSizeUnknown;
             OnInformationMessage($"Source start offset '{srcStartOffset}'");
-            OnInformationMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
+            OnInformationMessage(isSrcSizeUnknown
+                ? "Source size unknown"
+                : $"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
             // add src start offset, if defined
             if (sourceStartOffset > 0)
@@ -142,8 +145,11 @@ namespace Hst.Imager.Core.Commands
             
             var (destStartOffset, destSize) = destStartOffsetAndSizeResult.Value;
 
+            var isDestSizeUnknown = destMedia.IsSizeUnknown;
             OnInformationMessage($"Destination start offset '{destStartOffset}'");
-            OnInformationMessage($"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
+            OnInformationMessage(isDestSizeUnknown
+                ? "Destination size unknown"
+                : $"Destination size '{destSize.FormatBytes()}' ({destSize} bytes)");
 
             // add destination start offset, if defined
             if (destinationStartOffset > 0)
@@ -151,28 +157,53 @@ namespace Hst.Imager.Core.Commands
                 destStartOffset += destinationStartOffset;
             }
             
-            if (size.Value != 0)
+            long compareSize;
+            var maxSize = 0L;
+            if (isSrcSizeUnknown)
             {
-                srcSize = srcSize.ResolveSize(size);
+                // compare size is 0 for unknown size to compare until end of source, unless size is set in bytes
+                var compareSizeResult = size.ResolveUnknownSize();
+                if (compareSizeResult.IsFaulted)
+                {
+                    return new Result(compareSizeResult.Error);
+                }
+
+                compareSize = compareSizeResult.Value;
+                srcSize = compareSize;
+
+                // limit compare until end of source to destination size
+                if (compareSize == 0 && !isDestSizeUnknown)
+                {
+                    maxSize = destSize;
+                }
+            }
+            else
+            {
+                if (size.Value != 0)
+                {
+                    srcSize = srcSize.ResolveSize(size);
+                }
+
+                compareSize = isDestSizeUnknown ? srcSize : Math.Min(srcSize, destSize);
             }
 
-            if (srcSize > destSize)
+            if (!isDestSizeUnknown && srcSize > destSize)
             {
                 return new Result(new CompareSizeTooLargeError(srcSize, destSize,
                     $"Source part size '{srcSize.FormatBytes()}' ({srcSize} bytes) is larger than destination part size '{destSize.FormatBytes()}' ({destSize} bytes)"));
             }
-            
-            var compareSize = Math.Min(srcSize, destSize);
 
-            OnInformationMessage($"Compare size '{compareSize.FormatBytes()}' ({compareSize} bytes)");
+            OnInformationMessage(compareSize == 0 && isSrcSizeUnknown
+                ? "Compare size unknown, comparing until end of source"
+                : $"Compare size '{compareSize.FormatBytes()}' ({compareSize} bytes)");
             
             // return error, if compare size is zero
-            if (compareSize <= 0)
+            if (compareSize <= 0 && !isSrcSizeUnknown)
             {
                 return new Result(new Error($"Invalid compare size '{compareSize}' for source or destination"));
             }
 
-            if (compareSize > destSize)
+            if (!isDestSizeUnknown && compareSize > destSize)
             {
                 return new Result(new InvalidCompareSizeError(compareSize, destSize,
                     $"Compare size {compareSize} is larger than size {destSize}"));
@@ -190,13 +221,19 @@ namespace Hst.Imager.Core.Commands
             imageVerifier.DestError += (_, args) => OnDestError(args);
 
             var result = await imageVerifier.Verify(token, srcStream, srcStartOffset,
-                destStream, destStartOffset, compareSize, skipZeroFilled);
+                destStream, destStartOffset, compareSize, skipZeroFilled, maxSize);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);
             }
 
-            if (statusBytesProcessed != compareSize)
+            // return error, if source with unknown size is empty
+            if (compareSize == 0 && statusBytesProcessed == 0)
+            {
+                return new Result(new Error("Invalid compare size '0' for source"));
+            }
+
+            if (compareSize != 0 && statusBytesProcessed != compareSize)
             {
                 return new Result(new Error(
                     $"Compared '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{compareSize.FormatBytes()}' ({compareSize} bytes)"));
