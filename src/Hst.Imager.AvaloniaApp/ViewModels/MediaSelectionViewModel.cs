@@ -395,13 +395,7 @@ public class MediaSelectionViewModel : ViewModelBase
 
     public bool IsSizeEnabled => PartPath.IsCustom || _sizeAlwaysEnabled;
 
-    public long SizeInBytes => _sizeUnit switch
-    {
-        "GB" => (long)(_size * 1_000_000_000m),
-        "MB" => (long)(_size * 1_000_000m),
-        "KB" => (long)(_size * 1_000m),
-        _ => (long)_size
-    };
+    public long SizeInBytes => MediaOptions.ToBytes(_size, _sizeUnit);
 
     /// <summary>
     /// Size formatted for confirm dialog descriptions, when size is used.

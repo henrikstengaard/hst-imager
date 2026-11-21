@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Amiga.Extensions;
@@ -184,6 +186,81 @@ public class GivenOptimizeCommandWithCompact
         finally
         {
             File.Delete(vhdPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_CompactingImgWithZeroFilledData_Then_OriginalAndCompactedFileSizesAreOutput()
+    {
+        // arrange - img file with 1MB data at start and zeros in remaining part
+        var imgPath = $"{Guid.NewGuid()}.img";
+        var data = new byte[DiskSize];
+        new Random(1).NextBytes(data.AsSpan(0, 1024 * 1024));
+        await File.WriteAllBytesAsync(imgPath, data);
+
+        try
+        {
+            // arrange - optimize command with compact collecting information messages
+            using var testCommandHelper = new TestCommandHelper();
+            var optimizeCommand = new OptimizeCommand(testCommandHelper, imgPath, new Size(0, Unit.Bytes),
+                null, compact: true);
+            var messages = new List<string>();
+            optimizeCommand.InformationMessage += (_, message) => messages.Add(message);
+
+            // act - optimize img
+            var result = await optimizeCommand.Execute(CancellationToken.None);
+
+            // assert - result is success
+            Assert.True(result.IsSuccess);
+
+            // assert - compacted file size on disk is less than original file size,
+            // as zero filled data is not allocated in sparse file
+            Assert.Equal(DiskSize, optimizeCommand.OriginalFileSize);
+            Assert.True(optimizeCommand.OptimizedFileSize < optimizeCommand.OriginalFileSize,
+                $"Expected compacted file size {optimizeCommand.OptimizedFileSize} to be less than original file size {optimizeCommand.OriginalFileSize}");
+
+            // assert - original and compacted file sizes and percent compacted are output
+            Assert.Contains(messages, x => x.StartsWith($"Original file size ") && x.Contains($"({DiskSize} bytes)"));
+            Assert.Contains(messages, x => x.StartsWith("Compacted file size ") &&
+                                           x.Contains($"({optimizeCommand.OptimizedFileSize} bytes)"));
+            Assert.Contains(messages, x => Regex.IsMatch(x, @"^Compacted \d+\.\d%$"));
+        }
+        finally
+        {
+            File.Delete(imgPath);
+        }
+    }
+
+    [Fact]
+    public async Task When_OptimizingImgWithSize_Then_OriginalAndOptimizedFileSizesAreOutput()
+    {
+        // arrange - img file with data
+        var imgPath = $"{Guid.NewGuid()}.img";
+        await File.WriteAllBytesAsync(imgPath, CreateData((int)DiskSize, 1));
+
+        try
+        {
+            // arrange - optimize command without compact to 5MB collecting information messages
+            using var testCommandHelper = new TestCommandHelper();
+            var optimizeCommand = new OptimizeCommand(testCommandHelper, imgPath,
+                new Size(5 * 1024 * 1024, Unit.Bytes), null);
+            var messages = new List<string>();
+            optimizeCommand.InformationMessage += (_, message) => messages.Add(message);
+
+            // act - optimize img
+            var result = await optimizeCommand.Execute(CancellationToken.None);
+
+            // assert - result is success, original and optimized file sizes and percent are output
+            Assert.True(result.IsSuccess);
+            Assert.Equal(DiskSize, optimizeCommand.OriginalFileSize);
+            Assert.Equal(5 * 1024 * 1024, optimizeCommand.OptimizedFileSize);
+            Assert.Contains(messages, x => x.StartsWith("Original file size ") && x.Contains($"({DiskSize} bytes)"));
+            Assert.Contains(messages, x => x.StartsWith("Optimized file size ") && x.Contains("(5242880 bytes)"));
+            Assert.Contains("Optimized 75.0%", messages);
+        }
+        finally
+        {
+            File.Delete(imgPath);
         }
     }
 

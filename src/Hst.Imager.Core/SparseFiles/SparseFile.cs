@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using Hst.Core.Extensions;
+using Hst.Imager.Core.FileInfos;
 using Microsoft.Win32.SafeHandles;
 
 namespace Hst.Imager.Core.SparseFiles;
@@ -116,6 +117,46 @@ public static class SparseFile
         // return true, if the sparse file size is less than file size.
         // the file is then considered sparse.
         return sparseFileSize < fileSize;
+    }
+
+    /// <summary>
+    /// Gets size allocated on disk for a file in bytes. For sparse files and dynamic vhd files this is
+    /// less than the file size, if unallocated areas exist. Falls back to file size, if size on disk
+    /// can't be determined.
+    /// </summary>
+    public static long GetSizeOnDisk(string path)
+    {
+        if (!File.Exists(path))
+        {
+            return 0;
+        }
+
+        var fileSize = new FileInfo(path).Length;
+
+        try
+        {
+            if (System.OperatingSystem.IsWindows())
+            {
+                return GetWindowsSparseFileSize(path);
+            }
+
+            // st_blocks is number of 512 byte blocks allocated on both linux and macos
+            if (System.OperatingSystem.IsLinux() && LinuxFileInfo.TryGetStat(path, out var linuxStat))
+            {
+                return linuxStat.Blocks * 512;
+            }
+
+            if (System.OperatingSystem.IsMacOS() && MacOsFileInfo.TryGetStat(path, out var macOsStat))
+            {
+                return macOsStat.Blocks * 512;
+            }
+        }
+        catch (Exception)
+        {
+            // fall back to file size
+        }
+
+        return fileSize;
     }
 
     public static long GetSparseFileSize(string path) =>

@@ -129,8 +129,8 @@ public class ImagingService : IImagingService
         ThrowIfFaulted(result);
     }
 
-    public async Task OptimizeAsync(string path, long size, bool compact, bool examineFileSystems, bool byteswap,
-        IProgress<ProgressModel> progress, CancellationToken cancellationToken)
+    public async Task<OptimizeResult> OptimizeAsync(string path, long size, bool compact, bool examineFileSystems,
+        bool byteswap, IProgress<ProgressModel> progress, CancellationToken cancellationToken)
     {
         var stage = GetCacheStage(path, []);
         progress.Report(new ProgressModel { Title = "Optimizing", Stage = stage, PercentComplete = compact ? 0 : 50 });
@@ -144,6 +144,8 @@ public class ImagingService : IImagingService
 
         var result = await cmd.Execute(cache.Token);
         ThrowIfFaulted(result);
+
+        return new OptimizeResult(cmd.OriginalFileSize, cmd.OptimizedFileSize, cmd.IsCompacted, cmd.PercentReduced);
     }
 
     public async Task FormatAsync(string path, FormatType formatType, string fileSystem, string? fileSystemPath,

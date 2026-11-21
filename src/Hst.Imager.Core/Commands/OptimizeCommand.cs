@@ -1,6 +1,7 @@
 ﻿namespace Hst.Imager.Core.Commands
 {
     using System;
+    using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Threading;
@@ -10,6 +11,7 @@
     using MagicBytes;
     using Models;
     using Optimization;
+    using SparseFiles;
 
     /// <summary>
     /// Optimize an image file.
@@ -26,6 +28,32 @@
         bool examineFileSystems = false)
         : CommandBase
     {
+        /// <summary>
+        /// Size of image file before optimizing. Size on disk, when compacting.
+        /// </summary>
+        public long OriginalFileSize { get; private set; }
+
+        /// <summary>
+        /// Size of image file after optimizing. Size on disk, when compacting.
+        /// </summary>
+        public long OptimizedFileSize { get; private set; }
+
+        /// <summary>
+        /// Image file is compacted. True, if compact or examine file systems is enabled or image file is vhd.
+        /// </summary>
+        public bool IsCompacted { get; private set; }
+
+        /// <summary>
+        /// Percent file size is reduced by optimizing. Null, if file size is not reduced,
+        /// e.g. a dynamic vhd can be larger than the original due to vhd structures.
+        /// </summary>
+        public double? PercentReduced => GetPercentReduced(OriginalFileSize, OptimizedFileSize);
+
+        public static double? GetPercentReduced(long originalSize, long optimizedSize) =>
+            originalSize <= 0 || optimizedSize >= originalSize
+                ? null
+                : (double)(originalSize - optimizedSize) / originalSize * 100;
+
         public override async Task<Result> Execute(CancellationToken token)
         {
             OnInformationMessage($"Optimizing image file at '{path}'");
@@ -38,7 +66,8 @@
 
             var isVhd = await commandHelper.DetectDataType(mediaResult.Value.MediaPath) == DataType.Vhd;
 
-            return compact || examineFileSystems || isVhd
+            IsCompacted = compact || examineFileSystems || isVhd;
+            return IsCompacted
                 ? await Compact(mediaResult.Value.MediaPath, token)
                 : await Truncate();
         }
@@ -84,15 +113,24 @@
                 return new Result(new Error($"Invalid optimized size '{optimizedSize}'"));
             }
 
+            OriginalFileSize = mediaResult.Value.Stream.Length;
+
             mediaResult.Value.Stream.SetLength(optimizedSize);
 
+            OptimizedFileSize = optimizedSize;
+
             OnInformationMessage($"Optimized size '{optimizedSize}'");
+            OnInformationMessage($"Original file size {FormatFileSize(OriginalFileSize)}");
+            OnInformationMessage($"Optimized file size {FormatFileSize(OptimizedFileSize)}");
+            OnInformationMessage(FormatPercentReduced("Optimized"));
 
             return new Result();
         }
 
         private async Task<Result> Compact(string mediaPath, CancellationToken token)
         {
+            OriginalFileSize = SparseFile.GetSizeOnDisk(mediaPath);
+
             OnDebugMessage($"Opening '{path}' as readable");
 
             var sourceMediaResult = await commandHelper.GetReadableFileMedia(path);
@@ -214,8 +252,25 @@
             OnDebugMessage($"Replacing '{mediaPath}' with '{tempPath}'");
             File.Move(tempPath, mediaPath, true);
 
+            OptimizedFileSize = SparseFile.GetSizeOnDisk(mediaPath);
+
+            OnInformationMessage($"Original file size {FormatFileSize(OriginalFileSize)}");
+            OnInformationMessage($"Compacted file size {FormatFileSize(OptimizedFileSize)}");
+            OnInformationMessage(FormatPercentReduced("Compacted"));
+
             return new Result();
         }
+
+        private static string FormatFileSize(long size) => $"{size.FormatBytes()} ({size} bytes)";
+
+        /// <summary>
+        /// Format percent file size is reduced by. If file size is not reduced, it's stated instead
+        /// of a negative percent.
+        /// </summary>
+        private string FormatPercentReduced(string action) =>
+            PercentReduced is { } percent
+                ? $"{action} {percent.ToString("0.0", CultureInfo.InvariantCulture)}%"
+                : "File size not reduced";
 
         /// <summary>
         /// Get temporary path for compacted image file in same directory as image file

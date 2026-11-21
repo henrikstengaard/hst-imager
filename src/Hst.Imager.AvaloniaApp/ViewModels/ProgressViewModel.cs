@@ -24,6 +24,7 @@ public class ProgressViewModel : ViewModelBase
     private string _bytesText = string.Empty;
     private bool _hasError;
     private string _errorMessage = string.Empty;
+    private string _resultMessage = string.Empty;
     private CancellationTokenSource? _cts;
 
     public ProgressViewModel()
@@ -152,9 +153,35 @@ public class ProgressViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Message shown when task completed successfully, e.g. summary of result. Empty for no message.
+    /// </summary>
+    public string ResultMessage
+    {
+        get => _resultMessage;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _resultMessage, value);
+            this.RaisePropertyChanged(nameof(HasResultMessage));
+        }
+    }
+
+    public bool HasResultMessage => !string.IsNullOrEmpty(_resultMessage);
+
+    /// <summary>
     /// Run task showing progress until completed, failed or cancelled.
     /// </summary>
-    public async Task RunAsync(string title, Func<IProgress<ProgressModel>, CancellationToken, Task> action)
+    public Task RunAsync(string title, Func<IProgress<ProgressModel>, CancellationToken, Task> action) =>
+        RunAsync(title, async (progress, token) =>
+        {
+            await action(progress, token);
+            return null;
+        });
+
+    /// <summary>
+    /// Run task showing progress until completed, failed or cancelled.
+    /// Message returned by task is shown, when task completed successfully.
+    /// </summary>
+    public async Task RunAsync(string title, Func<IProgress<ProgressModel>, CancellationToken, Task<string?>> action)
     {
         if (IsRunning) return;
 
@@ -171,12 +198,13 @@ public class ProgressViewModel : ViewModelBase
         });
 
         string? errorMessage = null;
+        string? resultMessage = null;
         try
         {
             // run task on thread pool to keep ui responsive, as commands has synchronous parts
             // like flushing and closing destination when finishing. progress is reported to ui thread
             var token = _cts.Token;
-            await Task.Run(() => action(progress, token), CancellationToken.None);
+            resultMessage = await Task.Run(() => action(progress, token), CancellationToken.None);
         }
         catch (Exception e)
         {
@@ -198,6 +226,7 @@ public class ProgressViewModel : ViewModelBase
         PercentComplete = 100;
         HasError = errorMessage != null;
         ErrorMessage = errorMessage ?? string.Empty;
+        ResultMessage = errorMessage == null ? resultMessage ?? string.Empty : string.Empty;
         SpeedText = string.Empty;
         EtaText = string.Empty;
         BytesText = string.Empty;
@@ -256,5 +285,6 @@ public class ProgressViewModel : ViewModelBase
         BytesText = string.Empty;
         HasError = false;
         ErrorMessage = string.Empty;
+        ResultMessage = string.Empty;
     }
 }

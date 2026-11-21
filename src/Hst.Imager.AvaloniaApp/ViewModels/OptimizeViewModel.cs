@@ -1,7 +1,9 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Reactive;
 using System.Threading.Tasks;
+using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using ReactiveUI;
@@ -120,13 +122,7 @@ public class OptimizeViewModel : ViewModelBase
     public ReactiveCommand<Unit, Unit> StartOptimizeCommand { get; }
     public ReactiveCommand<Unit, Unit> ResetCommand { get; }
 
-    private long SizeInBytes => _sizeUnit switch
-    {
-        "GB" => (long)(_size * 1_000_000_000m),
-        "MB" => (long)(_size * 1_000_000m),
-        "KB" => (long)(_size * 1_000m),
-        _ => (long)_size
-    };
+    private long SizeInBytes => MediaOptions.ToBytes(_size, _sizeUnit);
 
     private void UpdateSizeOptions(MediaInfo? media)
     {
@@ -172,7 +168,22 @@ public class OptimizeViewModel : ViewModelBase
         var compact = Compact;
         var examineFileSystems = ExamineFileSystems;
         var byteswap = Source.Byteswap;
-        await Progress.RunAsync($"Optimizing image file '{path}'", (progress, token) =>
-            _imagingService.OptimizeAsync(path, size, compact, examineFileSystems, byteswap, progress, token));
+        await Progress.RunAsync($"Optimizing image file '{path}'", async (progress, token) =>
+            FormatResult(await _imagingService.OptimizeAsync(path, size, compact, examineFileSystems, byteswap,
+                progress, token)));
+    }
+
+    /// <summary>
+    /// Format original and optimized file sizes with percent reduced like console app output.
+    /// </summary>
+    private static string FormatResult(OptimizeResult result)
+    {
+        var action = result.IsCompacted ? "Compacted" : "Optimized";
+        var percentReduced = result.PercentReduced is { } percent
+            ? $"{action} {percent.ToString("0.0", CultureInfo.InvariantCulture)}%"
+            : "File size not reduced";
+        return $"Original file size {MediaOptions.FormatBytes(result.OriginalFileSize)}{Environment.NewLine}" +
+               $"{action} file size {MediaOptions.FormatBytes(result.OptimizedFileSize)}{Environment.NewLine}" +
+               percentReduced;
     }
 }
