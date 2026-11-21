@@ -258,7 +258,11 @@ namespace Hst.Imager.Core.Medias
                 File.Delete(path);
             }
 
-            if (create && createSparseFiles && OperatingSystem.IsWindows())
+            // compressed files are never created as sparse files. a sparse file is created with
+            // the uncompressed size, which pads compressed data with zeros and corrupts the compressed file
+            var isCompressed = MediaHelper.IsZip(path) || MediaHelper.IsGZip(path);
+
+            if (create && createSparseFiles && !isCompressed && OperatingSystem.IsWindows())
             {
                 try
                 {

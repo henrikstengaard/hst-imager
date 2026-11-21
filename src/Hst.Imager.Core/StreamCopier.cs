@@ -80,6 +80,10 @@
                 destinationOffset > sourceOffset &&
                 destinationOffset < sourceOffset + size;
 
+            // zero filled data can only be skipped, if destination supports seek. otherwise skipped data is lost,
+            // e.g. for compressed destinations like .gz and .zip that doesn't support seek
+            skipZeroFilled = skipZeroFilled && destination.CanSeek;
+
             var startOffset = size < bufferSize ? 0 : size - this.bufferSize;
 
             var srcOffset = sourceOffset + (copyRightToLeft ? startOffset : 0);
