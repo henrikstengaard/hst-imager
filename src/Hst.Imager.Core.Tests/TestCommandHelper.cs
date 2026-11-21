@@ -1,7 +1,3 @@
-﻿using DiscUtils;
-using Hst.Imager.Core.Helpers;
-using Hst.Imager.Core.MagicBytes;
-
 namespace Hst.Imager.Core.Tests
 {
     using System;
@@ -10,67 +6,37 @@ namespace Hst.Imager.Core.Tests
     using System.Linq;
     using System.Threading.Tasks;
     using Amiga.RigidDiskBlocks;
-    using Hst.Core;
-    using Core;
     using Commands;
-    using DiscUtils.Streams;
     using Hst.Core.Extensions;
-    using Models;
-    using Microsoft.Extensions.Logging.Abstractions;
+    using Helpers;
 
+    /// <summary>
+    /// Command helper opening test medias in memory with test media manager, test media path resolver
+    /// and test disk info reader sharing the same list of test medias.
+    /// </summary>
     public class TestCommandHelper : CommandHelper
     {
         public readonly List<TestMedia> TestMedias;
         public readonly RigidDiskBlock RigidDiskBlock;
-        public static readonly string PhysicalDrivePath = Hst.Core.OperatingSystem.IsWindows() 
-            ? @"\\.\PhysicalDrive0"
-            : "/dev/disk0";
+        public static readonly string PhysicalDrivePath = TestMediaManager.PhysicalDrivePath;
 
-        public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null) : base(new NullLogger<ICommandHelper>(), true)
+        public TestCommandHelper(RigidDiskBlock rigidDiskBlock = null)
+            : this(new List<TestMedia>(), rigidDiskBlock)
+        {
+        }
+
+        private TestCommandHelper(List<TestMedia> testMedias, RigidDiskBlock rigidDiskBlock)
+            : this(testMedias, rigidDiskBlock, new TestMediaPathResolver(testMedias))
+        {
+        }
+
+        private TestCommandHelper(List<TestMedia> testMedias, RigidDiskBlock rigidDiskBlock,
+            TestMediaPathResolver pathResolver)
+            : base(new TestMediaManager(testMedias, pathResolver), pathResolver,
+                new TestDiskInfoReader(rigidDiskBlock))
         {
             this.RigidDiskBlock = rigidDiskBlock;
-            this.TestMedias = new List<TestMedia>();
-        }
-
-        public override async Task<DataType> DetectDataType(string path)
-        {
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-
-            if (testMedia == null)
-            {
-                return await base.DetectDataType(path);
-            }
-            
-            return await DetectDataType(testMedia.Stream);
-        }
-
-        public override bool IsVhdValid(string path)
-        {
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-
-            if (testMedia == null)
-            {
-                return base.IsVhdValid(path);
-            }
-
-            if (testMedia.Stream.Length == 0)
-            {
-                return false;
-            }
-            
-            VirtualDisk disk;
-            
-            try
-            {
-                disk = new DiscUtils.Vhd.Disk(testMedia.Stream, Ownership.None);
-            }
-            catch (Exception)
-            {
-                return false;
-            }
-
-            disk.Dispose();
-            return true;
+            this.TestMedias = testMedias;
         }
 
         public async Task<byte[]> ReadMediaData(string path)
@@ -160,200 +126,6 @@ namespace Hst.Imager.Core.Tests
             }
 
             return data;
-        }
-
-        /// <summary>
-        /// Overrides get physical drive media to prevent access to physical drives while running unit tests.
-        /// </summary>
-        /// <param name="physicalDrives">List of physical drives.</param>
-        /// <param name="path">Path to physical drive.</param>
-        /// <param name="modifiers">Modifiers to use.</param>
-        /// <param name="writeable">Get writeable media.</param>
-        /// <returns>Media.</returns>
-        /// <exception cref="ArgumentNullException">Null exception thrown, if path is null.</exception>
-        public override Task<Result<Media>> GetPhysicalDriveMedia(IEnumerable<IPhysicalDrive> physicalDrives, string path,
-            ModifierEnum? modifiers = null, bool writeable = false)
-        {
-            ArgumentNullException.ThrowIfNull(path);
-
-            if (path != PhysicalDrivePath)
-            {
-                return Task.FromResult(new Result<Media>((Media)null));
-            }
-
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-
-            if (testMedia == null)
-            {
-                return Task.FromResult(new Result<Media>((Media)null));
-            }
-
-            var stream = testMedia.Stream;
-            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
-            {
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name,
-                    Media.MediaType.Raw, false, stream, false)));
-            }
-            
-            var disk = new DiscUtils.Vhd.Disk(stream, Ownership.Dispose);
-            return Task.FromResult(new Result<Media>(new DiskMedia(testMedia.Path, testMedia.Name, Media.MediaType.Vhd, 
-                false, disk, false, stream)));
-        }
-
-        public override async Task<Result<Media>> GetReadableFileMedia(string path, ModifierEnum? modifiers = null)
-        {
-            if (path == null)
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (testMedia == null)
-            {
-                return await base.GetReadableFileMedia(path, modifiers);
-            }
-            
-            //
-            var byteSwap = false;
-            var modifierResult = ResolveModifiers(path);
-            if (modifierResult.HasModifiers)
-            {
-                path = modifierResult.Path;
-                byteSwap = modifierResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
-            }
-
-            var stream = testMedia.Stream;
-            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
-            {
-                return new Result<Media>(new Media(testMedia.Path, testMedia.Name,
-                    Media.MediaType.Raw, false, stream, byteSwap));
-            }
-
-            stream.Position = 0;
-            var vhdDisk = new DiscUtils.Vhd.Disk(stream, Ownership.None);
-            Stream baseStream = byteSwap
-                ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
-                : vhdDisk.Content;
-            var disk = new DiskMedia(testMedia.Path, testMedia.Name, Media.MediaType.Vhd,
-                false, vhdDisk, byteSwap, baseStream);
-            return new Result<Media>(disk);
-        }
-
-        public override Task<Result<Media>> GetWritableFileMedia(string path, ModifierEnum? modifiers = null, long? size = null, bool create = false)
-        {
-            if (path == null)
-            {
-                throw new ArgumentNullException(nameof(path));
-            }
-
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            if (testMedia == null)
-            {
-                return base.GetWritableFileMedia(path, modifiers, size, create);
-            }
-
-            if (!testMedia.Path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase))
-            {
-                if (create && size.HasValue)
-                {
-                    testMedia.Stream.SetLength(size.Value);
-                }
-                
-                return Task.FromResult(new Result<Media>(new Media(testMedia.Path, testMedia.Name,
-                    Media.MediaType.Raw, false, testMedia.Stream, false)));
-            }
-
-            if (size.HasValue)
-            {
-                size = GetVhdSize(size.Value);
-            }
-            
-            if (create && size == null)
-            {
-                return Task.FromResult(new Result<Media>(new Error("Vhd requires size")));
-            }
-
-            //
-            var byteSwap = false;
-            var modifierResult = ResolveModifiers(path);
-            if (modifierResult.HasModifiers)
-            {
-                path = modifierResult.Path;
-                byteSwap = modifierResult.Modifiers.HasFlag(ModifierEnum.ByteSwap);
-            }
-
-            var stream = testMedia.Stream;
-            var isEmptyStream = stream.Length == 0;
-            var vhdDisk = create || isEmptyStream
-                ? DiscUtils.Vhd.Disk.InitializeDynamic(stream, Ownership.None, size ?? 0)
-                : new DiscUtils.Vhd.Disk(stream, Ownership.None);
-
-            Stream baseStream = byteSwap
-                ? new SectorStream(vhdDisk.Content, byteSwap: true, leaveOpen: false)
-                : vhdDisk.Content;
-            var disk = new DiskMedia(testMedia.Path, testMedia.Name,
-                Media.MediaType.Vhd, false, vhdDisk, false, baseStream);
-            return Task.FromResult(new Result<Media>(disk));
-        }
-
-        public override Task<Result<Media>> CreateSparseFileMedia(string path, long size)
-        {
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            return testMedia != null
-                ? GetWritableFileMedia(path, size: size, create: true)
-                : base.CreateSparseFileMedia(path, size);
-        }
-
-        public override Stream CreateWriteableStream(string path, bool create, long size)
-        {
-            var testMedia = TestMedias.FirstOrDefault(x => x.Path.Equals(path, StringComparison.OrdinalIgnoreCase));
-            return testMedia != null
-                ? testMedia.Stream
-                : base.CreateWriteableStream(path, create, size);
-        }
-
-        public override async Task<DiskInfo> ReadDiskInfo(Media media,
-            PartitionTableType partitionTableTypeContext = PartitionTableType.None)
-        {
-            var diskInfo = await base.ReadDiskInfo(media, partitionTableTypeContext);
-            if (RigidDiskBlock != null)
-            {
-                diskInfo.RigidDiskBlock = RigidDiskBlock;
-            }
-
-            return diskInfo;
-        }
-
-        public override Result<MediaResult> ResolveMedia(string path, bool allowNonExisting = false)
-        {
-            ArgumentNullException.ThrowIfNull(path);
-
-            var testMedia = TestMedias.FirstOrDefault(x => path.StartsWith(x.Path, StringComparison.OrdinalIgnoreCase));
-            if (testMedia == null)
-            {
-                return base.ResolveMedia(path, allowNonExisting);
-            }
-            
-            var directorySeparatorChar = path.IndexOf("\\", StringComparison.OrdinalIgnoreCase) >= 0 ? "\\" : "/";
-            var fileSystemPath = path.StartsWith(testMedia.Path, StringComparison.OrdinalIgnoreCase) && path.Length > testMedia.Path.Length
-                ? path.Substring(testMedia.Path.Length + 1)
-                : string.Empty;
-            
-            return new Result<MediaResult>(new MediaResult
-            {
-                Exists = true,
-                FullPath = path,
-                MediaPath = testMedia.Path,
-                DirectorySeparatorChar = directorySeparatorChar,
-                FileSystemPath = fileSystemPath,
-                Modifiers = ModifierEnum.None,
-                ByteSwap = false
-            });
-        }
-
-        public override Task RescanPhysicalDrives()
-        {
-            return Task.CompletedTask;
         }
     }
 }

@@ -289,6 +289,15 @@ namespace Hst.Imager.Core.Helpers
         
         public static bool IsVhd(string path) => path.EndsWith(".vhd", StringComparison.OrdinalIgnoreCase);
 
+        public static bool IsZip(string path) => path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase);
+
+        public static bool IsGZip(string path) => path.EndsWith(".gz", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Get vhd size increased to next sector size, if size is not dividable by 512.
+        /// </summary>
+        public static long GetVhdSize(long size) => size % 512 != 0 ? size + (512 - size % 512) : size;
+
         public static async Task<LocalDirectoryMedia> CreateLocalDirectoryMediaFromPath(string path,
             UaeMetadata uaeMetadata, UaeMetadataHelper uaeMetadataHelper)
         {
