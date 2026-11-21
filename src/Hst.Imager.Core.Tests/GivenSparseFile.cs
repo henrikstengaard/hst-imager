@@ -47,6 +47,10 @@ public class GivenSparseFile
         await using (var stream = File.Open(path, FileMode.Open, FileAccess.ReadWrite))
         {
             await stream.WriteAsync(data);
+
+            // flush to disk, as file systems with delayed allocation like refs don't report
+            // clusters as allocated until cached data is written to disk
+            stream.Flush(flushToDisk: true);
         }
 
         try
@@ -57,7 +61,9 @@ public class GivenSparseFile
             // assert - file size is unchanged and size on disk is at least written data and less than
             // file size, as unwritten part of sparse file is not allocated
             Assert.Equal(fileSize, new FileInfo(path).Length);
-            Assert.InRange(sizeOnDisk, OneMegabyte, fileSize - 1);
+            var driveFormat = new DriveInfo(Path.GetFullPath(path)).DriveFormat;
+            Assert.True(sizeOnDisk >= OneMegabyte && sizeOnDisk < fileSize,
+                $"Expected size on disk between {OneMegabyte} and {fileSize - 1}, but was {sizeOnDisk} on file system '{driveFormat}'");
         }
         finally
         {

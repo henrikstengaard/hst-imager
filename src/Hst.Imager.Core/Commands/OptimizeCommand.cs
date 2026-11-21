@@ -220,6 +220,14 @@
                 }
                 finally
                 {
+                    // flush sparse file to disk, so size on disk is reported correctly by file systems
+                    // with delayed allocation like refs. dynamic vhd is not a sparse file, so its size on
+                    // disk is its file size
+                    if (destinationMedia.Stream is FileStream fileStream)
+                    {
+                        fileStream.Flush(flushToDisk: true);
+                    }
+
                     var destinationMediaPath = destinationMedia.Path;
                     destinationMedia.Dispose();
                     commandHelper.ClearActiveMedia(destinationMediaPath);
