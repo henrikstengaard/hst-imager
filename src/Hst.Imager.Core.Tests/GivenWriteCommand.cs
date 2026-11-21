@@ -257,16 +257,57 @@ namespace Hst.Imager.Core.Tests
                 var result = await writeCommand.Execute(cancellationTokenSource.Token);
                 Assert.True(result.IsSuccess);
                 
-                // assert - data processed is 100 percent complete and has processed all uncompressed 
+                // assert - data processed is indeterminate as gzip uncompressed size is unknown,
+                // 100 percent complete and has processed all uncompressed data
                 Assert.NotNull(dataProcessedEventArgs);
+                Assert.True(dataProcessedEventArgs.Indeterminate);
                 Assert.Equal(100, dataProcessedEventArgs.PercentComplete);
                 Assert.Equal(1020055040, dataProcessedEventArgs.BytesProcessed);
                 Assert.Equal(0, dataProcessedEventArgs.BytesRemaining);
-                Assert.Equal(1020055040, dataProcessedEventArgs.BytesTotal);
+                Assert.Equal(0, dataProcessedEventArgs.BytesTotal);
 
                 // assert - data written to physical drive file is identical to uncompressed img
                 var destMedia = testCommandHelper.GetTestMedia(destinationPath);
                 await AssertTestMediaIsIdenticalToUncompressedImg(destMedia);
+            }
+            finally
+            {
+                TestHelper.DeletePaths(sourcePath);
+            }
+        }
+
+        [Fact]
+        public async Task WhenWriteGZipCompressedImgToSmallerPhysicalDriveThenErrorIsReturned()
+        {
+            // arrange
+            var sourcePath = $"{Guid.NewGuid()}.img.gz";
+            var destinationPath = TestCommandHelper.PhysicalDrivePath;
+            var testCommandHelper = new TestCommandHelper();
+            
+            try
+            {
+                // arrange - create source gzip compressed img media with uncompressed size of 1020055040 bytes
+                File.Copy(Path.Combine("TestData", "compressed-images", "1gb.img.gz"), sourcePath);
+                
+                // arrange - create destination physical drive of 512mb
+                testCommandHelper.AddTestMedia(destinationPath, 512.MB());
+
+                // act - write gzip compressed img media to physical drive
+                var cancellationTokenSource = new CancellationTokenSource();
+                var writeCommand =
+                    new WriteCommand(new NullLogger<WriteCommand>(), testCommandHelper, new List<IPhysicalDrive>(),
+                        sourcePath, destinationPath, new Size(), 0, false, false, false, 0);
+                DataProcessedEventArgs dataProcessedEventArgs = null;
+                writeCommand.DataProcessed += (_, args) => { dataProcessedEventArgs = args; };
+                var result = await writeCommand.Execute(cancellationTokenSource.Token);
+
+                // assert - write failed with source size too large error
+                Assert.True(result.IsFaulted);
+                Assert.IsType<SourceSizeTooLargeError>(result.Error);
+
+                // assert - data written is not more than destination size
+                Assert.NotNull(dataProcessedEventArgs);
+                Assert.Equal(512.MB(), dataProcessedEventArgs.BytesProcessed);
             }
             finally
             {

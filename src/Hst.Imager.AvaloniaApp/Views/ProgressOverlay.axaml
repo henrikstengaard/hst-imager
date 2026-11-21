@@ -19,9 +19,9 @@
           <TextBlock Text="{Binding Stage}" IsVisible="{Binding HasStage}"
                      Foreground="{DynamicResource AppBodyForegroundBrush}" HorizontalAlignment="Center" />
           <ProgressBar Value="{Binding PercentComplete}" Minimum="0" Maximum="100" Height="8"
-                       IsIndeterminate="{Binding IsFinishing}" />
+                       IsIndeterminate="{Binding IsProgressBarIndeterminate}" />
           <TextBlock Text="{Binding PercentText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center"
-                     IsVisible="{Binding !IsFinishing}" />
+                     IsVisible="{Binding IsPercentVisible}" />
           <TextBlock Text="Finishing, please wait..." Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center"
                      IsVisible="{Binding IsFinishing}" />
           <TextBlock Text="{Binding BytesText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" HorizontalAlignment="Center" />

@@ -50,12 +50,33 @@ namespace Hst.Imager.Core.Commands
             var srcStream = MediaHelper.GetStreamFromMedia(srcMedia);
 
             var srcSize = srcMedia.Size;
-            OnDebugMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
+            var isSrcSizeUnknown = srcMedia.IsSizeUnknown;
+            OnDebugMessage(isSrcSizeUnknown
+                ? "Source size unknown"
+                : $"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
-            var writeSize = Convert
-                .ToInt64(size.Value == 0 ? srcSize : size.Value)
-                .ResolveSize(size);
-            OnInformationMessage($"Size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
+            long writeSize;
+            if (isSrcSizeUnknown)
+            {
+                // write size is 0 for unknown size to write until end of source, unless size is set in bytes
+                var writeSizeResult = size.ResolveUnknownSize();
+                if (writeSizeResult.IsFaulted)
+                {
+                    return new Result(writeSizeResult.Error);
+                }
+
+                writeSize = writeSizeResult.Value;
+            }
+            else
+            {
+                writeSize = Convert
+                    .ToInt64(size.Value == 0 ? srcSize : size.Value)
+                    .ResolveSize(size);
+            }
+
+            OnInformationMessage(writeSize == 0 && isSrcSizeUnknown
+                ? "Size unknown, writing until end of source"
+                : $"Size '{writeSize.FormatBytes()}' ({writeSize} bytes)");
 
             OnDebugMessage($"Opening '{destinationPath}' as writable");
 
@@ -124,8 +145,9 @@ namespace Hst.Imager.Core.Commands
             streamCopier.SrcError += (_, args) => OnSrcError(args);
             streamCopier.DestError += (_, args) => OnDestError(args);
 
+            // limit write to destination size, when write size is unknown
             var result = await streamCopier.Copy(token, srcStream, destStream, writeSize, 0L, 
-                destStartOffset, skipZeroFilled);
+                destStartOffset, skipZeroFilled, maxSize: writeSize == 0 ? destSize : 0);
             if (result.IsFaulted)
             {
                 return new Result(result.Error);

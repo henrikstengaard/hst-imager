@@ -99,6 +99,7 @@ namespace Hst.Imager.Core.Tests
                 // assert - media info matches disk size and partitions
                 Assert.NotNull(mediaInfo);
                 Assert.Equal(1020055040, mediaInfo.DiskSize);
+                Assert.False(mediaInfo.IsDiskSizeUnknown);
                 Assert.NotNull(mediaInfo.DiskInfo);
                 Assert.Equal(1020055040, mediaInfo.DiskInfo.Size);
                 var partitionTable =
@@ -139,11 +140,15 @@ namespace Hst.Imager.Core.Tests
                 var result = await infoCommand.Execute(cancellationTokenSource.Token);
                 Assert.True(result.IsSuccess);
 
-                // assert - media info matches disk size and partitions
+                // assert - media info has unknown disk size as gzip uncompressed size is unknown
                 Assert.NotNull(mediaInfo);
-                Assert.Equal(1020055040, mediaInfo.DiskSize);
+                Assert.Equal(0, mediaInfo.DiskSize);
+                Assert.True(mediaInfo.IsDiskSizeUnknown);
                 Assert.NotNull(mediaInfo.DiskInfo);
-                Assert.Equal(1020055040, mediaInfo.DiskInfo.Size);
+                Assert.Equal(0, mediaInfo.DiskInfo.Size);
+                Assert.True(mediaInfo.DiskInfo.IsSizeUnknown);
+
+                // assert - partitions are read
                 var partitionTable =
                     mediaInfo.DiskInfo.PartitionTables.FirstOrDefault(x => x.Type == PartitionTableType.RigidDiskBlock);
                 Assert.NotNull(partitionTable);
@@ -228,6 +233,7 @@ namespace Hst.Imager.Core.Tests
                 // assert - media info matches disk size and partitions
                 Assert.NotNull(mediaInfo);
                 Assert.Equal(1020055040, mediaInfo.DiskSize);
+                Assert.False(mediaInfo.IsDiskSizeUnknown);
                 Assert.NotNull(mediaInfo.DiskInfo);
                 Assert.Equal(1020055040, mediaInfo.DiskInfo.Size);
                 var partitionTable =

@@ -176,14 +176,15 @@ public class InfoViewModel : ViewModelBase
         }
 
         var humanReadable = _showHumanReadable;
+        var diskSize = diskInfo.IsSizeUnknown ? "Unknown size" : FormatSize(diskInfo.Size, humanReadable);
         var detailSections = new ObservableCollection<DetailSectionBase>
         {
             new DiskInfoDetailSection
             {
-                Title = $"Disk: {diskInfo.Name}, {FormatSize(diskInfo.Size, humanReadable)}",
+                Title = $"Disk: {diskInfo.Name}, {diskSize}",
                 Name = diskInfo.Name ?? string.Empty,
                 Path = diskInfo.Path ?? string.Empty,
-                Size = FormatSize(diskInfo.Size, humanReadable),
+                Size = diskSize,
                 IsSparseFile = diskInfo.IsSparseFile,
                 SparseFileSize = diskInfo.IsSparseFile ? FormatSize(diskInfo.SparseFileSize, humanReadable) : string.Empty
             }

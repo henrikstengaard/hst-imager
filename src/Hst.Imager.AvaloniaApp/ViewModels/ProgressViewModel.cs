@@ -18,6 +18,7 @@ public class ProgressViewModel : ViewModelBase
     private bool _isRunning;
     private bool _isComplete;
     private double _percentComplete;
+    private bool _isIndeterminate;
     private string _title = string.Empty;
     private string _speedText = string.Empty;
     private string _etaText = string.Empty;
@@ -50,6 +51,8 @@ public class ProgressViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _isRunning, value);
             this.RaisePropertyChanged(nameof(IsFinishing));
+            this.RaisePropertyChanged(nameof(IsProgressBarIndeterminate));
+            this.RaisePropertyChanged(nameof(IsPercentVisible));
         }
     }
 
@@ -89,10 +92,36 @@ public class ProgressViewModel : ViewModelBase
             this.RaiseAndSetIfChanged(ref _percentComplete, value);
             this.RaisePropertyChanged(nameof(PercentText));
             this.RaisePropertyChanged(nameof(IsFinishing));
+            this.RaisePropertyChanged(nameof(IsProgressBarIndeterminate));
+            this.RaisePropertyChanged(nameof(IsPercentVisible));
         }
     }
 
     public string PercentText => $"{_percentComplete:0.0} %";
+
+    /// <summary>
+    /// Total size is unknown, so only bytes processed and time elapsed are shown, e.g. writing gzip compressed image.
+    /// </summary>
+    public bool IsIndeterminate
+    {
+        get => _isIndeterminate;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _isIndeterminate, value);
+            this.RaisePropertyChanged(nameof(IsProgressBarIndeterminate));
+            this.RaisePropertyChanged(nameof(IsPercentVisible));
+        }
+    }
+
+    /// <summary>
+    /// Progress bar is indeterminate, when task is finishing or total size is unknown.
+    /// </summary>
+    public bool IsProgressBarIndeterminate => IsFinishing || _isIndeterminate;
+
+    /// <summary>
+    /// Percent is shown, when task is not finishing and total size is known.
+    /// </summary>
+    public bool IsPercentVisible => !IsFinishing && !_isIndeterminate;
 
     public string Title
     {
@@ -257,10 +286,24 @@ public class ProgressViewModel : ViewModelBase
         Stage = p.Stage ?? string.Empty;
 
         PercentComplete = p.PercentComplete;
+        IsIndeterminate = p.IsIndeterminate;
 
         SpeedText = p.BytesPerSecond is > 0
             ? $"{ByteSize.FromBytes(p.BytesPerSecond.Value).Humanize("0.0")}/s"
             : string.Empty;
+
+        if (p.IsIndeterminate)
+        {
+            // total size is unknown, show bytes processed and time elapsed so far
+            EtaText = p.MillisecondsElapsed is > 0
+                ? $"Elapsed: {TimeSpan.FromMilliseconds(p.MillisecondsElapsed.Value).Humanize()}"
+                : string.Empty;
+
+            BytesText = p.BytesProcessed is > 0
+                ? ByteSize.FromBytes(p.BytesProcessed.Value).Humanize("0.0")
+                : string.Empty;
+            return;
+        }
 
         EtaText = p.MillisecondsRemaining is > 0
             ? $"ETA: {TimeSpan.FromMilliseconds(p.MillisecondsRemaining.Value).Humanize()}"
@@ -276,6 +319,7 @@ public class ProgressViewModel : ViewModelBase
     {
         IsComplete = false;
         PercentComplete = 0;
+        IsIndeterminate = false;
         Title = string.Empty;
         Stage = string.Empty;
         _isCacheFlush = false;

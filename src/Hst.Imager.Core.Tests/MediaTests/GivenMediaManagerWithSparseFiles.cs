@@ -49,7 +49,10 @@ public class GivenMediaManagerWithSparseFiles
                 var readableMediaResult = await mediaManager.GetReadableFileMedia(path);
                 Assert.True(readableMediaResult.IsSuccess);
                 var media = readableMediaResult.Value;
-                Assert.Equal(size, media.Size);
+
+                // assert - gzip uncompressed size is unknown, zip uncompressed size is known
+                Assert.Equal(extension == ".img.gz", media.IsSizeUnknown);
+                Assert.Equal(extension == ".img.gz" ? 0 : size, media.Size);
                 var readData = await media.Stream.ReadBytes(size);
                 Assert.Equal(data, readData);
             }

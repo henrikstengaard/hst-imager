@@ -71,6 +71,12 @@ namespace Hst.Imager.Core.Commands
             using var sourceMedia = sourceMediaResult.Value;
             var sourceStream = sourceMedia.Stream;
 
+            // partition size is based on source size, which must be known
+            if (sourceMedia.IsSizeUnknown)
+            {
+                return new Result(new Error($"Source '{sourcePath}' has unknown size and can't be imported"));
+            }
+
             OnDebugMessage($"Opening destination path '{destinationPath}' as writable");
 
             var destinationMediaResult =

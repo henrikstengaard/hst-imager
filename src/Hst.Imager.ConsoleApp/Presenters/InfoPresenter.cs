@@ -29,7 +29,7 @@
                     [
                         Formatters.FormatDiskPath(x.Path),
                         x.Name,
-                        x.DiskSize.FormatBytes(),
+                        x.IsDiskSizeUnknown ? "Unknown" : x.DiskSize.FormatBytes(),
                         x.SystemDrive.ToString()
                     ]
                 })
@@ -202,11 +202,16 @@
                 layoutWidth = 10;
             }
 
+            // layout size is end of last part, when disk size is unknown
+            var layoutSize = diskInfo.IsSizeUnknown
+                ? partsList.Select(x => x.EndOffset + 1).DefaultIfEmpty(0).Max()
+                : diskInfo.Size;
+
             for (var i = 0; i < partsList.Count; i++)
             {
                 var part = partsList[i];
                 rows[i].Columns[columns.Length - 1] =
-                    BuildLayout(layoutWidth, diskInfo.Size, part.StartOffset, part.EndOffset);
+                    BuildLayout(layoutWidth, layoutSize, part.StartOffset, part.EndOffset);
             }
 
             var diskTable = new Table
@@ -219,8 +224,9 @@
             outputBuilder.AppendLine($"Disk information read from '{diskInfo.Path}':");
             outputBuilder.AppendLine("Disk overview:");
             outputBuilder.AppendLine($"- Path: '{Formatters.FormatDiskPath(diskInfo.Path)}'");
-            outputBuilder.AppendLine(
-                $"- Size: {diskInfo.Size.FormatBytes()} ({diskInfo.Size} bytes)");
+            outputBuilder.AppendLine(diskInfo.IsSizeUnknown
+                ? "- Size: Unknown"
+                : $"- Size: {diskInfo.Size.FormatBytes()} ({diskInfo.Size} bytes)");
 
             if (diskInfo.IsSparseFile)
             {
@@ -249,6 +255,11 @@
 
         private static string BuildLayout(int maxWidth, long size, long startOffset, long endOffset)
         {
+            if (size <= 0)
+            {
+                return new string(' ', maxWidth);
+            }
+
             var sizePerWidth = (double)maxWidth / size;
             var layoutStart = Convert.ToInt32(sizePerWidth * startOffset);
             

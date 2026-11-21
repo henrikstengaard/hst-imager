@@ -1,4 +1,5 @@
 ﻿using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Medias;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.SparseFiles;
 
@@ -69,8 +70,11 @@ namespace Hst.Imager.Core.Commands
             
             var (srcStartOffset, srcSize) = startOffsetAndSizeResult.Value;
 
+            var isSrcSizeUnknown = srcMedia.IsSizeUnknown;
             OnInformationMessage($"Source start offset '{srcStartOffset}'");
-            OnInformationMessage($"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
+            OnInformationMessage(isSrcSizeUnknown
+                ? "Source size unknown"
+                : $"Source size '{srcSize.FormatBytes()}' ({srcSize} bytes)");
 
             // add start offset
             if (srcStart.HasValue)
@@ -78,8 +82,26 @@ namespace Hst.Imager.Core.Commands
                 srcStartOffset += srcStart.Value;
             }
 
-            var transferSize = srcSize.ResolveSize(size);
-            OnInformationMessage($"Size '{transferSize.FormatBytes()}' ({transferSize} bytes)");
+            long transferSize;
+            if (isSrcSizeUnknown)
+            {
+                // transfer size is 0 for unknown size to transfer until end of source, unless size is set in bytes
+                var transferSizeResult = size.ResolveUnknownSize();
+                if (transferSizeResult.IsFaulted)
+                {
+                    return new Result(transferSizeResult.Error);
+                }
+
+                transferSize = transferSizeResult.Value;
+            }
+            else
+            {
+                transferSize = srcSize.ResolveSize(size);
+            }
+
+            OnInformationMessage(transferSize == 0 && isSrcSizeUnknown
+                ? "Size unknown, transferring until end of source"
+                : $"Size '{transferSize.FormatBytes()}' ({transferSize} bytes)");
             
             // resolve media path
             var destResolvedMediaResult = commandHelper.ResolveMedia(destinationPath);
@@ -101,6 +123,21 @@ namespace Hst.Imager.Core.Commands
             var createDestMedia = destResolvedMediaResult.IsFaulted && destResolvedMediaResult.Error is PathNotFoundError;
             var directorySeparatorChar = destResolvedMediaResult.Value?.DirectorySeparatorChar ??
                                          srcResolvedMediaResult.Value.DirectorySeparatorChar;
+
+            // vhd image file is created with a fixed disk size, so source with unknown size is decompressed to
+            // determine size
+            if (transferSize == 0 && isSrcSizeUnknown && createDestMedia && MediaHelper.IsVhd(destMediaPath))
+            {
+                OnInformationMessage("Decompressing source to determine size required for creating vhd image file");
+                var uncompressedSizeResult = await CompressedMediaReader.GetUncompressedSize(srcMedia.Path, token);
+                if (uncompressedSizeResult.IsFaulted)
+                {
+                    return new Result(uncompressedSizeResult.Error);
+                }
+
+                transferSize = uncompressedSizeResult.Value;
+                OnInformationMessage($"Size '{transferSize.FormatBytes()}' ({transferSize} bytes)");
+            }
 
             var destinationMediaResult = createDestMedia
                 ? await commandHelper.GetWritableFileMedia(destMediaPath, size: transferSize, create: true)
@@ -167,7 +204,7 @@ namespace Hst.Imager.Core.Commands
                 return new Result(result.Error);
             }
             
-            if (statusBytesProcessed != transferSize)
+            if (transferSize != 0 && statusBytesProcessed != transferSize)
             {
                 return new Result(new Error($"Transferred '{statusBytesProcessed.FormatBytes()}' ({statusBytesProcessed} bytes) is not equal to size '{transferSize.FormatBytes()}' ({transferSize} bytes)"));
             }

@@ -42,7 +42,7 @@ namespace Hst.Imager.Core.Medias
             // recalculate percent size against disk size for allocated parts
             foreach (var allocatedPart in allocatedParts)
             {
-                allocatedPart.PercentSize = Math.Round(((double)100 / diskInfo.Size) * allocatedPart.Size);
+                allocatedPart.PercentSize = GetPercentSize(allocatedPart.Size, diskInfo.Size);
             }
 
             return allocatedParts.Concat(CreateUnallocatedParts(diskInfo.Size, diskInfo.Size / 512, 0,
@@ -74,7 +74,7 @@ namespace Hst.Imager.Core.Medias
                     EndSector = partitionTableInfo.Reserved.EndSector,
                     StartCylinder = partitionTableInfo.Reserved.StartCylinder,
                     EndCylinder = partitionTableInfo.Reserved.EndCylinder,
-                    PercentSize = Math.Round(((double)100 / diskInfo.Size) * partitionTableInfo.Reserved.Size)
+                    PercentSize = GetPercentSize(partitionTableInfo.Reserved.Size, diskInfo.Size)
                 }
             }.Concat(partitionTableInfo.Partitions.Select(x => new PartInfo
             {
@@ -94,7 +94,7 @@ namespace Hst.Imager.Core.Medias
                 EndSector = x.EndSector,
                 StartCylinder = x.StartCylinder,
                 EndCylinder = x.EndCylinder,
-                PercentSize = Math.Round(((double)100 / diskInfo.Size) * x.Size),
+                PercentSize = GetPercentSize(x.Size, diskInfo.Size),
                 IsActive = x.IsActive,
                 IsPrimary = x.IsPrimary,
                 StartChs = x.StartChs != null ? new ChsAddress
@@ -131,6 +131,12 @@ namespace Hst.Imager.Core.Medias
                     partitionTableTypeContext, parts, true, false)).OrderBy(x => x.StartOffset).ToList()
             };
         }
+
+        /// <summary>
+        /// Get percent size of disk size. Returns 0, if disk size is unknown.
+        /// </summary>
+        private static double GetPercentSize(long size, long diskSize) =>
+            diskSize <= 0 ? 0 : Math.Round((double)100 / diskSize * size);
 
         public static IEnumerable<PartInfo> CreateUnallocatedParts(long diskSize, long sectors, long cylinders,
             PartitionTableType partitionTableTypeContext, IEnumerable<PartInfo> parts, bool useSectors,
@@ -171,7 +177,7 @@ namespace Hst.Imager.Core.Medias
                         EndSector = overlappingPart.StartSector == 0 ? 0 : overlappingPart.StartSector - 1,
                         StartCylinder = overlappingPart.StartCylinder == 0 ? 0 : cylinder,
                         EndCylinder = overlappingPart.StartCylinder == 0 ? 0 : overlappingPart.StartCylinder - 1,
-                        PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
+                        PercentSize = GetPercentSize(unallocatedSize, diskSize)
                     };
                 }
 
@@ -196,7 +202,7 @@ namespace Hst.Imager.Core.Medias
                     EndSector = sectors == 0 ? 0 : sectors - 1,
                     StartCylinder = cylinders == 0 ? 0 : cylinder,
                     EndCylinder = cylinders == 0 ? 0 : cylinders - 1,
-                    PercentSize = Math.Round(((double)100 / diskSize) * unallocatedSize)
+                    PercentSize = GetPercentSize(unallocatedSize, diskSize)
                 };
             }
         }

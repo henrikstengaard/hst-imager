@@ -68,6 +68,9 @@
       <None Update="TestData\Xz\test.txt.xz">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
+      <None Update="TestData\Xz\multi-stream.bin.xz">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
       <None Update="TestData\diskutil\diskutil-all-usb-ide-adapter.plist">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </None>
