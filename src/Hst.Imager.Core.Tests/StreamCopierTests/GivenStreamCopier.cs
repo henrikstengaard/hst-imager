@@ -262,12 +262,44 @@ public class GivenStreamCopier
 
         // get source bytes
         var sourceBytes = data.ToArray();
-        
+
         // get destination bytes
         var destinationBytes = destination.ToArray();
-        
+
         // assert - source bytes are equal to destination bytes
         Assert.Equal(sourceBytes.Length, destinationBytes.Length);
         Assert.Equal(sourceBytes, destinationBytes);
+    }
+
+    [Fact]
+    public async Task WhenCopyZeroFilledDataWithSkipZeroFilledToNonSeekableDestinationThenAllBytesAreWritten()
+    {
+        // arrange - source bytes with data in first buffer and zero filled data after
+        var sourceBytes = new byte[BufferSize * 4];
+        for (var i = 0; i < BufferSize; i++)
+        {
+            sourceBytes[i] = 1;
+        }
+
+        // arrange - source and non seekable destination like a compressed stream
+        var source = new MemoryStream(sourceBytes);
+        var destination = new NonSeekableMemoryStream();
+
+        // arrange - stream copier
+        var streamCopier = new StreamCopier(BufferSize);
+        var cancellationTokenSource = new CancellationTokenSource();
+
+        // act - copy from source to destination skipping zero filled data
+        await streamCopier.Copy(cancellationTokenSource.Token, source, destination, sourceBytes.Length, 0, 0, true);
+
+        // assert - zero filled data is written, as destination doesn't support seek
+        var destinationBytes = destination.ToArray();
+        Assert.Equal(sourceBytes.Length, destinationBytes.Length);
+        Assert.Equal(sourceBytes, destinationBytes);
+    }
+
+    private class NonSeekableMemoryStream : MemoryStream
+    {
+        public override bool CanSeek => false;
     }
 }
