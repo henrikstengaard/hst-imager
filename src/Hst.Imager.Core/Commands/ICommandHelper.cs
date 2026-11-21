@@ -6,10 +6,26 @@ namespace Hst.Imager.Core.Commands
     using System.Collections.Generic;
     using System.Threading.Tasks;
     using Hst.Core;
+    using Medias;
     using Models;
 
     public interface ICommandHelper : IDisposable
     {
+        /// <summary>
+        /// Media manager used to open medias for read and write.
+        /// </summary>
+        IMediaManager MediaManager { get; }
+
+        /// <summary>
+        /// Path resolver used to resolve media path, file system path and modifiers.
+        /// </summary>
+        IMediaPathResolver PathResolver { get; }
+
+        /// <summary>
+        /// Disk info reader used to read partition tables and disk parts from medias.
+        /// </summary>
+        IDiskInfoReader DiskInfoReader { get; }
+
         Task<DataType> DetectDataType(string path);
         void ClearActiveMedias();
         void ClearActiveMedia(string path);
@@ -29,4 +45,4 @@ namespace Hst.Imager.Core.Commands
         Result<MediaResult> ResolveMedia(string path, bool allowNonExisting = false);
         Task RescanPhysicalDrives();
     }
-}
+}
