@@ -13,6 +13,7 @@ using DiscUtils.Streams;
 using Hst.Compression.Lha;
 using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.Models;
+using Hst.Imager.Core.Volumes;
 
 namespace Hst.Imager.Core.Commands
 {
@@ -105,18 +106,19 @@ namespace Hst.Imager.Core.Commands
             string fileSystemName)
         {
             var cdReader = new CDReader(stream, true);
-            var iso9660Iterator = new Iso9660EntryIterator(stream, string.Empty, cdReader, true);
-            var initializeResult = await iso9660Iterator.Initialize();
-            if (initializeResult.IsFaulted)
+            var volume = new DiscUtilsVolume(null, PartitionTableType.None, 0, cdReader, ownsMedia: false);
+            var walkerResult = await VolumeEntryWalker.Create(volume, [], true);
+            if (walkerResult.IsFaulted)
             {
-                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(walkerResult.Error);
             }
-            
+
+            var walker = walkerResult.Value;
             var fileSystems = new List<Tuple<string, byte[]>>();
 
-            while (await iso9660Iterator.Next())
+            while (await walker.Next())
             {
-                var entry = iso9660Iterator.Current;
+                var entry = walker.Current;
 
                 // skip entry, if larger than 1mb or if it doesn't end with ".adf"
                 if (entry.Size > 1.MB() || !entry.Name.EndsWith(".adf", StringComparison.OrdinalIgnoreCase))
@@ -124,14 +126,18 @@ namespace Hst.Imager.Core.Commands
                     continue;
                 }
 
-                var adfStream = await iso9660Iterator.OpenEntry(entry);
+                var adfStreamResult = await volume.OpenFile(entry.FullPathComponents);
+                if (adfStreamResult.IsFaulted)
+                {
+                    return new Result<IEnumerable<Tuple<string, byte[]>>>(adfStreamResult.Error);
+                }
 
-                var fileSystemsResult = await FindFileSystemsInAdf(media, adfStream, fileSystemName);
+                var fileSystemsResult = await FindFileSystemsInAdf(media, adfStreamResult.Value, fileSystemName);
                 if (fileSystemsResult.IsFaulted)
                 {
                     return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystemsResult.Error);
                 }
-                
+
                 fileSystems.AddRange(fileSystemsResult.Value);
             }
 
@@ -141,43 +147,33 @@ namespace Hst.Imager.Core.Commands
         private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInLha(Stream stream,
             string fileSystemName)
         {
-            var lhaArchive = new LhaArchive(stream);
-            var lhaEntryIterator = new LhaArchiveEntryIterator(stream, string.Empty, lhaArchive, true);
-
-            var initializeResult = await lhaEntryIterator.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
-            }
-            
-            return await FindFileSystemsInEntryIterator(lhaEntryIterator, fileSystemName);
+            var volume = await ArchiveVolumeReader.ReadLha(stream, new LhaOptions());
+            return await FindFileSystemsInVolume(volume, fileSystemName);
         }
 
         private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInAdf(Media media, Stream stream,
             string fileSystemName)
         {
             var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
-
-            var amigaVolumeEntryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.None, 0,
-                fastFileSystemVolume, [], true);
-
-            var initializeResult = await amigaVolumeEntryIterator.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEnumerable<Tuple<string, byte[]>>>(initializeResult.Error);
-            }
-            
-            return await FindFileSystemsInEntryIterator(amigaVolumeEntryIterator, fileSystemName);
+            var volume = new AmigaVolume(media, PartitionTableType.None, 0, fastFileSystemVolume, ownsMedia: false);
+            return await FindFileSystemsInVolume(volume, fileSystemName);
         }
 
-        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInEntryIterator(
-            IEntryIterator entryIterator, string fileSystemName)
+        private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInVolume(
+            IVolume volume, string fileSystemName)
         {
+            var walkerResult = await VolumeEntryWalker.Create(volume, [], true);
+            if (walkerResult.IsFaulted)
+            {
+                return new Result<IEnumerable<Tuple<string, byte[]>>>(walkerResult.Error);
+            }
+
+            var walker = walkerResult.Value;
             var fileSystems = new List<Tuple<string, byte[]>>();
 
-            while (await entryIterator.Next())
+            while (await walker.Next())
             {
-                var entry = entryIterator.Current;
+                var entry = walker.Current;
 
                 var fileName = entry.FullPathComponents[^1];
 
@@ -187,8 +183,14 @@ namespace Hst.Imager.Core.Commands
                 {
                     continue;
                 }
-                
-                await using var entryStream = await entryIterator.OpenEntry(entry);
+
+                var entryStreamResult = await volume.OpenFile(entry.FullPathComponents);
+                if (entryStreamResult.IsFaulted)
+                {
+                    return new Result<IEnumerable<Tuple<string, byte[]>>>(entryStreamResult.Error);
+                }
+
+                await using var entryStream = entryStreamResult.Value;
                 using var fileSystemStream = new MemoryStream();
                 await entryStream.CopyToAsync(fileSystemStream);
 
@@ -284,4 +286,4 @@ namespace Hst.Imager.Core.Commands
             return new Result<IEnumerable<Tuple<string, byte[]>>>(fileSystems);
         }
     }
-}
+}

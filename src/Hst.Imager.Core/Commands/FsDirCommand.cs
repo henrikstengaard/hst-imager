@@ -2,6 +2,7 @@
 using Hst.Imager.Core.Caching;
 using Hst.Imager.Core.MagicBytes;
 using Hst.Imager.Core.UaeMetadatas;
+using Hst.Imager.Core.Volumes;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -40,192 +41,105 @@ public class FsDirCommand(
     {
         using var appCache = new MemoryAppCache();
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        using var volumeFactory = new VolumeFactory(commandHelper, physicalDrives, uaeMetadataHelper, uaeMetadata,
+            OnDebugMessage);
 
         OnDebugMessage($"Opening '{path}' as readable");
 
-        var listMediaEntriesResult = await ListMediaEntries();
-        if (listMediaEntriesResult.IsSuccess)
+        // list partition tables or partitions, if path is a disk without a file system path or only a partition table
+        var listPartitionsResult = await ListPartitionTablesOrPartitions();
+        if (listPartitionsResult != null)
         {
-            return listMediaEntriesResult;
+            return listPartitionsResult;
         }
 
-        if (listMediaEntriesResult.IsFaulted && listMediaEntriesResult.Error is not PathNotFoundError)
+        var volumePathResult = await volumeFactory.Open(path, VolumeAccess.Read);
+        if (volumePathResult.IsFaulted)
         {
-            return new Result(listMediaEntriesResult.Error);
-        }
-        
-        // get directory entry iterator and list entries if successful
-        var directoryEntryIteratorResult = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
-            uaeMetadataHelper);
-        if (directoryEntryIteratorResult.IsFaulted)
-        {
-            return new Result(directoryEntryIteratorResult.Error);
-        }
-        
-        var initializeResult = await directoryEntryIteratorResult.Value.Initialize();
-        if (initializeResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(initializeResult.Error);
+            return new Result(volumePathResult.Error);
         }
 
-        directoryEntryIteratorResult.Value.UaeMetadata = directoryEntryIteratorResult.Value.SupportsUaeMetadata &&
-                                                         uaeMetadata != UaeMetadata.None
-            ? uaeMetadata
-            : UaeMetadata.None;
+        var (volume, pathComponents) = volumePathResult.Value;
 
-        await ListEntries(directoryEntryIteratorResult.Value);
-        
+        var walkerResult = await VolumeEntryWalker.Create(volume, pathComponents, recursive);
+        if (walkerResult.IsFaulted)
+        {
+            return new Result(walkerResult.Error);
+        }
+
+        await ListEntries(walkerResult.Value);
+
         return new Result();
     }
-    
-    private async Task<Result> ListMediaEntries()
+
+    /// <summary>
+    /// List partition tables or partitions, if path is a disk without a file system path or only a partition table.
+    /// </summary>
+    /// <returns>Result of listing partition tables or partitions. Null, if path is not partition tables or partitions.</returns>
+    private async Task<Result> ListPartitionTablesOrPartitions()
     {
         var pathResult = commandHelper.ResolveMedia(path);
-        if (pathResult.IsFaulted)
+        if (pathResult.IsFaulted ||
+            (string.IsNullOrWhiteSpace(pathResult.Value.FileSystemPath) && Directory.Exists(path)))
         {
-            return new Result(pathResult.Error);
+            return null;
+        }
+
+        var parts = (pathResult.Value.FileSystemPath ?? string.Empty).Split(pathResult.Value.DirectorySeparatorChar,
+            StringSplitOptions.RemoveEmptyEntries);
+
+        // partition tables are listed for no parts, partitions are listed for a partition table part or
+        // a pistorm rdb partition table in a mbr partition, e.g. "mbr/2/rdb"
+        if (parts.Length > 3 ||
+            (parts.Length > 0 && parts[0].ToLowerInvariant() is not ("mbr" or "gpt" or "rdb")))
+        {
+            return null;
+        }
+
+        var dataType = await commandHelper.DetectDataType(pathResult.Value.MediaPath);
+        if (dataType is DataType.Zip or DataType.Lha or DataType.Lzx or DataType.Lzw or DataType.Iso9660 or
+            DataType.Adf)
+        {
+            return null;
         }
 
         OnDebugMessage($"Media Path: '{pathResult.Value.MediaPath}'");
         OnDebugMessage($"File System Path: '{pathResult.Value.FileSystemPath}'");
 
-        var dataType = await commandHelper.DetectDataType(pathResult.Value.MediaPath);
-
-        Result<IEntryIterator> entryIteratorResult = null;
-        switch (dataType)
-        {
-            case DataType.Zip:
-                entryIteratorResult = await GetZipEntryIterator(pathResult.Value, recursive);
-                break;
-            case DataType.Lha:
-                entryIteratorResult = await GetLhaEntryIterator(pathResult.Value, recursive);
-                break;
-            case DataType.Lzx:
-                entryIteratorResult = await GetLzxEntryIterator(pathResult.Value, recursive);
-                break;
-            case DataType.Adf:
-                entryIteratorResult = await GetAdfEntryIterator(pathResult.Value, recursive);
-                break;
-            case DataType.Iso9660:
-                entryIteratorResult = await GetIso9660EntryIterator(pathResult.Value, recursive);
-                break;
-        }
-
-        if (entryIteratorResult != null && entryIteratorResult.IsSuccess)
-        {
-            using var entryIterator = entryIteratorResult.Value;
-            var initializeResult = await entryIterator.Initialize();
-            if (initializeResult.IsFaulted)
-            {
-                return new Result<IEntryIterator>(initializeResult.Error);
-            }
-            await ListEntries(entryIterator);
-            return new Result();
-        }
-
-        // floppy or disk
         var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, pathResult.Value.MediaPath);
         if (readableMediaResult.IsFaulted)
         {
             return new Result(readableMediaResult.Error);
         }
 
-        var fileSystemPath = pathResult.Value.FileSystemPath ?? string.Empty;
-        var directorySeparatorChar = pathResult.Value.DirectorySeparatorChar;
+        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(readableMediaResult.Value,
+            pathResult.Value.FileSystemPath ?? string.Empty, pathResult.Value.DirectorySeparatorChar);
 
-        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
-            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
+        using var media = piStormRdbMediaResult.Media;
+        parts = (piStormRdbMediaResult.FileSystemPath ?? string.Empty).Split(
+            pathResult.Value.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
 
-        var media = piStormRdbMediaResult.Media;
-        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
-
-        var stream = media.Stream;
-
-        var parts = fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries);
-
-        if (media.Type == Media.MediaType.Floppy)
+        // floppy entries are listed using volume
+        if (media.Type == Media.MediaType.Floppy || parts.Length > 1)
         {
-            var listFloppyEntriesResult = await ListFloppyEntries(media, parts);
-            return listFloppyEntriesResult.IsFaulted ? new Result(listFloppyEntriesResult.Error) : new Result();
+            return null;
         }
 
-        if (parts.Length == 0 || string.IsNullOrEmpty(parts[0]))
+        if (parts.Length == 0)
         {
-            await ListPartitionTables(media, stream);
-        }
-        else
-        {
-            switch (parts[0].ToLowerInvariant())
-            {
-                case "mbr":
-                    if (parts.Length == 1)
-                    {
-                        var listPartitionsResult = await ListMbrPartitions(media);
-                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
-                    }
-
-                    var listMbrEntriesResult = await ListMbrPartitionEntries(media, parts.Skip(1).ToArray());
-                    if (listMbrEntriesResult.IsFaulted)
-                    {
-                        return new Result(listMbrEntriesResult.Error);
-                    }
-
-                    break;
-                case "gpt":
-                    if (parts.Length == 1)
-                    {
-                        var listPartitionsResult = await ListGptPartitions(media);
-                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
-                    }
-
-                    var listGptEntriesResult = await ListGptPartitionEntries(media, parts.Skip(1).ToArray());
-                    if (listGptEntriesResult.IsFaulted)
-                    {
-                        return new Result(listGptEntriesResult.Error);
-                    }
-
-                    break;
-                case "rdb":
-                    if (parts.Length == 1)
-                    {
-                        var listPartitionsResult = await ListRdbPartitions(media);
-                        return listPartitionsResult.IsFaulted ? new Result(listPartitionsResult.Error) : new Result();
-                    }
-
-                    var listRdbEntriesResult = await ListRdbPartitionEntries(media, parts.Skip(1).ToArray());
-                    if (listRdbEntriesResult.IsFaulted)
-                    {
-                        return new Result(listRdbEntriesResult.Error);
-                    }
-
-                    break;
-                default:
-                    return new Result(new Error($"Unsupported partition table '{parts[0]}' in path '{path}'"));
-            }
+            await ListPartitionTables(media);
+            return new Result();
         }
 
-        return new Result();
+        return parts[0].ToLowerInvariant() switch
+        {
+            "mbr" => await ListMbrPartitions(media),
+            "gpt" => await ListGptPartitions(media),
+            _ => await ListRdbPartitions(media)
+        };
     }
 
-    private async Task<Result> ListFloppyEntries(Media media, string[] parts)
-    {
-        var mbrFileSystemResult = await MountFileSystem(media.Stream);
-        if (mbrFileSystemResult.IsFaulted)
-        {
-            return new Result(mbrFileSystemResult.Error);
-        }
-
-        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.None, 0, mbrFileSystemResult.Value, parts, recursive);
-        var initializeResult = await entryIterator.Initialize();
-        if (initializeResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(initializeResult.Error);
-        }
-        await ListEntries(entryIterator);
-        return new Result();
-    }
-
-    private async Task ListPartitionTables(Media media, Stream stream)
+    private async Task ListPartitionTables(Media media)
     {
         OnDebugMessage($"Listing partition tables");
 
@@ -326,7 +240,7 @@ public class FsDirCommand(
         }
         catch (Exception)
         {
-            return new Result<IEntryIterator>(new Error("Master Boot Record not found"));
+            return new Result(new Error("Master Boot Record not found"));
         }
 
         var partitionNumber = 0;
@@ -357,54 +271,7 @@ public class FsDirCommand(
         return new Result();
     }
     
-    private async Task<Result> ListMbrPartitionEntries(Media media, string[] parts)
-    {
-        var disk = await MediaHelper.ResolveVirtualDisk(media);
-            
-        var mbrFileSystemResult = await MountMbrFileSystem(disk, parts[0]);
-        if (mbrFileSystemResult.IsFaulted)
-        {
-            return new Result(mbrFileSystemResult.Error);
-        }
-
-        var (partitionNumber, fileSystem) = mbrFileSystemResult.Value;
-        
-        var rootPathComponents = parts.Skip(1).ToArray();
-        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.MasterBootRecord, partitionNumber,
-            fileSystem, rootPathComponents, recursive);
-        var initializeResult = await entryIterator.Initialize();
-        if (initializeResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(initializeResult.Error);
-        }
-        await ListEntries(entryIterator);
-        return new Result();
-    }
     
-    private async Task<Result> ListGptPartitionEntries(Media media, string[] parts)
-    {
-        var disk = await MediaHelper.ResolveVirtualDisk(media);
-            
-        var gptFileSystemResult = await MountGptFileSystem(disk, parts[0]);
-        if (gptFileSystemResult.IsFaulted)
-        {
-            return new Result(gptFileSystemResult.Error);
-        }
-
-        var (partitionNumber, fileSystem) = gptFileSystemResult.Value;
-
-        var rootPathComponents = parts.Skip(1).ToArray();
-        var entryIterator = new FileSystemEntryIterator(media, PartitionTableType.GuidPartitionTable, partitionNumber,
-            fileSystem, rootPathComponents, recursive);
-        var initializeResult = await entryIterator.Initialize();
-        if (initializeResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(initializeResult.Error);
-        }
-        await ListEntries(entryIterator);
-        return new Result();
-    }
-
     private async Task<Result> ListGptPartitions(Media media)
     {
         OnDebugMessage("Reading Guid Partition Table");
@@ -418,7 +285,7 @@ public class FsDirCommand(
         }
         catch (Exception)
         {
-            return new Result<IEntryIterator>(new Error("Guid Partition Table not found"));
+            return new Result(new Error("Guid Partition Table not found"));
         }
 
         var partitionNumber = 0;
@@ -524,36 +391,13 @@ public class FsDirCommand(
         return properties;
     }
 
-    private async Task<Result> ListRdbPartitionEntries(Media media, string[] parts)
-    {
-        var volumeResult = await MountRdbFileSystemVolume(media, parts[0]);
-        if (volumeResult.IsFaulted)
-        {
-            return new Result(volumeResult.Error);
-        }
-
-        var (partitionNumber, fileSystemVolume) = volumeResult.Value;
-
-        var rootPathComponents = parts.Skip(1).ToArray();
-        var entryIterator = new AmigaVolumeEntryIterator(media, PartitionTableType.RigidDiskBlock, partitionNumber,
-            fileSystemVolume, rootPathComponents, recursive);
-        var initializeResult = await entryIterator.Initialize();
-        if (initializeResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(initializeResult.Error);
-        }
-        await ListEntries(entryIterator);
-        return new Result();
-    }
-
-    private async Task ListEntries(IEntryIterator entryIterator)
+    private async Task ListEntries(VolumeEntryWalker walker)
     {
         var entries = new List<Entry>();
 
-        while (await entryIterator.Next())
+        while (await walker.Next())
         {
-            var entry = entryIterator.Current;
-            entries.Add(entry);
+            entries.Add(walker.Current);
         }
 
         OnEntriesRead(new EntriesInfo
@@ -561,7 +405,7 @@ public class FsDirCommand(
             Path = path,
             Recursive = recursive,
             Entries = entries,
-            AttributesMode = entryIterator.AttributesMode
+            AttributesMode = walker.Volume.AttributesMode
         });
     }
 
@@ -569,4 +413,4 @@ public class FsDirCommand(
     {
         EntriesRead?.Invoke(this, new EntriesInfoReadEventArgs(entriesInfo));
     }
-}
+}

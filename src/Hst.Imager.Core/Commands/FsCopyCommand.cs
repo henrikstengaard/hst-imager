@@ -1,5 +1,5 @@
 ﻿using Hst.Imager.Core.Caching;
-using Hst.Imager.Core.Helpers;
+using Hst.Imager.Core.Volumes;
 
 namespace Hst.Imager.Core.Commands;
 
@@ -31,55 +31,52 @@ public class FsCopyCommand(
 {
     private readonly ILogger<FsCopyCommand> logger = logger;
 
-    /// <summary>
-    /// Is single file or uses pattern examines if the operation involves 1 file or if the operation uses pattern.
-    /// </summary>
-    /// <param name="entry">Entry to examine.</param>
-    /// <param name="entryIterator">Entry iterator to examine.</param>
-    /// <returns>True, if entry is a file and there are no more entries or if there is only a single file entry next or if the entry iterator uses a pattern. Otherwise, false.</returns>
-    private static bool IsSingleFileOrUsesPattern(Entry entry, IEntryIterator entryIterator) =>
-        (entry.Type == EntryType.File && !entryIterator.HasMoreEntries) ||
-        entryIterator.IsSingleFileEntryNext ||
-        entryIterator.UsesPattern;
-
     public override async Task<Result> Execute(CancellationToken token)
     {
         using var appCache = new MemoryAppCache();
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
+        using var volumeFactory = CreateVolumeFactory(uaeMetadataHelper, uaeMetadata);
 
         OnInformationMessage($"Copying from source Path '{srcPath}' to destination path '{destPath}'");
 
         var stopwatch = new Stopwatch();
 
-        // get destination entry writer
-        var destEntryWriterResult = await GetEntryWriter(destPath, recursive, makeDirectory, forceOverwrite,
-            uaeMetadata, uaeMetadataHelper);
-        if (destEntryWriterResult.IsFaulted)
+        // get destination target
+        var destTargetResult = await OpenVolumeTarget(volumeFactory, destPath, recursive, makeDirectory,
+            forceOverwrite);
+        if (destTargetResult.IsFaulted)
         {
-            return new Result(destEntryWriterResult.Error);
+            return new Result(destTargetResult.Error);
         }
 
-        // get source copy entry iterator
-        var srcEntryIteratorResult = await GetCopyEntryIterator(destEntryWriterResult.Value, srcPath, uaeMetadata);
-        if (srcEntryIteratorResult.IsFaulted)
+        var destTarget = destTargetResult.Value;
+
+        // get source walker, which uses same volume as destination, if source is in same media and partition
+        OnDebugMessage($"Resolving path '{srcPath}'");
+        var srcVolumePathResult = await volumeFactory.Open(srcPath, VolumeAccess.Read, openArchives: false);
+        if (srcVolumePathResult.IsFaulted)
         {
-            return new Result(srcEntryIteratorResult.Error);
+            return new Result(srcVolumePathResult.Error);
         }
 
-        if (destEntryWriterResult.Value.ArePathComponentsSelfCopy(srcEntryIteratorResult.Value))
+        var srcWalkerResult = await VolumeEntryWalker.Create(srcVolumePathResult.Value.Volume,
+            srcVolumePathResult.Value.PathComponents, recursive);
+        if (srcWalkerResult.IsFaulted)
+        {
+            return new Result(srcWalkerResult.Error);
+        }
+
+        var srcWalker = srcWalkerResult.Value;
+
+        if (destTarget.IsSelfCopy(srcWalker))
         {
             return new Result(new SelfCopyError($"Unable to copy from source path '{srcPath}' to destination path '{destPath}' onto itself"));
         }
 
-        if (destEntryWriterResult.Value.ArePathComponentsCyclic(srcEntryIteratorResult.Value))
+        if (destTarget.IsCyclic(srcWalker))
         {
             return new Result(new CyclicPathError($"Unable to copy cyclic path from source path '{srcPath}' to destination path '{destPath}'"));
         }
-        
-        srcEntryIteratorResult.Value.UaeMetadata = srcEntryIteratorResult.Value.SupportsUaeMetadata &&
-                                                   uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
-        destEntryWriterResult.Value.UaeMetadata = destEntryWriterResult.Value.SupportsUaeMetadata &&
-                                                  uaeMetadata != UaeMetadata.None ? uaeMetadata : UaeMetadata.None;
 
         // iterate through source entries and write in destination
         var count = 0;
@@ -89,83 +86,83 @@ public class FsCopyCommand(
 
         stopwatch.Start();
 
-        using (var destEntryWriter = destEntryWriterResult.Value)
+        while (await srcWalker.Next())
         {
-            using (var srcEntryIterator = srcEntryIteratorResult.Value)
+            var entry = srcWalker.Current;
+
+            var isSingleFileOrUsesPattern = IsSingleFileOrUsesPattern(entry, srcWalker);
+
+            // skip directory entries when there are no entry path components or when it is a single file or uses pattern.
+            if (entry.Type == EntryType.Dir &&
+                (isSingleFileOrUsesPattern || entry.RelativePathComponents.Length == 0))
             {
-                while (await srcEntryIterator.Next())
+                continue;
+            }
+
+            switch (entry.Type)
+            {
+                case EntryType.Dir:
+                case EntryType.LinkDir:
+                    dirsCount++;
+                    var createDirectoryResult = await destTarget.CreateDirectory(entry,
+                        entry.RelativePathComponents, skipAttributes, isSingleFileOrUsesPattern);
+                    if (createDirectoryResult.IsFaulted)
+                    {
+                        return new Result(createDirectoryResult.Error);
+                    }
+                    break;
+                case EntryType.File:
+                case EntryType.LinkFile:
                 {
-                    var entry = srcEntryIterator.Current;
+                    filesCount++;
+                    totalBytes += entry.Size;
 
-                    var isSingleFileOrUsesPattern = IsSingleFileOrUsesPattern(entry, srcEntryIterator);
-
-                    // skip directory entries when there are no entry path components or when it is a single file or uses pattern.
-                    if (entry.Type == EntryType.Dir &&
-                        (isSingleFileOrUsesPattern || entry.RelativePathComponents.Length == 0))
+                    if (!quiet)
                     {
-                        continue;
+                        OnInformationMessage($"{entry.FormattedName} ({entry.Size.FormatBytes()})");
                     }
 
-                    switch (entry.Type)
+                    var openResult = await srcWalker.Volume.OpenFile(entry.FullPathComponents);
+                    if (openResult.IsFaulted)
                     {
-                        case EntryType.Dir:
-                        case EntryType.LinkDir:
-                            dirsCount++;
-                            var createDirectoryResult = await destEntryWriter.CreateDirectory(entry,
-                                entry.RelativePathComponents, skipAttributes, isSingleFileOrUsesPattern);
-                            if (createDirectoryResult.IsFaulted)
-                            {
-                                return new Result(createDirectoryResult.Error);
-                            }
-                            break;
-                        case EntryType.File:
-                        case EntryType.LinkFile:
-                        {
-                            filesCount++;
-                            totalBytes += entry.Size;
-
-                            if (!quiet)
-                            {
-                                OnInformationMessage($"{entry.FormattedName} ({entry.Size.FormatBytes()})");
-                            }
-
-                            await using var stream = await srcEntryIterator.OpenEntry(entry);
-                            var createFileResult = await destEntryWriter.CreateFile(entry,
-                                entry.RelativePathComponents, stream,
-                                skipAttributes, isSingleFileOrUsesPattern);
-                            if (createFileResult.IsFaulted)
-                            {
-                                return new Result(createFileResult.Error);
-                            }
-                            break;
-                        }
+                        return new Result(openResult.Error);
                     }
 
-                    count++;
-
-                    if (count <= 200)
+                    await using var stream = openResult.Value;
+                    var createFileResult = await destTarget.CreateFile(entry,
+                        entry.RelativePathComponents, stream,
+                        skipAttributes, isSingleFileOrUsesPattern);
+                    if (createFileResult.IsFaulted)
                     {
-                        continue;
+                        return new Result(createFileResult.Error);
                     }
-
-                    count = 0;
-                    await srcEntryIterator.Flush();
-                    await destEntryWriter.Flush();
+                    break;
                 }
-
-                await srcEntryIterator.Flush();
-                await destEntryWriter.Flush();
             }
 
-            foreach (var log in destEntryWriter.GetDebugLogs())
+            count++;
+
+            if (count <= 200)
             {
-                OnDebugMessage(log);
+                continue;
             }
 
-            foreach (var log in destEntryWriter.GetLogs())
-            {
-                OnInformationMessage(log);
-            }
+            count = 0;
+            await srcWalker.Volume.Flush();
+            await destTarget.Volume.Flush();
+        }
+
+        await srcWalker.Volume.Flush();
+        await destTarget.Volume.Flush();
+
+        foreach (var log in destTarget.Volume.GetDebugLogs())
+        {
+            OnDebugMessage(log);
+        }
+
+        foreach (var log in destTarget.Volume.GetLogs())
+        {
+            OnInformationMessage(log);
         }
 
         stopwatch.Stop();
@@ -184,128 +181,5 @@ public class FsCopyCommand(
         OnInformationMessage(string.Join(", ", stats));
 
         return new Result();
-    }
-
-    protected async Task<Result<IEntryIterator>> GetCopyEntryIterator(IEntryWriter entryWriter, string path,
-        UaeMetadata uaeMetadata)
-    {
-        var appCache = new MemoryAppCache();
-        var uaeMetadataHelper = new UaeMetadataHelper(appCache);
-        
-        var entryIteratorResult = await GetEntryIteratorFromMedia(entryWriter, path, uaeMetadataHelper);
-        if (entryIteratorResult.IsSuccess)
-        {
-            return entryIteratorResult;
-        }
-        
-        // get directory entry iterator and return if successful
-        var directoryEntryIterator = await GetDirectoryEntryIterator(path, recursive, uaeMetadata,
-            uaeMetadataHelper);
-        if (directoryEntryIterator.IsFaulted)
-        {
-            return new Result<IEntryIterator>(directoryEntryIterator.Error);
-        }
-        
-        var initializeResult = await directoryEntryIterator.Value.Initialize();
-        return initializeResult.IsSuccess
-            ? new Result<IEntryIterator>(directoryEntryIterator.Value)
-            : new Result<IEntryIterator>(initializeResult.Error);
-    }
-    
-    private async Task<Result<IEntryIterator>> GetEntryIteratorFromMedia(IEntryWriter entryWriter, string path,
-        UaeMetadataHelper uaeMetadataHelper)
-    {
-        // path is not a directory, so must be a file
-        
-        OnDebugMessage($"Resolving path '{path}'");
-
-        var mediaResult = commandHelper.ResolveMedia(path);
-        if (mediaResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(mediaResult.Error);
-        }
-
-        OnDebugMessage($"Media Path: '{mediaResult.Value.MediaPath}'");
-        OnDebugMessage($"File system Path: '{mediaResult.Value.FileSystemPath}'");
-        
-        // file entry iterator
-        if (string.IsNullOrWhiteSpace(mediaResult.Value.FileSystemPath))
-        {
-            var fileEntryIterator = await GetFileEntryIterator(path, recursive, uaeMetadata, uaeMetadataHelper);
-            if (fileEntryIterator != null && fileEntryIterator.IsSuccess)
-            {
-                var initializeResult = await fileEntryIterator.Value.Initialize();
-                return initializeResult.IsSuccess
-                    ? new Result<IEntryIterator>(fileEntryIterator.Value)
-                    : new Result<IEntryIterator>(initializeResult.Error);
-            }
-        }
-        
-        // get readable media for entry iterator
-        var readableMediaResult = await commandHelper.GetReadableMedia(physicalDrives, mediaResult.Value.MediaPath, mediaResult.Value.Modifiers);
-        if (readableMediaResult.IsFaulted)
-        {
-            return new Result<IEntryIterator>(readableMediaResult.Error);
-        }
-        
-        var fileSystemPath = mediaResult.Value.FileSystemPath ?? string.Empty;
-        var directorySeparatorChar = mediaResult.Value.DirectorySeparatorChar;
-
-        // get pistorm rdb media result from media
-        var piStormRdbMediaResult = MediaHelper.GetPiStormRdbMedia(
-            readableMediaResult.Value, fileSystemPath, directorySeparatorChar);
-
-        // get file system path and media path
-        var media = piStormRdbMediaResult.Media;
-        fileSystemPath = piStormRdbMediaResult.FileSystemPath;
-        var mediaPath = media.Path;
-        
-        // get entry iterator file system path components
-        var entryIteratorFileSystemPathComponents =
-            fileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries)
-                .ToArray();
-        
-        // get entry writer file system path components
-        var entryWriterFileSystemPathComponents =
-            entryWriter.FileSystemPath.Split(directorySeparatorChar, StringSplitOptions.RemoveEmptyEntries).Take(2)
-                .ToArray();
-
-        // return entry iterator from entry writer, if media is adf and media path is the same
-        if (mediaPath.EndsWith(".adf") && mediaPath == entryWriter.MediaPath)
-        {
-            var rootPathComponents = entryIteratorFileSystemPathComponents;
-            var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
-            var initializeResult = await entryIterator.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(entryIterator)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-        
-        // return entry iterator from entry writer, if media path is the same and
-        // entry iterator and writer file system path components starts with the
-        // same 2 path components, e.g. "rdb\1"
-        if (mediaPath == entryWriter.MediaPath &&
-            entryIteratorFileSystemPathComponents.Take(2).SequenceEqual(
-                entryWriterFileSystemPathComponents)) // and only if first two parts of file system path is equal
-        {
-            var rootPathComponents = entryIteratorFileSystemPathComponents.Skip(2).ToArray();
-            var entryIterator = entryWriter.CreateEntryIterator(rootPathComponents, recursive);
-            var initializeResult = await entryIterator.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(entryIterator)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-
-        // floppy or disk entry iterator
-        var diskEntryIterator = await GetDiskEntryIterator(mediaResult.Value, recursive, false, 100 * 1024 * 1024, 512);
-        if (diskEntryIterator != null && diskEntryIterator.IsSuccess)
-        {
-            var initializeResult = await diskEntryIterator.Value.Initialize();
-            return initializeResult.IsSuccess
-                ? new Result<IEntryIterator>(diskEntryIterator.Value)
-                : new Result<IEntryIterator>(initializeResult.Error);
-        }
-
-        return new Result<IEntryIterator>(new Error($"Unsupported path '{path}'"));
     }
 }

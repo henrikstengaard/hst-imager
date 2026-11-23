@@ -9,6 +9,7 @@ using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.Models.FileSystems;
 using Hst.Imager.Core.UaeMetadatas;
+using Hst.Imager.Core.Volumes;
 
 namespace Hst.Imager.Core.Commands.FsCommands;
 
@@ -34,15 +35,25 @@ public class FsAttribCommand(
         using var appCache = new MemoryAppCache();
         var uaeMetadataHelper = new UaeMetadataHelper(appCache);
 
-        var entryIteratorResult = await GetWritableEntryIterator(path, recursive, uaeMetadata, uaeMetadataHelper);
-        if (entryIteratorResult.IsFaulted)
+        using var volumeFactory = CreateVolumeFactory(uaeMetadataHelper, uaeMetadata);
+
+        var volumePathResult = await volumeFactory.Open(path, VolumeAccess.Write, openArchives: false);
+        if (volumePathResult.IsFaulted)
         {
-            return new Result(entryIteratorResult.Error);
+            return new Result(volumePathResult.Error);
         }
 
-        using var entryIterator = entryIteratorResult.Value;
+        var (volume, pathComponents) = volumePathResult.Value;
 
-        var mode = AttributesChange.ResolveMode(attributesMode, entryIterator.AttributesMode);
+        var walkerResult = await VolumeEntryWalker.Create(volume, pathComponents, recursive);
+        if (walkerResult.IsFaulted)
+        {
+            return new Result(walkerResult.Error);
+        }
+
+        var walker = walkerResult.Value;
+
+        var mode = AttributesChange.ResolveMode(attributesMode, volume.AttributesMode);
         var attributesChangeResult = AttributesChange.Parse(mode, attributes);
         if (attributesChangeResult.IsFaulted)
         {
@@ -57,10 +68,10 @@ public class FsAttribCommand(
         OnInformationMessage($"Setting {mode.ToString().ToLowerInvariant()} attributes for path '{path}'");
 
         // path is a directory, when it's not a single file and all path components exist as directories
-        var isDirPath = !entryIterator.IsSingleFileEntryNext &&
-                        entryIterator.PathComponents.Length == entryIterator.DirPathComponents.Length;
+        var isDirPath = !walker.IsSingleFileEntryNext &&
+                        walker.PathComponents.Length == walker.DirPathComponents.Length;
 
-        if (isDirPath && entryIterator.DirPathComponents.Length == 0 && !recursive)
+        if (isDirPath && walker.DirPathComponents.Length == 0 && !recursive)
         {
             return new Result(new Error(
                 $"Path '{path}' is root directory, use wildcard or recursive to set attributes of entries"));
@@ -69,12 +80,12 @@ public class FsAttribCommand(
         var entries = new List<Entry>();
 
         // set attributes of directory itself
-        if (isDirPath && entryIterator.DirPathComponents.Length > 0)
+        if (isDirPath && walker.DirPathComponents.Length > 0)
         {
             entries.Add(new Entry
             {
                 Type = EntryType.Dir,
-                FullPathComponents = entryIterator.DirPathComponents,
+                FullPathComponents = walker.DirPathComponents,
                 RelativePathComponents = []
             });
         }
@@ -82,13 +93,13 @@ public class FsAttribCommand(
         // set attributes of entries, if path is a single file, uses wildcard or is recursive
         if (!isDirPath || recursive)
         {
-            while (await entryIterator.Next())
+            while (await walker.Next())
             {
-                var entry = entryIterator.Current;
+                var entry = walker.Current;
 
                 // skip directory entries when there are no entry path components or when it's a single file.
                 if (entry.Type == EntryType.Dir &&
-                    (entryIterator.IsSingleFileEntryNext || entry.RelativePathComponents.Length == 0))
+                    (walker.IsSingleFileEntryNext || entry.RelativePathComponents.Length == 0))
                 {
                     continue;
                 }
@@ -107,10 +118,10 @@ public class FsAttribCommand(
                 break;
             }
 
-            var setAttributesResult = await entryIterator.SetAttributes(entry.FullPathComponents, attributesChange);
+            var setAttributesResult = await volume.SetAttributes(entry.FullPathComponents, attributesChange);
             if (setAttributesResult.IsFaulted)
             {
-                await entryIterator.Flush();
+                await volume.Flush();
                 return new Result(setAttributesResult.Error);
             }
 
@@ -126,10 +137,10 @@ public class FsAttribCommand(
             }
 
             OnInformationMessage(
-                $"{attributesChange.Format(setAttributesResult.Value)} {entryIterator.MediaPath.Join(entry.FullPathComponents)}");
+                $"{attributesChange.Format(setAttributesResult.Value)} {volume.MediaPath.Join(entry.FullPathComponents)}");
         }
 
-        await entryIterator.Flush();
+        await volume.Flush();
 
         stopwatch.Stop();
 
