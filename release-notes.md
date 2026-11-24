@@ -7,13 +7,19 @@ Hst Imager Gui:
 - Show original file size, optimized or compacted file size and percent reduced when optimize completes.
 - Change size units in blank, format, optimize and media selection to binary units (1 GB = 1024 MB) like console app and sizes displayed.
 - Show bytes processed and elapsed time without total size and ETA when writing, converting or comparing gzip compressed images, as uncompressed size is unknown.
+- Add Smart File System (SFS0) to format page with option to download SmartFilesystem from aminet.net.
+- Add formatting Smart File System (SFS0) partitions in Rigid Disk Block in partition page with option to download SmartFilesystem from aminet.net.
 
 Hst Imager console:
 - Add original file size, optimized or compacted file size and percent reduced to optimize command output.
 - Add compact option to optimize command copying only used sectors to a new sparse image file (sparse img/hdf or dynamic vhd), which replaces the image file. Zero filled sectors are not written. Vhd image files are always compacted when optimized.
-- Add file systems option to optimize command examining FAT12/16/32, exFAT, OFS/FFS (DOS\0-7) and PFS3 file systems in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions, so free sectors are not copied when compacting.
+- Add file systems option to optimize command examining FAT12/16/32, exFAT, OFS/FFS (DOS\0-7), PFS3 and SFS file systems in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions, so free sectors are not copied when compacting.
 - Read uncompressed size of xz compressed images from xz indexes instead of decompressing entire image when opening it.
 - Gzip compressed images are no longer decompressed to determine uncompressed size when opening them. Size is unknown and data is processed until end of image, so progress shows bytes processed and elapsed time only. Converting to vhd decompresses the gzip compressed image once to determine the vhd size.
+- Add Smart File System (SFS0) support for reading and writing files with fs commands and formatting with rdb part format and format commands. SFS2 (large file support) is not supported.
+- Format command asks to download SmartFilesystem from aminet.net, if file system path is not set for SFS0.
+- File systems in amiga hunk format (68k) are preferred when finding file systems in media containing file systems for multiple platforms, e.g. SFS.lha with SmartFilesystem for AmigaOS 3.x and AmigaOS 4.
+- Update Hst.Amiga to v1.0.291, Hst.Core and hst.compression to v1.0.104.
 
 ## v1.0
 

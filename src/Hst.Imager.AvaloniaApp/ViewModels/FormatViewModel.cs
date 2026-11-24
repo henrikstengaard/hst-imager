@@ -24,6 +24,7 @@ public class FormatTypeOption
 public class FormatViewModel : ViewModelBase
 {
     private const string Pfs3AioUrl = FormatCommand.Pfs3AioLhaUrl;
+    private const string SmartFileSystemUrl = FormatCommand.SmartFileSystemLhaUrl;
 
     private static readonly List<SelectOption> BasicFileSystemOptions =
     [
@@ -37,7 +38,8 @@ public class FormatViewModel : ViewModelBase
         new() { Title = "PDS\\3 (direct scsi)", Value = "pds3" },
         new() { Title = "PFS\\3", Value = "pfs3" },
         new() { Title = "DOS\\3", Value = "dos3" },
-        new() { Title = "DOS\\7 (long filename)", Value = "dos7" }
+        new() { Title = "DOS\\7 (long filename)", Value = "dos7" },
+        new() { Title = "SFS\\0 (Smart File System)", Value = "sfs0" }
     ];
 
     private static readonly List<SelectOption> DefaultMaxPartitionSizeOptions =
@@ -80,7 +82,7 @@ public class FormatViewModel : ViewModelBase
     private FormatTypeOption _selectedFormatType;
     private List<SelectOption> _fileSystemOptions = BasicFileSystemOptions;
     private SelectOption _selectedFileSystem = BasicFileSystemOptions[0];
-    private bool _downloadPfs3Aio = true;
+    private bool _downloadFileSystem = true;
     private string _fileSystemPath = Pfs3AioUrl;
     private decimal _size;
     private string _sizeUnit = "Bytes";
@@ -152,7 +154,7 @@ public class FormatViewModel : ViewModelBase
             {
                 FileSystemOptions = RdbFileSystemOptions;
                 _selectedFileSystem = RdbFileSystemOptions[0];
-                DownloadPfs3Aio = true;
+                DownloadFileSystem = true;
                 Kickstart31 = false;
                 UpdateMaxPartitionSizeOptions();
             }
@@ -182,7 +184,7 @@ public class FormatViewModel : ViewModelBase
         {
             if (value == null || ReferenceEquals(_selectedFileSystem, value)) return;
             this.RaiseAndSetIfChanged(ref _selectedFileSystem, value);
-            DownloadPfs3Aio = IsPfs3FileSystem;
+            DownloadFileSystem = HasDownloadableFileSystem;
             UpdateMaxPartitionSizeOptions();
             UpdateClusterSizeOptions();
             RaiseFileSystemChanged();
@@ -190,8 +192,18 @@ public class FormatViewModel : ViewModelBase
     }
 
     public bool IsPfs3FileSystem => _selectedFileSystem.Value is "pds3" or "pfs3";
-    public bool ShowDownloadPfs3Aio => IsRdbFormat && IsPfs3FileSystem;
-    public bool ShowFileSystemPath => IsRdbFormat && !_downloadPfs3Aio;
+    public bool IsSmartFileSystem => _selectedFileSystem.Value is "sfs0";
+
+    /// <summary>
+    /// File system can be downloaded from aminet.net: pfs3aio for PFS3 and PDS3 or SmartFilesystem for SFS0.
+    /// </summary>
+    private bool HasDownloadableFileSystem => IsPfs3FileSystem || IsSmartFileSystem;
+    private string DownloadFileSystemName => IsSmartFileSystem ? "SmartFilesystem" : "pfs3aio";
+    private string DownloadFileSystemUrl => IsSmartFileSystem ? SmartFileSystemUrl : Pfs3AioUrl;
+    public string DownloadFileSystemTitle => $"Download {DownloadFileSystemName} from aminet.net";
+
+    public bool ShowDownloadFileSystem => IsRdbFormat && HasDownloadableFileSystem;
+    public bool ShowFileSystemPath => IsRdbFormat && !_downloadFileSystem;
     public bool ShowUseExperimental => IsRdbFormat && IsPfs3FileSystem;
     public bool ShowClusterSize => !IsRdbFormat && ClusterSizeOptions.IsSupported(_selectedFileSystem.Value);
 
@@ -217,13 +229,13 @@ public class FormatViewModel : ViewModelBase
         }
     }
 
-    public bool DownloadPfs3Aio
+    public bool DownloadFileSystem
     {
-        get => _downloadPfs3Aio;
+        get => _downloadFileSystem;
         set
         {
-            this.RaiseAndSetIfChanged(ref _downloadPfs3Aio, value);
-            FileSystemPath = value ? Pfs3AioUrl : string.Empty;
+            this.RaiseAndSetIfChanged(ref _downloadFileSystem, value);
+            FileSystemPath = value ? DownloadFileSystemUrl : string.Empty;
             this.RaisePropertyChanged(nameof(ShowFileSystemPath));
         }
     }
@@ -276,7 +288,9 @@ public class FormatViewModel : ViewModelBase
     {
         this.RaisePropertyChanged(nameof(SelectedFileSystem));
         this.RaisePropertyChanged(nameof(IsPfs3FileSystem));
-        this.RaisePropertyChanged(nameof(ShowDownloadPfs3Aio));
+        this.RaisePropertyChanged(nameof(IsSmartFileSystem));
+        this.RaisePropertyChanged(nameof(DownloadFileSystemTitle));
+        this.RaisePropertyChanged(nameof(ShowDownloadFileSystem));
         this.RaisePropertyChanged(nameof(ShowFileSystemPath));
         this.RaisePropertyChanged(nameof(ShowUseExperimental));
         this.RaisePropertyChanged(nameof(ShowClusterSize));
@@ -324,8 +338,8 @@ public class FormatViewModel : ViewModelBase
             ? string.Empty
             : $", cluster size {ClusterSize?.Title}";
         var description = $"{sourceTypeFormatted} '{Source.Media?.Name ?? path}' with '{_selectedFormatType.Title}' format type, '{_selectedFileSystem.Title}' file system{sizeFormatted}{clusterSizeFormatted}";
-        var downloadFormatted = IsRdbFormat && IsPfs3FileSystem && _downloadPfs3Aio
-            ? $" This will download pfs3aio from '{Pfs3AioUrl}'."
+        var downloadFormatted = IsRdbFormat && HasDownloadableFileSystem && _downloadFileSystem
+            ? $" This will download {DownloadFileSystemName} from '{DownloadFileSystemUrl}'."
             : string.Empty;
         if (!await _dialogService.ShowConfirmDialogAsync("Format", $"Do you want to format {description}?{downloadFormatted}"))
             return;

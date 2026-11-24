@@ -62,6 +62,7 @@ public static class AdfTestHelper
         await fileSystemVolume.CreateDirectory("dir3");
         await fileSystemVolume.CreateFile("file1.txt", true, true);
         
+        await fileSystemVolume.DisposeAsync();
         media.Dispose();
     }
     
@@ -76,6 +77,7 @@ public static class AdfTestHelper
             await fileSystemVolume.ChangeDirectory(dirPathComponent);
         }
         
+        await fileSystemVolume.DisposeAsync();
         media.Dispose();
     }
 
@@ -98,6 +100,7 @@ public static class AdfTestHelper
         
         await fileSystemVolume.CreateFile(dirPathComponents[^1], true, true);
         
+        await fileSystemVolume.DisposeAsync();
         media.Dispose();
     }
     
@@ -113,6 +116,7 @@ public static class AdfTestHelper
 
         var entries = await fileSystemVolume.ListEntries();
         
+        await fileSystemVolume.DisposeAsync();
         media.Dispose();
 
         return entries;

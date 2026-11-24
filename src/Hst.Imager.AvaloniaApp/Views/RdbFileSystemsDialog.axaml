@@ -79,7 +79,7 @@
             <TextBlock Classes="field-label" Text="DOS type" />
           </StackPanel>
           <TextBox Text="{Binding SelectedFileSystem.DosTypeText, FallbackValue='', UpdateSourceTrigger=PropertyChanged}"
-                   PlaceholderText="e.g. PDS3, PFS3, DOS3" />
+                   PlaceholderText="e.g. PDS3, PFS3, DOS3, SFS0" />
           <TextBlock Classes="error-text" TextWrapping="Wrap"
                      IsVisible="{Binding SelectedFileSystem.HasDosTypeError, FallbackValue=False}"
                      Text="{Binding SelectedFileSystem.DosTypeError, FallbackValue=''}" />

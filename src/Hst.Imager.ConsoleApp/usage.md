@@ -178,7 +178,7 @@ Example of compacting a 4GB vhd image file:
 hst.imager optimize 4gb.vhd
 ```
 
-Option `--file-systems` (`-fs`) examines file systems to determine which sectors are used, so free sectors are not copied even if they contain data from deleted files. Supported file systems are FAT12, FAT16, FAT32, exFAT, OFS/FFS (DOS0-DOS7) and PFS3 in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions as well as partition hardfiles and floppy images without partition table. Sectors outside partitions and in partitions with unknown file systems are copied, if they are not zero filled.
+Option `--file-systems` (`-fs`) examines file systems to determine which sectors are used, so free sectors are not copied even if they contain data from deleted files. Supported file systems are FAT12, FAT16, FAT32, exFAT, OFS/FFS (DOS0-DOS7), PFS3 and SFS in Rigid Disk Block, Master Boot Record and Guid Partition Table partitions as well as partition hardfiles and floppy images without partition table. Sectors outside partitions and in partitions with unknown file systems are copied, if they are not zero filled.
 
 Example of compacting a 4GB vhd image file only copying sectors used by file systems:
 ```
@@ -321,6 +321,11 @@ Example of adding a file system with dos type PDS3 to Rigid Disk Block on a 4GB 
 hst.imager rdb fs add 4gb.vhd pfs3aio PDS3
 ```
 
+Example of adding Smart File System (SmartFilesystem from AmigaOS3.x\L in SFS.lha on aminet.net) with dos type SFS0 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb fs add 4gb.vhd SmartFilesystem SFS0
+```
+
 ## Delete file system from Rigid Disk Block
 
 Deletes a file system from Rigid Disk Block.
@@ -410,6 +415,11 @@ Example of adding a PDS3 partition of remaining space with device name DH0 to Ri
 hst.imager rdb part add 4gb.vhd DH0 PDS3 *
 ```
 
+Example of adding a Smart File System SFS0 partition of remaining space with device name DH1 to Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager rdb part add 4gb.vhd DH1 SFS0 *
+```
+
 ## Delete partition from Rigid Disk Block
 
 Deletes a partition from Rigid Disk Block.
@@ -451,6 +461,8 @@ Example of formatting partition number 1 with volume name "Workbench" in Rigid D
 ```
 hst.imager rdb part format 4gb.vhd 1 Workbench
 ```
+
+Partitions with dos types DOS0-DOS7 (OFS/FFS), PFS3/PDS3 (PFS3) and SFS0 (Smart File System) can be formatted. SFS2 (Smart File System with large file support) is not supported.
 
 ## Import partition to Rigid Disk Block
 

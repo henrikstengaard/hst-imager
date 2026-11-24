@@ -46,9 +46,9 @@
                   HorizontalAlignment="Stretch" />
       </StackPanel>
 
-      <CheckBox Content="Download pfs3aio from aminet.net"
-                IsChecked="{Binding DownloadPfs3Aio}"
-                IsVisible="{Binding ShowDownloadPfs3Aio}" />
+      <CheckBox Content="{Binding DownloadFileSystemTitle}"
+                IsChecked="{Binding DownloadFileSystem}"
+                IsVisible="{Binding ShowDownloadFileSystem}" />
 
       <!-- File system file -->
       <StackPanel Spacing="4" IsVisible="{Binding ShowFileSystemPath}">

@@ -405,7 +405,12 @@ namespace Hst.Imager.ConsoleApp
         {
             if (IsPfs3Format(formatType, fileSystem) && string.IsNullOrWhiteSpace(fileSystemPath))
             {
-                fileSystemPath = GetPfs3AioPath();
+                fileSystemPath = GetFileSystemDownloadPath("PFS3", "pfs3aio", FormatCommand.Pfs3AioLhaUrl);
+            }
+
+            if (IsSmartFileSystemFormat(formatType, fileSystem) && string.IsNullOrWhiteSpace(fileSystemPath))
+            {
+                fileSystemPath = GetFileSystemDownloadPath("SFS", "SmartFilesystem", FormatCommand.SmartFileSystemLhaUrl);
             }
 
             using var commandHelper = GetCommandHelper();
@@ -417,22 +422,32 @@ namespace Hst.Imager.ConsoleApp
                 kickstart31, ParseClusterSize(clusterSize)));
         }
 
+        private static bool IsRdbFormatType(FormatType formatType) =>
+            formatType is FormatType.Rdb or FormatType.PiStorm or FormatType.PiStormMbr or FormatType.PiStormGpt;
+
         private static bool IsPfs3Format(FormatType formatType, string fileSystem) =>
-            (formatType is FormatType.Rdb or FormatType.PiStorm or FormatType.PiStormMbr or FormatType.PiStormGpt) &&
+            IsRdbFormatType(formatType) &&
             (string.Equals(fileSystem, "pfs3", StringComparison.OrdinalIgnoreCase) ||
              string.Equals(fileSystem, "pds3", StringComparison.OrdinalIgnoreCase));
 
+        private static bool IsSmartFileSystemFormat(FormatType formatType, string fileSystem) =>
+            IsRdbFormatType(formatType) &&
+            string.Equals(fileSystem, "sfs0", StringComparison.OrdinalIgnoreCase);
+
         /// <summary>
-        /// Get path to pfs3aio file. Uses previously downloaded pfs3aio file, if it exists.
-        /// Otherwise the user is asked before downloading pfs3aio from aminet.net.
+        /// Get path to file system file to download. Uses previously downloaded file, if it exists.
+        /// Otherwise the user is asked before downloading file system from url.
         /// </summary>
-        /// <returns>Path or url to pfs3aio file, null if user declined download.</returns>
-        private static string GetPfs3AioPath()
+        /// <param name="dosType">Dos type requiring file system, e.g. PFS3.</param>
+        /// <param name="fileSystemName">Name of file system, e.g. pfs3aio.</param>
+        /// <param name="url">Url to download file system from.</param>
+        /// <returns>Path or url to file system file, null if user declined download.</returns>
+        private static string GetFileSystemDownloadPath(string dosType, string fileSystemName, string url)
         {
-            var pfs3AioPath = Path.Combine(AppState.Instance.AppPath, Path.GetFileName(FormatCommand.Pfs3AioLhaUrl));
-            if (File.Exists(pfs3AioPath))
+            var downloadedPath = Path.Combine(AppState.Instance.AppPath, Path.GetFileName(url));
+            if (File.Exists(downloadedPath))
             {
-                return pfs3AioPath;
+                return downloadedPath;
             }
 
             if (Console.IsInputRedirected)
@@ -440,12 +455,12 @@ namespace Hst.Imager.ConsoleApp
                 return null;
             }
 
-            Console.Write($"PFS3 file system requires pfs3aio. Download pfs3aio from '{FormatCommand.Pfs3AioLhaUrl}'? [y/N] ");
+            Console.Write($"{dosType} file system requires {fileSystemName}. Download {fileSystemName} from '{url}'? [y/N] ");
             var answer = Console.ReadLine();
 
             return string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase) ||
                    string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase)
-                ? FormatCommand.Pfs3AioLhaUrl
+                ? url
                 : null;
         }
 

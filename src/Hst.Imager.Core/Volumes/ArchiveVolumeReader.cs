@@ -114,10 +114,10 @@ public static partial class ArchiveVolumeReader
     public static async Task<ArchiveVolume> ReadLha(Stream stream, LhaOptions lhaOptions = null)
     {
         var mediaPath = MediaPath.LhaArchivePath;
-        var lhaArchive = new LhaArchive(stream, lhaOptions ?? LhaOptions.AmigaLhaOptions);
+        var lhaArchive = new LhaArchive(stream, lhaOptions ?? LhaOptions.AmigaLhaOptions, true);
 
         var items = new List<ArchiveItem>();
-        foreach (var lhaEntry in await lhaArchive.Entries())
+        foreach (var lhaEntry in await lhaArchive.EntriesAsync())
         {
             // skip lha entry, if name is empty.
             // shareware version of picasso96.lha from aminet has 2 files in root directory without filename.
@@ -129,7 +129,7 @@ public static partial class ArchiveVolumeReader
             var entryPath = GetLhaEntryName(lhaEntry.Name);
             var isDir = entryPath.EndsWith('\\');
 
-            var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attribute);
+            var protectionBits = ProtectionBitsConverter.ToProtectionBits(lhaEntry.Attributes);
             var properties = new Dictionary<string, string>
             {
                 { Constants.EntryPropertyNames.ProtectionBits, ((int)protectionBits ^ 0xf).ToString() }
@@ -142,13 +142,13 @@ public static partial class ArchiveVolumeReader
             }
 
             var header = lhaEntry;
-            items.Add(new ArchiveItem(mediaPath.Split(entryPath), isDir, lhaEntry.UnixLastModifiedStamp,
-                lhaEntry.OriginalSize, properties, entryPath, () =>
+            items.Add(new ArchiveItem(mediaPath.Split(entryPath), isDir, lhaEntry.Date,
+                lhaEntry.UnpackedSize, properties, entryPath, async () =>
                 {
                     var output = new MemoryStream();
-                    lhaArchive.Extract(header, output);
+                    await lhaArchive.ExtractAsync(header, output);
                     output.Position = 0;
-                    return Task.FromResult<Stream>(output);
+                    return (Stream)output;
                 }));
         }
 
@@ -176,16 +176,16 @@ public static partial class ArchiveVolumeReader
     public static async Task<ArchiveVolume> ReadLzx(Stream stream)
     {
         var mediaPath = MediaPath.LzxArchivePath;
-        var lzxArchive = new LzxArchive(stream, LzxOptions.AmigaLzxOptions);
+        var lzxArchive = new LzxArchive(stream, LzxOptions.AmigaLzxOptions, true);
 
         var items = new List<ArchiveItem>();
-        while (await lzxArchive.Next() is { } lzxEntry)
+        while (await lzxArchive.NextAsync() is { } lzxEntry)
         {
             // extract lzx entry, lzx archive can only be read sequentially
             byte[] data;
             using (var memoryStream = new MemoryStream())
             {
-                await lzxArchive.Extract(memoryStream);
+                await lzxArchive.ExtractCurrentAsync(memoryStream);
                 data = memoryStream.ToArray();
             }
 

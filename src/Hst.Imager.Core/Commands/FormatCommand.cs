@@ -42,6 +42,7 @@ namespace Hst.Imager.Core.Commands
         private const long PiStormBootPartitionSize = 1073741824; // [Math]::Pow(2, 30)
 
         public const string Pfs3AioLhaUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+        public const string SmartFileSystemLhaUrl = "https://aminet.net/disk/misc/SFS.lha";
 
         /// <summary>
         /// Format command.
@@ -160,6 +161,15 @@ namespace Hst.Imager.Core.Commands
                 string.IsNullOrWhiteSpace(fileSystemPath))
             {
                 return new Result(new Error($"File system path required for file system '{rdbFileSystem.ToString().ToUpper()}'. Use path to pfs3aio file or url '{Pfs3AioLhaUrl}' to download it"));
+            }
+
+            // file system path is required for sfs0 file system. smart file system is not downloaded
+            // automatically, so the user must explicitly provide a path or the smart file system url to download it
+            if (IsRdbOrPiStorm &&
+                rdbFileSystem == FormatRdbFileSystem.Sfs0 &&
+                string.IsNullOrWhiteSpace(fileSystemPath))
+            {
+                return new Result(new Error($"File system path required for file system '{rdbFileSystem.ToString().ToUpper()}'. Use path to SmartFilesystem file or url '{SmartFileSystemLhaUrl}' to download it"));
             }
 
             if (IsRdbOrPiStorm &&
@@ -338,6 +348,7 @@ namespace Hst.Imager.Core.Commands
             {
                 FormatRdbFileSystem.Dos3 or FormatRdbFileSystem.Dos7 => "FastFileSystem",
                 FormatRdbFileSystem.Pfs3 or FormatRdbFileSystem.Pds3 => "pfs3aio",
+                FormatRdbFileSystem.Sfs0 => "SmartFilesystem",
                 _ => throw new ArgumentOutOfRangeException(nameof(formatRdbFileSystem), formatRdbFileSystem, null)
             };
         }
@@ -541,7 +552,7 @@ namespace Hst.Imager.Core.Commands
 
             UpdateCommandsExecuted(1);
 
-            // add pfs3 filesystem
+            // add file system
             var rdbFsAddCommand = new RdbFsAddCommand(loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper, physicalDrives,
                 rdbPath, fileSystemPath, dosType, string.Empty, null, null);
             AddMessageEvents(rdbFsAddCommand);

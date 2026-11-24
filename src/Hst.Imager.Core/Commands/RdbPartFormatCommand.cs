@@ -10,6 +10,7 @@ namespace Hst.Imager.Core.Commands
     using Amiga.Extensions;
     using Amiga.FileSystems.FastFileSystem;
     using Amiga.FileSystems.Pfs3;
+    using Amiga.FileSystems.SmartFileSystem;
     using Amiga.RigidDiskBlocks;
     using Extensions;
     using Hst.Core;
@@ -197,6 +198,9 @@ namespace Hst.Imager.Core.Commands
                 case "PDS\\3":
                 case "PFS\\3":
                     await Pfs3Formatter.FormatPartition(stream, partitionBlock, name);
+                    break;
+                case "SFS\\0":
+                    await SmartFileSystemFormatter.FormatPartition(stream, partitionBlock, name);
                     break;
                 default:
                     return new Result(new Error($"Unsupported file system '{partitionBlock.DosTypeFormatted}'"));

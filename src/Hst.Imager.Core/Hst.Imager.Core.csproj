@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <ItemGroup>
-      <PackageReference Include="Hst.Amiga" Version="0.6.238" />
-      <PackageReference Include="hst.compression" Version="0.4.91" />
-      <PackageReference Include="Hst.Core" Version="0.4.91" />
+      <PackageReference Include="Hst.Amiga" Version="1.0.291" />
+      <PackageReference Include="hst.compression" Version="1.0.104" />
+      <PackageReference Include="Hst.Core" Version="1.0.104" />
       <PackageReference Include="LTRData.DiscUtils.Containers" Version="1.0.89" />
       <PackageReference Include="LTRData.DiscUtils.ExFat" Version="1.0.89" />
       <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.89" />
@@ -11,6 +11,7 @@
       <PackageReference Include="LTRData.DiscUtils.Vhd" Version="1.0.89" />
       <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
       <PackageReference Include="plist-cil" Version="2.3.1" />
+      <PackageReference Include="System.Runtime.Caching" Version="10.0.13" />
       <PackageReference Include="SharpCompress" Version="0.50.5" />
       <PackageReference Include="SharpZipLib" Version="1.4.2" />
       <!-- Override vulnerable transitive version from Hst.Core -> Microsoft.Windows.Compatibility -->

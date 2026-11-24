@@ -20,7 +20,7 @@
 
       <CheckBox IsChecked="{Binding ExamineFileSystems}" IsEnabled="{Binding Source.HasMedia}">
         <TextBlock TextWrapping="Wrap"
-                   Text="Examine file systems to only copy sectors used by file systems (FAT, exFAT, FFS, PFS3)." />
+                   Text="Examine file systems to only copy sectors used by file systems (FAT, exFAT, FFS, PFS3, SFS)." />
       </CheckBox>
 
       <!-- Advanced -->

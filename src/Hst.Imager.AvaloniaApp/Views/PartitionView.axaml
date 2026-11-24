@@ -173,6 +173,24 @@
             </StackPanel>
           </StackPanel>
 
+          <!-- download SmartFilesystem is always shown, as it makes SFS\0 available for new partitions -->
+          <StackPanel Spacing="4">
+            <CheckBox Content="Download SmartFilesystem from aminet.net for SFS\0 partitions"
+                      IsChecked="{Binding DownloadSmartFileSystem}" />
+            <StackPanel Spacing="4" IsVisible="{Binding ShowSmartFileSystemPath}">
+              <StackPanel Orientation="Horizontal" Spacing="5">
+                <ia:Icon Value="fa-file" Classes="field-icon" />
+                <TextBlock Classes="field-label" Text="SmartFilesystem file or media (lha, adf, iso)" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Grid.Column="0" Text="{Binding SmartFileSystemPath}" />
+                <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseSmartFileSystemPathCommand}" ToolTip.Tip="Browse">
+                  <ia:Icon Value="fa-folder-open" />
+                </Button>
+              </Grid>
+            </StackPanel>
+          </StackPanel>
+
           <StackPanel Spacing="4" IsVisible="{Binding NeedsFastFileSystem}">
             <StackPanel Orientation="Horizontal" Spacing="5">
               <ia:Icon Value="fa-file" Classes="field-icon" />

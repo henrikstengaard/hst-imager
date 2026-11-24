@@ -203,12 +203,16 @@ public class RdbFileSystemsViewModel : ViewModelBase
         if (path == null)
             return;
 
-        // pfs3aio is imported by default from media named pfs3, otherwise FastFileSystem
-        var isPfs3 = System.IO.Path.GetFileName(path).Contains("pfs3", StringComparison.OrdinalIgnoreCase);
+        // pfs3aio is imported by default from media named pfs3, SmartFilesystem from media named sfs or
+        // smartfilesystem, otherwise FastFileSystem
+        var mediaName = System.IO.Path.GetFileName(path);
+        var isPfs3 = mediaName.Contains("pfs3", StringComparison.OrdinalIgnoreCase);
+        var isSmartFileSystem = !isPfs3 && (mediaName.StartsWith("sfs", StringComparison.OrdinalIgnoreCase) ||
+                                            mediaName.Contains("smartfilesystem", StringComparison.OrdinalIgnoreCase));
         var fileSystem = new RdbFileSystemEntry(RdbFileSystemSource.Media)
         {
-            DosType = isPfs3 ? "PDS3" : "DOS3",
-            Name = isPfs3 ? "pfs3aio" : "FastFileSystem"
+            DosType = isPfs3 ? "PDS3" : isSmartFileSystem ? "SFS0" : "DOS3",
+            Name = isPfs3 ? "pfs3aio" : isSmartFileSystem ? "SmartFilesystem" : "FastFileSystem"
         };
         AddFileSystem(fileSystem);
         fileSystem.Path = path;

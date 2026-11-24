@@ -41,7 +41,8 @@ public static class PartitionFileSystems
         new() { Title = "PDS\\3 (direct scsi)", Value = "pds3" },
         new() { Title = "PFS\\3", Value = "pfs3" },
         new() { Title = "DOS\\3", Value = "dos3" },
-        new() { Title = "DOS\\7 (long filename)", Value = "dos7" }
+        new() { Title = "DOS\\7 (long filename)", Value = "dos7" },
+        new() { Title = "SFS\\0 (Smart File System)", Value = "sfs0" }
     ];
 
     public static List<SelectOption> GetOptions(PartitionTableType tableType, bool isNew) =>
@@ -79,10 +80,16 @@ public static class PartitionFileSystems
         fileSystem[3] is >= '0' and <= '7';
 
     /// <summary>
-    /// Rigid disk block partitions can be formatted with fast file system and pfs3.
+    /// Smart file system is used by dos type SFS\0. SFS\2 with large file support is not supported.
+    /// </summary>
+    public static bool IsSmartFileSystem(string fileSystem) =>
+        string.Equals(fileSystem, "sfs0", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Rigid disk block partitions can be formatted with fast file system, pfs3 and smart file system.
     /// </summary>
     public static bool IsRdbFormattable(string fileSystem) =>
-        IsPfs3(fileSystem.ToLowerInvariant()) || IsFastFileSystem(fileSystem);
+        IsPfs3(fileSystem.ToLowerInvariant()) || IsFastFileSystem(fileSystem) || IsSmartFileSystem(fileSystem);
 
     /// <summary>
     /// Get color for file system similar to colors used by gparted.
@@ -189,7 +196,7 @@ public static class PartitionTypes
         new() { Title = "DOS\\5 (FFS dircache)", Value = "DOS5" },
         new() { Title = "DOS\\6 (OFS long filenames)", Value = "DOS6" },
         new() { Title = "SFS\\0 (SmartFileSystem)", Value = "SFS0" },
-        new() { Title = "SFS\\2 (SmartFileSystem large partitions)", Value = "SFS2" },
+        new() { Title = "SFS\\2 (SmartFileSystem large files, not formatted)", Value = "SFS2" },
         new() { Title = "Enter DOS type manually", Value = PartitionTypeOption.CustomValue }
     ];
 
@@ -556,7 +563,7 @@ public class PartitionEntryViewModel : ReactiveObject
     /// partition must be one of the dos types available, which are dos types of file systems in rigid disk block.
     /// </summary>
     public string? DialogError => IsNew && IsRdb && _partitionTypeOptions.Count == 0
-        ? "Rigid Disk Block doesn't have any file systems. Add a file system to Rigid Disk Block or check download pfs3aio from aminet.net to add a partition."
+        ? "Rigid Disk Block doesn't have any file systems. Add a file system to Rigid Disk Block or check download pfs3aio or SmartFilesystem from aminet.net to add a partition."
         : IsNew && IsRdb && PartitionTypeOption == null
             ? $"Rigid Disk Block doesn't have a file system with DOS type {PartitionFileSystems.FormatDosType(PartitionType)}."
             : PartitionTypeError;
@@ -589,7 +596,7 @@ public class PartitionEntryViewModel : ReactiveObject
 
     /// <summary>
     /// New partition is formatted with a file system. Rigid disk block partitions can only be formatted with fast file
-    /// system and pfs3, master boot record and guid partitions are formatted, unless no file system is selected.
+    /// system, pfs3 and smart file system, master boot record and guid partitions are formatted, unless no file system is selected.
     /// </summary>
     public bool IsFormattable => IsRdb
         ? PartitionFileSystems.IsRdbFormattable(_fileSystem)
@@ -1827,7 +1834,7 @@ public class PartitionLayout
     /// Add new partition in unallocated space with default file system, name and size filling unallocated space.
     /// </summary>
     public PartitionEntryViewModel? AddPartition(long freeStart, long freeEnd, bool useExperimental,
-        bool downloadPfs3Aio, AddPartitionPlacement placement = AddPartitionPlacement.All)
+        bool downloadPfs3Aio, bool downloadSmartFileSystem, AddPartitionPlacement placement = AddPartitionPlacement.All)
     {
         if (!CanAddPartition || GetAddRange(freeStart, freeEnd, placement) is not { } range)
             return null;
@@ -1838,7 +1845,7 @@ public class PartitionLayout
         if (IsRdb)
         {
             // dos type of first file system available or none, if no file systems are available
-            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio);
+            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio, downloadSmartFileSystem);
             var isFirst = _partitions.Count == 0;
             entry.PartitionType = entry.PartitionTypeOptions.FirstOrDefault()?.Value ?? string.Empty;
             entry.DeviceName = GetNextDeviceName();
@@ -1871,7 +1878,8 @@ public class PartitionLayout
     /// with room for it, preferring unallocated space after partition. Only layout details are cloned, not data, so
     /// new partition is added and formatted like other new partitions.
     /// </summary>
-    public PartitionEntryViewModel? ClonePartition(PartitionEntryViewModel source, bool downloadPfs3Aio)
+    public PartitionEntryViewModel? ClonePartition(PartitionEntryViewModel source, bool downloadPfs3Aio,
+        bool downloadSmartFileSystem)
     {
         if (!CanClonePartition(source) || FindCloneStart(source) is not { } start)
             return null;
@@ -1883,7 +1891,7 @@ public class PartitionLayout
         var entry = new PartitionEntryViewModel(TableType, true);
         if (IsRdb)
         {
-            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio);
+            entry.PartitionTypeOptions = GetDosTypeOptions(downloadPfs3Aio, downloadSmartFileSystem);
             entry.FileSystem = partitionType.ToLowerInvariant();
             entry.DeviceName = GetNextDeviceName();
             entry.Label = GetNextWorkLabel();
@@ -2159,14 +2167,15 @@ public class PartitionLayout
     /// <summary>
     /// Dos types for new rigid disk block partitions, which are dos types of file systems in rigid disk block showing
     /// their names. PFS3 and PDS3 are also available without a file system in rigid disk block, if pfs3aio is
-    /// downloaded from aminet.net.
+    /// downloaded from aminet.net, and SFS0 is available, if SmartFilesystem is downloaded from aminet.net.
     /// </summary>
-    public List<PartitionTypeOption> GetDosTypeOptions(bool downloadPfs3Aio)
+    public List<PartitionTypeOption> GetDosTypeOptions(bool downloadPfs3Aio, bool downloadSmartFileSystem)
     {
         var common = PartitionTypes.RdbOptions.Where(x => !x.IsCustom)
             .Select(x => (Option: x, FileSystem: FindFileSystem(x.Value)))
             .Where(x => x.FileSystem != null ||
-                        (downloadPfs3Aio && PartitionFileSystems.IsPfs3(x.Option.Value.ToLowerInvariant())))
+                        (downloadPfs3Aio && PartitionFileSystems.IsPfs3(x.Option.Value.ToLowerInvariant())) ||
+                        (downloadSmartFileSystem && PartitionFileSystems.IsSmartFileSystem(x.Option.Value)))
             .Select(x => new PartitionTypeOption
             {
                 Title = x.FileSystem == null

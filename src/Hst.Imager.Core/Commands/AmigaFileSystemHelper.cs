@@ -45,7 +45,12 @@ namespace Hst.Imager.Core.Commands
                 return new Result<Tuple<string, byte[]>>(fileSystemsResult.Error);
             }
 
-            var fileSystemWithHighestVersion = fileSystemsResult.Value
+            // prefer file systems in amiga hunk format (68k), if any are found. archives can contain
+            // file systems for multiple platforms with same name, e.g. smart file system for amigaos 4 (ppc)
+            var fileSystems = fileSystemsResult.Value.ToList();
+            var hunkFileSystems = fileSystems.Where(x => IsHunkFile(x.Item2)).ToList();
+
+            var fileSystemWithHighestVersion = (hunkFileSystems.Count > 0 ? hunkFileSystems : fileSystems)
                 .OrderDescending(new FileSystemVersionComparer())
                 .FirstOrDefault();
 
@@ -56,6 +61,9 @@ namespace Hst.Imager.Core.Commands
 
             return new Result<Tuple<string, byte[]>>(fileSystemWithHighestVersion);
         }
+
+        private static bool IsHunkFile(byte[] data) =>
+            data is { Length: >= 4 } && data.AsSpan(0, 4).SequenceEqual(KnownMagicBytes.HunkMagicNumbers);
 
         private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> GetFileSystemsFromMedia(Media media,
             string mediaPath, Stream mediaStream, string fileSystemName)
@@ -154,8 +162,8 @@ namespace Hst.Imager.Core.Commands
         private static async Task<Result<IEnumerable<Tuple<string, byte[]>>>> FindFileSystemsInAdf(Media media, Stream stream,
             string fileSystemName)
         {
-            var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
-            var volume = new AmigaVolume(media, PartitionTableType.None, 0, fastFileSystemVolume, ownsMedia: false);
+            await using var fastFileSystemVolume = await FastFileSystemVolume.MountAdf(stream);
+            using var volume = new AmigaVolume(media, PartitionTableType.None, 0, fastFileSystemVolume, ownsMedia: false);
             return await FindFileSystemsInVolume(volume, fileSystemName);
         }
 
@@ -237,6 +245,12 @@ namespace Hst.Imager.Core.Commands
             if ((dosTypeId.Equals("PDS", StringComparison.OrdinalIgnoreCase) ||
                 dosTypeId.Equals("PFS", StringComparison.OrdinalIgnoreCase)) &&
                 fileSystemName.Equals("pfs3aio", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (dosTypeId.Equals("SFS", StringComparison.OrdinalIgnoreCase) &&
+                fileSystemName.Equals("SmartFilesystem", StringComparison.OrdinalIgnoreCase))
             {
                 return true;
             }
