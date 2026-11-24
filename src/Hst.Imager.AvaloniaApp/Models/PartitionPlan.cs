@@ -95,6 +95,11 @@ public class PartitionPlan
     public string? Pfs3FileSystemPath { get; set; }
 
     /// <summary>
+    /// Path or url to media with SmartFilesystem for SFS\0 partitions in rigid disk block.
+    /// </summary>
+    public string? SmartFileSystemPath { get; set; }
+
+    /// <summary>
     /// Path to media with FastFileSystem for DOS\3 and DOS\7 partitions in rigid disk block.
     /// </summary>
     public string? FastFileSystemPath { get; set; }

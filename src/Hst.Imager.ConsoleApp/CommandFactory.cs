@@ -360,7 +360,7 @@ namespace Hst.Imager.ConsoleApp
 
             var fileSystemPathOption = new Option<string>("--file-system-path")
             {
-                Description = "Path or url to file system file used to format (only for RDB and PiStorm). If not set for PFS3, user is asked to download pfs3aio from aminet.net."
+                Description = "Path or url to file system file used to format (only for RDB and PiStorm). If not set for PFS3 or SFS, user is asked to download pfs3aio or SmartFilesystem from aminet.net."
             };
 
             var sizeOption = new Option<string>("--size", ["-s"])

@@ -12,6 +12,7 @@ using DiscUtils.Partitions;
 using Hst.Amiga.FileSystems;
 using Hst.Amiga.FileSystems.FastFileSystem;
 using Hst.Amiga.FileSystems.Pfs3;
+using Hst.Amiga.FileSystems.SmartFileSystem;
 using Hst.Amiga.RigidDiskBlocks;
 using Hst.Core;
 using Hst.Core.Extensions;
@@ -232,6 +233,8 @@ public partial class VolumeMounter(Action<string> debugMessage = null)
             case "PDS\\3":
             case "PFS\\3":
                 return new Result<IFileSystemVolume>(await Pfs3Volume.Mount(stream, partitionBlock));
+            case "SFS\\0":
+                return new Result<IFileSystemVolume>(await SmartFileSystemVolume.Mount(stream, partitionBlock));
         }
 
         return new Result<IFileSystemVolume>(new Error($"Unsupported file system '{partitionBlock.DosTypeFormatted}'"));

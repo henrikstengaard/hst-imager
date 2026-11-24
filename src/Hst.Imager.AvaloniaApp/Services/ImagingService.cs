@@ -375,18 +375,21 @@ public class ImagingService : IImagingService
             {
                 if (!existingDosTypes.Contains(dosType))
                 {
-                    // pfs3aio and fast file system are added from media, other file systems must be added or
-                    // imported to rigid disk block by plan
-                    var isPfs3 = dosType is "PFS3" or "PDS3";
-                    if (!isPfs3 && !ViewModels.PartitionFileSystems.IsFastFileSystem(dosType))
+                    // pfs3aio, smart file system and fast file system are added from media, other file systems
+                    // must be added or imported to rigid disk block by plan
+                    var (mediaPath, fileSystemName) = dosType switch
                     {
-                        throw new ImagingException(
-                            $"File system with DOS type '{dosType}' not found in Rigid Disk Block. Import a file system with DOS type '{dosType}'");
-                    }
+                        "PFS3" or "PDS3" => (plan.Pfs3FileSystemPath, "pfs3aio"),
+                        _ when ViewModels.PartitionFileSystems.IsSmartFileSystem(dosType) =>
+                            (plan.SmartFileSystemPath, "SmartFilesystem"),
+                        _ when ViewModels.PartitionFileSystems.IsFastFileSystem(dosType) =>
+                            (plan.FastFileSystemPath, "FastFileSystem"),
+                        _ => throw new ImagingException(
+                            $"File system with DOS type '{dosType}' not found in Rigid Disk Block. Import a file system with DOS type '{dosType}'")
+                    };
 
-                    var fileSystemPath = await PrepareRdbFileSystemAsync(commandHelper,
-                        isPfs3 ? plan.Pfs3FileSystemPath : plan.FastFileSystemPath,
-                        isPfs3 ? "pfs3aio" : "FastFileSystem", token);
+                    var fileSystemPath = await PrepareRdbFileSystemAsync(commandHelper, mediaPath, fileSystemName,
+                        token);
                     await Run(new RdbFsAddCommand(_loggerFactory.CreateLogger<RdbFsAddCommand>(), commandHelper,
                         physicalDrives, path, fileSystemPath, dosType, string.Empty, null, null));
                 }

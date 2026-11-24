@@ -210,6 +210,7 @@ public class DiskAllocationAnalyzer
             () => FastFileSystemAllocationReader.Read(stream, offset, size, parameters.Reserved,
                 parameters.FileSystemBlockSize),
             () => Pfs3AllocationReader.Read(stream, offset, size, parameters.BlockSize),
+            () => SmartFileSystemAllocationReader.Read(stream, offset, size),
             () => ExFatAllocationReader.Read(stream, offset, size),
             () => FatAllocationReader.Read(stream, offset, size)
         };

@@ -25,7 +25,7 @@ namespace Hst.Imager.Core.FileSystems
         /// <summary>
         /// Pfs3 max partition size of 101.6 GB
         /// </summary>
-        public const long Pfs3MaxPartitionSize = Amiga.FileSystems.Pfs3.Constants.MAXDISKSIZE1K * 512;
+        public const long Pfs3MaxPartitionSize = Amiga.FileSystems.Pfs3.Pfs3Formatter.MaxPartitionBlocks * 512;
 
         /// <summary>
         /// Pfs3 experimental max partition size of 2TB

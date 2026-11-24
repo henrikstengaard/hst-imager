@@ -250,7 +250,7 @@ public class GivenFsDirCommandWithLha
         lhaData[23] = 0; // extend header 2, unused for unit test
 
         // arrange - calculate checksum for lha entry
-        lhaData[1] = (byte)ChecksumHelper.CalcSum(lhaData, 2, lhaData.Length - 2);
+        lhaData[1] = CalculateLhaHeaderChecksum(lhaData, 2, lhaData.Length - 2);
         
         try
         {
@@ -329,7 +329,7 @@ public class GivenFsDirCommandWithLha
         lhaData[27] = 0; // extend header 2, unused for unit test
 
         // arrange - calculate checksum for lha entry
-        lhaData[1] = (byte)ChecksumHelper.CalcSum(lhaData, 2, lhaData.Length - 2);
+        lhaData[1] = CalculateLhaHeaderChecksum(lhaData, 2, lhaData.Length - 2);
         
         try
         {
@@ -369,5 +369,15 @@ public class GivenFsDirCommandWithLha
                 File.Delete(mediaPath);
             }
         }
+    }
+    private static byte CalculateLhaHeaderChecksum(byte[] data, int offset, int count)
+    {
+        var sum = 0;
+        for (var i = offset; i < offset + count; i++)
+        {
+            sum += data[i];
+        }
+
+        return (byte)(sum & 0xff);
     }
 }

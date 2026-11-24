@@ -308,7 +308,8 @@ public class RdbFileSystemEntry : ReactiveObject
         dosType.Replace("\\", string.Empty).Trim().ToUpperInvariant();
 
     /// <summary>
-    /// Guess dos type of file system from its name, e.g. PDS3 for pfs3aio and DOS3 for FastFileSystem.
+    /// Guess dos type of file system from its name, e.g. PDS3 for pfs3aio, DOS3 for FastFileSystem and SFS0 for
+    /// SmartFilesystem.
     /// </summary>
     public static string GuessDosType(string name)
     {
@@ -317,6 +318,8 @@ public class RdbFileSystemEntry : ReactiveObject
             return "PDS3";
         if (normalized.Contains("fastfilesystem") || normalized.Contains("ffs"))
             return "DOS3";
+        if (normalized.Contains("smartfilesystem") || normalized.StartsWith("sfs"))
+            return "SFS0";
         return string.Empty;
     }
 

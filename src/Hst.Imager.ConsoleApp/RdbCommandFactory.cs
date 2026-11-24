@@ -378,7 +378,7 @@
 
             var dosTypeArgument = new Argument<string>("DosType")
             {
-                Description = "DOS type for the partition to use (e.g. DOS3, PFS3)."
+                Description = "DOS type for the partition to use (e.g. DOS3, PFS3, SFS0)."
             };
 
             var nameArgument = new Argument<string>("Name")
@@ -505,7 +505,7 @@
 
             var dosTypeOption = new Option<string>("--dos-type", ["-dt"])
             {
-                Description = "DOS type for the partition to use (e.g. DOS3, PFS3)."
+                Description = "DOS type for the partition to use (e.g. DOS3, PFS3, SFS0)."
             };
 
             var nameOption = new Option<string>("--name", ["-n"])
@@ -664,7 +664,7 @@
 
             var dosTypeOption = new Option<string>("--dos-type", ["-dt"])
             {
-                Description = "DOS type for the partition to use (e.g. DOS3, PFS3)."
+                Description = "DOS type for the partition to use (e.g. DOS3, PFS3, SFS0)."
             };
 
             var rdbPartDelCommand = new Command("copy", "Copy partition from a physical drive or image file.");
@@ -732,7 +732,7 @@
 
             var dosTypeArgument = new Argument<string>("DosType")
             {
-                Description = "DOS type for the partition to use (e.g. DOS3, PFS3)."
+                Description = "DOS type for the partition to use (e.g. DOS3, PFS3, SFS0)."
             };
 
             var nameArgument = new Argument<string>("Name")
@@ -867,7 +867,7 @@
 
             var dosTypeOption = new Option<string>("--dos-type", ["-dt"])
             {
-                Description = "DOS type for the partition to use (e.g. DOS3, PFS3). Required for non-RDB partition."
+                Description = "DOS type for the partition to use (e.g. DOS3, PFS3, SFS0). Required for non-RDB partition."
             };
 
             var rdbPartFormatCommand = new Command("format", "Format partition.");

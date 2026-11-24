@@ -22,7 +22,8 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 /// </summary>
 public class PartitionViewModel : ViewModelBase
 {
-    private const string Pfs3AioUrl = "https://aminet.net/disk/misc/pfs3aio.lha";
+    private const string Pfs3AioUrl = Core.Commands.FormatCommand.Pfs3AioLhaUrl;
+    private const string SmartFileSystemUrl = Core.Commands.FormatCommand.SmartFileSystemLhaUrl;
 
     public static readonly string[] SizeUnits = ["MB", "GB"];
 
@@ -52,6 +53,8 @@ public class PartitionViewModel : ViewModelBase
 
     private bool _downloadPfs3Aio = true;
     private string _pfs3FileSystemPath = string.Empty;
+    private bool _downloadSmartFileSystem = true;
+    private string _smartFileSystemPath = string.Empty;
     private string _fastFileSystemPath = string.Empty;
     private bool _useExperimental;
 
@@ -83,6 +86,11 @@ public class PartitionViewModel : ViewModelBase
         {
             var path = await BrowseFileSystemPathAsync("Select media with pfs3aio file system");
             if (path != null) Pfs3FileSystemPath = path;
+        });
+        BrowseSmartFileSystemPathCommand = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var path = await BrowseFileSystemPathAsync("Select media with SmartFilesystem");
+            if (path != null) SmartFileSystemPath = path;
         });
         BrowseFastFileSystemPathCommand = ReactiveCommand.CreateFromTask(async () =>
         {
@@ -373,10 +381,11 @@ public class PartitionViewModel : ViewModelBase
 
     /// <summary>
     /// Rigid disk block doesn't have a file system with dos type of selected partition, which isn't added
-    /// automatically like pfs3aio and FastFileSystem.
+    /// automatically like pfs3aio, SmartFilesystem and FastFileSystem.
     /// </summary>
     public bool IsRdbFileSystemMissing => CanImportFileSystem &&
                                           !PartitionFileSystems.IsPfs3(_selectedPartition!.FileSystem) &&
+                                          !PartitionFileSystems.IsSmartFileSystem(_selectedPartition.FileSystem) &&
                                           !PartitionFileSystems.IsFastFileSystem(_selectedPartition.FileSystem);
 
     public string RdbFileSystemText
@@ -402,6 +411,8 @@ public class PartitionViewModel : ViewModelBase
 
             if (PartitionFileSystems.IsPfs3(_selectedPartition.FileSystem))
                 return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. pfs3aio is added as set in Amiga file systems below partition layout, when applied. Import a file system to use another file system.";
+            if (PartitionFileSystems.IsSmartFileSystem(_selectedPartition.FileSystem))
+                return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. SmartFilesystem is added as set in Amiga file systems below partition layout, when applied. Import a file system to use another file system.";
             if (PartitionFileSystems.IsFastFileSystem(_selectedPartition.FileSystem))
                 return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. FastFileSystem is added from media set in Amiga file systems below partition layout, when applied. Import a file system to use another file system.";
             return $"Rigid Disk Block doesn't have a file system with DOS type {dosType}. Import a file system from media like lha, adf or iso or add it from a file system file.";
@@ -471,8 +482,10 @@ public class PartitionViewModel : ViewModelBase
     // ─── Amiga file systems ───────────────────────────────────────────────────
 
     public bool NeedsPfs3FileSystem => GetMissingDosTypes().Any(x => x is "PFS3" or "PDS3");
+    public bool NeedsSmartFileSystem => GetMissingDosTypes().Any(PartitionFileSystems.IsSmartFileSystem);
     public bool NeedsFastFileSystem => GetMissingDosTypes().Any(PartitionFileSystems.IsFastFileSystem);
     public bool ShowPfs3FileSystemPath => NeedsPfs3FileSystem && !_downloadPfs3Aio;
+    public bool ShowSmartFileSystemPath => NeedsSmartFileSystem && !_downloadSmartFileSystem;
     public bool ShowAmigaFileSystems => RdbLayouts.Any();
     public bool ShowUseExperimental => RdbLayouts.Any(layout =>
         layout.Partitions.Any(x => x.IsNew && PartitionFileSystems.IsPfs3(x.FileSystem)));
@@ -494,6 +507,27 @@ public class PartitionViewModel : ViewModelBase
         set
         {
             this.RaiseAndSetIfChanged(ref _pfs3FileSystemPath, value);
+            UpdatePending();
+        }
+    }
+
+    public bool DownloadSmartFileSystem
+    {
+        get => _downloadSmartFileSystem;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _downloadSmartFileSystem, value);
+            this.RaisePropertyChanged(nameof(ShowSmartFileSystemPath));
+            UpdatePending();
+        }
+    }
+
+    public string SmartFileSystemPath
+    {
+        get => _smartFileSystemPath;
+        set
+        {
+            this.RaiseAndSetIfChanged(ref _smartFileSystemPath, value);
             UpdatePending();
         }
     }
@@ -538,6 +572,7 @@ public class PartitionViewModel : ViewModelBase
     public bool CanApply => HasPendingOperations && !HasValidationErrors;
 
     public ReactiveCommand<Unit, Unit> BrowsePfs3FileSystemPathCommand { get; }
+    public ReactiveCommand<Unit, Unit> BrowseSmartFileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> BrowseFastFileSystemPathCommand { get; }
     public ReactiveCommand<Unit, Unit> InitializeCommand { get; }
     public ReactiveCommand<Unit, Unit> AddPartitionCommand { get; }
@@ -759,7 +794,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         var layout = _layout;
-        var partition = layout.AddPartition(segment.Start, segment.End, _useExperimental, _downloadPfs3Aio, placement);
+        var partition = layout.AddPartition(segment.Start, segment.End, _useExperimental, _downloadPfs3Aio, _downloadSmartFileSystem, placement);
         var partitionSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, partition));
         if (partition == null || partitionSegment == null)
             return;
@@ -784,7 +819,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         var layout = _layout;
-        var clone = layout.ClonePartition(source, _downloadPfs3Aio);
+        var clone = layout.ClonePartition(source, _downloadPfs3Aio, _downloadSmartFileSystem);
         var cloneSegment = Segments.FirstOrDefault(x => ReferenceEquals(x.Partition, clone));
         if (clone == null || cloneSegment == null)
             return;
@@ -878,7 +913,7 @@ public class PartitionViewModel : ViewModelBase
     private async Task<bool> ShowPartitionDialogAsync(PartitionLayout layout, PartitionEntryViewModel partition)
     {
         if (partition is { IsNew: true, IsRdb: true })
-            partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio);
+            partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio, _downloadSmartFileSystem);
 
         _dialogFileSystems.Clear();
         bool ok;
@@ -927,7 +962,7 @@ public class PartitionViewModel : ViewModelBase
         fileSystem.PropertyChanged += (_, _) => UpdatePending();
         _dialogFileSystems.Add(fileSystem);
         layout.AddFileSystem(fileSystem);
-        partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio);
+        partition.PartitionTypeOptions = layout.GetDosTypeOptions(_downloadPfs3Aio, _downloadSmartFileSystem);
     }
 
     private void RemoveImportedFileSystem()
@@ -937,7 +972,7 @@ public class PartitionViewModel : ViewModelBase
             return;
 
         _layout.RemoveFileSystem(fileSystem);
-        _selectedPartition.PartitionTypeOptions = _layout.GetDosTypeOptions(_downloadPfs3Aio);
+        _selectedPartition.PartitionTypeOptions = _layout.GetDosTypeOptions(_downloadPfs3Aio, _downloadSmartFileSystem);
     }
 
     /// <summary>
@@ -1182,6 +1217,9 @@ public class PartitionViewModel : ViewModelBase
         if (NeedsPfs3FileSystem && !_downloadPfs3Aio && string.IsNullOrWhiteSpace(_pfs3FileSystemPath))
             errors.Add("Path to media with pfs3aio file system is required for PFS\\3 and PDS\\3 partitions");
 
+        if (NeedsSmartFileSystem && !_downloadSmartFileSystem && string.IsNullOrWhiteSpace(_smartFileSystemPath))
+            errors.Add("Path to media with SmartFilesystem is required for SFS\\0 partitions");
+
         if (NeedsFastFileSystem && string.IsNullOrWhiteSpace(_fastFileSystemPath))
             errors.Add("Path to media with FastFileSystem is required for DOS\\0 to DOS\\7 partitions");
 
@@ -1193,6 +1231,8 @@ public class PartitionViewModel : ViewModelBase
         this.RaisePropertyChanged(nameof(NeedsPfs3FileSystem));
         this.RaisePropertyChanged(nameof(NeedsFastFileSystem));
         this.RaisePropertyChanged(nameof(ShowPfs3FileSystemPath));
+        this.RaisePropertyChanged(nameof(NeedsSmartFileSystem));
+        this.RaisePropertyChanged(nameof(ShowSmartFileSystemPath));
         this.RaisePropertyChanged(nameof(ShowUseExperimental));
         this.RaisePropertyChanged(nameof(CanAddPartition));
         this.RaisePropertyChanged(nameof(AddPartitionHint));
@@ -1353,9 +1393,10 @@ public class PartitionViewModel : ViewModelBase
             errors.Add(
                 $"Rigid Disk Block of {MediaOptions.FormatBytes(layout.UsableEnd)} is smaller than space used by its partitions up to {MediaOptions.FormatBytes(layout.MinRdbSize)}. Resize Rigid Disk Block again{location}");
 
-        // pfs3aio and FastFileSystem are added automatically, other file systems must be imported
+        // pfs3aio, SmartFilesystem and FastFileSystem are added automatically, other file systems must be imported
         foreach (var partition in layout.Partitions.Where(x => x.IsNew && x.PartitionTypeError == null &&
                                                               !PartitionFileSystems.IsPfs3(x.FileSystem) &&
+                                                              !PartitionFileSystems.IsSmartFileSystem(x.FileSystem) &&
                                                               !PartitionFileSystems.IsFastFileSystem(x.FileSystem) &&
                                                               layout.FindFileSystem(x.PartitionType) == null))
             errors.Add(
@@ -1412,6 +1453,7 @@ public class PartitionViewModel : ViewModelBase
         plan.ContainerTableType = table.ContainerTableType;
         plan.Byteswap = Source.Byteswap;
         plan.Pfs3FileSystemPath = _downloadPfs3Aio ? Pfs3AioUrl : _pfs3FileSystemPath;
+        plan.SmartFileSystemPath = _downloadSmartFileSystem ? SmartFileSystemUrl : _smartFileSystemPath;
         plan.FastFileSystemPath = _fastFileSystemPath;
         plan.UseExperimental = _useExperimental;
         return plan;
