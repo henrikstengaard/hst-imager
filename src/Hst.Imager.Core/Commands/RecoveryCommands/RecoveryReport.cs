@@ -124,9 +124,44 @@ public class RecoveryReport
     /// </summary>
     public RecoverySalvageSummary Salvage { get; set; }
 
+    /// <summary>
+    /// Number of partition tables found. Null, if operation is not a partition table operation.
+    /// </summary>
+    public int? PartitionTablesFound { get; set; }
+
+    /// <summary>
+    /// Number of partitions found in partition tables. Null, if operation is not a partition table operation.
+    /// </summary>
+    public int? PartitionsFound { get; set; }
+
+    /// <summary>
+    /// Number of file systems found on disk while scanning for rigid disk block. Null, if not scanned.
+    /// </summary>
+    public int? FileSystemsFound { get; set; }
+
+    /// <summary>
+    /// Number of directories found in file system. Null, if operation is not a file system scan or repair.
+    /// </summary>
+    public int? DirectoriesFound { get; set; }
+
+    /// <summary>
+    /// Number of files found in file system. Null, if operation is not a file system scan or repair.
+    /// </summary>
+    public int? FilesFound { get; set; }
+
     public int Errors => Issues.Count(x => x.Level == RecoveryIssueLevel.Error);
     public int Warnings => Issues.Count(x => x.Level == RecoveryIssueLevel.Warning);
     public int Fixed => Issues.Count(x => x.Fixed);
+
+    /// <summary>
+    /// Number of errors and warnings found.
+    /// </summary>
+    public int IssuesFound => Issues.Count(x => x.Level != RecoveryIssueLevel.Info);
+
+    /// <summary>
+    /// Number of errors and warnings, which were not fixed.
+    /// </summary>
+    public int IssuesNotFixed => Issues.Count(x => x.Level != RecoveryIssueLevel.Info && !x.Fixed);
 
     /// <summary>
     /// Partition table or file system is valid, if not aborted and no errors are left unfixed.

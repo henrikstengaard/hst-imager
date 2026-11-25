@@ -366,54 +366,95 @@ public class RecoveryViewModel : ViewModelBase
     public static string FormatReport(RecoveryReport report)
     {
         var builder = new StringBuilder();
-        var type = string.IsNullOrWhiteSpace(report.TargetType) ? string.Empty : $"{report.TargetType}: ";
 
-        if (report.Aborted)
+        builder.AppendLine(string.IsNullOrWhiteSpace(report.TargetType)
+            ? GetResult(report)
+            : $"{report.TargetType}: {GetResult(report)}");
+        builder.AppendLine();
+
+        if (report.PartitionTablesFound.HasValue)
         {
-            builder.AppendLine($"{type}Aborted.");
+            builder.AppendLine(Count(report.PartitionTablesFound.Value, "partition table", "partition tables", "found"));
         }
-        else if (report.Salvage != null)
+
+        if (report.PartitionsFound.HasValue)
+        {
+            builder.AppendLine(Count(report.PartitionsFound.Value, "partition", "partitions", "found"));
+        }
+
+        if (report.FileSystemsFound.HasValue)
+        {
+            builder.AppendLine(Count(report.FileSystemsFound.Value, "file system", "file systems", "found on disk"));
+        }
+
+        if (report.DirectoriesFound.HasValue)
+        {
+            builder.AppendLine(Count(report.DirectoriesFound.Value, "directory", "directories", "found"));
+        }
+
+        if (report.FilesFound.HasValue)
+        {
+            builder.AppendLine(Count(report.FilesFound.Value, "file", "files", "found"));
+        }
+
+        if (report.Salvage != null)
         {
             var salvage = report.Salvage;
-            builder.AppendLine(
-                $"{type}Salvaged {salvage.Directories} directories and {salvage.Files} files ({MediaOptions.FormatBytes(salvage.Bytes)}).");
-            if (salvage.PartialFiles > 0 || salvage.Skipped > 0 || salvage.OrphanedDirectories > 0 ||
-                salvage.Errors > 0)
+            builder.AppendLine(Count(salvage.Directories, "directory", "directories", "salvaged"));
+            builder.AppendLine(Count(salvage.Files, "file", "files", "salvaged"));
+            builder.AppendLine($"{MediaOptions.FormatBytes(salvage.Bytes)} salvaged");
+            if (salvage.PartialFiles > 0)
             {
-                builder.AppendLine(
-                    $"{salvage.PartialFiles} partial files, {salvage.OrphanedDirectories} orphaned directories, {salvage.Skipped} skipped, {salvage.Errors} errors.");
+                builder.AppendLine(Count(salvage.PartialFiles, "partial file", "partial files", "salvaged"));
+            }
+
+            if (salvage.OrphanedDirectories > 0)
+            {
+                builder.AppendLine(Count(salvage.OrphanedDirectories, "orphaned directory", "orphaned directories",
+                    "salvaged"));
+            }
+
+            if (salvage.Skipped > 0)
+            {
+                builder.AppendLine(Count(salvage.Skipped, "entry", "entries", "skipped"));
+            }
+
+            if (salvage.Errors > 0)
+            {
+                builder.AppendLine(Count(salvage.Errors, "error", "errors", "during salvage"));
             }
         }
-        else if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair)
+
+        builder.AppendLine(Count(report.IssuesFound, "issue", "issues", "found"));
+        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair)
         {
-            builder.AppendLine(report.IsValid
-                ? report.Written ? $"{type}Repaired, {report.Fixed} issue(s) fixed." : $"{type}Valid, no repair needed."
-                : $"{type}{report.Errors - report.Fixed} error(s) couldn't be repaired, {report.Fixed} issue(s) fixed.");
-        }
-        else
-        {
-            builder.AppendLine(report.IsValid
-                ? $"{type}Valid, no errors found{(report.Warnings > 0 ? $", {report.Warnings} warning(s)" : string.Empty)}."
-                : $"{type}{report.Errors} error(s) and {report.Warnings} warning(s) found.");
+            builder.AppendLine(Count(report.Fixed, "issue", "issues", "fixed"));
+            builder.AppendLine(Count(report.IssuesNotFixed, "issue", "issues", "not fixed"));
         }
 
-        var issues = report.Issues
-            .Where(x => x.Level != RecoveryIssueLevel.Info)
-            .Take(10)
-            .ToList();
-        foreach (var issue in issues)
-        {
-            builder.AppendLine($"- {issue}");
-        }
-
-        var moreIssues = report.Issues.Count(x => x.Level != RecoveryIssueLevel.Info) - issues.Count;
-        if (moreIssues > 0)
-        {
-            builder.AppendLine($"- ... and {moreIssues} more");
-        }
-
+        builder.AppendLine();
         builder.Append($"Detailed log written to '{report.LogPath}'.");
 
         return builder.ToString();
     }
+
+    private static string GetResult(RecoveryReport report)
+    {
+        if (report.Aborted)
+        {
+            return "Aborted";
+        }
+
+        return report.Operation switch
+        {
+            RecoveryOperation.FileSystemSalvage => report.Errors == 0 ? "Salvaged" : "Salvaged with errors",
+            RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair => report.IsValid
+                ? report.Written ? "Repaired" : "Valid, no repair needed"
+                : "Errors not repaired",
+            _ => report.IsValid ? "Valid" : "Errors found"
+        };
+    }
+
+    private static string Count(int count, string singular, string plural, string suffix) =>
+        $"{count} {(count == 1 ? singular : plural)} {suffix}";
 }

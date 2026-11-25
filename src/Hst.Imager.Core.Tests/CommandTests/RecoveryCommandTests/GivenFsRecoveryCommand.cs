@@ -72,6 +72,7 @@ public class GivenFsRecoveryCommand : RecoveryTestBase
         Assert.True(repairResult.IsSuccess, repairResult.Error?.Message);
         Assert.True(repairReport.Written);
         Assert.True(repairReport.Fixed > 0);
+        Assert.Equal(0, repairReport.IssuesNotFixed);
         Assert.True(repairReport.IsValid, string.Join(Environment.NewLine, repairReport.Issues));
 
         // assert - scanning repaired file system is valid
@@ -94,6 +95,9 @@ public class GivenFsRecoveryCommand : RecoveryTestBase
         Assert.True(result.IsSuccess, result.Error?.Message);
         Assert.StartsWith("PFS3", report.TargetType);
         Assert.True(report.IsValid, string.Join(Environment.NewLine, report.Issues));
+        Assert.NotNull(report.DirectoriesFound);
+        Assert.Equal(0, report.FilesFound);
+        Assert.Null(report.PartitionTablesFound);
     }
 
     [Fact]

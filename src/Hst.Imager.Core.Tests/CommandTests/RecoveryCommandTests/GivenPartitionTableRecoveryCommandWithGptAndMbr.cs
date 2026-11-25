@@ -26,6 +26,8 @@ public class GivenPartitionTableRecoveryCommandWithGptAndMbr : RecoveryTestBase
         Assert.Equal("GPT", report.TargetType);
         Assert.True(report.IsValid, string.Join(Environment.NewLine, report.Issues));
         Assert.Contains(report.Stats, x => x.Key == "GPT partitions" && x.Value == "1");
+        Assert.Equal(1, report.PartitionTablesFound);
+        Assert.Equal(1, report.PartitionsFound);
     }
 
     [Fact]
@@ -68,6 +70,7 @@ public class GivenPartitionTableRecoveryCommandWithGptAndMbr : RecoveryTestBase
         Assert.True(repairReport.Written);
         Assert.True(repairReport.IsValid, string.Join(Environment.NewLine, repairReport.Issues));
         Assert.True(repairReport.Fixed > 0);
+        Assert.Equal(0, repairReport.IssuesNotFixed);
         var actualPrimary = await TestHelper.ReadData(testCommandHelper, mediaPath, 512, 512 * 33);
         Assert.Equal(expectedPrimary, actualPrimary);
 
@@ -115,6 +118,8 @@ public class GivenPartitionTableRecoveryCommandWithGptAndMbr : RecoveryTestBase
         Assert.Equal("MBR", report.TargetType);
         Assert.True(report.IsValid, string.Join(Environment.NewLine, report.Issues));
         Assert.Contains(report.Stats, x => x.Key == "MBR partitions" && x.Value == "1");
+        Assert.Equal(1, report.PartitionTablesFound);
+        Assert.Equal(1, report.PartitionsFound);
     }
 
     [Fact]

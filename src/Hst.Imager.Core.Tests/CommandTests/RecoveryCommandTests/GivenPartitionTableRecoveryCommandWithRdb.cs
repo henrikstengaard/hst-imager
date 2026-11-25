@@ -26,6 +26,10 @@ public class GivenPartitionTableRecoveryCommandWithRdb : RecoveryTestBase
         Assert.Equal("RDB", report.TargetType);
         Assert.True(report.IsValid, string.Join(Environment.NewLine, report.Issues));
         Assert.Equal(RecoveryOperation.PartitionTableScan, report.Operation);
+        Assert.Equal(1, report.PartitionTablesFound);
+        Assert.Equal(1, report.PartitionsFound);
+        Assert.Equal(1, report.FileSystemsFound);
+        Assert.Equal(0, report.Errors);
     }
 
     [Fact]

@@ -94,6 +94,8 @@ internal class FastFileSystemDoctorAdapter(Stream stream, PartitionBlock partiti
         }
 
         var stats = doctor.Stats;
+        report.DirectoriesFound = stats.Directories;
+        report.FilesFound = stats.Files;
         report.AddStat("Directories", stats.Directories);
         report.AddStat("Files", stats.Files);
         report.AddStat("Hard links", stats.HardLinks);
@@ -136,6 +138,8 @@ internal class SmartFileSystemDoctorAdapter(Stream stream, PartitionBlock partit
         }
 
         var stats = doctor.Stats;
+        report.DirectoriesFound = stats.Directories;
+        report.FilesFound = stats.Files;
         report.AddStat("Directories", stats.Directories);
         report.AddStat("Files", stats.Files);
         report.AddStat("Soft links", stats.SoftLinks);
@@ -239,6 +243,8 @@ internal class Pfs3DoctorAdapter(Stream stream, PartitionBlock partitionBlock,
             repair ? Pfs3Doctor.Mode.Repair : Pfs3Doctor.Mode.Check, false, token);
 
         var stats = doctor.Stats;
+        report.DirectoriesFound = stats.NumDirs;
+        report.FilesFound = stats.NumFiles;
         report.AddStat("Directories", stats.NumDirs);
         report.AddStat("Files", stats.NumFiles);
         report.AddStat("Hard links", stats.NumHardLink);

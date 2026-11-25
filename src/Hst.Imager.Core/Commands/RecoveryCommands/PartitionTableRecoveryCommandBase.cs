@@ -63,10 +63,14 @@ public abstract class PartitionTableRecoveryCommandBase : RecoveryCommandBase
             AddMessage(report, RecoveryIssueLevel.Error,
                 "No partition table found. Specify partition table type to scan or repair, e.g. rigid disk block");
             report.TargetType = "None";
+            report.PartitionTablesFound = 0;
+            report.PartitionsFound = 0;
             return new Result();
         }
 
         report.TargetType = string.Join(", ", types.Select(GetName));
+        report.PartitionTablesFound = 0;
+        report.PartitionsFound = 0;
         OnInformationMessage($"{(Repair ? "Repairing" : "Scanning")} {report.TargetType} in '{Path}'");
 
         foreach (var type in types)
@@ -219,6 +223,13 @@ public abstract class PartitionTableRecoveryCommandBase : RecoveryCommandBase
                 fileSystem.StartSector);
         }
 
+        report.FileSystemsFound = (report.FileSystemsFound ?? 0) + result.FileSystems.Count;
+        if (strictReadError == null || result.RigidDiskBlock != null)
+        {
+            report.PartitionTablesFound++;
+            report.PartitionsFound += result.RigidDiskBlock?.PartitionBlocks.Count() ?? 0;
+        }
+
         report.AddStat("RDB mode", result.Mode);
         report.AddStat("RDB file systems found", result.FileSystems.Count);
         if (result.RigidDiskBlock != null)
@@ -304,6 +315,12 @@ public abstract class PartitionTableRecoveryCommandBase : RecoveryCommandBase
         var result = await GptValidator.Validate(stream, diskSize, (level, message, block) =>
             AddMessage(scanReport, level, $"GPT: {message}", block), token);
 
+        if (result.Primary.SignatureValid || result.Backup.SignatureValid)
+        {
+            report.PartitionTablesFound++;
+            report.PartitionsFound += result.Partitions;
+        }
+
         report.AddStat("GPT sector size", result.SectorSize);
         report.AddStat("GPT partitions", result.Partitions);
 
@@ -354,6 +371,12 @@ public abstract class PartitionTableRecoveryCommandBase : RecoveryCommandBase
 
         var partitions = await MbrValidator.Validate(stream, diskSize, (level, message, block) =>
             AddMessage(report, level, $"MBR: {message}", block), token);
+
+        if (await MbrValidator.IsPresent(stream, token))
+        {
+            report.PartitionTablesFound++;
+            report.PartitionsFound += partitions;
+        }
 
         report.AddStat("MBR partitions", partitions);
 
