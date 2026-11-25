@@ -232,6 +232,70 @@ public class GivenFsRecoveryCommand : RecoveryTestBase
         Assert.Contains("UAE metadata", result.Error.Message);
     }
 
+    [Fact]
+    public async Task When_RepairingPfs3FileSystemWithInvalidFileType_Then_ErrorIsFixed()
+    {
+        // arrange - create pfs3 formatted rdb disk with directories and files
+        var mediaPath = $"rdb_{Guid.NewGuid()}.vhd";
+        var testCommandHelper = new TestCommandHelper();
+        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+        await CreatePfs3Content(testCommandHelper, mediaPath);
+
+        // arrange - set invalid file type in directory entry for file1.txt
+        await CorruptPfs3DirEntryType(testCommandHelper, mediaPath, "file1.txt");
+
+        // arrange - scan reports error
+        var (_, scanReport) = await ScanFileSystem(testCommandHelper, Path.Combine(mediaPath, "rdb", "dh0"));
+        Assert.False(scanReport.IsValid, await File.ReadAllTextAsync(LogPath));
+
+        // act - repair file system
+        var (result, report) = await RepairFileSystem(testCommandHelper, Path.Combine(mediaPath, "rdb", "dh0"));
+
+        // assert - all errors are fixed
+        var log = await File.ReadAllTextAsync(LogPath);
+        Assert.True(result.IsSuccess, result.Error?.Message);
+        Assert.True(report.Fixed > 0, log);
+        Assert.True(report.IssuesNotFixed == 0, log);
+        Assert.Contains("Invalid filetype", log, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Verifying repaired file system", log);
+        Assert.Contains("0 error(s) left after repair", log);
+        Assert.True(report.IsValid, log);
+
+        // assert - scanning repaired file system is valid
+        var (_, rescanReport) = await ScanFileSystem(testCommandHelper, Path.Combine(mediaPath, "rdb", "dh0"));
+        Assert.True(rescanReport.IsValid, await File.ReadAllTextAsync(LogPath));
+    }
+
+    /// <summary>
+    /// Set invalid type in pfs3 directory entry with name. Directory entry has next (1 byte), type (1 byte), anode
+    /// (4 bytes), file size (4 bytes), creation day, minute and tick (2 bytes each), protection (1 byte) and name
+    /// length (1 byte) followed by name.
+    /// </summary>
+    private static async Task CorruptPfs3DirEntryType(TestCommandHelper testCommandHelper, string mediaPath,
+        string name)
+    {
+        var (partitionOffset, partitionBlock) = await GetFirstPartitionOffset(testCommandHelper, mediaPath);
+        var size = (int)((partitionBlock.HighCyl - partitionBlock.LowCyl + 1) * partitionBlock.Surfaces *
+                         partitionBlock.BlocksPerTrack * 512);
+        var data = await TestHelper.ReadData(testCommandHelper, mediaPath, partitionOffset, size);
+        var nameBytes = System.Text.Encoding.ASCII.GetBytes(name);
+        var pattern = new[] { (byte)nameBytes.Length }.Concat(nameBytes).ToArray();
+
+        for (var i = 16; i < data.Length - pattern.Length; i++)
+        {
+            if (!data.AsSpan(i, pattern.Length).SequenceEqual(pattern))
+            {
+                continue;
+            }
+
+            // directory entry starts 17 bytes before name length, type is second byte
+            await TestHelper.WriteData(testCommandHelper, mediaPath, partitionOffset + i - 17 + 1, [0x55]);
+            return;
+        }
+
+        throw new IOException($"Directory entry '{name}' not found");
+    }
+
     private static async Task CreatePfs3Content(TestCommandHelper testCommandHelper, string mediaPath)
     {
         var mediaResult = await testCommandHelper.GetWritableFileMedia(mediaPath);

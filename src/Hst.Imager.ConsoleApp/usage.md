@@ -530,7 +530,7 @@ Supported partition tables and file systems:
 - Rigid Disk Block (RDB), also in PiStorm RDB partitions: scan and repair. Repair fixes checksums, block pointers and partitions using file systems found on disk or rebuilds the Rigid Disk Block from file systems found on disk.
 - Guid Partition Table (GPT): scan and repair. Repair restores primary header and partition entries from backup or backup from primary.
 - Master Boot Record (MBR): scan only.
-- Fast File System (DOS -DOS), Professional File System (PFS, PDS) and Smart File System (SFS ): scan, repair and salvage. Fast File System in .adf files is also supported.
+- Fast File System (DOS\0-DOS\7), Professional File System (PFS\3, PDS\3) and Smart File System (SFS\0): scan, repair and salvage. Fast File System in .adf files is also supported.
 
 A detailed log is written for each recovery command. The log is written next to the image file or in the home directory for physical drives, unless a path is set with `--recovery-log`.
 
@@ -545,7 +545,7 @@ hst.imager recovery
 
 ### Scan partition table
 
-Scans partition tables for errors without writing any changes. Partition tables present are detected, unless type is set with `--type` or path contains partition table, e.g. `4gb.vhddb`.
+Scans partition tables for errors without writing any changes. Partition tables present are detected, unless type is set with `--type` or path contains partition table, e.g. `4gb.vhd\rdb`.
 
 Example of scanning partition tables on a 4GB vhd image file:
 ```
@@ -554,7 +554,7 @@ hst.imager recovery partitiontable scan 4gb.vhd
 
 Example of scanning Rigid Disk Block on a 4GB vhd image file writing log to scan.log:
 ```
-hst.imager recovery pt scan 4gb.vhddb --recovery-log scan.log
+hst.imager recovery pt scan 4gb.vhd\rdb --recovery-log scan.log
 ```
 
 ### Repair partition table
@@ -571,7 +571,21 @@ hst.imager recovery pt repair 4gb.vhd --type rdb
 
 Example of rebuilding Rigid Disk Block on a 4GB vhd image file without asking to confirm repair:
 ```
-hst.imager recovery pt repair 4gb.vhddb --mode rebuild --yes
+hst.imager recovery pt repair 4gb.vhd\rdb --mode rebuild --yes
+```
+
+### Full repair
+
+Repairs partition tables, reads partitions again and repairs file systems in all Rigid Disk Block partitions with supported file systems. Partition table and file system repairs are written to the same log file. Rigid Disk Block repair mode can be set with `--mode` like repair partition table.
+
+Example of full repair of partition tables and file systems on a 4GB vhd image file:
+```
+hst.imager recovery repair 4gb.vhd
+```
+
+Example of full repair of Rigid Disk Block and file systems in its partitions on a 4GB vhd image file without asking to confirm repair:
+```
+hst.imager recovery repair 4gb.vhd\rdb --yes
 ```
 
 ### Scan file system
@@ -580,7 +594,7 @@ Scans file system in a Rigid Disk Block partition or .adf file for errors withou
 
 Example of scanning file system in partition DH0 in Rigid Disk Block on a 4GB vhd image file:
 ```
-hst.imager recovery fs scan 4gb.vhddb\dh0
+hst.imager recovery fs scan 4gb.vhd\rdb\dh0
 ```
 
 Example of scanning file system in a .adf file:
@@ -594,7 +608,7 @@ Repairs file system in a Rigid Disk Block partition or .adf file.
 
 Example of repairing file system in partition number 1 in Rigid Disk Block on a 4GB vhd image file:
 ```
-hst.imager recovery fs repair 4gb.vhddb
+hst.imager recovery fs repair 4gb.vhd\rdb\1
 ```
 
 ### Salvage file system
@@ -603,10 +617,10 @@ Salvages directories and files from file system in a Rigid Disk Block partition 
 
 Example of salvaging directories and files from partition DH0 in Rigid Disk Block on a 4GB vhd image file to directory salvaged:
 ```
-hst.imager recovery fs salvage 4gb.vhddb\dh0 salvaged
+hst.imager recovery fs salvage 4gb.vhd\rdb\dh0 salvaged
 ```
 
 Example of salvaging directories and files from partition DH0 in Rigid Disk Block on a 4GB vhd image file to directory salvaged with UAE metafiles:
 ```
-hst.imager recovery fs salvage 4gb.vhddb\dh0 salvaged --uaemetadata UaeMetafile
+hst.imager recovery fs salvage 4gb.vhd\rdb\dh0 salvaged --uaemetadata UaeMetafile
 ```

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Amiga.FileSystems.Salvage;
@@ -87,11 +88,9 @@ internal class FastFileSystemDoctorAdapter(Stream stream, PartitionBlock partiti
         var doctor = await FfsDoctor.FastFileSystemDoctor.Run(volume,
             repair ? FfsDoctor.Mode.Repair : FfsDoctor.Mode.Check, token);
 
-        foreach (var issue in doctor.Issues)
-        {
-            callbacks.AddIssue(issue.Warning ? RecoveryIssueLevel.Warning : RecoveryIssueLevel.Error,
-                $"{issue.Type}: {issue.Message}", issue.Block, issue.Path, issue.Fixed);
-        }
+        await DoctorIssues.Add(callbacks, repair, ToDoctorIssues(doctor.Issues), async () =>
+            ToDoctorIssues((await FfsDoctor.FastFileSystemDoctor.Run(OpenVolume(), FfsDoctor.Mode.Check, token))
+                .Issues));
 
         var stats = doctor.Stats;
         report.DirectoriesFound = stats.Directories;
@@ -109,6 +108,10 @@ internal class FastFileSystemDoctorAdapter(Stream stream, PartitionBlock partiti
 
     public Task<SalvageResult> Salvage(ISalvageTarget target, SalvageOptions options, CancellationToken token) =>
         FfsDoctor.FastFileSystemDoctor.Salvage(OpenVolume(), target, options, token);
+
+    private static IList<DoctorIssue> ToDoctorIssues(IEnumerable<FfsDoctor.Issue> issues) =>
+        issues.Select(x => new DoctorIssue(x.Type.ToString(), x.Block, x.Path, x.Message, x.Warning, x.Fixed))
+            .ToList();
 }
 
 internal class SmartFileSystemDoctorAdapter(Stream stream, PartitionBlock partitionBlock,
@@ -131,11 +134,9 @@ internal class SmartFileSystemDoctorAdapter(Stream stream, PartitionBlock partit
         var doctor = await SfsDoctor.SmartFileSystemDoctor.Run(volume,
             repair ? SfsDoctor.Mode.Repair : SfsDoctor.Mode.Check, token);
 
-        foreach (var issue in doctor.Issues)
-        {
-            callbacks.AddIssue(issue.Warning ? RecoveryIssueLevel.Warning : RecoveryIssueLevel.Error,
-                $"{issue.Type}: {issue.Message}", issue.Block, issue.Path, issue.Fixed);
-        }
+        await DoctorIssues.Add(callbacks, repair, ToDoctorIssues(doctor.Issues), async () =>
+            ToDoctorIssues((await SfsDoctor.SmartFileSystemDoctor.Run(OpenVolume(), SfsDoctor.Mode.Check, token))
+                .Issues));
 
         var stats = doctor.Stats;
         report.DirectoriesFound = stats.Directories;
@@ -152,11 +153,20 @@ internal class SmartFileSystemDoctorAdapter(Stream stream, PartitionBlock partit
 
     public Task<SalvageResult> Salvage(ISalvageTarget target, SalvageOptions options, CancellationToken token) =>
         SfsDoctor.SmartFileSystemDoctor.Salvage(OpenVolume(), target, options, token);
+
+    private static IList<DoctorIssue> ToDoctorIssues(IEnumerable<SfsDoctor.Issue> issues) =>
+        issues.Select(x => new DoctorIssue(x.Type.ToString(), x.Block, x.Path, x.Message, x.Warning, x.Fixed))
+            .ToList();
 }
 
 internal class Pfs3DoctorAdapter(Stream stream, PartitionBlock partitionBlock,
     FileSystemDoctorCallbacks callbacks) : IFileSystemDoctorAdapter
 {
+    /// <summary>
+    /// Maximum number of repair passes, as some errors are only fixed by another repair pass.
+    /// </summary>
+    private const int MaxRepairPasses = 3;
+
     public string Name => $"PFS3 ({partitionBlock.DosTypeFormatted})";
 
     private Pfs3Doctor.Volume OpenVolume(bool reportProgress)
@@ -253,19 +263,50 @@ internal class Pfs3DoctorAdapter(Stream stream, PartitionBlock partitionBlock,
         report.AddStat("Blocks checked", stats.BlocksChecked);
         report.AddStat("Doctor result", doctor.Result);
 
-        if (stats.NumErrors > 0)
+        var errorsFound = stats.NumErrors;
+        var remainingErrors = errorsFound;
+        var written = repair && stats.ErrorsFixed > 0;
+
+        if (repair && errorsFound > 0 && doctor.Result == Pfs3Doctor.Error.None)
         {
-            var fixedErrors = repair ? Math.Min(stats.ErrorsFixed, stats.NumErrors) : 0;
+            // errors fixed reported by doctor isn't reliable, so repaired volume is checked to find errors left.
+            // more repair passes are done, while errors are left and repair is making progress
+            for (var pass = 2;; pass++)
+            {
+                callbacks.Log("Verifying repaired file system");
+                var verify = await Pfs3Doctor.Pfs3Doctor.Run(OpenVolume(false), Pfs3Doctor.Mode.Check, false,
+                    token);
+                var previousErrors = remainingErrors;
+                remainingErrors = verify.Stats.NumErrors;
+                callbacks.Log($"{remainingErrors} error(s) left after repair");
+
+                if (remainingErrors == 0 || pass > MaxRepairPasses || remainingErrors >= previousErrors ||
+                    verify.Result != Pfs3Doctor.Error.None)
+                {
+                    break;
+                }
+
+                callbacks.Log($"Starting repair pass {pass}");
+                var repairPass = await Pfs3Doctor.Pfs3Doctor.Run(OpenVolume(true), Pfs3Doctor.Mode.Repair, false,
+                    token);
+                written |= repairPass.Stats.ErrorsFixed > 0;
+            }
+        }
+
+        if (errorsFound > 0 || remainingErrors > 0)
+        {
+            var fixedErrors = repair ? Math.Max(0, errorsFound - remainingErrors) : 0;
             if (fixedErrors > 0)
             {
                 callbacks.AddIssue(RecoveryIssueLevel.Error,
                     $"{fixedErrors} error(s) found and fixed, see log for details", null, null, true);
             }
 
-            if (stats.NumErrors - fixedErrors > 0)
+            if (remainingErrors > 0)
             {
                 callbacks.AddIssue(RecoveryIssueLevel.Error,
-                    $"{stats.NumErrors - fixedErrors} error(s) found, see log for details", null, null, false);
+                    $"{remainingErrors} error(s) {(repair ? "left after repair" : "found")}, see log for details",
+                    null, null, false);
             }
         }
 
@@ -282,9 +323,50 @@ internal class Pfs3DoctorAdapter(Stream stream, PartitionBlock partitionBlock,
                 break;
         }
 
-        report.Written |= repair && stats.ErrorsFixed > 0;
+        report.Written |= written;
     }
 
     public Task<SalvageResult> Salvage(ISalvageTarget target, SalvageOptions options, CancellationToken token) =>
         Pfs3Doctor.Pfs3Doctor.Salvage(OpenVolume(false), target, options, token);
+}
+
+/// <summary>
+/// Issue found by fast file system or smart file system doctor.
+/// </summary>
+internal record DoctorIssue(string Type, uint Block, string Path, string Message, bool Warning, bool Fixed);
+
+internal static class DoctorIssues
+{
+    /// <summary>
+    /// Add issues found by doctor to report. Issues fixed reported by doctor isn't always reliable, so when repair
+    /// leaves errors not fixed, repaired volume is checked and errors not found by check are fixed. Errors found by
+    /// check, which weren't found by repair, are added as not fixed.
+    /// </summary>
+    public static async Task Add(FileSystemDoctorCallbacks callbacks, bool repair, IList<DoctorIssue> issues,
+        Func<Task<IList<DoctorIssue>>> check)
+    {
+        IList<DoctorIssue> remaining = null;
+        if (repair && issues.Any(x => !x.Warning && !x.Fixed))
+        {
+            callbacks.Log("Verifying repaired file system");
+            remaining = (await check()).Where(x => !x.Warning).ToList();
+            callbacks.Log($"{remaining.Count} error(s) left after repair");
+        }
+
+        foreach (var issue in issues)
+        {
+            var isFixed = issue.Fixed ||
+                          (remaining != null && !issue.Warning && !remaining.Any(x => IsSame(x, issue)));
+            callbacks.AddIssue(issue.Warning ? RecoveryIssueLevel.Warning : RecoveryIssueLevel.Error,
+                $"{issue.Type}: {issue.Message}", issue.Block, issue.Path, isFixed);
+        }
+
+        foreach (var issue in (remaining ?? []).Where(x => !issues.Any(i => IsSame(i, x))))
+        {
+            callbacks.AddIssue(RecoveryIssueLevel.Error, $"{issue.Type}: {issue.Message}", issue.Block,
+                issue.Path, false);
+        }
+    }
+
+    private static bool IsSame(DoctorIssue a, DoctorIssue b) => a.Type == b.Type && a.Block == b.Block;
 }

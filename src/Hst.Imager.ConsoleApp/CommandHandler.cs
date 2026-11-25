@@ -870,6 +870,20 @@ namespace Hst.Imager.ConsoleApp
             await ExecuteRecovery(command, false);
         }
 
+        public static async Task RecoveryFullRepair(string path, RecoveryMode rdbMode, bool yes,
+            string recoveryLogPath)
+        {
+            if (!ConfirmRepair("partition tables and file systems", path, yes))
+            {
+                Environment.Exit(1);
+            }
+
+            using var commandHelper = GetCommandHelper();
+            var command = new FullRepairCommand(GetLogger<FullRepairCommand>(), commandHelper,
+                await GetPhysicalDrives(), path, recoveryLogPath, rdbMode);
+            await ExecuteRecovery(command, false);
+        }
+
         public static async Task RecoveryFsSalvage(string path, string outputPath, UaeMetadata uaeMetadata,
             bool salvageOrphans, string recoveryLogPath)
         {
@@ -882,7 +896,8 @@ namespace Hst.Imager.ConsoleApp
         /// <summary>
         /// Execute recovery command and present report. Scan commands exit with code 2, if errors are found.
         /// </summary>
-        private static async Task ExecuteRecovery(RecoveryCommandBase command, bool exitWithErrorsFound)
+        private static async Task ExecuteRecovery<T>(T command, bool exitWithErrorsFound)
+            where T : CommandBase, IRecoveryCommand
         {
             RecoveryReport report = null;
             command.RecoveryReportRead += (_, args) =>

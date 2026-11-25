@@ -86,6 +86,30 @@ public class GivenPartitionTableRecoveryCommandWithRdb : RecoveryTestBase
     }
 
     [Fact]
+    public async Task When_ScanningPartitionTable_Then_LogLinesAreRaisedLikeLogFile()
+    {
+        // arrange - create pfs3 formatted rdb disk
+        var mediaPath = $"rdb_{Guid.NewGuid()}.vhd";
+        var testCommandHelper = new TestCommandHelper();
+        await TestHelper.CreatePfs3FormattedDisk(testCommandHelper, mediaPath);
+
+        // arrange - create scan command collecting log lines
+        var lines = new System.Collections.Generic.List<string>();
+        var command = new PartitionTableScanCommand(
+            new Microsoft.Extensions.Logging.Abstractions.NullLogger<PartitionTableScanCommand>(),
+            testCommandHelper, [], mediaPath, LogPath);
+        command.LogLineWritten += (_, line) => lines.Add(line);
+
+        // act - scan partition table
+        var result = await command.Execute(System.Threading.CancellationToken.None);
+
+        // assert - log lines raised are the same as lines in log file
+        Assert.True(result.IsSuccess);
+        Assert.NotEmpty(lines);
+        Assert.Equal(await File.ReadAllLinesAsync(LogPath), lines);
+    }
+
+    [Fact]
     public async Task When_ScanningPartitionTable_Then_LogFileIsWritten()
     {
         // arrange - create pfs3 formatted rdb disk

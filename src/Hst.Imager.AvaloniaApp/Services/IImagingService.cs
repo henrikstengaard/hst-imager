@@ -56,31 +56,41 @@ public interface IImagingService
     /// if null.
     /// </summary>
     Task<RecoveryReport> ScanPartitionTableAsync(string path, PartitionTableType? partitionTableType, bool byteswap,
-        string logPath, IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+        string logPath, IProgress<ProgressModel> progress, CancellationToken cancellationToken,
+        IProgress<string>? details = null);
 
     /// <summary>
     /// Repair partition table at path. Repair writes to disk and should be done on a backup.
     /// </summary>
     Task<RecoveryReport> RepairPartitionTableAsync(string path, PartitionTableType? partitionTableType,
         RecoveryMode rdbMode, bool byteswap, string logPath, IProgress<ProgressModel> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, IProgress<string>? details = null);
 
     /// <summary>
     /// Scan file system in partition at path for errors without writing any changes.
     /// </summary>
     Task<RecoveryReport> ScanFileSystemAsync(string path, bool byteswap, string logPath,
-        IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken,
+        IProgress<string>? details = null);
 
     /// <summary>
     /// Repair file system in partition at path. Repair writes to disk and should be done on a backup.
     /// </summary>
     Task<RecoveryReport> RepairFileSystemAsync(string path, bool byteswap, string logPath,
-        IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken,
+        IProgress<string>? details = null);
 
     /// <summary>
     /// Salvage directories and files from file system in partition at path to output path with uae metadata.
     /// </summary>
     Task<RecoveryReport> SalvageFileSystemAsync(string path, string outputPath, UaeMetadata uaeMetadata,
         bool salvageOrphans, bool byteswap, string logPath, IProgress<ProgressModel> progress,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, IProgress<string>? details = null);
+
+    /// <summary>
+    /// Full repair of partition tables and file systems in rigid disk block partitions at path. Repair writes to
+    /// disk and should be done on a backup.
+    /// </summary>
+    Task<RecoveryReport> FullRepairAsync(string path, RecoveryMode rdbMode, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken, IProgress<string>? details = null);
 }

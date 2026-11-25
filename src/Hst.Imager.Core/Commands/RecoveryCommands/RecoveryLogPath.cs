@@ -47,6 +47,7 @@ public static class RecoveryLogPath
         RecoveryOperation.FileSystemScan => "fs-scan",
         RecoveryOperation.FileSystemRepair => "fs-repair",
         RecoveryOperation.FileSystemSalvage => "fs-salvage",
+        RecoveryOperation.FullRepair => "full-repair",
         _ => "recovery"
     };
 

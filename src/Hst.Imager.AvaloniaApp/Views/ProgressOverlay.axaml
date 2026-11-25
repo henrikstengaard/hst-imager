@@ -5,9 +5,23 @@
              x:Class="Hst.Imager.AvaloniaApp.Views.ProgressOverlay"
              x:DataType="vm:ProgressViewModel">
 
+  <UserControl.Styles>
+    <Style Selector="Border.progress-card">
+      <Setter Property="Width" Value="560" />
+    </Style>
+    <!-- wider card, when details are expanded, so log lines fit -->
+    <Style Selector="Border.progress-card.wide">
+      <Setter Property="Width" Value="760" />
+    </Style>
+    <Style Selector="ListBox.details ListBoxItem">
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="MinHeight" Value="0" />
+    </Style>
+  </UserControl.Styles>
+
   <!-- Modal overlay blocking the app while a task runs, like gui app progress backdrop -->
   <Border Background="#B3000000" IsVisible="{Binding IsVisible}">
-    <Border Classes="card" Width="560" Padding="20"
+    <Border Classes="card progress-card" Classes.wide="{Binding IsDetailsExpanded}" Padding="20"
             HorizontalAlignment="Center" VerticalAlignment="Center">
       <StackPanel Spacing="12">
 
@@ -29,24 +43,60 @@
             <TextBlock Text="{Binding SpeedText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" />
             <TextBlock Text="{Binding EtaText}" Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="12" />
           </StackPanel>
-          <Button Command="{Binding CancelCommand}" HorizontalAlignment="Center">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-              <ia:Icon Value="fa-ban" />
-              <TextBlock Text="Cancel" />
-            </StackPanel>
-          </Button>
         </StackPanel>
 
-        <!-- Completed -->
+        <!-- Summary of result, e.g. counts found one per line -->
+        <TextBlock Text="{Binding ResultMessage}" IsVisible="{Binding HasResultMessage}"
+                   Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap" MaxWidth="480"
+                   TextAlignment="Center" HorizontalAlignment="Center" />
+
+        <!-- Details reported by task, e.g. same lines as written to recovery log file -->
+        <Expander IsVisible="{Binding HasDetails}" IsExpanded="{Binding IsDetailsExpanded}"
+                  HorizontalAlignment="Stretch">
+          <Expander.Header>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <ia:Icon Value="fa-list" />
+              <TextBlock Text="Details" />
+            </StackPanel>
+          </Expander.Header>
+          <StackPanel Spacing="4">
+            <ListBox x:Name="DetailsList" Classes="details"
+                     ItemsSource="{Binding DetailLines}"
+                     MaxHeight="260"
+                     FontFamily="Consolas, Menlo, DejaVu Sans Mono, monospace"
+                     FontSize="11"
+                     ScrollViewer.HorizontalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="x:String">
+                  <SelectableTextBlock Text="{Binding}" TextWrapping="NoWrap" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="{Binding DetailsTruncatedText}" IsVisible="{Binding IsDetailsTruncated}"
+                       Foreground="{DynamicResource AppSecondaryForegroundBrush}" FontSize="11" />
+          </StackPanel>
+        </Expander>
+
+        <!-- Cancel running task -->
+        <Button Command="{Binding CancelCommand}" HorizontalAlignment="Center" IsVisible="{Binding IsRunning}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-ban" />
+            <TextBlock Text="Cancel" />
+          </StackPanel>
+        </Button>
+
+        <!-- Completed with total status -->
         <StackPanel Spacing="12" IsVisible="{Binding IsComplete}">
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
-                      IsVisible="{Binding IsSuccess}">
+                      IsVisible="{Binding IsResultOk}">
             <ia:Icon Value="fa-check" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
-            <TextBlock Text="Completed successfully" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
+            <TextBlock Text="{Binding CompletedText}" Foreground="{DynamicResource AppSuccessForegroundBrush}" />
           </StackPanel>
-          <TextBlock Text="{Binding ResultMessage}" IsVisible="{Binding HasResultMessage}"
-                     Foreground="{DynamicResource AppBodyForegroundBrush}" TextWrapping="Wrap" MaxWidth="480"
-                     TextAlignment="Center" HorizontalAlignment="Center" />
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
+                      IsVisible="{Binding IsResultWarning}">
+            <ia:Icon Value="fa-triangle-exclamation" Foreground="{DynamicResource AppWarningForegroundBrush}" />
+            <TextBlock Text="{Binding CompletedText}" Foreground="{DynamicResource AppWarningForegroundBrush}" />
+          </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"
                       IsVisible="{Binding HasError}">
             <ia:Icon Value="fa-times" Foreground="{DynamicResource AppFailureForegroundBrush}" VerticalAlignment="Top" />

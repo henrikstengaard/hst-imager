@@ -55,6 +55,26 @@ public class GivenRecoveryCommandParser
     }
 
     [Fact]
+    public void When_ParsingFullRepair_Then_PathModeAndYesAreParsed()
+    {
+        // arrange - create root command
+        var rootCommand = CommandFactory.CreateRootCommand();
+
+        // act - parse recovery full repair command
+        var parseResult = rootCommand.Parse(["recovery", "repair", "disk.img", "--mode", "Fix", "--yes",
+            "--recovery-log", "repair.log"]);
+
+        // assert - no errors and path, mode, yes and recovery log are parsed
+        Assert.Empty(parseResult.Errors);
+        Assert.Equal("repair", parseResult.CommandResult.Command.Name);
+        Assert.Equal("recovery", parseResult.CommandResult.Command.Parents.OfType<Command>().First().Name);
+        Assert.Equal("disk.img", GetArgument(parseResult, "Path"));
+        Assert.Equal(RecoveryMode.Fix, GetOption<RecoveryMode>(parseResult, "--mode"));
+        Assert.True(GetOption<bool>(parseResult, "--yes"));
+        Assert.Equal("repair.log", GetOption<string>(parseResult, "--recovery-log"));
+    }
+
+    [Fact]
     public void When_ParsingFsRepairWithoutYes_Then_YesIsFalse()
     {
         // arrange - create root command

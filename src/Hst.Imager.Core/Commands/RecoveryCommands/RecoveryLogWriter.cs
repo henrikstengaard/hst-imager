@@ -17,7 +17,7 @@ public class RecoveryLogWriter : IDisposable
 
     public string Path { get; }
 
-    public RecoveryLogWriter(string path)
+    public RecoveryLogWriter(string path, bool append = false)
     {
         Path = System.IO.Path.GetFullPath(path);
 
@@ -27,7 +27,7 @@ public class RecoveryLogWriter : IDisposable
             Directory.CreateDirectory(dir);
         }
 
-        _writer = new StreamWriter(new FileStream(Path, FileMode.Create, FileAccess.Write, FileShare.Read),
+        _writer = new StreamWriter(new FileStream(Path, append ? FileMode.Append : FileMode.Create, FileAccess.Write, FileShare.Read),
             new UTF8Encoding(false))
         {
             AutoFlush = true
@@ -81,7 +81,8 @@ public class RecoveryLogWriter : IDisposable
         WriteRaw($"Errors: {report.Errors}");
         WriteRaw($"Warnings: {report.Warnings}");
         WriteRaw($"Fixed: {report.Fixed}");
-        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair)
+        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+            or RecoveryOperation.FullRepair)
         {
             WriteRaw($"Written: {(report.Written ? "Yes" : "No")}");
         }
@@ -126,7 +127,15 @@ public class RecoveryLogWriter : IDisposable
         }
     }
 
-    private void WriteRaw(string line)
+    /// <summary>
+    /// Raised for each line written to log file, e.g. to show log in front-ends while operation is running.
+    /// </summary>
+    public event EventHandler<string> LineWritten;
+
+    /// <summary>
+    /// Write line to log file without timestamp and level.
+    /// </summary>
+    public void WriteRaw(string line)
     {
         lock (_lock)
         {
@@ -137,6 +146,8 @@ public class RecoveryLogWriter : IDisposable
 
             _writer.WriteLine(line);
         }
+
+        LineWritten?.Invoke(this, line);
     }
 
     public void Dispose()

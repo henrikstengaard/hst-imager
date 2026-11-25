@@ -25,7 +25,11 @@ namespace Hst.Imager.ConsoleApp.Presenters
                     new[] { "Fixed", report.Fixed.ToString() }
                 }
                 .Concat(report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+                    or RecoveryOperation.FullRepair
                     ? [["Written", report.Written ? "Yes" : "No"]]
+                    : [])
+                .Concat(report.FileSystemsChecked.HasValue
+                    ? [["File systems checked", report.FileSystemsChecked.Value.ToString()]]
                     : [])
                 .Concat(report.Stats.Select(x => new[] { x.Key, x.Value }))
                 .Concat([["Log file", report.LogPath]]);

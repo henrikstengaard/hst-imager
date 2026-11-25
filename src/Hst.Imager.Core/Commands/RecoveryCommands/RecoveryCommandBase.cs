@@ -41,7 +41,7 @@ public class RecoveryContext
 /// <summary>
 /// Base for recovery commands opening media, writing log file and reporting results.
 /// </summary>
-public abstract class RecoveryCommandBase : CommandBase
+public abstract class RecoveryCommandBase : CommandBase, IRecoveryCommand
 {
     protected readonly ILogger Logger;
     protected readonly ICommandHelper CommandHelper;
@@ -63,6 +63,16 @@ public abstract class RecoveryCommandBase : CommandBase
     }
 
     public event EventHandler<RecoveryReportReadEventArgs> RecoveryReportRead;
+
+    /// <summary>
+    /// Append to log file instead of creating a new log file, e.g. when run as part of full repair.
+    /// </summary>
+    internal bool AppendLog { get; set; }
+
+    /// <summary>
+    /// Raised for each line written to log file.
+    /// </summary>
+    public event EventHandler<string> LogLineWritten;
 
     /// <summary>
     /// Recovery operation done by command.
@@ -113,7 +123,8 @@ public abstract class RecoveryCommandBase : CommandBase
 
         try
         {
-            _log = new RecoveryLogWriter(logPath);
+            _log = new RecoveryLogWriter(logPath, AppendLog);
+            _log.LineWritten += (_, line) => LogLineWritten?.Invoke(this, line);
         }
         catch (Exception e)
         {

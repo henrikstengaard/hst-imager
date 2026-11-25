@@ -12,7 +12,8 @@ public enum RecoveryOperation
     PartitionTableRepair,
     FileSystemScan,
     FileSystemRepair,
-    FileSystemSalvage
+    FileSystemSalvage,
+    FullRepair
 }
 
 /// <summary>
@@ -148,6 +149,11 @@ public class RecoveryReport
     /// Number of files found in file system. Null, if operation is not a file system scan or repair.
     /// </summary>
     public int? FilesFound { get; set; }
+
+    /// <summary>
+    /// Number of file systems checked or repaired in partitions. Null, if operation is not a full repair.
+    /// </summary>
+    public int? FileSystemsChecked { get; set; }
 
     public int Errors => Issues.Count(x => x.Level == RecoveryIssueLevel.Error);
     public int Warnings => Issues.Count(x => x.Level == RecoveryIssueLevel.Warning);

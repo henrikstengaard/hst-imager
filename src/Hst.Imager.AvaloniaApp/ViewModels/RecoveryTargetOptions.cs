@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Hst.Amiga.RigidDiskBlocks;
 using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Commands.RecoveryCommands;
 
 namespace Hst.Imager.AvaloniaApp.ViewModels;
 
@@ -13,12 +14,6 @@ namespace Hst.Imager.AvaloniaApp.ViewModels;
 public static class RecoveryTargetOptions
 {
     private static readonly long[] AdfSizes = [901120, 1802240];
-
-    private static readonly string[] SupportedDosTypes =
-    [
-        "DOS\\0", "DOS\\1", "DOS\\2", "DOS\\3", "DOS\\4", "DOS\\5", "DOS\\6", "DOS\\7",
-        "PFS\\3", "PDS\\3", "SFS\\0"
-    ];
 
     /// <summary>
     /// Get partition tables, which can be scanned and repaired: disk with auto detected partition tables, partition
@@ -96,7 +91,7 @@ public static class RecoveryTargetOptions
         var separator = GetSeparator(media.Path);
         return rigidDiskBlock.PartitionBlocks
             .Select((partitionBlock, index) => (PartitionBlock: partitionBlock, Number: index + 1))
-            .Where(x => SupportedDosTypes.Contains(x.PartitionBlock.DosTypeFormatted))
+            .Where(x => RecoveryFileSystems.IsSupported(x.PartitionBlock.DosTypeFormatted))
             .Select(x => new SelectOption
             {
                 Title = $"Partition #{x.Number}: {x.PartitionBlock.DriveName}, {x.PartitionBlock.DosTypeFormatted} ({MediaOptions.FormatBytes(GetPartitionSize(x.PartitionBlock))})",

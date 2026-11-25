@@ -5,6 +5,7 @@ using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Hst.Amiga.RigidDiskBlocks.Recovery;
+using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.AvaloniaApp.Services;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.RecoveryCommands;
@@ -100,6 +101,11 @@ public class RecoveryViewModel : ViewModelBase
             {
                 Title = "Salvage file system", Value = RecoveryOperation.FileSystemSalvage,
                 Description = "Salvage directories and files from Amiga file system (FFS, PFS3 or SFS) to a directory. The file system is never written to."
+            },
+            new RecoveryOperationOption
+            {
+                Title = "Full repair", Value = RecoveryOperation.FullRepair,
+                Description = "Repair partition tables, read partitions again and repair Amiga file systems (FFS, PFS3 and SFS) in all Rigid Disk Block partitions."
             }
         ];
         _selectedOperation = OperationOptions[0];
@@ -165,15 +171,22 @@ public class RecoveryViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Operation targets disk or partition table, which includes full repair.
+    /// </summary>
     public bool IsPartitionTableOperation => _selectedOperation.Value is RecoveryOperation.PartitionTableScan
-        or RecoveryOperation.PartitionTableRepair;
+        or RecoveryOperation.PartitionTableRepair or RecoveryOperation.FullRepair;
 
     public bool IsFileSystemOperation => !IsPartitionTableOperation;
 
     public bool IsRepair => _selectedOperation.Value is RecoveryOperation.PartitionTableRepair
-        or RecoveryOperation.FileSystemRepair;
+        or RecoveryOperation.FileSystemRepair or RecoveryOperation.FullRepair;
 
-    public bool IsPartitionTableRepair => _selectedOperation.Value == RecoveryOperation.PartitionTableRepair;
+    /// <summary>
+    /// Operation repairs partition table, so rigid disk block repair mode can be selected.
+    /// </summary>
+    public bool IsPartitionTableRepair => _selectedOperation.Value is RecoveryOperation.PartitionTableRepair
+        or RecoveryOperation.FullRepair;
 
     public bool IsSalvage => _selectedOperation.Value == RecoveryOperation.FileSystemSalvage;
 
@@ -181,8 +194,10 @@ public class RecoveryViewModel : ViewModelBase
 
     public string StartIcon => IsRepair ? "fa-screwdriver-wrench" : IsSalvage ? "fa-life-ring" : "fa-stethoscope";
 
-    public string TargetHint => IsPartitionTableOperation
-        ? "Partition tables present are detected, when disk is selected. Select Rigid Disk Block to scan or repair a Rigid Disk Block, which is damaged and not detected."
+    public string TargetHint => _selectedOperation.Value == RecoveryOperation.FullRepair
+        ? "Partition tables are repaired first, then partitions are read again and file systems in all Rigid Disk Block partitions are repaired."
+        : IsPartitionTableOperation
+        ?"Partition tables present are detected, when disk is selected. Select Rigid Disk Block to scan or repair a Rigid Disk Block, which is damaged and not detected."
         : "Only partitions with Amiga file systems FFS, PFS3 and SFS are listed. If partitions are missing due to a damaged Rigid Disk Block, repair partition table first.";
 
     /// <summary>
@@ -322,12 +337,18 @@ public class RecoveryViewModel : ViewModelBase
         var uaeMetadata = _selectedUaeMetadata.Value;
         var salvageOrphans = _salvageOrphans;
         var sourceType = Source.IsPhysicalDisk ? "physical disk" : "image file";
-        var target = IsPartitionTableOperation ? "partition table" : "file system";
+        var target = operation switch
+        {
+            RecoveryOperation.FullRepair => "partition tables and file systems",
+            RecoveryOperation.PartitionTableScan or RecoveryOperation.PartitionTableRepair => "partition table",
+            _ => "file system"
+        };
         var description = $"'{targetTitle}' in {sourceType} '{Source.Media?.Name ?? Source.Path}'";
 
         var confirmed = operation switch
         {
-            RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair =>
+            RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+                or RecoveryOperation.FullRepair =>
                 await _dialogService.ShowConfirmDialogAsync($"Repair {target}",
                     $"WARNING: Repair writes changes to {description} and can potentially corrupt the {target} further.{Environment.NewLine}{Environment.NewLine}Repair should only be done on a backup of the disk or image file. Make sure you have a backup before continuing.{Environment.NewLine}{Environment.NewLine}Do you understand the risk and want to repair the {target}?"),
             RecoveryOperation.FileSystemSalvage =>
@@ -340,24 +361,33 @@ public class RecoveryViewModel : ViewModelBase
         if (!confirmed)
             return;
 
-        await Progress.RunAsync($"{_selectedOperation.Title} {description}", async (progress, token) =>
+        await Progress.RunAsync($"{_selectedOperation.Title} {description}", async (progress, details, token) =>
         {
             var report = operation switch
             {
                 RecoveryOperation.PartitionTableScan => await _imagingService.ScanPartitionTableAsync(targetPath,
-                    null, byteswap, logPath, progress, token),
+                    null, byteswap, logPath, progress, token, details),
                 RecoveryOperation.PartitionTableRepair => await _imagingService.RepairPartitionTableAsync(
-                    targetPath, null, rdbMode, byteswap, logPath, progress, token),
+                    targetPath, null, rdbMode, byteswap, logPath, progress, token, details),
                 RecoveryOperation.FileSystemScan => await _imagingService.ScanFileSystemAsync(targetPath, byteswap,
-                    logPath, progress, token),
+                    logPath, progress, token, details),
                 RecoveryOperation.FileSystemRepair => await _imagingService.RepairFileSystemAsync(targetPath,
-                    byteswap, logPath, progress, token),
+                    byteswap, logPath, progress, token, details),
                 RecoveryOperation.FileSystemSalvage => await _imagingService.SalvageFileSystemAsync(targetPath,
-                    outputPath, uaeMetadata, salvageOrphans, byteswap, logPath, progress, token),
+                    outputPath, uaeMetadata, salvageOrphans, byteswap, logPath, progress, token, details),
+                RecoveryOperation.FullRepair => await _imagingService.FullRepairAsync(targetPath, rdbMode, byteswap,
+                    logPath, progress, token, details),
                 _ => throw new ArgumentOutOfRangeException(nameof(operation))
             };
-            return FormatReport(report);
+            return new ProgressResult(FormatReport(report), GetStatus(report), IsWarning(report));
         });
+
+        // read disk again after repair to refresh partition tables and partitions available as targets
+        if (operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+            or RecoveryOperation.FullRepair)
+        {
+            await Source.ReloadMediaAsync();
+        }
     }
 
     /// <summary>
@@ -366,11 +396,6 @@ public class RecoveryViewModel : ViewModelBase
     public static string FormatReport(RecoveryReport report)
     {
         var builder = new StringBuilder();
-
-        builder.AppendLine(string.IsNullOrWhiteSpace(report.TargetType)
-            ? GetResult(report)
-            : $"{report.TargetType}: {GetResult(report)}");
-        builder.AppendLine();
 
         if (report.PartitionTablesFound.HasValue)
         {
@@ -390,6 +415,11 @@ public class RecoveryViewModel : ViewModelBase
         if (report.DirectoriesFound.HasValue)
         {
             builder.AppendLine(Count(report.DirectoriesFound.Value, "directory", "directories", "found"));
+        }
+
+        if (report.FileSystemsChecked.HasValue)
+        {
+            builder.AppendLine(Count(report.FileSystemsChecked.Value, "file system", "file systems", "checked"));
         }
 
         if (report.FilesFound.HasValue)
@@ -426,34 +456,68 @@ public class RecoveryViewModel : ViewModelBase
         }
 
         builder.AppendLine(Count(report.IssuesFound, "issue", "issues", "found"));
-        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair)
+        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+            or RecoveryOperation.FullRepair)
         {
             builder.AppendLine(Count(report.Fixed, "issue", "issues", "fixed"));
             builder.AppendLine(Count(report.IssuesNotFixed, "issue", "issues", "not fixed"));
         }
 
-        builder.AppendLine();
-        builder.Append($"Detailed log written to '{report.LogPath}'.");
-
-        return builder.ToString();
+        return builder.ToString().TrimEnd();
     }
 
-    private static string GetResult(RecoveryReport report)
+    /// <summary>
+    /// Get total status of recovery operation, e.g. "Partition table valid" or "File system repaired".
+    /// </summary>
+    public static string GetStatus(RecoveryReport report)
     {
         if (report.Aborted)
         {
             return "Aborted";
         }
 
-        return report.Operation switch
+        switch (report.Operation)
         {
-            RecoveryOperation.FileSystemSalvage => report.Errors == 0 ? "Salvaged" : "Salvaged with errors",
-            RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair => report.IsValid
-                ? report.Written ? "Repaired" : "Valid, no repair needed"
-                : "Errors not repaired",
-            _ => report.IsValid ? "Valid" : "Errors found"
-        };
+            case RecoveryOperation.PartitionTableScan:
+            case RecoveryOperation.PartitionTableRepair:
+                if (report.PartitionTablesFound == 0)
+                {
+                    return "No partition table found";
+                }
+
+                var multiple = report.PartitionTablesFound > 1;
+                var partitionTable = multiple ? "Partition tables" : "Partition table";
+                return GetStatus(report, partitionTable, multiple);
+            case RecoveryOperation.FileSystemSalvage:
+                return report.Errors == 0 ? "Files salvaged" : "Files salvaged with errors";
+            case RecoveryOperation.FullRepair:
+                return GetStatus(report, "Disk", false);
+            default:
+                return GetStatus(report, "File system", false);
+        }
     }
+
+    private static string GetStatus(RecoveryReport report, string target, bool multiple)
+    {
+        if (report.Operation is RecoveryOperation.PartitionTableRepair or RecoveryOperation.FileSystemRepair
+            or RecoveryOperation.FullRepair)
+        {
+            return report.IsValid
+                ? report.Written ? $"{target} repaired" : $"{target} valid, no repair needed"
+                : $"{target} not repaired";
+        }
+
+        return report.IsValid ? $"{target} valid" : $"{target} {(multiple ? "have" : "has")} errors";
+    }
+
+    /// <summary>
+    /// Status is a warning, if operation was aborted, errors were found or not repaired, or no partition table was
+    /// found.
+    /// </summary>
+    public static bool IsWarning(RecoveryReport report) =>
+        report.Aborted ||
+        report.PartitionTablesFound == 0 ||
+        (report.Operation == RecoveryOperation.FileSystemSalvage ? report.Errors > 0 : !report.IsValid);
 
     private static string Count(int count, string singular, string plural, string suffix) =>
         $"{count} {(count == 1 ? singular : plural)} {suffix}";

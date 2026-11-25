@@ -25,6 +25,7 @@ public static class RecoveryCommandFactory
 
         command.Add(CreatePartitionTable());
         command.Add(CreateFs());
+        command.Add(CreateFullRepair());
 
         return command;
     }
@@ -95,11 +96,7 @@ public static class RecoveryCommandFactory
             Description = "Path to physical drive or image file, optionally with partition table, e.g. disk.img\\rdb."
         };
         var typeOption = CreatePartitionTableTypeOption();
-        var modeOption = new Option<RecoveryMode>("--mode", ["-m"])
-        {
-            Description = "Rigid disk block repair mode. Fix repairs existing rigid disk block, Rebuild creates new rigid disk block from file systems found on disk and Auto fixes, if rigid disk block is found, otherwise rebuilds.",
-            DefaultValueFactory = (ArgumentResult _) => RecoveryMode.Auto
-        };
+        var modeOption = CreateRdbModeOption();
         var yesOption = CreateYesOption();
         var recoveryLogOption = CreateRecoveryLogOption();
 
@@ -112,6 +109,36 @@ public static class RecoveryCommandFactory
         });
         command.Add(pathArgument);
         command.Add(typeOption);
+        command.Add(modeOption);
+        command.Add(yesOption);
+        command.Add(recoveryLogOption);
+
+        return command;
+    }
+
+    private static Option<RecoveryMode> CreateRdbModeOption() => new("--mode", ["-m"])
+    {
+        Description = "Rigid disk block repair mode. Fix repairs existing rigid disk block, Rebuild creates new rigid disk block from file systems found on disk and Auto fixes, if rigid disk block is found, otherwise rebuilds.",
+        DefaultValueFactory = (ArgumentResult _) => RecoveryMode.Auto
+    };
+
+    private static Command CreateFullRepair()
+    {
+        var pathArgument = new Argument<string>("Path")
+        {
+            Description = "Path to physical drive or image file, optionally with partition table, e.g. disk.img\\rdb."
+        };
+        var modeOption = CreateRdbModeOption();
+        var yesOption = CreateYesOption();
+        var recoveryLogOption = CreateRecoveryLogOption();
+
+        var command = new Command("repair", "Full repair of partition tables and Amiga file systems in rigid disk block partitions. Repair writes to disk and should be done on a backup.");
+        command.SetAction(async (ParseResult ctx) =>
+        {
+            await CommandHandler.RecoveryFullRepair(ctx.GetValue(pathArgument), ctx.GetValue(modeOption),
+                ctx.GetValue(yesOption), ctx.GetValue(recoveryLogOption));
+        });
+        command.Add(pathArgument);
         command.Add(modeOption);
         command.Add(yesOption);
         command.Add(recoveryLogOption);
