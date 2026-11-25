@@ -21,6 +21,8 @@ namespace Hst.Imager.ConsoleApp
     using Hst.Core;
     using Core.Commands.MbrCommands;
     using Core.Commands.RdbCommands;
+    using Core.Commands.RecoveryCommands;
+    using Hst.Amiga.RigidDiskBlocks.Recovery;
     using Core.UaeMetadatas;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Logging;
@@ -822,6 +824,113 @@ namespace Hst.Imager.ConsoleApp
             var command = new AdfCreateCommand(GetLogger<AdfCreateCommand>(), commandHelper,
                 await GetPhysicalDrives(), adfPath, format, name, dosType, recursive);
             await Execute(command);
+        }
+
+        public static async Task RecoveryPartitionTableScan(string path, PartitionTableType? partitionTableType,
+            string recoveryLogPath)
+        {
+            using var commandHelper = GetCommandHelper();
+            var command = new PartitionTableScanCommand(GetLogger<PartitionTableScanCommand>(), commandHelper,
+                await GetPhysicalDrives(), path, recoveryLogPath, partitionTableType);
+            await ExecuteRecovery(command, true);
+        }
+
+        public static async Task RecoveryPartitionTableRepair(string path, PartitionTableType? partitionTableType,
+            RecoveryMode rdbMode, bool yes, string recoveryLogPath)
+        {
+            if (!ConfirmRepair("partition table", path, yes))
+            {
+                Environment.Exit(1);
+            }
+
+            using var commandHelper = GetCommandHelper();
+            var command = new PartitionTableRepairCommand(GetLogger<PartitionTableRepairCommand>(), commandHelper,
+                await GetPhysicalDrives(), path, recoveryLogPath, partitionTableType, rdbMode);
+            await ExecuteRecovery(command, false);
+        }
+
+        public static async Task RecoveryFsScan(string path, string recoveryLogPath)
+        {
+            using var commandHelper = GetCommandHelper();
+            var command = new FsScanCommand(GetLogger<FsScanCommand>(), commandHelper, await GetPhysicalDrives(),
+                path, recoveryLogPath);
+            await ExecuteRecovery(command, true);
+        }
+
+        public static async Task RecoveryFsRepair(string path, bool yes, string recoveryLogPath)
+        {
+            if (!ConfirmRepair("file system", path, yes))
+            {
+                Environment.Exit(1);
+            }
+
+            using var commandHelper = GetCommandHelper();
+            var command = new FsRepairCommand(GetLogger<FsRepairCommand>(), commandHelper, await GetPhysicalDrives(),
+                path, recoveryLogPath);
+            await ExecuteRecovery(command, false);
+        }
+
+        public static async Task RecoveryFsSalvage(string path, string outputPath, UaeMetadata uaeMetadata,
+            bool salvageOrphans, string recoveryLogPath)
+        {
+            using var commandHelper = GetCommandHelper();
+            var command = new FsSalvageCommand(GetLogger<FsSalvageCommand>(), commandHelper,
+                await GetPhysicalDrives(), path, outputPath, uaeMetadata, salvageOrphans, recoveryLogPath);
+            await ExecuteRecovery(command, false);
+        }
+
+        /// <summary>
+        /// Execute recovery command and present report. Scan commands exit with code 2, if errors are found.
+        /// </summary>
+        private static async Task ExecuteRecovery(RecoveryCommandBase command, bool exitWithErrorsFound)
+        {
+            RecoveryReport report = null;
+            command.RecoveryReportRead += (_, args) =>
+            {
+                report = args.Report;
+                Log.Logger.Information(RecoveryPresenter.PresentReport(args.Report));
+            };
+
+            await Execute(command);
+
+            if (exitWithErrorsFound && report is { IsValid: false })
+            {
+                Environment.Exit(2);
+            }
+        }
+
+        /// <summary>
+        /// Warn user repair can potentially corrupt data further and ask user to confirm repair.
+        /// </summary>
+        /// <returns>True, if repair is confirmed.</returns>
+        private static bool ConfirmRepair(string target, string path, bool yes)
+        {
+            Log.Logger.Warning(
+                $"WARNING: Repair writes changes to '{path}' and can potentially corrupt the {target} further. Repair should only be done on a backup of the disk or image file.");
+
+            if (yes)
+            {
+                Log.Logger.Information("Repair confirmed by --yes option");
+                return true;
+            }
+
+            if (Console.IsInputRedirected)
+            {
+                Log.Logger.Error("Repair must be confirmed. Use --yes option to confirm repair, when input is redirected");
+                return false;
+            }
+
+            Console.Write($"Repair {target} in '{path}'? [y/N] ");
+            var answer = Console.ReadLine();
+
+            var confirmed = string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(answer?.Trim(), "yes", StringComparison.OrdinalIgnoreCase);
+            if (!confirmed)
+            {
+                Log.Logger.Information("Repair cancelled");
+            }
+
+            return confirmed;
         }
 
         private static Task WriteProcessMessage(object sender, DataProcessedEventArgs args)

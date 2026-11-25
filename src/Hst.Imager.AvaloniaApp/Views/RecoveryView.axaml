@@ -1,0 +1,124 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Hst.Imager.AvaloniaApp.ViewModels"
+             xmlns:views="using:Hst.Imager.AvaloniaApp.Views"
+             xmlns:ia="clr-namespace:Optris.Icons.Avalonia;assembly=Optris.Icons.Avalonia"
+             xmlns:controls="using:Hst.Imager.AvaloniaApp.Controls"
+             x:Class="Hst.Imager.AvaloniaApp.Views.RecoveryView"
+             x:DataType="vm:RecoveryViewModel">
+
+  <controls:PageLayout Title="Recovery"
+                       Description="Scan and repair partition tables and Amiga file systems and salvage files from damaged Amiga file systems.">
+    <StackPanel Spacing="8">
+      <views:MediaSelectionCard DataContext="{Binding Source}" />
+
+      <!-- Partition layout of disk same as info view -->
+      <views:MediaPartitionLayoutView DataContext="{Binding SourceLayout}" />
+
+      <!-- Operation -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-kit-medical" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Operation" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding OperationOptions}"
+                SelectedItem="{Binding SelectedOperation}"
+                DisplayMemberBinding="{Binding Title}"
+                HorizontalAlignment="Stretch" />
+      <TextBlock Text="{Binding SelectedOperation.Description}" TextWrapping="Wrap" Opacity="0.8" />
+
+      <Border Classes="warning" IsVisible="{Binding IsRepair}">
+        <TextBlock TextWrapping="Wrap"
+                   Text="Repair writes changes to the disk and can potentially corrupt the partition table or file system further. Only repair a backup of the disk or image file." />
+      </Border>
+
+      <!-- Target: disk, partition table or partition available for operation -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-crosshairs" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Target" />
+      </StackPanel>
+      <ComboBox ItemsSource="{Binding TargetOptions}"
+                SelectedItem="{Binding SelectedTarget}"
+                DisplayMemberBinding="{Binding Title}"
+                PlaceholderText="{Binding TargetPlaceholder}"
+                HorizontalAlignment="Stretch" />
+      <TextBlock Text="{Binding TargetHint}" TextWrapping="Wrap" Opacity="0.7" FontSize="12" />
+
+      <!-- Rigid disk block repair mode -->
+      <StackPanel Spacing="4" IsVisible="{Binding IsPartitionTableRepair}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-sliders" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Rigid Disk Block repair mode" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding RdbModeOptions}"
+                  SelectedItem="{Binding SelectedRdbMode}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+      </StackPanel>
+
+      <!-- Salvage -->
+      <StackPanel Spacing="8" IsVisible="{Binding IsSalvage}">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-folder-open" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="Directory to write salvaged directories and files to" />
+        </StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBox Grid.Column="0" Text="{Binding OutputPath}" />
+          <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseOutputPathCommand}" ToolTip.Tip="Browse">
+            <ia:Icon Value="fa-folder-open" />
+          </Button>
+        </Grid>
+
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <ia:Icon Value="fa-tags" Classes="field-icon" />
+          <TextBlock Classes="field-label" Text="UAE metadata" />
+        </StackPanel>
+        <ComboBox ItemsSource="{Binding UaeMetadataOptions}"
+                  SelectedItem="{Binding SelectedUaeMetadata}"
+                  DisplayMemberBinding="{Binding Title}"
+                  HorizontalAlignment="Stretch" />
+
+        <CheckBox IsChecked="{Binding SalvageOrphans}">
+          <TextBlock TextWrapping="Wrap"
+                     Text="Salvage orphaned directories and files, which can't be reached from root directory, to a lost directory" />
+        </CheckBox>
+      </StackPanel>
+
+      <!-- Log file -->
+      <StackPanel Orientation="Horizontal" Spacing="5">
+        <ia:Icon Value="fa-file-lines" Classes="field-icon" />
+        <TextBlock Classes="field-label" Text="Log file" />
+      </StackPanel>
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <TextBox Grid.Column="0" Text="{Binding LogPath}" PlaceholderText="Select disk to use default log file" />
+        <Button Grid.Column="1" Margin="8,0,0,0" Command="{Binding BrowseLogPathCommand}" ToolTip.Tip="Browse">
+          <ia:Icon Value="fa-folder-open" />
+        </Button>
+        <Button Grid.Column="2" Margin="8,0,0,0" Command="{Binding ResetLogPathCommand}"
+                ToolTip.Tip="Reset to default log file">
+          <ia:Icon Value="fa-rotate-left" />
+        </Button>
+      </Grid>
+      <TextBlock TextWrapping="Wrap" Opacity="0.7" FontSize="12"
+                 Text="A detailed log is written next to the image file or in the home directory for physical disks." />
+    </StackPanel>
+
+    <controls:PageLayout.Actions>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button Command="{Binding ResetCommand}" ToolTip.Tip="Reset to defaults">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="fa-rotate-left" />
+            <TextBlock Text="Reset" />
+          </StackPanel>
+        </Button>
+        <Button Command="{Binding StartCommand}"
+                Classes="primary"
+                Classes.danger="{Binding IsRepair}">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <ia:Icon Value="{Binding StartIcon}" />
+            <TextBlock Text="{Binding StartTitle}" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </controls:PageLayout.Actions>
+  </controls:PageLayout>
+</UserControl>

@@ -112,6 +112,9 @@
           <DataTemplate DataType="vm:PartitionViewModel">
             <views:PartitionView />
           </DataTemplate>
+          <DataTemplate DataType="vm:RecoveryViewModel">
+            <views:RecoveryView />
+          </DataTemplate>
           <DataTemplate DataType="vm:SettingsViewModel">
             <views:SettingsView />
           </DataTemplate>

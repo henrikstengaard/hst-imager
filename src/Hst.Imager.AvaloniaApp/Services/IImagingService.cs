@@ -2,7 +2,11 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Hst.Imager.AvaloniaApp.Models;
+using Hst.Imager.Core.Commands;
+using Hst.Imager.Core.Commands.RecoveryCommands;
 using Hst.Imager.Core.Models;
+using Hst.Imager.Core.UaeMetadatas;
+using Hst.Amiga.RigidDiskBlocks.Recovery;
 
 namespace Hst.Imager.AvaloniaApp.Services;
 
@@ -46,4 +50,37 @@ public interface IImagingService
     /// Find file system with name in media like lha, adf or iso. Returns null, if file system is not found.
     /// </summary>
     Task<RdbFileSystemInfo?> FindRdbFileSystemAsync(string mediaPath, string fileSystemName);
+
+    /// <summary>
+    /// Scan partition table at path for errors without writing any changes. Partition table type is auto detected,
+    /// if null.
+    /// </summary>
+    Task<RecoveryReport> ScanPartitionTableAsync(string path, PartitionTableType? partitionTableType, bool byteswap,
+        string logPath, IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Repair partition table at path. Repair writes to disk and should be done on a backup.
+    /// </summary>
+    Task<RecoveryReport> RepairPartitionTableAsync(string path, PartitionTableType? partitionTableType,
+        RecoveryMode rdbMode, bool byteswap, string logPath, IProgress<ProgressModel> progress,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Scan file system in partition at path for errors without writing any changes.
+    /// </summary>
+    Task<RecoveryReport> ScanFileSystemAsync(string path, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Repair file system in partition at path. Repair writes to disk and should be done on a backup.
+    /// </summary>
+    Task<RecoveryReport> RepairFileSystemAsync(string path, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Salvage directories and files from file system in partition at path to output path with uae metadata.
+    /// </summary>
+    Task<RecoveryReport> SalvageFileSystemAsync(string path, string outputPath, UaeMetadata uaeMetadata,
+        bool salvageOrphans, bool byteswap, string logPath, IProgress<ProgressModel> progress,
+        CancellationToken cancellationToken);
 }
