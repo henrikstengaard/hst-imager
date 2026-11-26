@@ -8,10 +8,13 @@ using Hst.Imager.AvaloniaApp.Models;
 using Hst.Imager.Core;
 using Hst.Imager.Core.Commands;
 using Hst.Imager.Core.Commands.GptCommands;
+using Hst.Imager.Core.Commands.RecoveryCommands;
 using Hst.Imager.Core.FileSystems;
 using Hst.Imager.Core.Helpers;
 using Hst.Imager.Core.Models;
 using Hst.Imager.Core.PhysicalDrives;
+using Hst.Imager.Core.UaeMetadatas;
+using Hst.Amiga.RigidDiskBlocks.Recovery;
 using Microsoft.Extensions.Logging;
 
 namespace Hst.Imager.AvaloniaApp.Services;
@@ -670,6 +673,79 @@ public class ImagingService : IImagingService
         await System.IO.File.WriteAllBytesAsync(fileSystemPath, data, token);
 
         return fileSystemPath;
+    }
+
+    public Task<RecoveryReport> ScanPartitionTableAsync(string path, PartitionTableType? partitionTableType,
+        bool byteswap, string logPath, IProgress<ProgressModel> progress, CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Scanning partition table", progress, details, cancellationToken, (commandHelper, physicalDrives) =>
+            new PartitionTableScanCommand(_loggerFactory.CreateLogger<PartitionTableScanCommand>(), commandHelper,
+                physicalDrives, GetRecoveryPath(path, byteswap), logPath, partitionTableType));
+
+    public Task<RecoveryReport> RepairPartitionTableAsync(string path, PartitionTableType? partitionTableType,
+        RecoveryMode rdbMode, bool byteswap, string logPath, IProgress<ProgressModel> progress,
+        CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Repairing partition table", progress, details, cancellationToken, (commandHelper, physicalDrives) =>
+            new PartitionTableRepairCommand(_loggerFactory.CreateLogger<PartitionTableRepairCommand>(),
+                commandHelper, physicalDrives, GetRecoveryPath(path, byteswap), logPath, partitionTableType,
+                rdbMode));
+
+    public Task<RecoveryReport> ScanFileSystemAsync(string path, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Scanning file system", progress, details, cancellationToken, (commandHelper, physicalDrives) =>
+            new FsScanCommand(_loggerFactory.CreateLogger<FsScanCommand>(), commandHelper, physicalDrives,
+                GetRecoveryPath(path, byteswap), logPath));
+
+    public Task<RecoveryReport> RepairFileSystemAsync(string path, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Repairing file system", progress, details, cancellationToken, (commandHelper, physicalDrives) =>
+            new FsRepairCommand(_loggerFactory.CreateLogger<FsRepairCommand>(), commandHelper, physicalDrives,
+                GetRecoveryPath(path, byteswap), logPath));
+
+    public Task<RecoveryReport> SalvageFileSystemAsync(string path, string outputPath, UaeMetadata uaeMetadata,
+        bool salvageOrphans, bool byteswap, string logPath, IProgress<ProgressModel> progress,
+        CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Salvaging file system", progress, details, cancellationToken, (commandHelper, physicalDrives) =>
+            new FsSalvageCommand(_loggerFactory.CreateLogger<FsSalvageCommand>(), commandHelper, physicalDrives,
+                GetRecoveryPath(path, byteswap), outputPath, uaeMetadata, salvageOrphans, logPath));
+
+    public Task<RecoveryReport> FullRepairAsync(string path, RecoveryMode rdbMode, bool byteswap, string logPath,
+        IProgress<ProgressModel> progress, CancellationToken cancellationToken, IProgress<string>? details = null) =>
+        RecoverAsync("Repairing partition tables and file systems", progress, details, cancellationToken,
+            (commandHelper, physicalDrives) =>
+                new FullRepairCommand(_loggerFactory.CreateLogger<FullRepairCommand>(), commandHelper,
+                    physicalDrives, GetRecoveryPath(path, byteswap), logPath, rdbMode));
+
+    private static string GetRecoveryPath(string path, bool byteswap) =>
+        string.Concat(byteswap ? "+bs:" : string.Empty, path);
+
+    /// <summary>
+    /// Run recovery command and return report.
+    /// </summary>
+    private async Task<RecoveryReport> RecoverAsync<T>(string title, IProgress<ProgressModel> progress,
+        IProgress<string>? details, CancellationToken cancellationToken,
+        Func<ICommandHelper, IEnumerable<IPhysicalDrive>, T> createCommand)
+        where T : CommandBase, IRecoveryCommand
+    {
+        var physicalDrives = await GetPhysicalDrivesAsync();
+        progress.Report(new ProgressModel { Title = title, IsIndeterminate = true });
+        using var commandHelper = CreateCommandHelper();
+
+        var cmd = createCommand(commandHelper, physicalDrives);
+        RecoveryReport? report = null;
+        cmd.RecoveryReportRead += (_, args) => report = args.Report;
+        cmd.LogLineWritten += (_, line) => details?.Report(line);
+        string? stage = null;
+        cmd.InformationMessage += (_, message) =>
+        {
+            stage = message;
+            progress.Report(new ProgressModel { Title = title, Stage = stage, IsIndeterminate = true });
+        };
+        cmd.DataProcessed += (_, args) => progress.Report(MapProgress(title, args, stage));
+
+        var result = await cmd.Execute(cancellationToken);
+        ThrowIfFaulted(result);
+
+        return report ?? throw new ImagingException("Recovery operation didn't return a report");
     }
 
     private async Task<List<IPhysicalDrive>> GetPhysicalDrivesAsync()

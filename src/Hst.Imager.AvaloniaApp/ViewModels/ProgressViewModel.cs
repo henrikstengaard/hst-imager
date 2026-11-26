@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reactive;
+using Avalonia.Threading;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
@@ -79,6 +83,7 @@ public class ProgressViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _isComplete, value);
             this.RaisePropertyChanged(nameof(IsSuccess));
+            this.RaisePropertyChanged(nameof(IsResultOk));
         }
     }
 
@@ -172,6 +177,7 @@ public class ProgressViewModel : ViewModelBase
         {
             this.RaiseAndSetIfChanged(ref _hasError, value);
             this.RaisePropertyChanged(nameof(IsSuccess));
+            this.RaisePropertyChanged(nameof(IsResultOk));
         }
     }
 
@@ -196,6 +202,116 @@ public class ProgressViewModel : ViewModelBase
 
     public bool HasResultMessage => !string.IsNullOrEmpty(_resultMessage);
 
+    private string _resultStatus = string.Empty;
+    private bool _isResultWarning;
+
+    /// <summary>
+    /// Total status shown when task completed successfully, e.g. "Partition table valid".
+    /// Completed successfully is shown, if empty.
+    /// </summary>
+    public string ResultStatus
+    {
+        get => _resultStatus;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _resultStatus, value);
+            this.RaisePropertyChanged(nameof(CompletedText));
+        }
+    }
+
+    /// <summary>
+    /// Text shown when task completed successfully, result status or completed successfully.
+    /// </summary>
+    public string CompletedText => string.IsNullOrEmpty(_resultStatus) ? "Completed successfully" : _resultStatus;
+
+    /// <summary>
+    /// Result status is a warning, e.g. errors found or not repaired.
+    /// </summary>
+    public bool IsResultWarning
+    {
+        get => _isResultWarning;
+        private set
+        {
+            this.RaiseAndSetIfChanged(ref _isResultWarning, value);
+            this.RaisePropertyChanged(nameof(IsResultOk));
+        }
+    }
+
+    public bool IsResultOk => IsSuccess && !_isResultWarning;
+
+    /// <summary>
+    /// Maximum number of detail lines kept. Oldest lines are removed, when exceeded.
+    /// </summary>
+    public const int MaxDetailLines = 10000;
+
+    private const int DetailsFlushIntervalMilliseconds = 200;
+
+    private bool _isDetailsExpanded;
+    private bool _isDetailsTruncated;
+
+    /// <summary>
+    /// Detail lines reported by running task, e.g. same lines as written to recovery log file.
+    /// </summary>
+    public ObservableCollection<string> DetailLines { get; } = [];
+
+    public bool HasDetails => DetailLines.Count > 0;
+
+    public bool IsDetailsExpanded
+    {
+        get => _isDetailsExpanded;
+        set => this.RaiseAndSetIfChanged(ref _isDetailsExpanded, value);
+    }
+
+    /// <summary>
+    /// Oldest detail lines were removed, as maximum number of detail lines was exceeded.
+    /// </summary>
+    public bool IsDetailsTruncated
+    {
+        get => _isDetailsTruncated;
+        private set => this.RaiseAndSetIfChanged(ref _isDetailsTruncated, value);
+    }
+
+    public string DetailsTruncatedText => $"Showing last {MaxDetailLines} lines, see log file for all details.";
+
+    private void AddDetailLines(IList<string> lines)
+    {
+        if (lines.Count == 0)
+        {
+            return;
+        }
+
+        var hadDetails = HasDetails;
+
+        // only add lines fitting within max detail lines
+        foreach (var line in lines.Skip(Math.Max(0, lines.Count - MaxDetailLines)))
+        {
+            DetailLines.Add(line);
+        }
+
+        var removeCount = DetailLines.Count - MaxDetailLines;
+        if (removeCount > 0 || lines.Count > MaxDetailLines)
+        {
+            for (var i = 0; i < removeCount; i++)
+            {
+                DetailLines.RemoveAt(0);
+            }
+
+            IsDetailsTruncated = true;
+        }
+
+        if (!hadDetails)
+        {
+            this.RaisePropertyChanged(nameof(HasDetails));
+        }
+    }
+
+    private void ClearDetails()
+    {
+        DetailLines.Clear();
+        IsDetailsTruncated = false;
+        this.RaisePropertyChanged(nameof(HasDetails));
+    }
+
     /// <summary>
     /// Run task showing progress until completed, failed or cancelled.
     /// </summary>
@@ -210,7 +326,20 @@ public class ProgressViewModel : ViewModelBase
     /// Run task showing progress until completed, failed or cancelled.
     /// Message returned by task is shown, when task completed successfully.
     /// </summary>
-    public async Task RunAsync(string title, Func<IProgress<ProgressModel>, CancellationToken, Task<string?>> action)
+    public Task RunAsync(string title, Func<IProgress<ProgressModel>, CancellationToken, Task<string?>> action) =>
+        RunAsync(title, async (progress, _, token) =>
+        {
+            var message = await action(progress, token);
+            return new ProgressResult(message);
+        });
+
+    /// <summary>
+    /// Run task showing progress and details reported by task until completed, failed or cancelled.
+    /// Details are shown in a collapsable details panel while task is running and after it completes.
+    /// Result summary and status returned by task is shown, when task completed successfully.
+    /// </summary>
+    public async Task RunAsync(string title,
+        Func<IProgress<ProgressModel>, IProgress<string>, CancellationToken, Task<ProgressResult?>> action)
     {
         if (IsRunning) return;
 
@@ -226,19 +355,28 @@ public class ProgressViewModel : ViewModelBase
                 Update(p);
         });
 
+        // details are queued by task and added to details lines in batches to avoid flooding ui thread
+        var details = new DetailsLog();
+        var detailsTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(DetailsFlushIntervalMilliseconds),
+            DispatcherPriority.Background, (_, _) => AddDetailLines(details.Drain()));
+        detailsTimer.Start();
+
         string? errorMessage = null;
-        string? resultMessage = null;
+        ProgressResult? result = null;
         try
         {
             // run task on thread pool to keep ui responsive, as commands has synchronous parts
             // like flushing and closing destination when finishing. progress is reported to ui thread
             var token = _cts.Token;
-            resultMessage = await Task.Run(() => action(progress, token), CancellationToken.None);
+            result = await Task.Run(() => action(progress, details, token), CancellationToken.None);
         }
         catch (Exception e)
         {
             errorMessage = e.Message;
         }
+
+        detailsTimer.Stop();
+        AddDetailLines(details.Drain());
 
         var cancelled = _cts.IsCancellationRequested;
         _cts.Dispose();
@@ -255,7 +393,9 @@ public class ProgressViewModel : ViewModelBase
         PercentComplete = 100;
         HasError = errorMessage != null;
         ErrorMessage = errorMessage ?? string.Empty;
-        ResultMessage = errorMessage == null ? resultMessage ?? string.Empty : string.Empty;
+        ResultMessage = errorMessage == null ? result?.Message ?? string.Empty : string.Empty;
+        ResultStatus = errorMessage == null ? result?.Status ?? string.Empty : string.Empty;
+        IsResultWarning = errorMessage == null && (result?.IsWarning ?? false);
         SpeedText = string.Empty;
         EtaText = string.Empty;
         BytesText = string.Empty;
@@ -324,6 +464,9 @@ public class ProgressViewModel : ViewModelBase
         Stage = string.Empty;
         _isCacheFlush = false;
         IsCancelling = false;
+        ClearDetails();
+        ResultStatus = string.Empty;
+        IsResultWarning = false;
         SpeedText = string.Empty;
         EtaText = string.Empty;
         BytesText = string.Empty;

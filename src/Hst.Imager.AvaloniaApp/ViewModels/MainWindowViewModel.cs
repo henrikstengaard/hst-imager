@@ -59,7 +59,8 @@ public class MainWindowViewModel : ViewModelBase
         new("Blank", "Blank", "fa-plus"),
         new("Optimize", "Optimize", "fa-compress"),
         new("Format", "Format", "fa-broom"),
-        new("Partition", "Partition", "fa-table-columns")
+        new("Partition", "Partition", "fa-table-columns"),
+        new("Recovery", "Recovery", "fa-kit-medical")
     ];
 
     public IReadOnlyList<NavItemViewModel> FooterNavItems { get; } =
@@ -92,6 +93,7 @@ public class MainWindowViewModel : ViewModelBase
             "Optimize" => _services.GetRequiredService<OptimizeViewModel>(),
             "Format" => _services.GetRequiredService<FormatViewModel>(),
             "Partition" => _services.GetRequiredService<PartitionViewModel>(),
+            "Recovery" => _services.GetRequiredService<RecoveryViewModel>(),
             "Settings" => _services.GetRequiredService<SettingsViewModel>(),
             "About" => _services.GetRequiredService<AboutViewModel>(),
             _ => _services.GetRequiredService<StartViewModel>()

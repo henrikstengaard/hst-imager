@@ -9,6 +9,10 @@ Hst Imager Gui:
 - Show bytes processed and elapsed time without total size and ETA when writing, converting or comparing gzip compressed images, as uncompressed size is unknown.
 - Add Smart File System (SFS0) to format page with option to download SmartFilesystem from aminet.net.
 - Add formatting Smart File System (SFS0) partitions in Rigid Disk Block in partition page with option to download SmartFilesystem from aminet.net.
+- Add recovery page for scanning and repairing partition tables (RDB, GPT and MBR scan) and Amiga file systems (FFS, PFS3 and SFS) and salvaging directories and files from Amiga file systems to a directory with UAE metadata. A detailed log is written next to the image file or in the home directory for physical disks.
+- Add collapsable details panel to progress showing recovery log messages appended while recovery is running and after it completes.
+- Add full repair to recovery page repairing partition tables and file systems in Rigid Disk Block partitions.
+- Read disk again after repairing in recovery page, so repaired partition tables and partitions can be selected.
 
 Hst Imager console:
 - Add original file size, optimized or compacted file size and percent reduced to optimize command output.
@@ -19,6 +23,8 @@ Hst Imager console:
 - Add Smart File System (SFS0) support for reading and writing files with fs commands and formatting with rdb part format and format commands. SFS2 (large file support) is not supported.
 - Format command asks to download SmartFilesystem from aminet.net, if file system path is not set for SFS0.
 - File systems in amiga hunk format (68k) are preferred when finding file systems in media containing file systems for multiple platforms, e.g. SFS.lha with SmartFilesystem for AmigaOS 3.x and AmigaOS 4.
+- Add recovery command with partition table scan and repair (RDB, GPT and MBR scan) and file system scan, repair and salvage (FFS, PFS3 and SFS) sub commands. A detailed log is written next to the image file or in the home directory for physical drives. Repair asks to confirm repair, unless --yes is set. Salvage writes UAEFSDB or UAE metafiles.
+- Add recovery repair command for full repair of partition tables and file systems in Rigid Disk Block partitions.
 - Update Hst.Amiga to v1.0.291, Hst.Core and hst.compression to v1.0.104.
 
 ## v1.0

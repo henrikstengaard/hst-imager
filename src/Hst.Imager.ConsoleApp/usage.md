@@ -521,3 +521,106 @@ Example of updating partition number 1 setting max transfer to 130560 in Rigid D
 ```
 hst.imager rdb part update 4gb.vhd 1 --max-transfer 130560
 ```
+
+## Recovery
+
+Recovery commands scan and repair partition tables and Amiga file systems and salvage directories and files from damaged Amiga file systems.
+
+Supported partition tables and file systems:
+- Rigid Disk Block (RDB), also in PiStorm RDB partitions: scan and repair. Repair fixes checksums, block pointers and partitions using file systems found on disk or rebuilds the Rigid Disk Block from file systems found on disk.
+- Guid Partition Table (GPT): scan and repair. Repair restores primary header and partition entries from backup or backup from primary.
+- Master Boot Record (MBR): scan only.
+- Fast File System (DOS\0-DOS\7), Professional File System (PFS\3, PDS\3) and Smart File System (SFS\0): scan, repair and salvage. Fast File System in .adf files is also supported.
+
+A detailed log is written for each recovery command. The log is written next to the image file or in the home directory for physical drives, unless a path is set with `--recovery-log`.
+
+Repair writes changes to the disk and can potentially corrupt the partition table or file system further. Repair should only be done on a backup of the disk or image file. Repair commands show a warning and ask to confirm the repair. Use `--yes` to confirm repair without asking, e.g. in scripts.
+
+Scan commands exit with exit code 2, if errors are found.
+
+Example of displaying usage for recovery:
+```
+hst.imager recovery
+```
+
+### Scan partition table
+
+Scans partition tables for errors without writing any changes. Partition tables present are detected, unless type is set with `--type` or path contains partition table, e.g. `4gb.vhd\rdb`.
+
+Example of scanning partition tables on a 4GB vhd image file:
+```
+hst.imager recovery partitiontable scan 4gb.vhd
+```
+
+Example of scanning Rigid Disk Block on a 4GB vhd image file writing log to scan.log:
+```
+hst.imager recovery pt scan 4gb.vhd\rdb --recovery-log scan.log
+```
+
+### Repair partition table
+
+Repairs partition tables. Rigid Disk Block repair mode can be set with `--mode`:
+- Auto: Fix Rigid Disk Block, if found. Otherwise rebuild Rigid Disk Block (default).
+- Fix: Fix existing Rigid Disk Block by repairing checksums, block pointers and partitions using file systems found on disk.
+- Rebuild: Rebuild new Rigid Disk Block from disk size and file systems found on disk.
+
+Example of repairing Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager recovery pt repair 4gb.vhd --type rdb
+```
+
+Example of rebuilding Rigid Disk Block on a 4GB vhd image file without asking to confirm repair:
+```
+hst.imager recovery pt repair 4gb.vhd\rdb --mode rebuild --yes
+```
+
+### Full repair
+
+Repairs partition tables, reads partitions again and repairs file systems in all Rigid Disk Block partitions with supported file systems. Partition table and file system repairs are written to the same log file. Rigid Disk Block repair mode can be set with `--mode` like repair partition table.
+
+Example of full repair of partition tables and file systems on a 4GB vhd image file:
+```
+hst.imager recovery repair 4gb.vhd
+```
+
+Example of full repair of Rigid Disk Block and file systems in its partitions on a 4GB vhd image file without asking to confirm repair:
+```
+hst.imager recovery repair 4gb.vhd\rdb --yes
+```
+
+### Scan file system
+
+Scans file system in a Rigid Disk Block partition or .adf file for errors without writing any changes. Partition is selected by device name or partition number.
+
+Example of scanning file system in partition DH0 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager recovery fs scan 4gb.vhd\rdb\dh0
+```
+
+Example of scanning file system in a .adf file:
+```
+hst.imager recovery fs scan workbench.adf
+```
+
+### Repair file system
+
+Repairs file system in a Rigid Disk Block partition or .adf file.
+
+Example of repairing file system in partition number 1 in Rigid Disk Block on a 4GB vhd image file:
+```
+hst.imager recovery fs repair 4gb.vhd\rdb\1
+```
+
+### Salvage file system
+
+Salvages directories and files from file system in a Rigid Disk Block partition or .adf file to a directory. The file system is never written to, so salvage can be used on damaged file systems, which can't be repaired. Amiga names, protection bits and comments are written as UAE metadata, UAEFSDB (default, supported by WinUAE, FS-UAE and Amiberry) or UAE metafiles (supported by FS-UAE) with `--uaemetadata`. Directories and files, which can't be reached from root directory, are salvaged to a lost directory, unless `--no-orphans` is set.
+
+Example of salvaging directories and files from partition DH0 in Rigid Disk Block on a 4GB vhd image file to directory salvaged:
+```
+hst.imager recovery fs salvage 4gb.vhd\rdb\dh0 salvaged
+```
+
+Example of salvaging directories and files from partition DH0 in Rigid Disk Block on a 4GB vhd image file to directory salvaged with UAE metafiles:
+```
+hst.imager recovery fs salvage 4gb.vhd\rdb\dh0 salvaged --uaemetadata UaeMetafile
+```

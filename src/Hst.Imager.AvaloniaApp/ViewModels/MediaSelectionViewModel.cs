@@ -678,6 +678,11 @@ public class MediaSelectionViewModel : ViewModelBase
             ImagePath = path;
     }
 
+    /// <summary>
+    /// Read media info of selected media again, e.g. after partition table is repaired.
+    /// </summary>
+    public Task ReloadMediaAsync() => LoadMediaAsync();
+
     private async Task LoadMediaAsync()
     {
         var path = Path;

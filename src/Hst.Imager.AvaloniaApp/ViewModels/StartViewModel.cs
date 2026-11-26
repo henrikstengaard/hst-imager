@@ -33,6 +33,7 @@ public class StartViewModel : ViewModelBase
         new() { Title = "Blank", Description = "Create a blank image file.", Page = "Blank", Icon = "fa-plus" },
         new() { Title = "Optimize", Description = "Optimize an image file size.", Page = "Optimize", Icon = "fa-compress" },
         new() { Title = "Format", Description = "Format a physical disk or an image file.", Page = "Format", Icon = "fa-broom" },
-        new() { Title = "Partition", Description = "Initialize, partition and format a physical disk or an image file.", Page = "Partition", Icon = "fa-table-columns" }
+        new() { Title = "Partition", Description = "Initialize, partition and format a physical disk or an image file.", Page = "Partition", Icon = "fa-table-columns" },
+        new() { Title = "Recovery", Description = "Scan and repair partition tables and Amiga file systems and salvage files.", Page = "Recovery", Icon = "fa-kit-medical" }
     ];
 }
